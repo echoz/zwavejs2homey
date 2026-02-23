@@ -15,3 +15,9 @@ export function extractZwjsNodeValue(result: ZwjsNodeValueResult | unknown): unk
   return result;
 }
 
+export function hasZwjsNodeValue(result: ZwjsNodeValueResult | unknown): boolean {
+  if (isZwjsNodeValueEnvelopeResult(result)) {
+    return 'value' in result;
+  }
+  return result !== undefined;
+}

@@ -64,7 +64,7 @@ export type {
   ZwjsVersionFrame,
 } from './protocol/raw-frame-types';
 export { extractZwjsDefinedValueIds, isZwjsDefinedValueId, isZwjsValueId } from './protocol/value-id-guards';
-export { extractZwjsNodeValue, isZwjsNodeValueEnvelopeResult } from './protocol/value-result-guards';
+export { extractZwjsNodeValue, hasZwjsNodeValue, isZwjsNodeValueEnvelopeResult } from './protocol/value-result-guards';
 
 import { ZwjsClientImpl } from './client/zwjs-client';
 import type { ZwjsClient, ZwjsClientConfig } from './client/types';

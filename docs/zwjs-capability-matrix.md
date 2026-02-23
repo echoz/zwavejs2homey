@@ -138,7 +138,7 @@ This first-pass matrix is decision-oriented: all currently implemented wrappers 
 | node | `node.get_state` | 14+ | yes | `getNodes`/node state handling | `typed-wrapper` (`getNodeState`) | `partial` | `fixture`, `mocked-transport`, `live-readonly` | yes | P0 | Key bridge discovery/state sync primitive |
 | node | `node.get_defined_value_ids` | 0+ | yes | backend value inventory logic | `typed-wrapper` (`getNodeDefinedValueIds`) | `partial` | `fixture`, `mocked-transport`, `live-readonly` | yes | P0 | Includes exported value-id guards/extractor for array and object-wrapped results |
 | node | `node.get_value_metadata` | 0+ | yes | backend metadata handling | `typed-wrapper` (`getNodeValueMetadata`) | `partial` | `fixture`, `mocked-transport`, `live-readonly` | yes | P0 | Common metadata fields typed; nested payload remains protocol-native |
-| node | `node.get_value` | 14+ | yes | backend value reads/writes | `typed-wrapper` (`getNodeValue`) | `partial` | `fixture`, `mocked-transport`, `live-readonly` | yes | P0 | Live-validated object envelopes observed (`{ value: ... }`, `{}`); helper extractor exported |
+| node | `node.get_value` | 14+ | yes | backend value reads/writes | `typed-wrapper` (`getNodeValue`) | `partial` | `fixture`, `mocked-transport`, `live-readonly` | yes | P0 | Live-validated object envelopes observed (`{ value: ... }`, `{}`); helpers exported for extraction and presence checks |
 | node | `node.get_value_timestamp` | 27+ | yes | backend value tracking | `typed-wrapper` (`getNodeValueTimestamp`) | `partial` | `fixture`, `mocked-transport`, `live-readonly` | yes | P1 | Observed object result shape (`{ timestamp: number }`) in addition to scalar fixture |
 | node | `node.get_supported_notification_events` | 41+ | yes | backend notification UX methods | `typed-wrapper` (`getNodeSupportedNotificationEvents`) | `protocol-native` | `fixture`, `mocked-transport` | yes (failed on node 5) | P1 | Command path works; device support is node-specific |
 | node | `node.set_value` | 0+ | yes | `writeValue` / `sendCommand` / `writeBroadcast` / `writeMulticast` | `generic-mutation` + `sendMutationCommand` guard | `protocol-native` | `fixture`, `mocked-transport` (policy path) | no | P2 | Add typed mutating wrapper + policy preset |
@@ -209,7 +209,7 @@ These are included to prevent architectural confusion and to show where UI/backe
 
 - Stronger typing for node value payloads used by Homey mapping (`node.get_value`) and deeper metadata typing beyond common fields
 - Additional specialized node event typing needed for capability sync (remaining high-frequency/edge node events still to be observed and prioritized)
-- Deeper typing for command-class-specific `node.get_value` payloads after more observed value samples are cataloged (generic envelope shape now handled)
+- Deeper typing for command-class-specific `node.get_value` payloads after more diverse observed value samples are cataloged (generic/empty envelope handling complete)
 
 ### P1 Gaps (Read-Only Ops Completeness)
 

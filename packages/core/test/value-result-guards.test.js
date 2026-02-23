@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const {
   isZwjsNodeValueEnvelopeResult,
   extractZwjsNodeValue,
+  hasZwjsNodeValue,
 } = require('../dist/protocol/value-result-guards.js');
 const { loadFixture } = require('./fixtures/_load-fixture.js');
 
@@ -22,6 +23,7 @@ test('extracts value from observed value envelope shape', () => {
 test('returns undefined for empty object envelope', () => {
   const fixture = loadFixture('zwjs-server', 'result.node.get_value.success.empty-envelope.json');
   assert.equal(extractZwjsNodeValue(fixture.result), undefined);
+  assert.equal(hasZwjsNodeValue(fixture.result), false);
 });
 
 test('passes through scalar and array values', () => {
@@ -29,4 +31,12 @@ test('passes through scalar and array values', () => {
   assert.equal(extractZwjsNodeValue(42), 42);
   assert.equal(extractZwjsNodeValue('on'), 'on');
   assert.deepEqual(extractZwjsNodeValue([1, 2]), [1, 2]);
+  assert.equal(hasZwjsNodeValue(true), true);
+  assert.equal(hasZwjsNodeValue([1, 2]), true);
+});
+
+test('detects whether value envelope contains a value key', () => {
+  assert.equal(hasZwjsNodeValue({ value: false }), true);
+  assert.equal(hasZwjsNodeValue({ value: null }), true);
+  assert.equal(hasZwjsNodeValue({}), false);
 });

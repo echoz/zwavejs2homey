@@ -77,6 +77,7 @@ Progress (completed subset):
 - Tightened `ZwjsNodeValueMetadataResult` common-field typing to `partial`
 - Added `node.get_value` envelope helper for observed result shapes (`{ value: ... }` and `{}`) plus fixture-backed tests
 - `ZwjsNodeValueResult` improved to partial envelope typing, while remaining broad for command-class-specific payloads
+- Added `hasZwjsNodeValue()` helper to distinguish empty envelopes from envelopes with explicit values in observed server responses
 
 #### P0.2 Real-Instance Read Validation for Value Flows (Read-Only)
 
@@ -356,6 +357,6 @@ This roadmap is considered complete when:
 
 ## Immediate Next Tasks (Recommended Sequence)
 
-1. Complete remaining P0.1 value payload typing tightening from observed `node.get_value` payloads
+1. P0 exit gate code review (all P0 work completed so far)
 2. P2.3 protocol wrappers for inclusion/exclusion commands (mutation-gated) to pair with existing controller inclusion/security event typing
-3. Continue P0.3 event typing expansion for any newly observed node/controller events
+3. Continue event typing expansion for newly observed node/controller events as follow-up
