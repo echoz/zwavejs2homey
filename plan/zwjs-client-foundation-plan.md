@@ -243,6 +243,7 @@ Build a fully featured, protocol-oriented `zwjs` client in `packages/core` for `
 9. [x] Add typed value wrappers for `node.get_value_metadata` and `node.get_value_timestamp` with fixture-backed wrapper tests
 10. [x] Add specialized node event typing helpers (`value updated`, `metadata updated`, `notification`) and fixture-backed normalizer tests
 11. [x] Add specialized driver/controller event typing helpers (`driver.logging`, controller NVM progress events) and fixture-backed normalizer tests
+12. [x] Add in-process `ws` integration harness test covering real `WsTransport` + `ZwjsClient` handshake and command success/failure semantics
 7. [ ] Validate expanded command/event coverage against real instance (read-only only)
 8. [ ] Add mutating-command layer (still protocol-oriented) with safety guards (separate phase)
 
