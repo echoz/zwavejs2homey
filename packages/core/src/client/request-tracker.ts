@@ -15,7 +15,13 @@ export class RequestTracker {
     const promise = new Promise<T>((resolve, reject) => {
       const timeoutId = setTimeout(() => {
         this.pending.delete(id);
-        reject(new ZwjsClientError({ code: 'REQUEST_TIMEOUT', message: `Request timed out: ${id}`, retryable: true }));
+        reject(
+          new ZwjsClientError({
+            code: 'REQUEST_TIMEOUT',
+            message: `Request timed out: ${id}`,
+            retryable: true,
+          }),
+        );
       }, timeoutMs);
       this.pending.set(id, { resolve: resolve as (v: unknown) => void, reject, timeoutId });
     });

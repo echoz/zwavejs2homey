@@ -3,9 +3,11 @@
 ## 1) Goal and Scope
 
 ### Goal
+
 Build a fully featured, protocol-oriented `zwjs` client in `packages/core` for `zwave-js-server` / Z-Wave JS UI (`zwavejs2mqtt`), with no Homey-specific abstractions in the client API.
 
 ### In Scope (Foundation Completed)
+
 - WebSocket transport client (ZWJS UI)
 - Optional auth
 - Auto-reconnect with backoff
@@ -18,6 +20,7 @@ Build a fully featured, protocol-oriented `zwjs` client in `packages/core` for `
 - Read-only validation against a real production instance
 
 ### Out of Scope (still)
+
 - Homey integration abstractions in the core client API
 - Homey driver/capability mapping
 - Pairing flows
@@ -28,9 +31,11 @@ Build a fully featured, protocol-oriented `zwjs` client in `packages/core` for `
 ## 2) Public API and Types (Current + Target)
 
 ### Factory
+
 - `createZwjsClient(config: ZwjsClientConfig): ZwjsClient`
 
 ### Client API
+
 - `start(): Promise<void>`
 - `stop(): Promise<void>`
 - `getStatus(): ZwjsClientStatus`
@@ -41,6 +46,7 @@ Build a fully featured, protocol-oriented `zwjs` client in `packages/core` for `
 - thin read-only wrappers (e.g. `getServerInfo()`, `getNodeList()`)
 
 ### Config (`ZwjsClientConfig`)
+
 - `url: string`
 - `auth?: { type: 'none' } | { type: 'bearer'; token: string }`
 - `reconnect?: ReconnectPolicy`
@@ -49,6 +55,7 @@ Build a fully featured, protocol-oriented `zwjs` client in `packages/core` for `
 - `logger?: ClientLogger`
 
 ### Status (`ZwjsClientStatus`)
+
 - lifecycle state (`idle|connecting|connected|reconnecting|stopping|stopped|error`)
 - `transportConnected`
 - optional auth status
@@ -59,12 +66,14 @@ Build a fully featured, protocol-oriented `zwjs` client in `packages/core` for `
 - `lastError`
 
 ### Event API
+
 - Typed callback subscription
 - `onEvent()` returns unsubscribe
 - Ordered delivery
 - Subscriber errors isolated
 
 ### Initial Event Categories
+
 - `client.lifecycle`
 - `client.reconnect.scheduled`
 - `transport.connected`
@@ -78,11 +87,13 @@ Build a fully featured, protocol-oriented `zwjs` client in `packages/core` for `
 - `node.event.raw-normalized`
 
 ### Initial Read Surface
+
 - `getServerInfo()` (thin protocol wrapper, normalized response)
 - `getNodeList()` (thin protocol wrapper, normalized response)
 - `controller.get_state` / `driver.get_config` candidates next
 
 ### Target Expansion (next phases)
+
 - More typed wrappers over `sendCommand(...)` for read-only commands first
 - Typed protocol frame/result/error/event models (broader coverage)
 - Event source-specific typing (`driver`, `controller`, `node`, `zniffer`)
@@ -90,6 +101,7 @@ Build a fully featured, protocol-oriented `zwjs` client in `packages/core` for `
 ## 3) Internal Architecture
 
 ### Core Modules
+
 - `client/zwjs-client.ts`
 - `client/state-machine.ts`
 - `client/reconnect.ts`
@@ -103,6 +115,7 @@ Build a fully featured, protocol-oriented `zwjs` client in `packages/core` for `
 - `errors.ts`
 
 ### Separation of Concerns
+
 - Client owns protocol lifecycle/reconnect/requests/subscribers/public API
 - Transport wraps `ws` only (no protocol parsing)
 - Detector selects normalizer adapter
@@ -110,39 +123,46 @@ Build a fully featured, protocol-oriented `zwjs` client in `packages/core` for `
 - State machine enforces valid transitions
 
 ### Pedantic Rule
+
 - Main client never directly parses protocol payloads
 
 ## 4) Lifecycle, Reconnect, Auth
 
 ### Lifecycle
+
 - `start()` idempotent
 - `stop()` idempotent
 - `start()` during `stopping` waits, then starts
 - `stop()` cancels reconnect, closes socket, rejects pending requests
 
 ### Reconnect (default)
+
 - enabled
 - exponential backoff + jitter
 - resets after stable connection
 - no reconnect after explicit `stop()`
 
 ### Default Reconnect Values
+
 - initial: `500ms`
 - max: `10s`
 - multiplier: `2`
 - jitter: `0.2`
 
 ### Auth (v1)
+
 - optional (`none` or `bearer`)
 - auth success emits `auth.succeeded`
 - deterministic auth failure emits `auth.failed`
 - deterministic auth failure is non-retryable in v1
 
 ### Error Posture
+
 - structured errors only
 - no silent failures
 
 ### Handshake (v1)
+
 - Parse initial `version` frame on connect
 - Send `initialize` (schema/version preferences)
 - Send `start_listening`
@@ -151,24 +171,29 @@ Build a fully featured, protocol-oriented `zwjs` client in `packages/core` for `
 ## 5) Version Adaptation + Canonical Data
 
 ### Version Strategy
+
 - Always use adapter registry
 - Outcomes: `exact`, `family`, `fallback`
 - `family` / `fallback` emit `compat.warning`
 
 ### Normalizer Contract
+
 - input: raw frame/message
 - output: canonical events/results or typed protocol error
 - no uncaught throws across client boundary
 
 ### Canonical Results (v1)
+
 - `ServerInfoResult`: normalized server/protocol metadata
 - `NodeListResult`: canonical node summaries (safe subset only)
 
 ### Protocol Fidelity Rule
+
 - Prefer `zwave-js-server` command/result/event names and shapes
 - Do not introduce Homey-centric naming in the core protocol client
 
 ### Parsing Posture
+
 - validate required fields
 - tolerate unknown extra fields
 - missing required fields => typed error
@@ -177,6 +202,7 @@ Build a fully featured, protocol-oriented `zwjs` client in `packages/core` for `
 ## 6) Testing and Acceptance
 
 ### Tests (foundation done / next)
+
 - mocked WebSocket unit tests for lifecycle/reconnect/request timeouts
 - fixture-based normalizer tests for version/schema variations
 - contract tests for public API (`onEvent`, ordering, unsubscribe, `getStatus`)
@@ -184,6 +210,7 @@ Build a fully featured, protocol-oriented `zwjs` client in `packages/core` for `
 - next: handshake/integration sequence tests (`version` -> `initialize` -> `start_listening`)
 
 ### Fixture Coverage
+
 - server info payloads
 - node snapshot payloads
 - node event payloads
@@ -191,6 +218,7 @@ Build a fully featured, protocol-oriented `zwjs` client in `packages/core` for `
 - version mismatch cases (exact/family/fallback)
 
 ### Acceptance Criteria (Foundation)
+
 - client connects via `ws`
 - optional auth works
 - reconnect/backoff works
@@ -204,6 +232,7 @@ Build a fully featured, protocol-oriented `zwjs` client in `packages/core` for `
 - Homey app compiles against new API
 
 ### Foundation Status
+
 - [x] Client connects via `ws`
 - [x] Optional auth path exists
 - [x] Reconnect/backoff implemented
@@ -219,6 +248,7 @@ Build a fully featured, protocol-oriented `zwjs` client in `packages/core` for `
 ## 7) Implementation Sequence
 
 ### Completed (Foundation)
+
 1. [x] Define public types/interfaces/errors (`zwjs` naming)
 2. [x] Implement subscriber registry + state machine + reconnect helpers
 3. [x] Implement `ws` transport wrapper
@@ -232,6 +262,7 @@ Build a fully featured, protocol-oriented `zwjs` client in `packages/core` for `
 11. [x] Update docs + sprint plan
 
 ### Next (Protocol Coverage Expansion)
+
 1. [x] Add exact typed protocol result/error frame models (`type: result`, `success`, `error`)
 2. [x] Add explicit handshake state machine (`version received`, `initialized`, `listening`)
 3. [x] Add typed wrappers for read-only commands (`driver.get_config`, `controller.get_state`, selected `node.*`)
@@ -245,10 +276,11 @@ Build a fully featured, protocol-oriented `zwjs` client in `packages/core` for `
 11. [x] Add specialized driver/controller event typing helpers (`driver.logging`, controller NVM progress events) and fixture-backed normalizer tests
 12. [x] Add in-process `ws` integration harness test covering real `WsTransport` + `ZwjsClient` handshake and command success/failure semantics
 13. [x] Add typed read-only wrappers for `driver.get_log_config`, `driver.is_statistics_enabled`, and `node.get_supported_notification_events` with fixture-backed tests
-7. [x] Validate expanded command/event coverage against real instance (read-only only)
-8. [x] Add mutating-command layer (still protocol-oriented) with safety guards (separate phase)
+14. [x] Validate expanded command/event coverage against real instance (read-only only)
+15. [x] Add mutating-command layer (still protocol-oriented) with safety guards (separate phase)
 
 ### Read-only Validation Notes (2026-02-23, production instance `ws://192.168.1.15:3000`)
+
 - Verified handshake path: `version` -> `set_api_schema(0)` -> `initialize({ schemaVersion: 0 })` -> `start_listening`
 - Verified read-only wrappers succeed:
   - `driver.get_config`
@@ -263,6 +295,7 @@ Build a fully featured, protocol-oriented `zwjs` client in `packages/core` for `
 - Observed event stream included controller events and normalized generic events during listening
 
 ## Assumptions and Defaults
+
 - WebSocket-first (not MQTT/REST) for v1
 - Config passed by caller (Homey later, but client is caller-agnostic)
 - Auto reconnect enabled by default
@@ -274,5 +307,6 @@ Build a fully featured, protocol-oriented `zwjs` client in `packages/core` for `
 - `file:../packages/core` dependency remains for now due npm `workspace:*` issue in this environment
 
 ## Current Direction (Confirmed)
+
 - The core client is protocol-oriented (`zwave-js-server`), not Homey-oriented
 - Homey integration remains a separate layer that consumes the protocol client

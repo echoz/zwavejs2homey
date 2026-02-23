@@ -12,7 +12,12 @@ export function detectProtocolInfo(message: unknown): DetectedProtocolInfo {
   }
   if (typeof record.version === 'string') return { serverVersion: record.version };
   if (typeof record.serverVersion === 'string') return { serverVersion: record.serverVersion };
-  if (typeof record.type === 'string' && record.type === 'server.info' && typeof record.payload === 'object' && record.payload) {
+  if (
+    typeof record.type === 'string' &&
+    record.type === 'server.info' &&
+    typeof record.payload === 'object' &&
+    record.payload
+  ) {
     const payload = record.payload as Record<string, unknown>;
     if (typeof payload.serverVersion === 'string') return { serverVersion: payload.serverVersion };
   }

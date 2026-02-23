@@ -11,7 +11,10 @@ const ALLOWED_TRANSITIONS: Record<ZwjsLifecycleState, ZwjsLifecycleState[]> = {
   error: ['connecting', 'reconnecting', 'stopping', 'stopped'],
 };
 
-export function transitionState(current: ZwjsLifecycleState, next: ZwjsLifecycleState): ZwjsLifecycleState {
+export function transitionState(
+  current: ZwjsLifecycleState,
+  next: ZwjsLifecycleState,
+): ZwjsLifecycleState {
   if (current === next) return current;
   if (!ALLOWED_TRANSITIONS[current].includes(next)) {
     throw new ZwjsClientError({

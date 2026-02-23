@@ -7,7 +7,12 @@ const { loadFixture } = require('./fixtures/_load-fixture.js');
 
 test('default normalizer exposes successful result via requestResponse', () => {
   const n = new DefaultZwjsFamilyNormalizer();
-  const out = n.normalizeIncoming({ type: 'result', messageId: '1', success: true, result: { ok: true } });
+  const out = n.normalizeIncoming({
+    type: 'result',
+    messageId: '1',
+    success: true,
+    result: { ok: true },
+  });
   assert.deepEqual(out.requestResponse, { id: '1', payload: { ok: true } });
   assert.equal(out.requestError, undefined);
 });

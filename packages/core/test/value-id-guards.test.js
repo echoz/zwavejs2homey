@@ -9,10 +9,7 @@ const {
 const { loadFixture } = require('./fixtures/_load-fixture.js');
 
 test('recognizes valid ZwjsValueId and rejects invalid shapes', () => {
-  assert.equal(
-    isZwjsValueId({ commandClass: 37, property: 'currentValue', endpoint: 0 }),
-    true,
-  );
+  assert.equal(isZwjsValueId({ commandClass: 37, property: 'currentValue', endpoint: 0 }), true);
   assert.equal(
     isZwjsValueId({ commandClass: 'Binary Switch', property: 'currentValue', propertyKey: 'foo' }),
     true,
@@ -37,7 +34,10 @@ test('extracts defined value ids from array result shape', () => {
 });
 
 test('extracts defined value ids from object wrapper shape and filters invalid entries', () => {
-  const fixture = loadFixture('zwjs-server', 'result.node.get_defined_value_ids.success.object-wrapper.json');
+  const fixture = loadFixture(
+    'zwjs-server',
+    'result.node.get_defined_value_ids.success.object-wrapper.json',
+  );
   const out = extractZwjsDefinedValueIds(fixture);
   assert.equal(out.length, 2);
   assert.equal(out[1].commandClass, 112);
@@ -45,7 +45,10 @@ test('extracts defined value ids from object wrapper shape and filters invalid e
 });
 
 test('extracts defined value ids from valueIds wrapper shape used by observed server responses', () => {
-  const fixture = loadFixture('zwjs-server', 'result.node.get_defined_value_ids.success.valueIds-wrapper.json');
+  const fixture = loadFixture(
+    'zwjs-server',
+    'result.node.get_defined_value_ids.success.valueIds-wrapper.json',
+  );
   const out = extractZwjsDefinedValueIds(fixture);
   assert.equal(out.length, 2);
   assert.equal(out[0].propertyName, 'Current value');

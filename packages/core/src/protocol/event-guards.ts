@@ -24,27 +24,42 @@ import type {
   ZwjsProtocolEventPayload,
 } from '../client/types';
 
-function isNodeEventBase(event: ZwjsProtocolEventPayload, expectedName: string): event is ZwjsProtocolEventPayload & { source: 'node'; event: string; nodeId: number } {
-  return event.source === 'node' && event.event === expectedName && typeof event.nodeId === 'number';
+function isNodeEventBase(
+  event: ZwjsProtocolEventPayload,
+  expectedName: string,
+): event is ZwjsProtocolEventPayload & { source: 'node'; event: string; nodeId: number } {
+  return (
+    event.source === 'node' && event.event === expectedName && typeof event.nodeId === 'number'
+  );
 }
 
-export function isZwjsNodeValueUpdatedEvent(event: ZwjsProtocolEventPayload): event is ZwjsNodeValueUpdatedEventPayload {
+export function isZwjsNodeValueUpdatedEvent(
+  event: ZwjsProtocolEventPayload,
+): event is ZwjsNodeValueUpdatedEventPayload {
   return isNodeEventBase(event, 'value updated');
 }
 
-export function isZwjsNodeValueAddedEvent(event: ZwjsProtocolEventPayload): event is ZwjsNodeValueAddedEventPayload {
+export function isZwjsNodeValueAddedEvent(
+  event: ZwjsProtocolEventPayload,
+): event is ZwjsNodeValueAddedEventPayload {
   return isNodeEventBase(event, 'value added');
 }
 
-export function isZwjsNodeValueRemovedEvent(event: ZwjsProtocolEventPayload): event is ZwjsNodeValueRemovedEventPayload {
+export function isZwjsNodeValueRemovedEvent(
+  event: ZwjsProtocolEventPayload,
+): event is ZwjsNodeValueRemovedEventPayload {
   return isNodeEventBase(event, 'value removed');
 }
 
-export function isZwjsNodeValueNotificationEvent(event: ZwjsProtocolEventPayload): event is ZwjsNodeValueNotificationEventPayload {
+export function isZwjsNodeValueNotificationEvent(
+  event: ZwjsProtocolEventPayload,
+): event is ZwjsNodeValueNotificationEventPayload {
   return isNodeEventBase(event, 'value notification');
 }
 
-export function isZwjsNodeInterviewStartedEvent(event: ZwjsProtocolEventPayload): event is ZwjsNodeInterviewStartedEventPayload {
+export function isZwjsNodeInterviewStartedEvent(
+  event: ZwjsProtocolEventPayload,
+): event is ZwjsNodeInterviewStartedEventPayload {
   return isNodeEventBase(event, 'interview started');
 }
 
@@ -54,7 +69,9 @@ export function isZwjsNodeInterviewCompletedEvent(
   return isNodeEventBase(event, 'interview completed');
 }
 
-export function isZwjsNodeInterviewFailedEvent(event: ZwjsProtocolEventPayload): event is ZwjsNodeInterviewFailedEventPayload {
+export function isZwjsNodeInterviewFailedEvent(
+  event: ZwjsProtocolEventPayload,
+): event is ZwjsNodeInterviewFailedEventPayload {
   return isNodeEventBase(event, 'interview failed');
 }
 
@@ -69,24 +86,38 @@ export function isZwjsNodeInterviewStageCompletedEvent(
   );
 }
 
-export function isZwjsNodeMetadataUpdatedEvent(event: ZwjsProtocolEventPayload): event is ZwjsNodeMetadataUpdatedEventPayload {
+export function isZwjsNodeMetadataUpdatedEvent(
+  event: ZwjsProtocolEventPayload,
+): event is ZwjsNodeMetadataUpdatedEventPayload {
   return isNodeEventBase(event, 'metadata updated');
 }
 
-export function isZwjsNodeNotificationEvent(event: ZwjsProtocolEventPayload): event is ZwjsNodeNotificationEventPayload {
+export function isZwjsNodeNotificationEvent(
+  event: ZwjsProtocolEventPayload,
+): event is ZwjsNodeNotificationEventPayload {
   return isNodeEventBase(event, 'notification');
 }
 
-export function isZwjsNodeWakeUpEvent(event: ZwjsProtocolEventPayload): event is ZwjsNodeWakeUpEventPayload {
+export function isZwjsNodeWakeUpEvent(
+  event: ZwjsProtocolEventPayload,
+): event is ZwjsNodeWakeUpEventPayload {
   return isNodeEventBase(event, 'wake up');
 }
 
-export function isZwjsNodeSleepEvent(event: ZwjsProtocolEventPayload): event is ZwjsNodeSleepEventPayload {
+export function isZwjsNodeSleepEvent(
+  event: ZwjsProtocolEventPayload,
+): event is ZwjsNodeSleepEventPayload {
   return isNodeEventBase(event, 'sleep');
 }
 
-export function isZwjsDriverLoggingEvent(event: ZwjsProtocolEventPayload): event is ZwjsDriverLoggingEventPayload {
-  return event.source === 'driver' && event.event === 'logging' && typeof event.formattedMessage === 'string';
+export function isZwjsDriverLoggingEvent(
+  event: ZwjsProtocolEventPayload,
+): event is ZwjsDriverLoggingEventPayload {
+  return (
+    event.source === 'driver' &&
+    event.event === 'logging' &&
+    typeof event.formattedMessage === 'string'
+  );
 }
 
 export function isZwjsControllerGrantSecurityClassesEvent(
@@ -103,7 +134,11 @@ export function isZwjsControllerGrantSecurityClassesEvent(
 export function isZwjsControllerValidateDskAndEnterPinEvent(
   event: ZwjsProtocolEventPayload,
 ): event is ZwjsControllerValidateDskAndEnterPinEventPayload {
-  return event.source === 'controller' && event.event === 'validate dsk and enter pin' && typeof event.dsk === 'string';
+  return (
+    event.source === 'controller' &&
+    event.event === 'validate dsk and enter pin' &&
+    typeof event.dsk === 'string'
+  );
 }
 
 export function isZwjsControllerInclusionAbortedEvent(

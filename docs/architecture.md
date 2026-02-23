@@ -16,6 +16,7 @@ Bridge Z-Wave JS data and behavior into a Homey app with a clear separation betw
 ### Core (`packages/core`)
 
 Owns:
+
 - Z-Wave JS Server protocol client (`zwjs` client)
 - Z-Wave JS connection/session lifecycle
 - Protocol request/response/event handling
@@ -23,6 +24,7 @@ Owns:
 - Thin protocol-oriented command wrappers
 
 Does not own:
+
 - Homey SDK classes
 - Homey capability mappings
 - Homey pairing UI
@@ -32,6 +34,7 @@ Does not own:
 ### Homey App (`co.lazylabs.zwavejs2homey`)
 
 Owns:
+
 - App lifecycle (`onInit`, `onUninit`)
 - Driver/device registration
 - Pairing flows
@@ -43,11 +46,13 @@ Owns:
 The Homey app will import a protocol-first `zwjs` client surface from `@zwavejs2homey/core`.
 
 Current direction:
+
 - `createZwjsClient()`
 - typed lifecycle/status/events
 - protocol commands (`messageId` + `command`) and thin wrappers
 
 Future likely additions:
+
 - Higher-level bridge layer (still in core or separate package)
 - Homey integration adapter (outside protocol client)
 - Device discovery/mapping abstractions

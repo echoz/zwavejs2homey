@@ -39,7 +39,10 @@ export class ZwjsClientError extends Error {
   }
 }
 
-export function toErrorSummary(error: unknown, fallbackCode: ZwjsClientErrorCode = 'PROTOCOL_ERROR'): ClientErrorSummary {
+export function toErrorSummary(
+  error: unknown,
+  fallbackCode: ZwjsClientErrorCode = 'PROTOCOL_ERROR',
+): ClientErrorSummary {
   if (error instanceof ZwjsClientError) return error.toSummary();
   if (error instanceof Error) {
     return { code: fallbackCode, message: error.message, cause: error };

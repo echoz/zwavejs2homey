@@ -22,7 +22,9 @@ export function isZwjsDefinedValueId(value: unknown): value is ZwjsDefinedValueI
   return isZwjsValueId(value);
 }
 
-export function extractZwjsDefinedValueIds(result: ZwjsDefinedValueIdsResult | unknown): ZwjsDefinedValueId[] {
+export function extractZwjsDefinedValueIds(
+  result: ZwjsDefinedValueIdsResult | unknown,
+): ZwjsDefinedValueId[] {
   if (Array.isArray(result)) {
     return result.filter(isZwjsDefinedValueId);
   }

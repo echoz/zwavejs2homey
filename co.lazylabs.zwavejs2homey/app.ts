@@ -1,7 +1,12 @@
 'use strict';
 
 import Homey from 'homey';
-import { createZwjsClient, type ClientLogger, type ZwjsClient, type ZwjsClientEvent } from '@zwavejs2homey/core';
+import {
+  createZwjsClient,
+  type ClientLogger,
+  type ZwjsClient,
+  type ZwjsClientEvent,
+} from '@zwavejs2homey/core';
 
 module.exports = class Zwavejs2HomeyApp extends Homey.App {
   private zwjsClient!: ZwjsClient;
@@ -36,4 +41,4 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
       await this.zwjsClient.stop();
     }
   }
-}
+};

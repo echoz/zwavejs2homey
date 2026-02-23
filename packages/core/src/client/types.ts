@@ -150,9 +150,13 @@ export interface ZwjsNodeStateResult {
   [key: string]: unknown;
 }
 
-export type ZwjsControllerNodeNeighborsResult = number[] | { neighbors?: number[]; [key: string]: unknown };
+export type ZwjsControllerNodeNeighborsResult =
+  | number[]
+  | { neighbors?: number[]; [key: string]: unknown };
 
-export type ZwjsDefinedValueIdsResult = ZwjsDefinedValueId[] | { values?: ZwjsDefinedValueId[]; [key: string]: unknown };
+export type ZwjsDefinedValueIdsResult =
+  | ZwjsDefinedValueId[]
+  | { values?: ZwjsDefinedValueId[]; [key: string]: unknown };
 
 export interface ZwjsNodeValueEnvelopeResult {
   value?: unknown;
@@ -191,8 +195,15 @@ export type ZwjsNodeValueTimestampResult =
     };
 export type ZwjsNodeSupportedNotificationEventsResult = Record<string, unknown> | Array<unknown>;
 export type ZwjsNodeFirmwareUpdateCapabilitiesResult = Record<string, unknown> | Array<unknown>;
-export type ZwjsNodeFirmwareUpdateCapabilitiesCachedResult = Record<string, unknown> | Array<unknown>;
-export type ZwjsNodeDateAndTimeResult = Record<string, unknown> | Array<unknown> | string | number | null;
+export type ZwjsNodeFirmwareUpdateCapabilitiesCachedResult =
+  | Record<string, unknown>
+  | Array<unknown>;
+export type ZwjsNodeDateAndTimeResult =
+  | Record<string, unknown>
+  | Array<unknown>
+  | string
+  | number
+  | null;
 export interface ZwjsNodeFirmwareUpdateInProgressResult {
   inProgress?: boolean;
   [key: string]: unknown;
@@ -480,12 +491,27 @@ export interface ZwjsEventBase {
 
 export type ZwjsClientEvent =
   | (ZwjsEventBase & { type: 'client.lifecycle'; from: ZwjsLifecycleState; to: ZwjsLifecycleState })
-  | (ZwjsEventBase & { type: 'client.reconnect.scheduled'; attempt: number; delayMs: number; reason?: ClientErrorSummary })
+  | (ZwjsEventBase & {
+      type: 'client.reconnect.scheduled';
+      attempt: number;
+      delayMs: number;
+      reason?: ClientErrorSummary;
+    })
   | (ZwjsEventBase & { type: 'transport.connected' })
-  | (ZwjsEventBase & { type: 'transport.disconnected'; code?: number; reason?: string; wasClean?: boolean })
+  | (ZwjsEventBase & {
+      type: 'transport.disconnected';
+      code?: number;
+      reason?: string;
+      wasClean?: boolean;
+    })
   | (ZwjsEventBase & { type: 'auth.succeeded' })
   | (ZwjsEventBase & { type: 'auth.failed'; error: ClientErrorSummary })
-  | (ZwjsEventBase & { type: 'compat.warning'; message: string; version?: string; adapterFamily?: string })
+  | (ZwjsEventBase & {
+      type: 'compat.warning';
+      message: string;
+      version?: string;
+      adapterFamily?: string;
+    })
   | (ZwjsEventBase & { type: 'protocol.error'; error: ClientErrorSummary; context?: unknown })
   | (ZwjsEventBase & { type: 'server.info'; info: ServerInfoResult })
   | (ZwjsEventBase & { type: 'nodes.snapshot'; nodes: NodeListResult })
@@ -493,28 +519,82 @@ export type ZwjsClientEvent =
   | (ZwjsEventBase & { type: 'zwjs.event.controller'; event: ZwjsProtocolEventPayload })
   | (ZwjsEventBase & { type: 'zwjs.event.node'; event: ZwjsProtocolEventPayload })
   | (ZwjsEventBase & { type: 'zwjs.event.zniffer'; event: ZwjsProtocolEventPayload })
-  | (ZwjsEventBase & { type: 'zwjs.event.node.value-updated'; event: ZwjsNodeValueUpdatedEventPayload })
+  | (ZwjsEventBase & {
+      type: 'zwjs.event.node.value-updated';
+      event: ZwjsNodeValueUpdatedEventPayload;
+    })
   | (ZwjsEventBase & { type: 'zwjs.event.node.value-added'; event: ZwjsNodeValueAddedEventPayload })
-  | (ZwjsEventBase & { type: 'zwjs.event.node.value-removed'; event: ZwjsNodeValueRemovedEventPayload })
-  | (ZwjsEventBase & { type: 'zwjs.event.node.value-notification'; event: ZwjsNodeValueNotificationEventPayload })
-  | (ZwjsEventBase & { type: 'zwjs.event.node.metadata-updated'; event: ZwjsNodeMetadataUpdatedEventPayload })
-  | (ZwjsEventBase & { type: 'zwjs.event.node.notification'; event: ZwjsNodeNotificationEventPayload })
+  | (ZwjsEventBase & {
+      type: 'zwjs.event.node.value-removed';
+      event: ZwjsNodeValueRemovedEventPayload;
+    })
+  | (ZwjsEventBase & {
+      type: 'zwjs.event.node.value-notification';
+      event: ZwjsNodeValueNotificationEventPayload;
+    })
+  | (ZwjsEventBase & {
+      type: 'zwjs.event.node.metadata-updated';
+      event: ZwjsNodeMetadataUpdatedEventPayload;
+    })
+  | (ZwjsEventBase & {
+      type: 'zwjs.event.node.notification';
+      event: ZwjsNodeNotificationEventPayload;
+    })
   | (ZwjsEventBase & { type: 'zwjs.event.node.wake-up'; event: ZwjsNodeWakeUpEventPayload })
   | (ZwjsEventBase & { type: 'zwjs.event.node.sleep'; event: ZwjsNodeSleepEventPayload })
-  | (ZwjsEventBase & { type: 'zwjs.event.node.interview-started'; event: ZwjsNodeInterviewStartedEventPayload })
-  | (ZwjsEventBase & { type: 'zwjs.event.node.interview-completed'; event: ZwjsNodeInterviewCompletedEventPayload })
-  | (ZwjsEventBase & { type: 'zwjs.event.node.interview-failed'; event: ZwjsNodeInterviewFailedEventPayload })
-  | (ZwjsEventBase & { type: 'zwjs.event.node.interview-stage-completed'; event: ZwjsNodeInterviewStageCompletedEventPayload })
+  | (ZwjsEventBase & {
+      type: 'zwjs.event.node.interview-started';
+      event: ZwjsNodeInterviewStartedEventPayload;
+    })
+  | (ZwjsEventBase & {
+      type: 'zwjs.event.node.interview-completed';
+      event: ZwjsNodeInterviewCompletedEventPayload;
+    })
+  | (ZwjsEventBase & {
+      type: 'zwjs.event.node.interview-failed';
+      event: ZwjsNodeInterviewFailedEventPayload;
+    })
+  | (ZwjsEventBase & {
+      type: 'zwjs.event.node.interview-stage-completed';
+      event: ZwjsNodeInterviewStageCompletedEventPayload;
+    })
   | (ZwjsEventBase & { type: 'zwjs.event.driver.logging'; event: ZwjsDriverLoggingEventPayload })
-  | (ZwjsEventBase & { type: 'zwjs.event.controller.grant-security-classes'; event: ZwjsControllerGrantSecurityClassesEventPayload })
-  | (ZwjsEventBase & { type: 'zwjs.event.controller.validate-dsk-and-enter-pin'; event: ZwjsControllerValidateDskAndEnterPinEventPayload })
-  | (ZwjsEventBase & { type: 'zwjs.event.controller.inclusion-aborted'; event: ZwjsControllerInclusionAbortedEventPayload })
-  | (ZwjsEventBase & { type: 'zwjs.event.controller.nvm-backup-progress'; event: ZwjsControllerNvmBackupProgressEventPayload })
-  | (ZwjsEventBase & { type: 'zwjs.event.controller.nvm-convert-progress'; event: ZwjsControllerNvmConvertProgressEventPayload })
-  | (ZwjsEventBase & { type: 'zwjs.event.controller.nvm-restore-progress'; event: ZwjsControllerNvmRestoreProgressEventPayload })
-  | (ZwjsEventBase & { type: 'zwjs.event.node.test-powerlevel-progress'; event: ZwjsNodeTestPowerlevelProgressEventPayload })
-  | (ZwjsEventBase & { type: 'zwjs.event.node.check-lifeline-health-progress'; event: ZwjsNodeCheckLifelineHealthProgressEventPayload })
-  | (ZwjsEventBase & { type: 'zwjs.event.node.check-route-health-progress'; event: ZwjsNodeCheckRouteHealthProgressEventPayload })
+  | (ZwjsEventBase & {
+      type: 'zwjs.event.controller.grant-security-classes';
+      event: ZwjsControllerGrantSecurityClassesEventPayload;
+    })
+  | (ZwjsEventBase & {
+      type: 'zwjs.event.controller.validate-dsk-and-enter-pin';
+      event: ZwjsControllerValidateDskAndEnterPinEventPayload;
+    })
+  | (ZwjsEventBase & {
+      type: 'zwjs.event.controller.inclusion-aborted';
+      event: ZwjsControllerInclusionAbortedEventPayload;
+    })
+  | (ZwjsEventBase & {
+      type: 'zwjs.event.controller.nvm-backup-progress';
+      event: ZwjsControllerNvmBackupProgressEventPayload;
+    })
+  | (ZwjsEventBase & {
+      type: 'zwjs.event.controller.nvm-convert-progress';
+      event: ZwjsControllerNvmConvertProgressEventPayload;
+    })
+  | (ZwjsEventBase & {
+      type: 'zwjs.event.controller.nvm-restore-progress';
+      event: ZwjsControllerNvmRestoreProgressEventPayload;
+    })
+  | (ZwjsEventBase & {
+      type: 'zwjs.event.node.test-powerlevel-progress';
+      event: ZwjsNodeTestPowerlevelProgressEventPayload;
+    })
+  | (ZwjsEventBase & {
+      type: 'zwjs.event.node.check-lifeline-health-progress';
+      event: ZwjsNodeCheckLifelineHealthProgressEventPayload;
+    })
+  | (ZwjsEventBase & {
+      type: 'zwjs.event.node.check-route-health-progress';
+      event: ZwjsNodeCheckRouteHealthProgressEventPayload;
+    })
   | (ZwjsEventBase & { type: 'node.event.raw-normalized'; event: Record<string, unknown> });
 
 export type ZwjsClientEventInput = ZwjsClientEvent extends infer T
@@ -533,30 +613,61 @@ export interface ZwjsClient {
   startListening(): Promise<ZwjsCommandResult<{ state?: unknown }>>;
   startListeningLogs(filter?: ZwjsLogFilter): Promise<ZwjsCommandResult>;
   stopListeningLogs(): Promise<ZwjsCommandResult>;
-  sendCommand<TResult = unknown, TArgs = Record<string, unknown>>(request: ZwjsCommandRequest<TArgs>): Promise<ZwjsCommandResult<TResult>>;
-  sendMutationCommand<TResult = unknown, TArgs = Record<string, unknown>>(request: ZwjsCommandRequest<TArgs>): Promise<ZwjsCommandResult<TResult>>;
+  sendCommand<TResult = unknown, TArgs = Record<string, unknown>>(
+    request: ZwjsCommandRequest<TArgs>,
+  ): Promise<ZwjsCommandResult<TResult>>;
+  sendMutationCommand<TResult = unknown, TArgs = Record<string, unknown>>(
+    request: ZwjsCommandRequest<TArgs>,
+  ): Promise<ZwjsCommandResult<TResult>>;
   getDriverConfig(): Promise<ZwjsCommandResult<ZwjsDriverConfig>>;
   getDriverLogConfig(): Promise<ZwjsCommandResult<ZwjsDriverLogConfigResult>>;
   isDriverStatisticsEnabled(): Promise<ZwjsCommandResult<ZwjsDriverStatisticsEnabledResult>>;
   getControllerState(): Promise<ZwjsCommandResult<ZwjsControllerStateResult>>;
-  getControllerNodeNeighbors(nodeId: number): Promise<ZwjsCommandResult<ZwjsControllerNodeNeighborsResult>>;
+  getControllerNodeNeighbors(
+    nodeId: number,
+  ): Promise<ZwjsCommandResult<ZwjsControllerNodeNeighborsResult>>;
   getNodeState(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeStateResult>>;
   getNodeDefinedValueIds(nodeId: number): Promise<ZwjsCommandResult<ZwjsDefinedValueIdsResult>>;
-  getNodeValueMetadata(nodeId: number, valueId: ZwjsValueId): Promise<ZwjsCommandResult<ZwjsNodeValueMetadataResult>>;
-  getNodeValue(nodeId: number, valueId: ZwjsValueId): Promise<ZwjsCommandResult<ZwjsNodeValueResult>>;
-  getNodeValueTimestamp(nodeId: number, valueId: ZwjsValueId): Promise<ZwjsCommandResult<ZwjsNodeValueTimestampResult>>;
-  getNodeSupportedNotificationEvents(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeSupportedNotificationEventsResult>>;
-  getNodeFirmwareUpdateCapabilities(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeFirmwareUpdateCapabilitiesResult>>;
+  getNodeValueMetadata(
+    nodeId: number,
+    valueId: ZwjsValueId,
+  ): Promise<ZwjsCommandResult<ZwjsNodeValueMetadataResult>>;
+  getNodeValue(
+    nodeId: number,
+    valueId: ZwjsValueId,
+  ): Promise<ZwjsCommandResult<ZwjsNodeValueResult>>;
+  getNodeValueTimestamp(
+    nodeId: number,
+    valueId: ZwjsValueId,
+  ): Promise<ZwjsCommandResult<ZwjsNodeValueTimestampResult>>;
+  getNodeSupportedNotificationEvents(
+    nodeId: number,
+  ): Promise<ZwjsCommandResult<ZwjsNodeSupportedNotificationEventsResult>>;
+  getNodeFirmwareUpdateCapabilities(
+    nodeId: number,
+  ): Promise<ZwjsCommandResult<ZwjsNodeFirmwareUpdateCapabilitiesResult>>;
   getNodeFirmwareUpdateCapabilitiesCached(
     nodeId: number,
   ): Promise<ZwjsCommandResult<ZwjsNodeFirmwareUpdateCapabilitiesCachedResult>>;
   getNodeDateAndTime(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeDateAndTimeResult>>;
-  isNodeFirmwareUpdateInProgress(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeFirmwareUpdateInProgressResult>>;
-  getNodeFirmwareUpdateProgress(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeFirmwareUpdateProgressResult>>;
-  isNodeHealthCheckInProgress(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeHealthCheckInProgressResult>>;
-  hasNodeDeviceConfigChanged(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeDeviceConfigChangedResult>>;
-  beginInclusion(args?: ZwjsControllerBeginInclusionArgs): Promise<ZwjsCommandResult<ZwjsControllerInclusionCommandResult>>;
-  beginExclusion(args?: ZwjsControllerBeginExclusionArgs): Promise<ZwjsCommandResult<ZwjsControllerInclusionCommandResult>>;
+  isNodeFirmwareUpdateInProgress(
+    nodeId: number,
+  ): Promise<ZwjsCommandResult<ZwjsNodeFirmwareUpdateInProgressResult>>;
+  getNodeFirmwareUpdateProgress(
+    nodeId: number,
+  ): Promise<ZwjsCommandResult<ZwjsNodeFirmwareUpdateProgressResult>>;
+  isNodeHealthCheckInProgress(
+    nodeId: number,
+  ): Promise<ZwjsCommandResult<ZwjsNodeHealthCheckInProgressResult>>;
+  hasNodeDeviceConfigChanged(
+    nodeId: number,
+  ): Promise<ZwjsCommandResult<ZwjsNodeDeviceConfigChangedResult>>;
+  beginInclusion(
+    args?: ZwjsControllerBeginInclusionArgs,
+  ): Promise<ZwjsCommandResult<ZwjsControllerInclusionCommandResult>>;
+  beginExclusion(
+    args?: ZwjsControllerBeginExclusionArgs,
+  ): Promise<ZwjsCommandResult<ZwjsControllerInclusionCommandResult>>;
   stopInclusion(): Promise<ZwjsCommandResult<ZwjsControllerInclusionCommandResult>>;
   stopExclusion(): Promise<ZwjsCommandResult<ZwjsControllerInclusionCommandResult>>;
   getServerInfo(): Promise<ServerInfoResult>;

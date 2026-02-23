@@ -29,7 +29,10 @@ test('normalizes start_listening result state nodes to snapshot', () => {
     ready: true,
     status: 'alive',
   });
-  assert.equal(out.events.some((e) => e.type === 'nodes.snapshot'), true);
+  assert.equal(
+    out.events.some((e) => e.type === 'nodes.snapshot'),
+    true,
+  );
 });
 
 test('normalizes event frame to raw-normalized event', () => {
@@ -51,7 +54,10 @@ test('normalizes controller event frame to source-aware typed event', () => {
   assert.equal(out.events[0].type, 'zwjs.event.controller');
   assert.equal(out.events[0].event.event, 'nvm restore progress');
   assert.equal(out.events[0].event.bytesWritten, 128);
-  assert.equal(out.events.some((e) => e.type === 'zwjs.event.controller.nvm-restore-progress'), true);
+  assert.equal(
+    out.events.some((e) => e.type === 'zwjs.event.controller.nvm-restore-progress'),
+    true,
+  );
 });
 
 test('normalizes failed result as requestError only', () => {
@@ -174,7 +180,9 @@ test('emits specialized node interview-failed event', () => {
 test('emits specialized node interview-stage-completed event', () => {
   const msg = loadFixture('zwjs-server', 'event.node.interview-stage-completed.json');
   const out = normalizer.normalizeIncoming(msg);
-  const specialized = out.events.find((e) => e.type === 'zwjs.event.node.interview-stage-completed');
+  const specialized = out.events.find(
+    (e) => e.type === 'zwjs.event.node.interview-stage-completed',
+  );
   assert.ok(specialized);
   assert.equal(specialized.event.stageName, 'CommandClasses');
 });
@@ -190,7 +198,9 @@ test('emits specialized driver logging event', () => {
 test('emits specialized controller grant security classes event', () => {
   const msg = loadFixture('zwjs-server', 'event.controller.grant-security-classes.json');
   const out = normalizer.normalizeIncoming(msg);
-  const specialized = out.events.find((e) => e.type === 'zwjs.event.controller.grant-security-classes');
+  const specialized = out.events.find(
+    (e) => e.type === 'zwjs.event.controller.grant-security-classes',
+  );
   assert.ok(specialized);
   assert.equal(specialized.event.requested.s2AccessControl, true);
 });
@@ -198,7 +208,9 @@ test('emits specialized controller grant security classes event', () => {
 test('emits specialized controller validate dsk and enter pin event', () => {
   const msg = loadFixture('zwjs-server', 'event.controller.validate-dsk-and-enter-pin.json');
   const out = normalizer.normalizeIncoming(msg);
-  const specialized = out.events.find((e) => e.type === 'zwjs.event.controller.validate-dsk-and-enter-pin');
+  const specialized = out.events.find(
+    (e) => e.type === 'zwjs.event.controller.validate-dsk-and-enter-pin',
+  );
   assert.ok(specialized);
   assert.equal(typeof specialized.event.dsk, 'string');
 });
@@ -214,7 +226,9 @@ test('emits specialized controller inclusion aborted event', () => {
 test('emits specialized controller nvm convert progress event', () => {
   const msg = loadFixture('zwjs-server', 'event.controller.nvm-convert-progress.json');
   const out = normalizer.normalizeIncoming(msg);
-  const specialized = out.events.find((e) => e.type === 'zwjs.event.controller.nvm-convert-progress');
+  const specialized = out.events.find(
+    (e) => e.type === 'zwjs.event.controller.nvm-convert-progress',
+  );
   assert.ok(specialized);
   assert.equal(specialized.event.bytesRead, 256);
   assert.equal(specialized.event.total, 1024);
@@ -223,7 +237,9 @@ test('emits specialized controller nvm convert progress event', () => {
 test('emits specialized controller nvm backup progress event', () => {
   const msg = loadFixture('zwjs-server', 'event.controller.nvm-backup-progress.json');
   const out = normalizer.normalizeIncoming(msg);
-  const specialized = out.events.find((e) => e.type === 'zwjs.event.controller.nvm-backup-progress');
+  const specialized = out.events.find(
+    (e) => e.type === 'zwjs.event.controller.nvm-backup-progress',
+  );
   assert.ok(specialized);
   assert.equal(specialized.event.bytesRead, 64);
   assert.equal(specialized.event.total, 1024);
@@ -241,7 +257,9 @@ test('emits specialized node test powerlevel progress event', () => {
 test('emits specialized node check lifeline health progress event', () => {
   const msg = loadFixture('zwjs-server', 'event.node.check-lifeline-health-progress.json');
   const out = normalizer.normalizeIncoming(msg);
-  const specialized = out.events.find((e) => e.type === 'zwjs.event.node.check-lifeline-health-progress');
+  const specialized = out.events.find(
+    (e) => e.type === 'zwjs.event.node.check-lifeline-health-progress',
+  );
   assert.ok(specialized);
   assert.equal(specialized.event.round, 2);
   assert.equal(specialized.event.totalRounds, 5);
@@ -250,7 +268,9 @@ test('emits specialized node check lifeline health progress event', () => {
 test('emits specialized node check route health progress event', () => {
   const msg = loadFixture('zwjs-server', 'event.node.check-route-health-progress.json');
   const out = normalizer.normalizeIncoming(msg);
-  const specialized = out.events.find((e) => e.type === 'zwjs.event.node.check-route-health-progress');
+  const specialized = out.events.find(
+    (e) => e.type === 'zwjs.event.node.check-route-health-progress',
+  );
   assert.ok(specialized);
   assert.equal(specialized.event.rounds, 3);
   assert.equal(specialized.event.lastRating, 7);

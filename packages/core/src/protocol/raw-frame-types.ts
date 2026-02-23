@@ -37,7 +37,9 @@ export interface ZwjsResultErrorFrame extends RawFrame {
   error?: unknown;
 }
 
-export type ZwjsResultFrame<TResult = unknown> = ZwjsResultSuccessFrame<TResult> | ZwjsResultErrorFrame;
+export type ZwjsResultFrame<TResult = unknown> =
+  | ZwjsResultSuccessFrame<TResult>
+  | ZwjsResultErrorFrame;
 
 export interface ZwjsProtocolCommandFrame<TArgs = Record<string, unknown>> extends RawFrame {
   messageId: string;

@@ -21,24 +21,24 @@ import type {
   ZwjsClientEvent,
   ZwjsClientEventInput,
   ZwjsInitializeOptions,
-    ZwjsLogFilter,
-    ZwjsControllerBeginInclusionArgs,
-    ZwjsControllerBeginExclusionArgs,
-    ZwjsControllerInclusionCommandResult,
+  ZwjsLogFilter,
+  ZwjsControllerBeginInclusionArgs,
+  ZwjsControllerBeginExclusionArgs,
+  ZwjsControllerInclusionCommandResult,
   ZwjsNodeStateResult,
   ZwjsDefinedValueIdsResult,
   ZwjsNodeValueMetadataResult,
   ZwjsNodeValueResult,
   ZwjsNodeValueTimestampResult,
-    ZwjsNodeSupportedNotificationEventsResult,
-    ZwjsNodeFirmwareUpdateCapabilitiesResult,
-    ZwjsNodeFirmwareUpdateCapabilitiesCachedResult,
-    ZwjsNodeDateAndTimeResult,
-    ZwjsNodeFirmwareUpdateInProgressResult,
-    ZwjsNodeFirmwareUpdateProgressResult,
-    ZwjsNodeHealthCheckInProgressResult,
-    ZwjsNodeDeviceConfigChangedResult,
-    ZwjsValueId,
+  ZwjsNodeSupportedNotificationEventsResult,
+  ZwjsNodeFirmwareUpdateCapabilitiesResult,
+  ZwjsNodeFirmwareUpdateCapabilitiesCachedResult,
+  ZwjsNodeDateAndTimeResult,
+  ZwjsNodeFirmwareUpdateInProgressResult,
+  ZwjsNodeFirmwareUpdateProgressResult,
+  ZwjsNodeHealthCheckInProgressResult,
+  ZwjsNodeDeviceConfigChangedResult,
+  ZwjsValueId,
   ZwjsClientStatus,
   ZwjsLifecycleState,
 } from './types';
@@ -116,7 +116,11 @@ export class ZwjsClientImpl implements ZwjsClient {
   }
 
   async start(): Promise<void> {
-    if (this.status.lifecycle === 'connected' || this.status.lifecycle === 'connecting' || this.status.lifecycle === 'reconnecting') {
+    if (
+      this.status.lifecycle === 'connected' ||
+      this.status.lifecycle === 'connecting' ||
+      this.status.lifecycle === 'reconnecting'
+    ) {
       return this.startPromise ?? Promise.resolve();
     }
     if (this.status.lifecycle === 'stopping') {
@@ -138,9 +142,27 @@ export class ZwjsClientImpl implements ZwjsClient {
     this.setLifecycle('stopping');
 
     this.stopPromise = Promise.resolve().then(() => {
-      this.clearVersionWaiters(new ZwjsClientError({ code: 'CLIENT_STOPPED', message: 'Client stopped', retryable: false }));
-      this.clearNodeListWaiters(new ZwjsClientError({ code: 'CLIENT_STOPPED', message: 'Client stopped', retryable: false }));
-      this.requests.rejectAll(new ZwjsClientError({ code: 'CLIENT_STOPPED', message: 'Client stopped', retryable: false }));
+      this.clearVersionWaiters(
+        new ZwjsClientError({
+          code: 'CLIENT_STOPPED',
+          message: 'Client stopped',
+          retryable: false,
+        }),
+      );
+      this.clearNodeListWaiters(
+        new ZwjsClientError({
+          code: 'CLIENT_STOPPED',
+          message: 'Client stopped',
+          retryable: false,
+        }),
+      );
+      this.requests.rejectAll(
+        new ZwjsClientError({
+          code: 'CLIENT_STOPPED',
+          message: 'Client stopped',
+          retryable: false,
+        }),
+      );
       this.transport.close();
       this.status.transportConnected = false;
       this.setLifecycle('stopped');
@@ -151,7 +173,10 @@ export class ZwjsClientImpl implements ZwjsClient {
 
   async getServerInfo(): Promise<ServerInfoResult> {
     if (this.cachedServerInfo) return this.cachedServerInfo;
-    throw new ZwjsClientError({ code: 'UNSUPPORTED_OPERATION', message: 'Server info not yet available; wait for version frame after connect' });
+    throw new ZwjsClientError({
+      code: 'UNSUPPORTED_OPERATION',
+      message: 'Server info not yet available; wait for version frame after connect',
+    });
   }
 
   async getNodeList(): Promise<NodeListResult> {
@@ -166,10 +191,17 @@ export class ZwjsClientImpl implements ZwjsClient {
   async initialize(options: ZwjsInitializeOptions): Promise<ZwjsCommandResult> {
     this.ensureAdapter();
     if (!this.adapter?.buildInitializeRequest) {
-      throw new ZwjsClientError({ code: 'UNSUPPORTED_OPERATION', message: 'Initialize command not supported by selected adapter' });
+      throw new ZwjsClientError({
+        code: 'UNSUPPORTED_OPERATION',
+        message: 'Initialize command not supported by selected adapter',
+      });
     }
     const result = await this.requestProtocolCommand((id) =>
-      this.adapter!.buildInitializeRequest!(id, options.schemaVersion, options.additionalUserAgentComponents),
+      this.adapter!.buildInitializeRequest!(
+        id,
+        options.schemaVersion,
+        options.additionalUserAgentComponents,
+      ),
     );
     if (result.success) {
       this.status.initialized = true;
@@ -184,12 +216,21 @@ export class ZwjsClientImpl implements ZwjsClient {
   async startListening(): Promise<ZwjsCommandResult<{ state?: unknown }>> {
     this.ensureAdapter();
     if (this.listeningRequested) {
-      return { messageId: 'already-listening', success: true, result: { state: this.startListeningState } };
+      return {
+        messageId: 'already-listening',
+        success: true,
+        result: { state: this.startListeningState },
+      };
     }
     if (!this.adapter?.buildStartListeningRequest) {
-      throw new ZwjsClientError({ code: 'UNSUPPORTED_OPERATION', message: 'start_listening command not supported by selected adapter' });
+      throw new ZwjsClientError({
+        code: 'UNSUPPORTED_OPERATION',
+        message: 'start_listening command not supported by selected adapter',
+      });
     }
-    const result = await this.requestProtocolCommand<{ state?: unknown }>((id) => this.adapter!.buildStartListeningRequest!(id));
+    const result = await this.requestProtocolCommand<{ state?: unknown }>((id) =>
+      this.adapter!.buildStartListeningRequest!(id),
+    );
     if (result.success) {
       this.listeningRequested = true;
       this.status.listening = true;
@@ -199,7 +240,10 @@ export class ZwjsClientImpl implements ZwjsClient {
   }
 
   async startListeningLogs(filter?: ZwjsLogFilter): Promise<ZwjsCommandResult> {
-    return this.sendCommand({ command: 'start_listening_logs', ...(filter ? { args: { filter } } : {}) });
+    return this.sendCommand({
+      command: 'start_listening_logs',
+      ...(filter ? { args: { filter } } : {}),
+    });
   }
 
   async stopListeningLogs(): Promise<ZwjsCommandResult> {
@@ -211,10 +255,17 @@ export class ZwjsClientImpl implements ZwjsClient {
   ): Promise<ZwjsCommandResult<TResult>> {
     this.ensureAdapter();
     if (!this.adapter?.buildCommandRequest) {
-      throw new ZwjsClientError({ code: 'UNSUPPORTED_OPERATION', message: 'Generic command requests not supported by selected adapter' });
+      throw new ZwjsClientError({
+        code: 'UNSUPPORTED_OPERATION',
+        message: 'Generic command requests not supported by selected adapter',
+      });
     }
     return this.requestProtocolCommand<TResult>((id) =>
-      this.adapter!.buildCommandRequest!(id, request.command, (request.args ?? {}) as Record<string, unknown>),
+      this.adapter!.buildCommandRequest!(
+        id,
+        request.command,
+        (request.args ?? {}) as Record<string, unknown>,
+      ),
     );
   }
 
@@ -234,14 +285,18 @@ export class ZwjsClientImpl implements ZwjsClient {
   }
 
   async isDriverStatisticsEnabled(): Promise<ZwjsCommandResult<ZwjsDriverStatisticsEnabledResult>> {
-    return this.sendCommand<ZwjsDriverStatisticsEnabledResult>({ command: 'driver.is_statistics_enabled' });
+    return this.sendCommand<ZwjsDriverStatisticsEnabledResult>({
+      command: 'driver.is_statistics_enabled',
+    });
   }
 
   async getControllerState(): Promise<ZwjsCommandResult<ZwjsControllerStateResult>> {
     return this.sendCommand<ZwjsControllerStateResult>({ command: 'controller.get_state' });
   }
 
-  async getControllerNodeNeighbors(nodeId: number): Promise<ZwjsCommandResult<ZwjsControllerNodeNeighborsResult>> {
+  async getControllerNodeNeighbors(
+    nodeId: number,
+  ): Promise<ZwjsCommandResult<ZwjsControllerNodeNeighborsResult>> {
     return this.sendCommand<ZwjsControllerNodeNeighborsResult, { nodeId: number }>({
       command: 'controller.get_node_neighbors',
       args: { nodeId },
@@ -249,38 +304,56 @@ export class ZwjsClientImpl implements ZwjsClient {
   }
 
   async getNodeState(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeStateResult>> {
-    return this.sendCommand<ZwjsNodeStateResult, { nodeId: number }>({ command: 'node.get_state', args: { nodeId } });
+    return this.sendCommand<ZwjsNodeStateResult, { nodeId: number }>({
+      command: 'node.get_state',
+      args: { nodeId },
+    });
   }
 
-  async getNodeDefinedValueIds(nodeId: number): Promise<ZwjsCommandResult<ZwjsDefinedValueIdsResult>> {
+  async getNodeDefinedValueIds(
+    nodeId: number,
+  ): Promise<ZwjsCommandResult<ZwjsDefinedValueIdsResult>> {
     return this.sendCommand<ZwjsDefinedValueIdsResult, { nodeId: number }>({
       command: 'node.get_defined_value_ids',
       args: { nodeId },
     });
   }
 
-  async getNodeValueMetadata(nodeId: number, valueId: ZwjsValueId): Promise<ZwjsCommandResult<ZwjsNodeValueMetadataResult>> {
+  async getNodeValueMetadata(
+    nodeId: number,
+    valueId: ZwjsValueId,
+  ): Promise<ZwjsCommandResult<ZwjsNodeValueMetadataResult>> {
     return this.sendCommand<ZwjsNodeValueMetadataResult, { nodeId: number; valueId: ZwjsValueId }>({
       command: 'node.get_value_metadata',
       args: { nodeId, valueId },
     });
   }
 
-  async getNodeValue(nodeId: number, valueId: ZwjsValueId): Promise<ZwjsCommandResult<ZwjsNodeValueResult>> {
+  async getNodeValue(
+    nodeId: number,
+    valueId: ZwjsValueId,
+  ): Promise<ZwjsCommandResult<ZwjsNodeValueResult>> {
     return this.sendCommand<ZwjsNodeValueResult, { nodeId: number; valueId: ZwjsValueId }>({
       command: 'node.get_value',
       args: { nodeId, valueId },
     });
   }
 
-  async getNodeValueTimestamp(nodeId: number, valueId: ZwjsValueId): Promise<ZwjsCommandResult<ZwjsNodeValueTimestampResult>> {
-    return this.sendCommand<ZwjsNodeValueTimestampResult, { nodeId: number; valueId: ZwjsValueId }>({
-      command: 'node.get_value_timestamp',
-      args: { nodeId, valueId },
-    });
+  async getNodeValueTimestamp(
+    nodeId: number,
+    valueId: ZwjsValueId,
+  ): Promise<ZwjsCommandResult<ZwjsNodeValueTimestampResult>> {
+    return this.sendCommand<ZwjsNodeValueTimestampResult, { nodeId: number; valueId: ZwjsValueId }>(
+      {
+        command: 'node.get_value_timestamp',
+        args: { nodeId, valueId },
+      },
+    );
   }
 
-  async getNodeSupportedNotificationEvents(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeSupportedNotificationEventsResult>> {
+  async getNodeSupportedNotificationEvents(
+    nodeId: number,
+  ): Promise<ZwjsCommandResult<ZwjsNodeSupportedNotificationEventsResult>> {
     return this.sendCommand<ZwjsNodeSupportedNotificationEventsResult, { nodeId: number }>({
       command: 'node.get_supported_notification_events',
       args: { nodeId },
@@ -312,94 +385,145 @@ export class ZwjsClientImpl implements ZwjsClient {
     });
   }
 
-  async isNodeFirmwareUpdateInProgress(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeFirmwareUpdateInProgressResult>> {
+  async isNodeFirmwareUpdateInProgress(
+    nodeId: number,
+  ): Promise<ZwjsCommandResult<ZwjsNodeFirmwareUpdateInProgressResult>> {
     return this.sendCommand<ZwjsNodeFirmwareUpdateInProgressResult, { nodeId: number }>({
       command: 'node.is_firmware_update_in_progress',
       args: { nodeId },
     });
   }
 
-  async getNodeFirmwareUpdateProgress(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeFirmwareUpdateProgressResult>> {
+  async getNodeFirmwareUpdateProgress(
+    nodeId: number,
+  ): Promise<ZwjsCommandResult<ZwjsNodeFirmwareUpdateProgressResult>> {
     return this.sendCommand<ZwjsNodeFirmwareUpdateProgressResult, { nodeId: number }>({
       command: 'node.get_firmware_update_progress',
       args: { nodeId },
     });
   }
 
-  async isNodeHealthCheckInProgress(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeHealthCheckInProgressResult>> {
+  async isNodeHealthCheckInProgress(
+    nodeId: number,
+  ): Promise<ZwjsCommandResult<ZwjsNodeHealthCheckInProgressResult>> {
     return this.sendCommand<ZwjsNodeHealthCheckInProgressResult, { nodeId: number }>({
       command: 'node.is_health_check_in_progress',
       args: { nodeId },
     });
   }
 
-  async hasNodeDeviceConfigChanged(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeDeviceConfigChangedResult>> {
+  async hasNodeDeviceConfigChanged(
+    nodeId: number,
+  ): Promise<ZwjsCommandResult<ZwjsNodeDeviceConfigChangedResult>> {
     return this.sendCommand<ZwjsNodeDeviceConfigChangedResult, { nodeId: number }>({
       command: 'node.has_device_config_changed',
       args: { nodeId },
     });
   }
 
-  async beginInclusion(args?: ZwjsControllerBeginInclusionArgs): Promise<ZwjsCommandResult<ZwjsControllerInclusionCommandResult>> {
-    return this.sendMutationCommand<ZwjsControllerInclusionCommandResult, ZwjsControllerBeginInclusionArgs>({
+  async beginInclusion(
+    args?: ZwjsControllerBeginInclusionArgs,
+  ): Promise<ZwjsCommandResult<ZwjsControllerInclusionCommandResult>> {
+    return this.sendMutationCommand<
+      ZwjsControllerInclusionCommandResult,
+      ZwjsControllerBeginInclusionArgs
+    >({
       command: 'controller.begin_inclusion',
       ...(args ? { args } : {}),
     });
   }
 
-  async beginExclusion(args?: ZwjsControllerBeginExclusionArgs): Promise<ZwjsCommandResult<ZwjsControllerInclusionCommandResult>> {
-    return this.sendMutationCommand<ZwjsControllerInclusionCommandResult, ZwjsControllerBeginExclusionArgs>({
+  async beginExclusion(
+    args?: ZwjsControllerBeginExclusionArgs,
+  ): Promise<ZwjsCommandResult<ZwjsControllerInclusionCommandResult>> {
+    return this.sendMutationCommand<
+      ZwjsControllerInclusionCommandResult,
+      ZwjsControllerBeginExclusionArgs
+    >({
       command: 'controller.begin_exclusion',
       ...(args ? { args } : {}),
     });
   }
 
   async stopInclusion(): Promise<ZwjsCommandResult<ZwjsControllerInclusionCommandResult>> {
-    return this.sendMutationCommand<ZwjsControllerInclusionCommandResult>({ command: 'controller.stop_inclusion' });
+    return this.sendMutationCommand<ZwjsControllerInclusionCommandResult>({
+      command: 'controller.stop_inclusion',
+    });
   }
 
   async stopExclusion(): Promise<ZwjsCommandResult<ZwjsControllerInclusionCommandResult>> {
-    return this.sendMutationCommand<ZwjsControllerInclusionCommandResult>({ command: 'controller.stop_exclusion' });
+    return this.sendMutationCommand<ZwjsControllerInclusionCommandResult>({
+      command: 'controller.stop_exclusion',
+    });
   }
 
-  private async connectFlow(targetState: Extract<ZwjsLifecycleState, 'connecting' | 'reconnecting'>): Promise<void> {
+  private async connectFlow(
+    targetState: Extract<ZwjsLifecycleState, 'connecting' | 'reconnecting'>,
+  ): Promise<void> {
     this.setLifecycle(targetState);
 
     const headers = this.buildHeaders();
-    const connectPromise = this.transport.connect(this.config.url, {
-      onOpen: () => {
-        this.status.transportConnected = true;
-        this.status.versionReceived = false;
-        this.status.initialized = false;
-        this.status.listening = false;
-        this.status.serverVersion = undefined;
-        this.status.adapterFamily = undefined;
-        this.status.connectedAt = new Date().toISOString();
-        this.reconnectAttempt = 0;
-        this.status.reconnectAttempt = undefined;
-        this.adapter = undefined;
-        this.cachedServerInfo = undefined;
-        this.cachedNodeList = undefined;
-        this.listeningRequested = false;
-        this.startListeningState = undefined;
-        this.emit({ type: 'transport.connected' });
+    const connectPromise = this.transport.connect(
+      this.config.url,
+      {
+        onOpen: () => {
+          this.status.transportConnected = true;
+          this.status.versionReceived = false;
+          this.status.initialized = false;
+          this.status.listening = false;
+          this.status.serverVersion = undefined;
+          this.status.adapterFamily = undefined;
+          this.status.connectedAt = new Date().toISOString();
+          this.reconnectAttempt = 0;
+          this.status.reconnectAttempt = undefined;
+          this.adapter = undefined;
+          this.cachedServerInfo = undefined;
+          this.cachedNodeList = undefined;
+          this.listeningRequested = false;
+          this.startListeningState = undefined;
+          this.emit({ type: 'transport.connected' });
+        },
+        onClose: (event) => {
+          this.status.transportConnected = false;
+          this.emit({
+            type: 'transport.disconnected',
+            code: event.code,
+            reason: event.reason,
+            wasClean: event.wasClean,
+          });
+          this.clearVersionWaiters(
+            new ZwjsClientError({
+              code: 'TRANSPORT_ERROR',
+              message: 'Transport closed',
+              retryable: true,
+            }),
+          );
+          this.clearNodeListWaiters(
+            new ZwjsClientError({
+              code: 'TRANSPORT_ERROR',
+              message: 'Transport closed',
+              retryable: true,
+            }),
+          );
+          this.requests.rejectAll(
+            new ZwjsClientError({
+              code: 'TRANSPORT_ERROR',
+              message: 'Transport closed',
+              retryable: true,
+            }),
+          );
+          void this.handleDisconnect();
+        },
+        onError: (error) => {
+          this.status.lastError = toErrorSummary(error, 'TRANSPORT_ERROR');
+        },
+        onMessage: (raw) => {
+          this.status.lastMessageAt = new Date().toISOString();
+          void this.handleIncoming(raw);
+        },
       },
-      onClose: (event) => {
-        this.status.transportConnected = false;
-        this.emit({ type: 'transport.disconnected', code: event.code, reason: event.reason, wasClean: event.wasClean });
-        this.clearVersionWaiters(new ZwjsClientError({ code: 'TRANSPORT_ERROR', message: 'Transport closed', retryable: true }));
-        this.clearNodeListWaiters(new ZwjsClientError({ code: 'TRANSPORT_ERROR', message: 'Transport closed', retryable: true }));
-        this.requests.rejectAll(new ZwjsClientError({ code: 'TRANSPORT_ERROR', message: 'Transport closed', retryable: true }));
-        void this.handleDisconnect();
-      },
-      onError: (error) => {
-        this.status.lastError = toErrorSummary(error, 'TRANSPORT_ERROR');
-      },
-      onMessage: (raw) => {
-        this.status.lastMessageAt = new Date().toISOString();
-        void this.handleIncoming(raw);
-      },
-    }, headers);
+      headers,
+    );
 
     let connectTimeout: ReturnType<typeof setTimeout> | undefined;
     try {
@@ -407,7 +531,14 @@ export class ZwjsClientImpl implements ZwjsClient {
         connectPromise,
         new Promise<never>((_, reject) => {
           connectTimeout = setTimeout(
-            () => reject(new ZwjsClientError({ code: 'CONNECT_TIMEOUT', message: 'Connection timed out', retryable: true })),
+            () =>
+              reject(
+                new ZwjsClientError({
+                  code: 'CONNECT_TIMEOUT',
+                  message: 'Connection timed out',
+                  retryable: true,
+                }),
+              ),
             this.timeouts.connectTimeoutMs,
           );
         }),
@@ -447,7 +578,8 @@ export class ZwjsClientImpl implements ZwjsClient {
       if (normalized.serverInfo) {
         this.cachedServerInfo = normalized.serverInfo;
         this.status.versionReceived = true;
-        this.status.serverVersion = normalized.serverInfo.serverVersion ?? this.status.serverVersion;
+        this.status.serverVersion =
+          normalized.serverInfo.serverVersion ?? this.status.serverVersion;
         this.flushVersionWaiters();
       }
       if (normalized.nodesSnapshot) {
@@ -550,15 +682,15 @@ export class ZwjsClientImpl implements ZwjsClient {
   }
 
   private toProtocolErrorPayload(raw: unknown): ZwjsProtocolErrorPayload {
-    const record = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : undefined;
+    const record =
+      typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : undefined;
     return {
       errorCode: typeof record?.errorCode === 'string' ? record.errorCode : undefined,
-      zwaveErrorCode: typeof record?.zwaveErrorCode === 'number' ? record.zwaveErrorCode : undefined,
-      zwaveErrorMessage: typeof record?.zwaveErrorMessage === 'string' ? record.zwaveErrorMessage : undefined,
-      error:
-        record && 'error' in record
-          ? record.error
-          : undefined,
+      zwaveErrorCode:
+        typeof record?.zwaveErrorCode === 'number' ? record.zwaveErrorCode : undefined,
+      zwaveErrorMessage:
+        typeof record?.zwaveErrorMessage === 'string' ? record.zwaveErrorMessage : undefined,
+      error: record && 'error' in record ? record.error : undefined,
       raw,
     };
   }
@@ -602,7 +734,9 @@ export class ZwjsClientImpl implements ZwjsClient {
     if (this.cachedNodeList) return Promise.resolve(this.cachedNodeList);
     return new Promise<NodeListResult>((resolve, reject) => {
       const timer = setTimeout(() => {
-        this.pendingNodeListWaiters = this.pendingNodeListWaiters.filter((waiter) => waiter.timer !== timer);
+        this.pendingNodeListWaiters = this.pendingNodeListWaiters.filter(
+          (waiter) => waiter.timer !== timer,
+        );
         reject(
           new ZwjsClientError({
             code: 'REQUEST_TIMEOUT',
@@ -619,7 +753,9 @@ export class ZwjsClientImpl implements ZwjsClient {
     if (this.status.versionReceived) return Promise.resolve();
     return new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => {
-        this.pendingVersionWaiters = this.pendingVersionWaiters.filter((waiter) => waiter.timer !== timer);
+        this.pendingVersionWaiters = this.pendingVersionWaiters.filter(
+          (waiter) => waiter.timer !== timer,
+        );
         reject(
           new ZwjsClientError({
             code: 'CONNECT_TIMEOUT',

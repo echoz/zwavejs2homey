@@ -68,9 +68,20 @@ test('getControllerNodeNeighbors sends correct command and returns result array'
 
   const pending = client.getControllerNodeNeighbors(5);
   const sent = transport.sent.at(-1);
-  assert.deepEqual(sent, withMessageId(loadFixture('zwjs-server', 'command.controller.get_node_neighbors.json'), sent.messageId));
+  assert.deepEqual(
+    sent,
+    withMessageId(
+      loadFixture('zwjs-server', 'command.controller.get_node_neighbors.json'),
+      sent.messageId,
+    ),
+  );
 
-  transport.triggerMessage(withMessageId(loadFixture('zwjs-server', 'result.controller.get_node_neighbors.success.json'), sent.messageId));
+  transport.triggerMessage(
+    withMessageId(
+      loadFixture('zwjs-server', 'result.controller.get_node_neighbors.success.json'),
+      sent.messageId,
+    ),
+  );
   const result = await pending;
 
   assert.equal(result.success, true);
@@ -84,9 +95,20 @@ test('getNodeDefinedValueIds sends correct command and returns result array', as
 
   const pending = client.getNodeDefinedValueIds(5);
   const sent = transport.sent.at(-1);
-  assert.deepEqual(sent, withMessageId(loadFixture('zwjs-server', 'command.node.get_defined_value_ids.json'), sent.messageId));
+  assert.deepEqual(
+    sent,
+    withMessageId(
+      loadFixture('zwjs-server', 'command.node.get_defined_value_ids.json'),
+      sent.messageId,
+    ),
+  );
 
-  transport.triggerMessage(withMessageId(loadFixture('zwjs-server', 'result.node.get_defined_value_ids.success.json'), sent.messageId));
+  transport.triggerMessage(
+    withMessageId(
+      loadFixture('zwjs-server', 'result.node.get_defined_value_ids.success.json'),
+      sent.messageId,
+    ),
+  );
   const result = await pending;
 
   assert.equal(result.success, true);
@@ -102,9 +124,14 @@ test('getNodeValue sends correct command and returns raw value result', async ()
   const valueId = { commandClass: 37, property: 'currentValue', endpoint: 0 };
   const pending = client.getNodeValue(5, valueId);
   const sent = transport.sent.at(-1);
-  assert.deepEqual(sent, withMessageId(loadFixture('zwjs-server', 'command.node.get_value.json'), sent.messageId));
+  assert.deepEqual(
+    sent,
+    withMessageId(loadFixture('zwjs-server', 'command.node.get_value.json'), sent.messageId),
+  );
 
-  transport.triggerMessage(withMessageId(loadFixture('zwjs-server', 'result.node.get_value.success.json'), sent.messageId));
+  transport.triggerMessage(
+    withMessageId(loadFixture('zwjs-server', 'result.node.get_value.success.json'), sent.messageId),
+  );
   const result = await pending;
 
   assert.equal(result.success, true);
@@ -119,9 +146,20 @@ test('getNodeValueMetadata sends correct command and returns metadata object', a
   const valueId = { commandClass: 37, property: 'currentValue', endpoint: 0 };
   const pending = client.getNodeValueMetadata(5, valueId);
   const sent = transport.sent.at(-1);
-  assert.deepEqual(sent, withMessageId(loadFixture('zwjs-server', 'command.node.get_value_metadata.json'), sent.messageId));
+  assert.deepEqual(
+    sent,
+    withMessageId(
+      loadFixture('zwjs-server', 'command.node.get_value_metadata.json'),
+      sent.messageId,
+    ),
+  );
 
-  transport.triggerMessage(withMessageId(loadFixture('zwjs-server', 'result.node.get_value_metadata.success.json'), sent.messageId));
+  transport.triggerMessage(
+    withMessageId(
+      loadFixture('zwjs-server', 'result.node.get_value_metadata.success.json'),
+      sent.messageId,
+    ),
+  );
   const result = await pending;
 
   assert.equal(result.success, true);
@@ -137,9 +175,20 @@ test('getNodeValueTimestamp sends correct command and returns timestamp result',
   const valueId = { commandClass: 37, property: 'currentValue', endpoint: 0 };
   const pending = client.getNodeValueTimestamp(5, valueId);
   const sent = transport.sent.at(-1);
-  assert.deepEqual(sent, withMessageId(loadFixture('zwjs-server', 'command.node.get_value_timestamp.json'), sent.messageId));
+  assert.deepEqual(
+    sent,
+    withMessageId(
+      loadFixture('zwjs-server', 'command.node.get_value_timestamp.json'),
+      sent.messageId,
+    ),
+  );
 
-  transport.triggerMessage(withMessageId(loadFixture('zwjs-server', 'result.node.get_value_timestamp.success.json'), sent.messageId));
+  transport.triggerMessage(
+    withMessageId(
+      loadFixture('zwjs-server', 'result.node.get_value_timestamp.success.json'),
+      sent.messageId,
+    ),
+  );
   const result = await pending;
 
   assert.equal(result.success, true);
@@ -154,9 +203,20 @@ test('getNodeValueTimestamp supports object timestamp result shape', async () =>
   const valueId = { commandClass: 37, property: 'currentValue', endpoint: 0 };
   const pending = client.getNodeValueTimestamp(5, valueId);
   const sent = transport.sent.at(-1);
-  assert.deepEqual(sent, withMessageId(loadFixture('zwjs-server', 'command.node.get_value_timestamp.json'), sent.messageId));
+  assert.deepEqual(
+    sent,
+    withMessageId(
+      loadFixture('zwjs-server', 'command.node.get_value_timestamp.json'),
+      sent.messageId,
+    ),
+  );
 
-  transport.triggerMessage(withMessageId(loadFixture('zwjs-server', 'result.node.get_value_timestamp.success.object.json'), sent.messageId));
+  transport.triggerMessage(
+    withMessageId(
+      loadFixture('zwjs-server', 'result.node.get_value_timestamp.success.object.json'),
+      sent.messageId,
+    ),
+  );
   const result = await pending;
 
   assert.equal(result.success, true);
@@ -170,9 +230,17 @@ test('getDriverLogConfig sends correct command and returns log config', async ()
 
   const pending = client.getDriverLogConfig();
   const sent = transport.sent.at(-1);
-  assert.deepEqual(sent, withMessageId(loadFixture('zwjs-server', 'command.driver.get_log_config.json'), sent.messageId));
+  assert.deepEqual(
+    sent,
+    withMessageId(loadFixture('zwjs-server', 'command.driver.get_log_config.json'), sent.messageId),
+  );
 
-  transport.triggerMessage(withMessageId(loadFixture('zwjs-server', 'result.driver.get_log_config.success.json'), sent.messageId));
+  transport.triggerMessage(
+    withMessageId(
+      loadFixture('zwjs-server', 'result.driver.get_log_config.success.json'),
+      sent.messageId,
+    ),
+  );
   const result = await pending;
 
   assert.equal(result.success, true);
@@ -187,9 +255,20 @@ test('isDriverStatisticsEnabled sends correct command and returns statisticsEnab
 
   const pending = client.isDriverStatisticsEnabled();
   const sent = transport.sent.at(-1);
-  assert.deepEqual(sent, withMessageId(loadFixture('zwjs-server', 'command.driver.is_statistics_enabled.json'), sent.messageId));
+  assert.deepEqual(
+    sent,
+    withMessageId(
+      loadFixture('zwjs-server', 'command.driver.is_statistics_enabled.json'),
+      sent.messageId,
+    ),
+  );
 
-  transport.triggerMessage(withMessageId(loadFixture('zwjs-server', 'result.driver.is_statistics_enabled.success.json'), sent.messageId));
+  transport.triggerMessage(
+    withMessageId(
+      loadFixture('zwjs-server', 'result.driver.is_statistics_enabled.success.json'),
+      sent.messageId,
+    ),
+  );
   const result = await pending;
 
   assert.equal(result.success, true);
@@ -205,11 +284,17 @@ test('getNodeSupportedNotificationEvents sends correct command and returns proto
   const sent = transport.sent.at(-1);
   assert.deepEqual(
     sent,
-    withMessageId(loadFixture('zwjs-server', 'command.node.get_supported_notification_events.json'), sent.messageId),
+    withMessageId(
+      loadFixture('zwjs-server', 'command.node.get_supported_notification_events.json'),
+      sent.messageId,
+    ),
   );
 
   transport.triggerMessage(
-    withMessageId(loadFixture('zwjs-server', 'result.node.get_supported_notification_events.success.json'), sent.messageId),
+    withMessageId(
+      loadFixture('zwjs-server', 'result.node.get_supported_notification_events.success.json'),
+      sent.messageId,
+    ),
   );
   const result = await pending;
 
@@ -224,10 +309,19 @@ test('getNodeFirmwareUpdateCapabilities sends correct command and returns protoc
 
   const pending = client.getNodeFirmwareUpdateCapabilities(5);
   const sent = transport.sent.at(-1);
-  assert.deepEqual(sent, withMessageId(loadFixture('zwjs-server', 'command.node.get_firmware_update_capabilities.json'), sent.messageId));
+  assert.deepEqual(
+    sent,
+    withMessageId(
+      loadFixture('zwjs-server', 'command.node.get_firmware_update_capabilities.json'),
+      sent.messageId,
+    ),
+  );
 
   transport.triggerMessage(
-    withMessageId(loadFixture('zwjs-server', 'result.node.get_firmware_update_capabilities.success.json'), sent.messageId),
+    withMessageId(
+      loadFixture('zwjs-server', 'result.node.get_firmware_update_capabilities.success.json'),
+      sent.messageId,
+    ),
   );
   const result = await pending;
   assert.equal(result.success, true);
@@ -243,11 +337,20 @@ test('getNodeFirmwareUpdateCapabilitiesCached sends correct command and returns 
   const sent = transport.sent.at(-1);
   assert.deepEqual(
     sent,
-    withMessageId(loadFixture('zwjs-server', 'command.node.get_firmware_update_capabilities_cached.json'), sent.messageId),
+    withMessageId(
+      loadFixture('zwjs-server', 'command.node.get_firmware_update_capabilities_cached.json'),
+      sent.messageId,
+    ),
   );
 
   transport.triggerMessage(
-    withMessageId(loadFixture('zwjs-server', 'result.node.get_firmware_update_capabilities_cached.success.json'), sent.messageId),
+    withMessageId(
+      loadFixture(
+        'zwjs-server',
+        'result.node.get_firmware_update_capabilities_cached.success.json',
+      ),
+      sent.messageId,
+    ),
   );
   const result = await pending;
   assert.equal(result.success, true);
@@ -261,9 +364,20 @@ test('getNodeDateAndTime sends correct command and returns protocol-native paylo
 
   const pending = client.getNodeDateAndTime(5);
   const sent = transport.sent.at(-1);
-  assert.deepEqual(sent, withMessageId(loadFixture('zwjs-server', 'command.node.get_date_and_time.json'), sent.messageId));
+  assert.deepEqual(
+    sent,
+    withMessageId(
+      loadFixture('zwjs-server', 'command.node.get_date_and_time.json'),
+      sent.messageId,
+    ),
+  );
 
-  transport.triggerMessage(withMessageId(loadFixture('zwjs-server', 'result.node.get_date_and_time.success.json'), sent.messageId));
+  transport.triggerMessage(
+    withMessageId(
+      loadFixture('zwjs-server', 'result.node.get_date_and_time.success.json'),
+      sent.messageId,
+    ),
+  );
   const result = await pending;
   assert.equal(result.success, true);
   assert.equal(result.result.year, 2026);
@@ -278,11 +392,17 @@ test('isNodeFirmwareUpdateInProgress sends correct command and returns inProgres
   const sent = transport.sent.at(-1);
   assert.deepEqual(
     sent,
-    withMessageId(loadFixture('zwjs-server', 'command.node.is_firmware_update_in_progress.json'), sent.messageId),
+    withMessageId(
+      loadFixture('zwjs-server', 'command.node.is_firmware_update_in_progress.json'),
+      sent.messageId,
+    ),
   );
 
   transport.triggerMessage(
-    withMessageId(loadFixture('zwjs-server', 'result.node.is_firmware_update_in_progress.success.json'), sent.messageId),
+    withMessageId(
+      loadFixture('zwjs-server', 'result.node.is_firmware_update_in_progress.success.json'),
+      sent.messageId,
+    ),
   );
   const result = await pending;
   assert.equal(result.success, true);
@@ -298,11 +418,17 @@ test('getNodeFirmwareUpdateProgress sends correct command and returns protocol-n
   const sent = transport.sent.at(-1);
   assert.deepEqual(
     sent,
-    withMessageId(loadFixture('zwjs-server', 'command.node.get_firmware_update_progress.json'), sent.messageId),
+    withMessageId(
+      loadFixture('zwjs-server', 'command.node.get_firmware_update_progress.json'),
+      sent.messageId,
+    ),
   );
 
   transport.triggerMessage(
-    withMessageId(loadFixture('zwjs-server', 'result.node.get_firmware_update_progress.success.json'), sent.messageId),
+    withMessageId(
+      loadFixture('zwjs-server', 'result.node.get_firmware_update_progress.success.json'),
+      sent.messageId,
+    ),
   );
   const result = await pending;
   assert.equal(result.success, true);
@@ -318,11 +444,17 @@ test('isNodeHealthCheckInProgress sends correct command and returns inProgress f
   const sent = transport.sent.at(-1);
   assert.deepEqual(
     sent,
-    withMessageId(loadFixture('zwjs-server', 'command.node.is_health_check_in_progress.json'), sent.messageId),
+    withMessageId(
+      loadFixture('zwjs-server', 'command.node.is_health_check_in_progress.json'),
+      sent.messageId,
+    ),
   );
 
   transport.triggerMessage(
-    withMessageId(loadFixture('zwjs-server', 'result.node.is_health_check_in_progress.success.json'), sent.messageId),
+    withMessageId(
+      loadFixture('zwjs-server', 'result.node.is_health_check_in_progress.success.json'),
+      sent.messageId,
+    ),
   );
   const result = await pending;
   assert.equal(result.success, true);
@@ -338,11 +470,17 @@ test('hasNodeDeviceConfigChanged sends correct command and returns changed flag'
   const sent = transport.sent.at(-1);
   assert.deepEqual(
     sent,
-    withMessageId(loadFixture('zwjs-server', 'command.node.has_device_config_changed.json'), sent.messageId),
+    withMessageId(
+      loadFixture('zwjs-server', 'command.node.has_device_config_changed.json'),
+      sent.messageId,
+    ),
   );
 
   transport.triggerMessage(
-    withMessageId(loadFixture('zwjs-server', 'result.node.has_device_config_changed.success.json'), sent.messageId),
+    withMessageId(
+      loadFixture('zwjs-server', 'result.node.has_device_config_changed.success.json'),
+      sent.messageId,
+    ),
   );
   const result = await pending;
   assert.equal(result.success, true);
@@ -356,9 +494,14 @@ test('setApiSchema sends correct command and returns success result', async () =
 
   const pending = client.setApiSchema(44);
   const sent = transport.sent.at(-1);
-  assert.deepEqual(sent, withMessageId(loadFixture('zwjs-server', 'command.set_api_schema.json'), sent.messageId));
+  assert.deepEqual(
+    sent,
+    withMessageId(loadFixture('zwjs-server', 'command.set_api_schema.json'), sent.messageId),
+  );
 
-  transport.triggerMessage(withMessageId(loadFixture('zwjs-server', 'result.set_api_schema.success.json'), sent.messageId));
+  transport.triggerMessage(
+    withMessageId(loadFixture('zwjs-server', 'result.set_api_schema.success.json'), sent.messageId),
+  );
   const result = await pending;
 
   assert.equal(result.success, true);
@@ -372,9 +515,14 @@ test('startListeningLogs sends correct command without filter', async () => {
 
   const pending = client.startListeningLogs();
   const sent = transport.sent.at(-1);
-  assert.deepEqual(sent, withMessageId(loadFixture('zwjs-server', 'command.start_listening_logs.json'), sent.messageId));
+  assert.deepEqual(
+    sent,
+    withMessageId(loadFixture('zwjs-server', 'command.start_listening_logs.json'), sent.messageId),
+  );
 
-  transport.triggerMessage(withMessageId(loadFixture('zwjs-server', 'result.command.success.empty.json'), sent.messageId));
+  transport.triggerMessage(
+    withMessageId(loadFixture('zwjs-server', 'result.command.success.empty.json'), sent.messageId),
+  );
   const result = await pending;
   assert.equal(result.success, true);
   await client.stop();
@@ -389,10 +537,15 @@ test('startListeningLogs sends correct command with filter', async () => {
   const sent = transport.sent.at(-1);
   assert.deepEqual(
     sent,
-    withMessageId(loadFixture('zwjs-server', 'command.start_listening_logs.with-filter.json'), sent.messageId),
+    withMessageId(
+      loadFixture('zwjs-server', 'command.start_listening_logs.with-filter.json'),
+      sent.messageId,
+    ),
   );
 
-  transport.triggerMessage(withMessageId(loadFixture('zwjs-server', 'result.command.success.empty.json'), sent.messageId));
+  transport.triggerMessage(
+    withMessageId(loadFixture('zwjs-server', 'result.command.success.empty.json'), sent.messageId),
+  );
   const result = await pending;
   assert.equal(result.success, true);
   await client.stop();
@@ -404,9 +557,14 @@ test('stopListeningLogs sends correct command', async () => {
 
   const pending = client.stopListeningLogs();
   const sent = transport.sent.at(-1);
-  assert.deepEqual(sent, withMessageId(loadFixture('zwjs-server', 'command.stop_listening_logs.json'), sent.messageId));
+  assert.deepEqual(
+    sent,
+    withMessageId(loadFixture('zwjs-server', 'command.stop_listening_logs.json'), sent.messageId),
+  );
 
-  transport.triggerMessage(withMessageId(loadFixture('zwjs-server', 'result.command.success.empty.json'), sent.messageId));
+  transport.triggerMessage(
+    withMessageId(loadFixture('zwjs-server', 'result.command.success.empty.json'), sent.messageId),
+  );
   const result = await pending;
   assert.equal(result.success, true);
   await client.stop();

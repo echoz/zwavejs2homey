@@ -10,12 +10,28 @@ class FakeTransport {
     this.currentEvents = undefined;
     this.sent = [];
   }
-  connect(_url, events) { this.currentEvents = events; return Promise.resolve(); }
-  send(data) { if (!this.open) throw new Error('WebSocket is not connected'); this.sent.push(JSON.parse(data)); }
-  close() { this.open = false; this.currentEvents?.onClose?.({ code: 1000, reason: 'closed', wasClean: true }); }
-  isOpen() { return this.open; }
-  triggerOpen() { this.open = true; this.currentEvents?.onOpen?.(); }
-  triggerMessage(frame) { this.currentEvents?.onMessage?.(JSON.stringify(frame)); }
+  connect(_url, events) {
+    this.currentEvents = events;
+    return Promise.resolve();
+  }
+  send(data) {
+    if (!this.open) throw new Error('WebSocket is not connected');
+    this.sent.push(JSON.parse(data));
+  }
+  close() {
+    this.open = false;
+    this.currentEvents?.onClose?.({ code: 1000, reason: 'closed', wasClean: true });
+  }
+  isOpen() {
+    return this.open;
+  }
+  triggerOpen() {
+    this.open = true;
+    this.currentEvents?.onOpen?.();
+  }
+  triggerMessage(frame) {
+    this.currentEvents?.onMessage?.(JSON.stringify(frame));
+  }
 }
 
 function makeClient(mutationPolicy) {
@@ -46,7 +62,15 @@ test('sendMutationCommand is blocked by default mutation policy', async () => {
   await startConnected(client, transport);
 
   await assert.rejects(
-    () => client.sendMutationCommand({ command: 'node.set_value', args: { nodeId: 5, valueId: { commandClass: 37, property: 'targetValue', endpoint: 0 }, value: true } }),
+    () =>
+      client.sendMutationCommand({
+        command: 'node.set_value',
+        args: {
+          nodeId: 5,
+          valueId: { commandClass: 37, property: 'targetValue', endpoint: 0 },
+          value: true,
+        },
+      }),
     (err) => err && err.code === 'UNSUPPORTED_OPERATION' && /blocked by policy/.test(err.message),
   );
   assert.equal(transport.sent.length, 0);
@@ -54,11 +78,22 @@ test('sendMutationCommand is blocked by default mutation policy', async () => {
 });
 
 test('sendMutationCommand enforces explicit allowlist when enabled', async () => {
-  const { client, transport } = makeClient({ enabled: true, allowCommands: ['driver.update_log_config'] });
+  const { client, transport } = makeClient({
+    enabled: true,
+    allowCommands: ['driver.update_log_config'],
+  });
   await startConnected(client, transport);
 
   await assert.rejects(
-    () => client.sendMutationCommand({ command: 'node.set_value', args: { nodeId: 5, valueId: { commandClass: 37, property: 'targetValue', endpoint: 0 }, value: true } }),
+    () =>
+      client.sendMutationCommand({
+        command: 'node.set_value',
+        args: {
+          nodeId: 5,
+          valueId: { commandClass: 37, property: 'targetValue', endpoint: 0 },
+          value: true,
+        },
+      }),
     (err) => err && err.code === 'UNSUPPORTED_OPERATION' && /allowlist/.test(err.message),
   );
   assert.equal(transport.sent.length, 0);
@@ -69,12 +104,21 @@ test('sendMutationCommand sends allowed mutation command and returns result', as
   const { client, transport } = makeClient({ enabled: true, allowCommands: ['node.set_value'] });
   await startConnected(client, transport);
 
-  const args = { nodeId: 5, valueId: { commandClass: 37, property: 'targetValue', endpoint: 0 }, value: true };
+  const args = {
+    nodeId: 5,
+    valueId: { commandClass: 37, property: 'targetValue', endpoint: 0 },
+    value: true,
+  };
   const pending = client.sendMutationCommand({ command: 'node.set_value', args });
   const sent = transport.sent.at(-1);
-  assert.deepEqual(sent, withMessageId(loadFixture('zwjs-server', 'command.node.set_value.json'), sent.messageId));
+  assert.deepEqual(
+    sent,
+    withMessageId(loadFixture('zwjs-server', 'command.node.set_value.json'), sent.messageId),
+  );
 
-  transport.triggerMessage(withMessageId(loadFixture('zwjs-server', 'result.node.set_value.success.json'), sent.messageId));
+  transport.triggerMessage(
+    withMessageId(loadFixture('zwjs-server', 'result.node.set_value.success.json'), sent.messageId),
+  );
   const result = await pending;
   assert.equal(result.success, true);
   assert.equal(result.result.success, true);
@@ -82,56 +126,100 @@ test('sendMutationCommand sends allowed mutation command and returns result', as
 });
 
 test('beginInclusion sends mutation-gated protocol command and returns result', async () => {
-  const { client, transport } = makeClient({ enabled: true, allowCommands: ['controller.begin_inclusion'] });
+  const { client, transport } = makeClient({
+    enabled: true,
+    allowCommands: ['controller.begin_inclusion'],
+  });
   await startConnected(client, transport);
 
   const pending = client.beginInclusion();
   const sent = transport.sent.at(-1);
-  assert.deepEqual(sent, withMessageId(loadFixture('zwjs-server', 'command.controller.begin_inclusion.json'), sent.messageId));
+  assert.deepEqual(
+    sent,
+    withMessageId(
+      loadFixture('zwjs-server', 'command.controller.begin_inclusion.json'),
+      sent.messageId,
+    ),
+  );
 
-  transport.triggerMessage(withMessageId(loadFixture('zwjs-server', 'result.command.success.empty.json'), sent.messageId));
+  transport.triggerMessage(
+    withMessageId(loadFixture('zwjs-server', 'result.command.success.empty.json'), sent.messageId),
+  );
   const result = await pending;
   assert.equal(result.success, true);
   await client.stop();
 });
 
 test('beginExclusion sends mutation-gated protocol command and returns result', async () => {
-  const { client, transport } = makeClient({ enabled: true, allowCommands: ['controller.begin_exclusion'] });
+  const { client, transport } = makeClient({
+    enabled: true,
+    allowCommands: ['controller.begin_exclusion'],
+  });
   await startConnected(client, transport);
 
   const pending = client.beginExclusion();
   const sent = transport.sent.at(-1);
-  assert.deepEqual(sent, withMessageId(loadFixture('zwjs-server', 'command.controller.begin_exclusion.json'), sent.messageId));
+  assert.deepEqual(
+    sent,
+    withMessageId(
+      loadFixture('zwjs-server', 'command.controller.begin_exclusion.json'),
+      sent.messageId,
+    ),
+  );
 
-  transport.triggerMessage(withMessageId(loadFixture('zwjs-server', 'result.command.success.empty.json'), sent.messageId));
+  transport.triggerMessage(
+    withMessageId(loadFixture('zwjs-server', 'result.command.success.empty.json'), sent.messageId),
+  );
   const result = await pending;
   assert.equal(result.success, true);
   await client.stop();
 });
 
 test('stopInclusion sends mutation-gated protocol command and returns result', async () => {
-  const { client, transport } = makeClient({ enabled: true, allowCommands: ['controller.stop_inclusion'] });
+  const { client, transport } = makeClient({
+    enabled: true,
+    allowCommands: ['controller.stop_inclusion'],
+  });
   await startConnected(client, transport);
 
   const pending = client.stopInclusion();
   const sent = transport.sent.at(-1);
-  assert.deepEqual(sent, withMessageId(loadFixture('zwjs-server', 'command.controller.stop_inclusion.json'), sent.messageId));
+  assert.deepEqual(
+    sent,
+    withMessageId(
+      loadFixture('zwjs-server', 'command.controller.stop_inclusion.json'),
+      sent.messageId,
+    ),
+  );
 
-  transport.triggerMessage(withMessageId(loadFixture('zwjs-server', 'result.command.success.empty.json'), sent.messageId));
+  transport.triggerMessage(
+    withMessageId(loadFixture('zwjs-server', 'result.command.success.empty.json'), sent.messageId),
+  );
   const result = await pending;
   assert.equal(result.success, true);
   await client.stop();
 });
 
 test('stopExclusion sends mutation-gated protocol command and returns result', async () => {
-  const { client, transport } = makeClient({ enabled: true, allowCommands: ['controller.stop_exclusion'] });
+  const { client, transport } = makeClient({
+    enabled: true,
+    allowCommands: ['controller.stop_exclusion'],
+  });
   await startConnected(client, transport);
 
   const pending = client.stopExclusion();
   const sent = transport.sent.at(-1);
-  assert.deepEqual(sent, withMessageId(loadFixture('zwjs-server', 'command.controller.stop_exclusion.json'), sent.messageId));
+  assert.deepEqual(
+    sent,
+    withMessageId(
+      loadFixture('zwjs-server', 'command.controller.stop_exclusion.json'),
+      sent.messageId,
+    ),
+  );
 
-  transport.triggerMessage(withMessageId(loadFixture('zwjs-server', 'result.command.success.empty.json'), sent.messageId));
+  transport.triggerMessage(
+    withMessageId(loadFixture('zwjs-server', 'result.command.success.empty.json'), sent.messageId),
+  );
   const result = await pending;
   assert.equal(result.success, true);
   await client.stop();

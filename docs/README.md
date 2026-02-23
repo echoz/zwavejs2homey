@@ -3,6 +3,7 @@
 Project documentation and durable technical context.
 
 Suggested contents:
+
 - architecture.md
 - integration-notes.md
 - homey-sdk-notes.md

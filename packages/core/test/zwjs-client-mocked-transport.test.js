@@ -165,7 +165,10 @@ test('reconnects after abnormal disconnect and can process commands again', asyn
   assert.equal(res.success, true);
   assert.equal(res.result.config.logConfig.enabled, true);
   assert.equal(client.getStatus().lifecycle, 'connected');
-  assert.equal(events.some((e) => e.type === 'client.reconnect.scheduled'), true);
+  assert.equal(
+    events.some((e) => e.type === 'client.reconnect.scheduled'),
+    true,
+  );
 
   await client.stop();
 });
@@ -198,7 +201,11 @@ test('clears cached server and node snapshots on reconnect before new frames arr
     pendingNodeList.then(() => 'resolved'),
     new Promise((resolve) => setTimeout(() => resolve('pending'), 5)),
   ]);
-  assert.equal(earlyResult, 'pending', 'node list should not resolve from stale cache before new snapshot');
+  assert.equal(
+    earlyResult,
+    'pending',
+    'node list should not resolve from stale cache before new snapshot',
+  );
 
   transport.triggerMessage({
     type: 'version',
@@ -251,7 +258,10 @@ test('getNodeList waits for snapshot instead of returning an empty list when sta
   });
 
   const nodeList = await nodeListPromise;
-  assert.deepEqual(nodeList.nodes.map((n) => n.nodeId), [11]);
+  assert.deepEqual(
+    nodeList.nodes.map((n) => n.nodeId),
+    [11],
+  );
 
   await client.stop();
 });

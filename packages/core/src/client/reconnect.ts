@@ -13,7 +13,10 @@ export function mergeReconnectPolicy(policy?: Partial<ReconnectPolicy>): Reconne
 }
 
 export function computeReconnectDelayMs(attempt: number, policy: ReconnectPolicy): number {
-  const base = Math.min(policy.maxDelayMs, policy.initialDelayMs * Math.pow(policy.multiplier, Math.max(0, attempt - 1)));
+  const base = Math.min(
+    policy.maxDelayMs,
+    policy.initialDelayMs * Math.pow(policy.multiplier, Math.max(0, attempt - 1)),
+  );
   const jitterSpan = Math.round(base * policy.jitterRatio);
   if (jitterSpan <= 0) return base;
   const offset = Math.floor(Math.random() * (jitterSpan * 2 + 1)) - jitterSpan;

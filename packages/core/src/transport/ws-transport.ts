@@ -32,8 +32,12 @@ export class WsTransport {
       });
 
       socket.on('close', (code: number, reason: Buffer) => {
-        const closeFrameReceived = Boolean((socket as WebSocket & { _closeFrameReceived?: boolean })._closeFrameReceived);
-        const closeFrameSent = Boolean((socket as WebSocket & { _closeFrameSent?: boolean })._closeFrameSent);
+        const closeFrameReceived = Boolean(
+          (socket as WebSocket & { _closeFrameReceived?: boolean })._closeFrameReceived,
+        );
+        const closeFrameSent = Boolean(
+          (socket as WebSocket & { _closeFrameSent?: boolean })._closeFrameSent,
+        );
         const wasClean = closeFrameReceived && closeFrameSent;
         events.onClose?.({ code, reason: reason.toString(), wasClean });
       });

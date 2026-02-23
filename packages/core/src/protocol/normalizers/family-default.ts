@@ -1,6 +1,16 @@
-import type { NodeListResult, ServerInfoResult, ZwjsClientEvent, ZwjsProtocolEventPayload } from '../../client/types';
+import type {
+  NodeListResult,
+  ServerInfoResult,
+  ZwjsClientEvent,
+  ZwjsProtocolEventPayload,
+} from '../../client/types';
 import { ZwjsClientError } from '../../errors';
-import { isRecord, isZwjsEventFrame, isZwjsResultFrame, isZwjsVersionFrame } from '../raw-frame-types';
+import {
+  isRecord,
+  isZwjsEventFrame,
+  isZwjsResultFrame,
+  isZwjsVersionFrame,
+} from '../raw-frame-types';
 import {
   isZwjsControllerGrantSecurityClassesEvent,
   isZwjsControllerInclusionAbortedEvent,
@@ -36,12 +46,19 @@ export class DefaultZwjsFamilyNormalizer implements ZwjsProtocolAdapter {
 
   normalizeIncoming(message: unknown) {
     if (!isRecord(message)) {
-      throw new ZwjsClientError({ code: 'PROTOCOL_ERROR', message: 'Incoming message is not an object' });
+      throw new ZwjsClientError({
+        code: 'PROTOCOL_ERROR',
+        message: 'Incoming message is not an object',
+      });
     }
 
     const record = message;
     const type = typeof record.type === 'string' ? record.type : undefined;
-    const messageId = isZwjsResultFrame(record) ? record.messageId : typeof record.messageId === 'string' ? record.messageId : undefined;
+    const messageId = isZwjsResultFrame(record)
+      ? record.messageId
+      : typeof record.messageId === 'string'
+        ? record.messageId
+        : undefined;
     const events: ZwjsClientEvent[] = [];
     let serverInfo: ServerInfoResult | undefined;
     let nodesSnapshot: NodeListResult | undefined;
@@ -50,39 +67,59 @@ export class DefaultZwjsFamilyNormalizer implements ZwjsProtocolAdapter {
       serverInfo = {
         serverVersion: record.serverVersion,
         zwaveJsVersion: record.driverVersion,
-        schemaHints: [
-          `min:${record.minSchemaVersion}`,
-          `max:${record.maxSchemaVersion}`,
-        ],
+        schemaHints: [`min:${record.minSchemaVersion}`, `max:${record.maxSchemaVersion}`],
         raw: record,
       };
-      events.push({ type: 'server.info', ts: new Date().toISOString(), source: 'zwjs-client', info: serverInfo });
-    } else if (type === 'server.info' && typeof record.payload === 'object' && record.payload !== null) {
+      events.push({
+        type: 'server.info',
+        ts: new Date().toISOString(),
+        source: 'zwjs-client',
+        info: serverInfo,
+      });
+    } else if (
+      type === 'server.info' &&
+      typeof record.payload === 'object' &&
+      record.payload !== null
+    ) {
       const payload = record.payload as Record<string, unknown>;
       serverInfo = {
-        serverVersion: typeof payload.serverVersion === 'string' ? payload.serverVersion : undefined,
-        zwaveJsVersion: typeof payload.zwaveJsVersion === 'string' ? payload.zwaveJsVersion : undefined,
-        schemaHints: Array.isArray(payload.schemaHints) ? payload.schemaHints.filter((v): v is string => typeof v === 'string') : undefined,
+        serverVersion:
+          typeof payload.serverVersion === 'string' ? payload.serverVersion : undefined,
+        zwaveJsVersion:
+          typeof payload.zwaveJsVersion === 'string' ? payload.zwaveJsVersion : undefined,
+        schemaHints: Array.isArray(payload.schemaHints)
+          ? payload.schemaHints.filter((v): v is string => typeof v === 'string')
+          : undefined,
         raw: payload,
       };
-      events.push({ type: 'server.info', ts: new Date().toISOString(), source: 'zwjs-client', info: serverInfo });
+      events.push({
+        type: 'server.info',
+        ts: new Date().toISOString(),
+        source: 'zwjs-client',
+        info: serverInfo,
+      });
     }
 
     const resultPayload = 'result' in record ? record.result : undefined;
     const candidateNodes =
       type === 'nodes.snapshot' && Array.isArray(record.payload)
         ? record.payload
-        : (typeof resultPayload === 'object' &&
-          resultPayload !== null &&
-          typeof (resultPayload as Record<string, unknown>).state === 'object' &&
-          (resultPayload as Record<string, unknown>).state !== null &&
-          Array.isArray(((resultPayload as Record<string, unknown>).state as Record<string, unknown>).nodes)
-            ? ((((resultPayload as Record<string, unknown>).state as Record<string, unknown>).nodes) as unknown[])
-            : undefined);
+        : typeof resultPayload === 'object' &&
+            resultPayload !== null &&
+            typeof (resultPayload as Record<string, unknown>).state === 'object' &&
+            (resultPayload as Record<string, unknown>).state !== null &&
+            Array.isArray(
+              ((resultPayload as Record<string, unknown>).state as Record<string, unknown>).nodes,
+            )
+          ? (((resultPayload as Record<string, unknown>).state as Record<string, unknown>)
+              .nodes as unknown[])
+          : undefined;
 
     if (candidateNodes) {
       const nodes = candidateNodes
-        .filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null)
+        .filter(
+          (item): item is Record<string, unknown> => typeof item === 'object' && item !== null,
+        )
         .map((node) => ({
           nodeId:
             typeof node.nodeId === 'number'
@@ -103,12 +140,18 @@ export class DefaultZwjsFamilyNormalizer implements ZwjsProtocolAdapter {
         .filter((node) => node.nodeId >= 0);
 
       nodesSnapshot = { nodes };
-      events.push({ type: 'nodes.snapshot', ts: new Date().toISOString(), source: 'zwjs-client', nodes: nodesSnapshot });
+      events.push({
+        type: 'nodes.snapshot',
+        ts: new Date().toISOString(),
+        source: 'zwjs-client',
+        nodes: nodesSnapshot,
+      });
     }
 
     if (isZwjsEventFrame(record)) {
       const protocolEvent = record.event as ZwjsProtocolEventPayload;
-      const protocolSource = typeof protocolEvent.source === 'string' ? protocolEvent.source : undefined;
+      const protocolSource =
+        typeof protocolEvent.source === 'string' ? protocolEvent.source : undefined;
       const typedEventType =
         protocolSource === 'driver'
           ? 'zwjs.event.driver'
@@ -308,16 +351,25 @@ export class DefaultZwjsFamilyNormalizer implements ZwjsProtocolAdapter {
       events,
       requestResponse:
         messageId && !isFailedResult
-          ? { id: messageId, payload: 'result' in record ? record.result : record.payload ?? record }
+          ? {
+              id: messageId,
+              payload: 'result' in record ? record.result : (record.payload ?? record),
+            }
           : undefined,
       requestError:
-        messageId && isFailedResult ? { id: messageId, error: 'error' in record ? record.error : record } : undefined,
+        messageId && isFailedResult
+          ? { id: messageId, error: 'error' in record ? record.error : record }
+          : undefined,
       serverInfo,
       nodesSnapshot,
     };
   }
 
-  buildInitializeRequest(id: string, schemaVersion: number, additionalUserAgentComponents?: Record<string, string>): unknown {
+  buildInitializeRequest(
+    id: string,
+    schemaVersion: number,
+    additionalUserAgentComponents?: Record<string, string>,
+  ): unknown {
     return {
       messageId: id,
       command: 'initialize',

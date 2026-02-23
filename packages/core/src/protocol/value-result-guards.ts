@@ -4,7 +4,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-export function isZwjsNodeValueEnvelopeResult(value: unknown): value is ZwjsNodeValueEnvelopeResult {
+export function isZwjsNodeValueEnvelopeResult(
+  value: unknown,
+): value is ZwjsNodeValueEnvelopeResult {
   return isRecord(value);
 }
 

@@ -50,53 +50,63 @@ test('real ws transport handles version, initialize/start_listening, success and
       received.push(msg);
 
       if (msg.command === 'initialize') {
-        socket.send(JSON.stringify({
-          type: 'result',
-          messageId: msg.messageId,
-          success: true,
-          result: { ok: true },
-        }));
+        socket.send(
+          JSON.stringify({
+            type: 'result',
+            messageId: msg.messageId,
+            success: true,
+            result: { ok: true },
+          }),
+        );
         return;
       }
 
       if (msg.command === 'start_listening') {
-        const result = clone(loadFixture('zwjs-server', 'result.start-listening.state.minimal.json'));
+        const result = clone(
+          loadFixture('zwjs-server', 'result.start-listening.state.minimal.json'),
+        );
         result.messageId = msg.messageId;
         socket.send(JSON.stringify(result));
         return;
       }
 
       if (msg.command === 'driver.get_config') {
-        socket.send(JSON.stringify({
-          type: 'result',
-          messageId: msg.messageId,
-          success: true,
-          result: {
-            config: {
-              statisticsEnabled: true,
-              logConfig: { enabled: true, level: 'info' },
+        socket.send(
+          JSON.stringify({
+            type: 'result',
+            messageId: msg.messageId,
+            success: true,
+            result: {
+              config: {
+                statisticsEnabled: true,
+                logConfig: { enabled: true, level: 'info' },
+              },
             },
-          },
-        }));
+          }),
+        );
         return;
       }
 
       if (msg.command === 'set_api_schema') {
-        socket.send(JSON.stringify({
-          type: 'result',
-          messageId: msg.messageId,
-          success: false,
-          errorCode: 'schema_incompatible',
-        }));
+        socket.send(
+          JSON.stringify({
+            type: 'result',
+            messageId: msg.messageId,
+            success: false,
+            errorCode: 'schema_incompatible',
+          }),
+        );
         return;
       }
 
-      socket.send(JSON.stringify({
-        type: 'result',
-        messageId: msg.messageId,
-        success: false,
-        errorCode: 'unknown_command',
-      }));
+      socket.send(
+        JSON.stringify({
+          type: 'result',
+          messageId: msg.messageId,
+          success: false,
+          errorCode: 'unknown_command',
+        }),
+      );
     });
   });
 
@@ -126,14 +136,26 @@ test('real ws transport handles version, initialize/start_listening, success and
   assert.equal(driverConfig.success, true);
   assert.equal(driverConfig.result.config.statisticsEnabled, true);
 
-  const schemaFail = await client.sendCommand({ command: 'set_api_schema', args: { schemaVersion: 999 } });
+  const schemaFail = await client.sendCommand({
+    command: 'set_api_schema',
+    args: { schemaVersion: 999 },
+  });
   assert.equal(schemaFail.success, false);
   assert.equal(schemaFail.error.errorCode, 'schema_incompatible');
   assert.equal(schemaFail.error.raw.errorCode, 'schema_incompatible');
 
-  assert.equal(received.some((m) => m.command === 'initialize'), true);
-  assert.equal(received.some((m) => m.command === 'start_listening'), true);
-  assert.equal(received.some((m) => m.command === 'driver.get_config'), true);
+  assert.equal(
+    received.some((m) => m.command === 'initialize'),
+    true,
+  );
+  assert.equal(
+    received.some((m) => m.command === 'start_listening'),
+    true,
+  );
+  assert.equal(
+    received.some((m) => m.command === 'driver.get_config'),
+    true,
+  );
 
   await client.stop();
   assert.equal(client.getStatus().lifecycle, 'stopped');

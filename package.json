@@ -10,6 +10,11 @@
     "build": "npm run build -w @zwavejs2homey/core && npm run build -w co.lazylabs.zwavejs2homey",
     "build:core": "npm run build -w @zwavejs2homey/core",
     "build:homey": "npm run build -w co.lazylabs.zwavejs2homey",
-    "lint": "npm run lint -w co.lazylabs.zwavejs2homey"
+    "lint": "npm run lint -w co.lazylabs.zwavejs2homey",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "prettier": "^3.6.2"
   }
 }
