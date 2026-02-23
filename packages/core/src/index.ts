@@ -1,34 +1,25 @@
-export interface BridgeService {
-  start(): Promise<void>;
-  stop(): Promise<void>;
-  getStatus(): BridgeStatus;
-}
+export type {
+  CanonicalNodeSummary,
+  ClientLogger,
+  NodeListResult,
+  ReconnectPolicy,
+  ServerInfoResult,
+  TimeoutPolicy,
+  VersionPolicy,
+  ZwjsCommandRequest,
+  ZwjsCommandResult,
+  ZwjsAuthConfig,
+  ZwjsClient,
+  ZwjsClientConfig,
+  ZwjsClientEvent,
+  ZwjsInitializeOptions,
+  ZwjsClientStatus,
+} from './client/types';
+export type { ClientErrorSummary, ZwjsClientErrorCode } from './errors';
 
-export interface BridgeStatus {
-  running: boolean;
-  startedAt?: string;
-}
+import { ZwjsClientImpl } from './client/zwjs-client';
+import type { ZwjsClient, ZwjsClientConfig } from './client/types';
 
-class PlaceholderBridgeService implements BridgeService {
-  private startedAt?: Date;
-
-  async start(): Promise<void> {
-    if (this.startedAt) return;
-    this.startedAt = new Date();
-  }
-
-  async stop(): Promise<void> {
-    this.startedAt = undefined;
-  }
-
-  getStatus(): BridgeStatus {
-    return {
-      running: this.startedAt !== undefined,
-      startedAt: this.startedAt?.toISOString(),
-    };
-  }
-}
-
-export function createBridgeService(): BridgeService {
-  return new PlaceholderBridgeService();
+export function createZwjsClient(config: ZwjsClientConfig): ZwjsClient {
+  return new ZwjsClientImpl(config);
 }

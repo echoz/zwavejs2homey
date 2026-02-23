@@ -2,25 +2,25 @@
 
 ## Goal
 
-Move from scaffolded structure to a real end-to-end vertical slice (Homey app lifecycle -> core bridge -> one mocked device flow).
+Build a protocol-first `zwjs` WebSocket client foundation (no Homey-specific API in core), validated against a real Z-Wave JS UI instance in read-only mode.
 
 ## In Progress
 
-- Workspace/core/Homey integration scaffolding
+- `zwjs` client foundation (transport/lifecycle/reconnect/normalizer scaffolding)
 
 ## Next Tasks
 
-1. Normalize root workspace install flow (`npm install` at repo root)
-2. Define core event model (`BridgeEvent`, `DeviceSnapshot`, `CommandRequest`)
-3. Implement mocked bridge event stream in `packages/core`
-4. Consume mocked events in Homey app and log mapped output
-5. Decide first real device/capability target for MVP
+1. Lock protocol handshake to `zwave-js-server` docs (`version`, `initialize`, `start_listening`)
+2. Implement generic `sendCommand` path (`messageId` + `command`)
+3. Tighten real frame parsing (`result` / `event` / error frames)
+4. Add fixture tests from `docs/external/zwave-js-server` docs and live read-only captures
+5. Keep Homey app integration minimal (connect + log protocol events only)
 
 ## Risks / Unknowns
 
+- Exact read-only command set to use for safe validation on production instance
+- Schema/version differences across `zwave-js-server` versions
 - Homey runtime packaging behavior with workspace dependencies
-- Node version compatibility for Homey tooling vs local `mise` version
-- Z-Wave JS transport choice and deployment topology
 
 ## Notes
 

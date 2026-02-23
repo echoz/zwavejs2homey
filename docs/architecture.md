@@ -16,16 +16,18 @@ Bridge Z-Wave JS data and behavior into a Homey app with a clear separation betw
 ### Core (`packages/core`)
 
 Owns:
+- Z-Wave JS Server protocol client (`zwjs` client)
 - Z-Wave JS connection/session lifecycle
-- Node/device state models
-- Event translation into app-agnostic domain events
-- Command APIs for device actions
+- Protocol request/response/event handling
+- Version/schema adaptation and normalization
+- Thin protocol-oriented command wrappers
 
 Does not own:
 - Homey SDK classes
 - Homey capability mappings
 - Homey pairing UI
 - Homey app manifest/runtime config
+- Homey-specific abstractions in the protocol client API
 
 ### Homey App (`co.lazylabs.zwavejs2homey`)
 
@@ -38,26 +40,27 @@ Owns:
 
 ## Integration Contract (Draft)
 
-The Homey app imports a small surface from `@zwavejs2homey/core`.
+The Homey app will import a protocol-first `zwjs` client surface from `@zwavejs2homey/core`.
 
-Current placeholder:
-- `createBridgeService()`
-- `BridgeService.start()` / `stop()` / `getStatus()`
+Current direction:
+- `createZwjsClient()`
+- typed lifecycle/status/events
+- protocol commands (`messageId` + `command`) and thin wrappers
 
 Future likely additions:
-- Event emitter / subscriptions
-- Device discovery snapshots
-- Command execution API
-- Health/status metrics
+- Higher-level bridge layer (still in core or separate package)
+- Homey integration adapter (outside protocol client)
+- Device discovery/mapping abstractions
+- Command translation layer
 
 ## Runtime Flow (Target)
 
 1. Homey app starts
-2. Homey app creates core bridge service
-3. Core connects to Z-Wave JS endpoint
-4. Core emits device/network events
+2. Homey app creates `zwjs` protocol client
+3. Core protocol client connects to Z-Wave JS endpoint
+4. Core protocol client emits protocol/canonical events
 5. Homey layer maps events to capabilities/devices
-6. Homey commands are translated back into core commands
+6. Homey layer translates Homey actions into protocol commands
 
 ## Open Questions
 
