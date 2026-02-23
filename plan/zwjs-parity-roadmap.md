@@ -394,6 +394,14 @@ Cover advanced operational domains once P0/P1/P2 needs are stable.
 - Zniffer command/event typing
 - Firmware and advanced route maintenance workflows
 
+### Current Status (2026-02-23)
+
+- P3 implementation slices are complete for the planned subset (`P3.1` / `P3.2` / `P3.3`)
+- Remaining P3 work is operational validation and fixture expansion only:
+  - non-production live validation for zniffer workflows (`P3.2`)
+  - non-production live validation for firmware workflows (`P3.3`)
+  - capture observed variants to tighten result/event fixtures over time
+
 ### Slices (Decision Complete)
 
 #### P3.1 Endpoint / Virtual Endpoint Typed Read Surface
@@ -536,6 +544,12 @@ Progress (completed firmware mutation wrapper subset):
   - `controller.get_powerlevel`
   - `controller.get_max_long_range_powerlevel`
   - `controller.get_long_range_channel`
+- Read-only live validation completed on 2026-02-23 for the above controller diagnostics wrappers:
+  - `get_known_lifeline_routes` -> observed `{ routes: {} }`
+  - `get_rf_region` -> observed numeric region code (`9`)
+  - `get_powerlevel` -> observed `{ powerlevel: 0, measured0dBm: 0 }`
+  - `get_max_long_range_powerlevel` -> observed `{ limit: 0 }`
+  - `get_long_range_channel` -> observed `{ channel: 255, supportsAutoChannelSelection: true }`
 
 Safety guidance (documented posture for firmware operations):
 
