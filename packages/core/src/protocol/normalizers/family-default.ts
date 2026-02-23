@@ -1,5 +1,6 @@
 import type { NodeListResult, ServerInfoResult, ZwjsClientEvent, ZwjsProtocolEventPayload } from '../../client/types';
 import { ZwjsClientError } from '../../errors';
+import { isRecord, isZwjsEventFrame, isZwjsResultFrame, isZwjsVersionFrame } from '../raw-frame-types';
 import type { ZwjsProtocolAdapter } from './types';
 
 export class DefaultZwjsFamilyNormalizer implements ZwjsProtocolAdapter {
@@ -10,24 +11,24 @@ export class DefaultZwjsFamilyNormalizer implements ZwjsProtocolAdapter {
   }
 
   normalizeIncoming(message: unknown) {
-    if (typeof message !== 'object' || message === null) {
+    if (!isRecord(message)) {
       throw new ZwjsClientError({ code: 'PROTOCOL_ERROR', message: 'Incoming message is not an object' });
     }
 
-    const record = message as Record<string, unknown>;
+    const record = message;
     const type = typeof record.type === 'string' ? record.type : undefined;
-    const messageId = typeof record.messageId === 'string' ? record.messageId : undefined;
+    const messageId = isZwjsResultFrame(record) ? record.messageId : typeof record.messageId === 'string' ? record.messageId : undefined;
     const events: ZwjsClientEvent[] = [];
     let serverInfo: ServerInfoResult | undefined;
     let nodesSnapshot: NodeListResult | undefined;
 
-    if (type === 'version') {
+    if (isZwjsVersionFrame(record)) {
       serverInfo = {
-        serverVersion: typeof record.serverVersion === 'string' ? record.serverVersion : undefined,
-        zwaveJsVersion: typeof record.driverVersion === 'string' ? record.driverVersion : undefined,
+        serverVersion: record.serverVersion,
+        zwaveJsVersion: record.driverVersion,
         schemaHints: [
-          ...(typeof record.minSchemaVersion === 'number' ? [`min:${record.minSchemaVersion}`] : []),
-          ...(typeof record.maxSchemaVersion === 'number' ? [`max:${record.maxSchemaVersion}`] : []),
+          `min:${record.minSchemaVersion}`,
+          `max:${record.maxSchemaVersion}`,
         ],
         raw: record,
       };
@@ -81,7 +82,7 @@ export class DefaultZwjsFamilyNormalizer implements ZwjsProtocolAdapter {
       events.push({ type: 'nodes.snapshot', ts: new Date().toISOString(), source: 'zwjs-client', nodes: nodesSnapshot });
     }
 
-    if (type === 'event' && typeof record.event === 'object' && record.event !== null) {
+    if (isZwjsEventFrame(record)) {
       const protocolEvent = record.event as ZwjsProtocolEventPayload;
       const protocolSource = typeof protocolEvent.source === 'string' ? protocolEvent.source : undefined;
       const typedEventType =
@@ -119,7 +120,7 @@ export class DefaultZwjsFamilyNormalizer implements ZwjsProtocolAdapter {
       });
     }
 
-    const isFailedResult = record.type === 'result' && record.success === false;
+    const isFailedResult = isZwjsResultFrame(record) && record.success === false;
 
     return {
       events,

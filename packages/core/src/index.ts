@@ -19,6 +19,12 @@ export type {
   ZwjsClientStatus,
 } from './client/types';
 export type { ClientErrorSummary, ZwjsClientErrorCode } from './errors';
+export type {
+  ZwjsEventFrame,
+  ZwjsProtocolCommandFrame,
+  ZwjsResultFrame,
+  ZwjsVersionFrame,
+} from './protocol/raw-frame-types';
 
 import { ZwjsClientImpl } from './client/zwjs-client';
 import type { ZwjsClient, ZwjsClientConfig } from './client/types';
