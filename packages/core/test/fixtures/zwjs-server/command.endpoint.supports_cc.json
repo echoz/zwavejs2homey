@@ -1,0 +1,6 @@
+{
+  "command": "endpoint.supports_cc",
+  "nodeId": 5,
+  "endpoint": 1,
+  "commandClass": 37
+}

@@ -1,0 +1,6 @@
+{
+  "command": "endpoint.is_cc_secure",
+  "nodeId": 5,
+  "endpoint": 1,
+  "commandClass": 37
+}

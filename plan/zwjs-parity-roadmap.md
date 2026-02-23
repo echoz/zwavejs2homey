@@ -403,6 +403,18 @@ Acceptance:
 - Result typing `partial` or `protocol-native` with documented caveats
 - Fixtures and mocked tests added
 
+Progress (completed subset):
+
+- Added endpoint read wrappers (`endpoint.*`) for:
+  - `supports_cc`
+  - `controls_cc`
+  - `is_cc_secure`
+  - `get_cc_version`
+  - `try_get_node`
+  - `get_node_unsafe`
+- Added fixture-backed mocked transport tests for exact command envelopes and representative boolean/number/object results
+- Virtual endpoint (`broadcast_node.*` / `multicast_group.*`) typed read wrappers remain pending
+
 #### P3.2 Zniffer Protocol Layer
 
 Implement:

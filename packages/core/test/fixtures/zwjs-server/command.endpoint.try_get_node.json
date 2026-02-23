@@ -1,0 +1,5 @@
+{
+  "command": "endpoint.try_get_node",
+  "nodeId": 5,
+  "endpoint": 1
+}

@@ -260,6 +260,20 @@ export interface ZwjsNodePollValueResult {
   value?: unknown;
   [key: string]: unknown;
 }
+export interface ZwjsEndpointTarget {
+  nodeId: number;
+  endpoint?: number;
+}
+export interface ZwjsEndpointCcQuery extends ZwjsEndpointTarget {
+  commandClass: number | string;
+}
+export type ZwjsEndpointSupportsCcResult =
+  | boolean
+  | { supported?: boolean; [key: string]: unknown };
+export type ZwjsEndpointControlsCcResult = boolean | { controls?: boolean; [key: string]: unknown };
+export type ZwjsEndpointIsCcSecureResult = boolean | { secure?: boolean; [key: string]: unknown };
+export type ZwjsEndpointGetCcVersionResult = number | { version?: number; [key: string]: unknown };
+export type ZwjsEndpointNodeRefResult = Record<string, unknown> | null;
 
 export interface ClientLogger {
   debug?(msg: string, meta?: unknown): void;
@@ -708,6 +722,24 @@ export interface ZwjsClient {
   refreshNodeInfo(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeRefreshInfoResult>>;
   refreshNodeValues(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeRefreshValuesResult>>;
   pollNodeValue(args: ZwjsNodePollValueArgs): Promise<ZwjsCommandResult<ZwjsNodePollValueResult>>;
+  endpointSupportsCc(
+    args: ZwjsEndpointCcQuery,
+  ): Promise<ZwjsCommandResult<ZwjsEndpointSupportsCcResult>>;
+  endpointControlsCc(
+    args: ZwjsEndpointCcQuery,
+  ): Promise<ZwjsCommandResult<ZwjsEndpointControlsCcResult>>;
+  endpointIsCcSecure(
+    args: ZwjsEndpointCcQuery,
+  ): Promise<ZwjsCommandResult<ZwjsEndpointIsCcSecureResult>>;
+  endpointGetCcVersion(
+    args: ZwjsEndpointCcQuery,
+  ): Promise<ZwjsCommandResult<ZwjsEndpointGetCcVersionResult>>;
+  endpointTryGetNode(
+    args: ZwjsEndpointTarget,
+  ): Promise<ZwjsCommandResult<ZwjsEndpointNodeRefResult>>;
+  endpointGetNodeUnsafe(
+    args: ZwjsEndpointTarget,
+  ): Promise<ZwjsCommandResult<ZwjsEndpointNodeRefResult>>;
   beginInclusion(
     args?: ZwjsControllerBeginInclusionArgs,
   ): Promise<ZwjsCommandResult<ZwjsControllerInclusionCommandResult>>;

@@ -43,6 +43,13 @@ import type {
   ZwjsNodeRefreshValuesResult,
   ZwjsNodePollValueArgs,
   ZwjsNodePollValueResult,
+  ZwjsEndpointTarget,
+  ZwjsEndpointCcQuery,
+  ZwjsEndpointSupportsCcResult,
+  ZwjsEndpointControlsCcResult,
+  ZwjsEndpointIsCcSecureResult,
+  ZwjsEndpointGetCcVersionResult,
+  ZwjsEndpointNodeRefResult,
   ZwjsValueId,
   ZwjsClientStatus,
   ZwjsLifecycleState,
@@ -452,6 +459,60 @@ export class ZwjsClientImpl implements ZwjsClient {
   ): Promise<ZwjsCommandResult<ZwjsNodePollValueResult>> {
     return this.sendMutationCommand<ZwjsNodePollValueResult, ZwjsNodePollValueArgs>({
       command: 'node.poll_value',
+      args,
+    });
+  }
+
+  async endpointSupportsCc(
+    args: ZwjsEndpointCcQuery,
+  ): Promise<ZwjsCommandResult<ZwjsEndpointSupportsCcResult>> {
+    return this.sendCommand<ZwjsEndpointSupportsCcResult, ZwjsEndpointCcQuery>({
+      command: 'endpoint.supports_cc',
+      args,
+    });
+  }
+
+  async endpointControlsCc(
+    args: ZwjsEndpointCcQuery,
+  ): Promise<ZwjsCommandResult<ZwjsEndpointControlsCcResult>> {
+    return this.sendCommand<ZwjsEndpointControlsCcResult, ZwjsEndpointCcQuery>({
+      command: 'endpoint.controls_cc',
+      args,
+    });
+  }
+
+  async endpointIsCcSecure(
+    args: ZwjsEndpointCcQuery,
+  ): Promise<ZwjsCommandResult<ZwjsEndpointIsCcSecureResult>> {
+    return this.sendCommand<ZwjsEndpointIsCcSecureResult, ZwjsEndpointCcQuery>({
+      command: 'endpoint.is_cc_secure',
+      args,
+    });
+  }
+
+  async endpointGetCcVersion(
+    args: ZwjsEndpointCcQuery,
+  ): Promise<ZwjsCommandResult<ZwjsEndpointGetCcVersionResult>> {
+    return this.sendCommand<ZwjsEndpointGetCcVersionResult, ZwjsEndpointCcQuery>({
+      command: 'endpoint.get_cc_version',
+      args,
+    });
+  }
+
+  async endpointTryGetNode(
+    args: ZwjsEndpointTarget,
+  ): Promise<ZwjsCommandResult<ZwjsEndpointNodeRefResult>> {
+    return this.sendCommand<ZwjsEndpointNodeRefResult, ZwjsEndpointTarget>({
+      command: 'endpoint.try_get_node',
+      args,
+    });
+  }
+
+  async endpointGetNodeUnsafe(
+    args: ZwjsEndpointTarget,
+  ): Promise<ZwjsCommandResult<ZwjsEndpointNodeRefResult>> {
+    return this.sendCommand<ZwjsEndpointNodeRefResult, ZwjsEndpointTarget>({
+      command: 'endpoint.get_node_unsafe',
       args,
     });
   }

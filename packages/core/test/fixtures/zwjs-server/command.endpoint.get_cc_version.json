@@ -1,0 +1,6 @@
+{
+  "command": "endpoint.get_cc_version",
+  "nodeId": 5,
+  "endpoint": 1,
+  "commandClass": 37
+}

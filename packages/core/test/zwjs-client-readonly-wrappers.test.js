@@ -555,6 +555,70 @@ test('P1.2 diagnostic wrappers support observed nested result key shapes from li
   await client.stop();
 });
 
+test('endpoint support-check and node-helper wrappers send exact protocol commands and return results', async () => {
+  const { client, transport } = makeClient();
+  await startConnected(client, transport);
+
+  const endpointCcArgs = { nodeId: 5, endpoint: 1, commandClass: 37 };
+  const endpointTargetArgs = { nodeId: 5, endpoint: 1 };
+
+  const checks = [
+    [
+      () => client.endpointSupportsCc(endpointCcArgs),
+      'command.endpoint.supports_cc.json',
+      'result.endpoint.supports_cc.success.json',
+      (result) => assert.equal(result, true),
+    ],
+    [
+      () => client.endpointControlsCc(endpointCcArgs),
+      'command.endpoint.controls_cc.json',
+      'result.endpoint.controls_cc.success.json',
+      (result) => assert.equal(result, false),
+    ],
+    [
+      () => client.endpointIsCcSecure(endpointCcArgs),
+      'command.endpoint.is_cc_secure.json',
+      'result.endpoint.is_cc_secure.success.json',
+      (result) => assert.equal(result, true),
+    ],
+    [
+      () => client.endpointGetCcVersion(endpointCcArgs),
+      'command.endpoint.get_cc_version.json',
+      'result.endpoint.get_cc_version.success.json',
+      (result) => assert.equal(result, 4),
+    ],
+    [
+      () => client.endpointTryGetNode(endpointTargetArgs),
+      'command.endpoint.try_get_node.json',
+      'result.endpoint.try_get_node.success.json',
+      (result) => assert.equal(result.id, 5),
+    ],
+    [
+      () => client.endpointGetNodeUnsafe(endpointTargetArgs),
+      'command.endpoint.get_node_unsafe.json',
+      'result.endpoint.get_node_unsafe.success.json',
+      (result) => assert.equal(result.id, 5),
+    ],
+  ];
+
+  for (const [call, commandFixture, resultFixture, assertResult] of checks) {
+    const pending = call();
+    const sent = transport.sent.at(-1);
+    assert.deepEqual(
+      sent,
+      withMessageId(loadFixture('zwjs-server', commandFixture), sent.messageId),
+    );
+    transport.triggerMessage(
+      withMessageId(loadFixture('zwjs-server', resultFixture), sent.messageId),
+    );
+    const response = await pending;
+    assert.equal(response.success, true);
+    assertResult(response.result);
+  }
+
+  await client.stop();
+});
+
 test('setApiSchema sends correct command and returns success result', async () => {
   const { client, transport } = makeClient();
   await startConnected(client, transport);
