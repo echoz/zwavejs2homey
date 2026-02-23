@@ -523,6 +523,7 @@ Progress (completed firmware mutation wrapper subset):
 - Tightened firmware wrapper validation for common invalid request shapes:
   - reject ambiguous `driver.firmware_update_otw` payload mode (`raw file` + `updateInfo`)
   - reject empty `node.update_firmware` `updates` arrays before send
+- Tightened firmware mutation test coverage by command family (driver/controller/node) instead of one shared grouped success assertion
 
 Safety guidance (documented posture for firmware operations):
 

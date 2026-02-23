@@ -285,7 +285,13 @@ export interface ZwjsNodePollValueResult {
   value?: unknown;
   [key: string]: unknown;
 }
-export type ZwjsFirmwareUpdateCommandResult = Record<string, unknown>;
+export interface ZwjsFirmwareUpdateCommandResult {
+  success?: boolean;
+  status?: unknown;
+  waitTime?: number;
+  details?: Record<string, unknown>;
+  [key: string]: unknown;
+}
 export interface ZwjsDriverFirmwareUpdateOtwRawFileArgs {
   filename: string;
   file: string;

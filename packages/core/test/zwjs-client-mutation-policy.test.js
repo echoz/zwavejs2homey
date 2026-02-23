@@ -603,13 +603,98 @@ test('zniffer mutation wrappers are blocked by default mutation policy', async (
   await client.stop();
 });
 
-test('firmware mutation wrappers send exact protocol commands when allowlisted', async () => {
+test('driver firmware mutation wrapper sends exact protocol command when allowlisted', async () => {
+  const { client, transport } = makeClient({
+    enabled: true,
+    allowCommands: ['driver.firmware_update_otw'],
+  });
+  await startConnected(client, transport);
+
+  const pending = client.driverFirmwareUpdateOtw({
+    filename: 'controller.gbl',
+    file: 'AQID',
+    fileFormat: 'gbl',
+  });
+  const sent = transport.sent.at(-1);
+  assert.deepEqual(
+    sent,
+    withMessageId(
+      loadFixture('zwjs-server', 'command.driver.firmware_update_otw.raw-file.json'),
+      sent.messageId,
+    ),
+  );
+  transport.triggerMessage(
+    withMessageId(
+      loadFixture('zwjs-server', 'result.firmware_update.command.success.json'),
+      sent.messageId,
+    ),
+  );
+  const result = await pending;
+  assert.equal(result.success, true);
+  assert.equal(result.result.status, 'started');
+
+  await client.stop();
+});
+
+test('controller firmware mutation wrappers send exact protocol commands when allowlisted', async () => {
+  const { client, transport } = makeClient({
+    enabled: true,
+    allowCommands: ['controller.firmware_update_ota', 'controller.firmware_update_otw'],
+  });
+  await startConnected(client, transport);
+
+  const otaPending = client.controllerFirmwareUpdateOta({
+    nodeId: 5,
+    updateInfo: { version: '1.2.3', files: [] },
+  });
+  let sent = transport.sent.at(-1);
+  assert.deepEqual(
+    sent,
+    withMessageId(
+      loadFixture('zwjs-server', 'command.controller.firmware_update_ota.json'),
+      sent.messageId,
+    ),
+  );
+  transport.triggerMessage(
+    withMessageId(
+      loadFixture('zwjs-server', 'result.firmware_update.command.success.json'),
+      sent.messageId,
+    ),
+  );
+  const otaResult = await otaPending;
+  assert.equal(otaResult.success, true);
+  assert.equal(typeof otaResult.result.status !== 'undefined', true);
+
+  const otwPending = client.controllerFirmwareUpdateOtw({
+    filename: 'controller.gbl',
+    file: 'AQID',
+    fileFormat: 'gbl',
+  });
+  sent = transport.sent.at(-1);
+  assert.deepEqual(
+    sent,
+    withMessageId(
+      loadFixture('zwjs-server', 'command.controller.firmware_update_otw.json'),
+      sent.messageId,
+    ),
+  );
+  transport.triggerMessage(
+    withMessageId(
+      loadFixture('zwjs-server', 'result.firmware_update.command.success.variant.json'),
+      sent.messageId,
+    ),
+  );
+  const otwResult = await otwPending;
+  assert.equal(otwResult.success, true);
+  assert.equal(otwResult.result.success, true);
+
+  await client.stop();
+});
+
+test('node firmware mutation wrappers send exact protocol commands when allowlisted', async () => {
   const { client, transport } = makeClient({
     enabled: true,
     allowCommands: [
-      'driver.firmware_update_otw',
-      'controller.firmware_update_ota',
-      'controller.firmware_update_otw',
       'node.begin_firmware_update',
       'node.update_firmware',
       'node.abort_firmware_update',
@@ -617,72 +702,66 @@ test('firmware mutation wrappers send exact protocol commands when allowlisted',
   });
   await startConnected(client, transport);
 
-  const checks = [
-    [
-      () =>
-        client.driverFirmwareUpdateOtw({
-          filename: 'controller.gbl',
-          file: 'AQID',
-          fileFormat: 'gbl',
-        }),
-      'command.driver.firmware_update_otw.raw-file.json',
-    ],
-    [
-      () =>
-        client.controllerFirmwareUpdateOta({
-          nodeId: 5,
-          updateInfo: { version: '1.2.3', files: [] },
-        }),
-      'command.controller.firmware_update_ota.json',
-    ],
-    [
-      () =>
-        client.controllerFirmwareUpdateOtw({
-          filename: 'controller.gbl',
-          file: 'AQID',
-          fileFormat: 'gbl',
-        }),
-      'command.controller.firmware_update_otw.json',
-    ],
-    [
-      () =>
-        client.beginNodeFirmwareUpdate({
-          nodeId: 5,
-          firmwareFilename: 'device.otz',
-          firmwareFile: 'AQID',
-          firmwareFileFormat: 'otz',
-          target: 0,
-        }),
-      'command.node.begin_firmware_update.json',
-    ],
-    [
-      () =>
-        client.updateNodeFirmware({
-          nodeId: 5,
-          updates: [{ filename: 'device.otz', file: 'AQID', fileFormat: 'otz', firmwareTarget: 0 }],
-        }),
-      'command.node.update_firmware.json',
-    ],
-    [() => client.abortNodeFirmwareUpdate(5), 'command.node.abort_firmware_update.json'],
-  ];
+  const beginPending = client.beginNodeFirmwareUpdate({
+    nodeId: 5,
+    firmwareFilename: 'device.otz',
+    firmwareFile: 'AQID',
+    firmwareFileFormat: 'otz',
+    target: 0,
+  });
+  let sent = transport.sent.at(-1);
+  assert.deepEqual(
+    sent,
+    withMessageId(
+      loadFixture('zwjs-server', 'command.node.begin_firmware_update.json'),
+      sent.messageId,
+    ),
+  );
+  transport.triggerMessage(
+    withMessageId(
+      loadFixture('zwjs-server', 'result.firmware_update.command.success.json'),
+      sent.messageId,
+    ),
+  );
+  const beginResult = await beginPending;
+  assert.equal(beginResult.success, true);
 
-  for (const [call, commandFixture] of checks) {
-    const pending = call();
-    const sent = transport.sent.at(-1);
-    assert.deepEqual(
-      sent,
-      withMessageId(loadFixture('zwjs-server', commandFixture), sent.messageId),
-    );
-    transport.triggerMessage(
-      withMessageId(
-        loadFixture('zwjs-server', 'result.firmware_update.command.success.json'),
-        sent.messageId,
-      ),
-    );
-    const result = await pending;
-    assert.equal(result.success, true);
-    assert.equal(result.result.status, 'started');
-  }
+  const updatePending = client.updateNodeFirmware({
+    nodeId: 5,
+    updates: [{ filename: 'device.otz', file: 'AQID', fileFormat: 'otz', firmwareTarget: 0 }],
+  });
+  sent = transport.sent.at(-1);
+  assert.deepEqual(
+    sent,
+    withMessageId(loadFixture('zwjs-server', 'command.node.update_firmware.json'), sent.messageId),
+  );
+  transport.triggerMessage(
+    withMessageId(
+      loadFixture('zwjs-server', 'result.firmware_update.command.success.variant.json'),
+      sent.messageId,
+    ),
+  );
+  const updateResult = await updatePending;
+  assert.equal(updateResult.success, true);
+  assert.equal(typeof updateResult.result.status !== 'undefined', true);
+
+  const abortPending = client.abortNodeFirmwareUpdate(5);
+  sent = transport.sent.at(-1);
+  assert.deepEqual(
+    sent,
+    withMessageId(
+      loadFixture('zwjs-server', 'command.node.abort_firmware_update.json'),
+      sent.messageId,
+    ),
+  );
+  transport.triggerMessage(
+    withMessageId(
+      loadFixture('zwjs-server', 'result.firmware_update.command.success.json'),
+      sent.messageId,
+    ),
+  );
+  const abortResult = await abortPending;
+  assert.equal(abortResult.success, true);
 
   await client.stop();
 });

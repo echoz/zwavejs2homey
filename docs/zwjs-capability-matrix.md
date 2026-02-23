@@ -303,6 +303,8 @@ Firmware mutation safety posture:
   - use `createMutationPolicyPreset('destructive', { additionalAllowCommands: [...] })`
   - allowlist only the exact firmware commands required for the current maintenance step
   - test on non-production hardware before any production usage
+- Test coverage note:
+  - firmware mutation wrappers now have command-family-specific fixture tests (driver/controller/node), in addition to policy-blocking tests
 
 ## Notes on Naming and Mapping
 
