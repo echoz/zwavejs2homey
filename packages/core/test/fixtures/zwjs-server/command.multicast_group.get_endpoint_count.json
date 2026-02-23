@@ -1,0 +1,4 @@
+{
+  "command": "multicast_group.get_endpoint_count",
+  "nodeIDs": [5, 7]
+}

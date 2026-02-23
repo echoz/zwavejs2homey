@@ -50,6 +50,12 @@ import type {
   ZwjsEndpointIsCcSecureResult,
   ZwjsEndpointGetCcVersionResult,
   ZwjsEndpointNodeRefResult,
+  ZwjsMulticastGroupTarget,
+  ZwjsVirtualEndpointCcQuery,
+  ZwjsVirtualEndpointEndpointCountResult,
+  ZwjsVirtualEndpointSupportsCcResult,
+  ZwjsVirtualEndpointGetCcVersionResult,
+  ZwjsVirtualEndpointDefinedValueIdsResult,
   ZwjsValueId,
   ZwjsClientStatus,
   ZwjsLifecycleState,
@@ -513,6 +519,74 @@ export class ZwjsClientImpl implements ZwjsClient {
   ): Promise<ZwjsCommandResult<ZwjsEndpointNodeRefResult>> {
     return this.sendCommand<ZwjsEndpointNodeRefResult, ZwjsEndpointTarget>({
       command: 'endpoint.get_node_unsafe',
+      args,
+    });
+  }
+
+  async broadcastNodeGetEndpointCount(): Promise<
+    ZwjsCommandResult<ZwjsVirtualEndpointEndpointCountResult>
+  > {
+    return this.sendCommand<ZwjsVirtualEndpointEndpointCountResult>({
+      command: 'broadcast_node.get_endpoint_count',
+    });
+  }
+
+  async broadcastNodeSupportsCc(
+    args: Pick<ZwjsVirtualEndpointCcQuery, 'index' | 'commandClass'>,
+  ): Promise<ZwjsCommandResult<ZwjsVirtualEndpointSupportsCcResult>> {
+    return this.sendCommand<
+      ZwjsVirtualEndpointSupportsCcResult,
+      Pick<ZwjsVirtualEndpointCcQuery, 'index' | 'commandClass'>
+    >({
+      command: 'broadcast_node.supports_cc',
+      args,
+    });
+  }
+
+  async broadcastNodeGetCcVersion(
+    args: Pick<ZwjsVirtualEndpointCcQuery, 'index' | 'commandClass'>,
+  ): Promise<ZwjsCommandResult<ZwjsVirtualEndpointGetCcVersionResult>> {
+    return this.sendCommand<
+      ZwjsVirtualEndpointGetCcVersionResult,
+      Pick<ZwjsVirtualEndpointCcQuery, 'index' | 'commandClass'>
+    >({
+      command: 'broadcast_node.get_cc_version',
+      args,
+    });
+  }
+
+  async multicastGroupGetEndpointCount(
+    args: ZwjsMulticastGroupTarget,
+  ): Promise<ZwjsCommandResult<ZwjsVirtualEndpointEndpointCountResult>> {
+    return this.sendCommand<ZwjsVirtualEndpointEndpointCountResult, ZwjsMulticastGroupTarget>({
+      command: 'multicast_group.get_endpoint_count',
+      args,
+    });
+  }
+
+  async multicastGroupSupportsCc(
+    args: ZwjsVirtualEndpointCcQuery,
+  ): Promise<ZwjsCommandResult<ZwjsVirtualEndpointSupportsCcResult>> {
+    return this.sendCommand<ZwjsVirtualEndpointSupportsCcResult, ZwjsVirtualEndpointCcQuery>({
+      command: 'multicast_group.supports_cc',
+      args,
+    });
+  }
+
+  async multicastGroupGetCcVersion(
+    args: ZwjsVirtualEndpointCcQuery,
+  ): Promise<ZwjsCommandResult<ZwjsVirtualEndpointGetCcVersionResult>> {
+    return this.sendCommand<ZwjsVirtualEndpointGetCcVersionResult, ZwjsVirtualEndpointCcQuery>({
+      command: 'multicast_group.get_cc_version',
+      args,
+    });
+  }
+
+  async multicastGroupGetDefinedValueIds(
+    args: ZwjsMulticastGroupTarget,
+  ): Promise<ZwjsCommandResult<ZwjsVirtualEndpointDefinedValueIdsResult>> {
+    return this.sendCommand<ZwjsVirtualEndpointDefinedValueIdsResult, ZwjsMulticastGroupTarget>({
+      command: 'multicast_group.get_defined_value_ids',
       args,
     });
   }

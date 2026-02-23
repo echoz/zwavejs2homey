@@ -1,0 +1,5 @@
+{
+  "command": "broadcast_node.get_cc_version",
+  "index": 1,
+  "commandClass": 37
+}

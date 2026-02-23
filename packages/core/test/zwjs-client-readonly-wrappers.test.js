@@ -619,6 +619,73 @@ test('endpoint support-check and node-helper wrappers send exact protocol comman
   await client.stop();
 });
 
+test('virtual endpoint read wrappers send exact broadcast/multicast protocol commands and return results', async () => {
+  const { client, transport } = makeClient();
+  await startConnected(client, transport);
+
+  const checks = [
+    [
+      () => client.broadcastNodeGetEndpointCount(),
+      'command.broadcast_node.get_endpoint_count.json',
+      'result.broadcast_node.get_endpoint_count.success.json',
+      (result) => assert.equal(result, 3),
+    ],
+    [
+      () => client.broadcastNodeSupportsCc({ index: 1, commandClass: 37 }),
+      'command.broadcast_node.supports_cc.json',
+      'result.broadcast_node.supports_cc.success.json',
+      (result) => assert.equal(result, true),
+    ],
+    [
+      () => client.broadcastNodeGetCcVersion({ index: 1, commandClass: 37 }),
+      'command.broadcast_node.get_cc_version.json',
+      'result.broadcast_node.get_cc_version.success.json',
+      (result) => assert.equal(result, 4),
+    ],
+    [
+      () => client.multicastGroupGetEndpointCount({ nodeIDs: [5, 7] }),
+      'command.multicast_group.get_endpoint_count.json',
+      'result.multicast_group.get_endpoint_count.success.json',
+      (result) => assert.equal(result, 4),
+    ],
+    [
+      () => client.multicastGroupSupportsCc({ nodeIDs: [5, 7], index: 1, commandClass: 37 }),
+      'command.multicast_group.supports_cc.json',
+      'result.multicast_group.supports_cc.success.json',
+      (result) => assert.equal(result, false),
+    ],
+    [
+      () => client.multicastGroupGetCcVersion({ nodeIDs: [5, 7], index: 1, commandClass: 37 }),
+      'command.multicast_group.get_cc_version.json',
+      'result.multicast_group.get_cc_version.success.json',
+      (result) => assert.equal(result, 5),
+    ],
+    [
+      () => client.multicastGroupGetDefinedValueIds({ nodeIDs: [5, 7] }),
+      'command.multicast_group.get_defined_value_ids.json',
+      'result.multicast_group.get_defined_value_ids.success.json',
+      (result) => assert.equal(Array.isArray(result), true),
+    ],
+  ];
+
+  for (const [call, commandFixture, resultFixture, assertResult] of checks) {
+    const pending = call();
+    const sent = transport.sent.at(-1);
+    assert.deepEqual(
+      sent,
+      withMessageId(loadFixture('zwjs-server', commandFixture), sent.messageId),
+    );
+    transport.triggerMessage(
+      withMessageId(loadFixture('zwjs-server', resultFixture), sent.messageId),
+    );
+    const response = await pending;
+    assert.equal(response.success, true);
+    assertResult(response.result);
+  }
+
+  await client.stop();
+});
+
 test('setApiSchema sends correct command and returns success result', async () => {
   const { client, transport } = makeClient();
   await startConnected(client, transport);

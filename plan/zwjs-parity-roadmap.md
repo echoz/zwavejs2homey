@@ -413,7 +413,13 @@ Progress (completed subset):
   - `try_get_node`
   - `get_node_unsafe`
 - Added fixture-backed mocked transport tests for exact command envelopes and representative boolean/number/object results
-- Virtual endpoint (`broadcast_node.*` / `multicast_group.*`) typed read wrappers remain pending
+- Added first virtual endpoint read wrappers (`broadcast_node.*` / `multicast_group.*`) for:
+  - `get_endpoint_count`
+  - `supports_cc`
+  - `get_cc_version`
+  - `multicast_group.get_defined_value_ids`
+- Added fixture-backed mocked transport tests for exact command envelopes and representative results for this virtual endpoint subset
+- Remaining virtual endpoint scope for this slice: broader `invoke_cc_api` / `supports_cc_api` and additional commands as needed
 
 #### P3.2 Zniffer Protocol Layer
 

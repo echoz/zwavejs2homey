@@ -1,0 +1,4 @@
+{
+  "command": "multicast_group.get_defined_value_ids",
+  "nodeIDs": [5, 7]
+}

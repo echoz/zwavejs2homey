@@ -1,0 +1,6 @@
+{
+  "command": "multicast_group.get_cc_version",
+  "nodeIDs": [5, 7],
+  "index": 1,
+  "commandClass": 37
+}

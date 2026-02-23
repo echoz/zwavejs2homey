@@ -1,0 +1,12 @@
+{
+  "type": "result",
+  "messageId": "fixture-message-id",
+  "success": true,
+  "result": [
+    {
+      "commandClass": 37,
+      "property": "currentValue",
+      "endpoint": 0
+    }
+  ]
+}

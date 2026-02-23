@@ -274,6 +274,23 @@ export type ZwjsEndpointControlsCcResult = boolean | { controls?: boolean; [key:
 export type ZwjsEndpointIsCcSecureResult = boolean | { secure?: boolean; [key: string]: unknown };
 export type ZwjsEndpointGetCcVersionResult = number | { version?: number; [key: string]: unknown };
 export type ZwjsEndpointNodeRefResult = Record<string, unknown> | null;
+export interface ZwjsMulticastGroupTarget {
+  nodeIDs: number[];
+}
+export interface ZwjsVirtualEndpointCcQuery extends ZwjsMulticastGroupTarget {
+  index: number;
+  commandClass: number | string;
+}
+export type ZwjsVirtualEndpointEndpointCountResult =
+  | number
+  | { count?: number; [key: string]: unknown };
+export type ZwjsVirtualEndpointSupportsCcResult =
+  | boolean
+  | { supported?: boolean; [key: string]: unknown };
+export type ZwjsVirtualEndpointGetCcVersionResult =
+  | number
+  | { version?: number; [key: string]: unknown };
+export type ZwjsVirtualEndpointDefinedValueIdsResult = ZwjsDefinedValueIdsResult;
 
 export interface ClientLogger {
   debug?(msg: string, meta?: unknown): void;
@@ -740,6 +757,27 @@ export interface ZwjsClient {
   endpointGetNodeUnsafe(
     args: ZwjsEndpointTarget,
   ): Promise<ZwjsCommandResult<ZwjsEndpointNodeRefResult>>;
+  broadcastNodeGetEndpointCount(): Promise<
+    ZwjsCommandResult<ZwjsVirtualEndpointEndpointCountResult>
+  >;
+  broadcastNodeSupportsCc(
+    args: Pick<ZwjsVirtualEndpointCcQuery, 'index' | 'commandClass'>,
+  ): Promise<ZwjsCommandResult<ZwjsVirtualEndpointSupportsCcResult>>;
+  broadcastNodeGetCcVersion(
+    args: Pick<ZwjsVirtualEndpointCcQuery, 'index' | 'commandClass'>,
+  ): Promise<ZwjsCommandResult<ZwjsVirtualEndpointGetCcVersionResult>>;
+  multicastGroupGetEndpointCount(
+    args: ZwjsMulticastGroupTarget,
+  ): Promise<ZwjsCommandResult<ZwjsVirtualEndpointEndpointCountResult>>;
+  multicastGroupSupportsCc(
+    args: ZwjsVirtualEndpointCcQuery,
+  ): Promise<ZwjsCommandResult<ZwjsVirtualEndpointSupportsCcResult>>;
+  multicastGroupGetCcVersion(
+    args: ZwjsVirtualEndpointCcQuery,
+  ): Promise<ZwjsCommandResult<ZwjsVirtualEndpointGetCcVersionResult>>;
+  multicastGroupGetDefinedValueIds(
+    args: ZwjsMulticastGroupTarget,
+  ): Promise<ZwjsCommandResult<ZwjsVirtualEndpointDefinedValueIdsResult>>;
   beginInclusion(
     args?: ZwjsControllerBeginInclusionArgs,
   ): Promise<ZwjsCommandResult<ZwjsControllerInclusionCommandResult>>;
