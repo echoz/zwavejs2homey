@@ -1,0 +1,9 @@
+{
+  "type": "event",
+  "event": {
+    "source": "controller",
+    "event": "nvm backup progress",
+    "bytesRead": 64,
+    "total": 1024
+  }
+}

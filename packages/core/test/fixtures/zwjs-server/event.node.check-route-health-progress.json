@@ -1,0 +1,11 @@
+{
+  "type": "event",
+  "event": {
+    "source": "node",
+    "event": "check route health progress",
+    "nodeId": 5,
+    "rounds": 3,
+    "totalRounds": 5,
+    "lastRating": 7
+  }
+}

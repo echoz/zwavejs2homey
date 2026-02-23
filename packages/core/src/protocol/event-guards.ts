@@ -1,9 +1,13 @@
 import type {
+  ZwjsControllerNvmBackupProgressEventPayload,
   ZwjsControllerNvmConvertProgressEventPayload,
   ZwjsControllerNvmRestoreProgressEventPayload,
   ZwjsDriverLoggingEventPayload,
+  ZwjsNodeCheckLifelineHealthProgressEventPayload,
+  ZwjsNodeCheckRouteHealthProgressEventPayload,
   ZwjsNodeMetadataUpdatedEventPayload,
   ZwjsNodeNotificationEventPayload,
+  ZwjsNodeTestPowerlevelProgressEventPayload,
   ZwjsNodeValueAddedEventPayload,
   ZwjsNodeValueRemovedEventPayload,
   ZwjsNodeValueUpdatedEventPayload,
@@ -49,6 +53,17 @@ export function isZwjsControllerNvmConvertProgressEvent(
   );
 }
 
+export function isZwjsControllerNvmBackupProgressEvent(
+  event: ZwjsProtocolEventPayload,
+): event is ZwjsControllerNvmBackupProgressEventPayload {
+  return (
+    event.source === 'controller' &&
+    event.event === 'nvm backup progress' &&
+    typeof event.bytesRead === 'number' &&
+    typeof event.total === 'number'
+  );
+}
+
 export function isZwjsControllerNvmRestoreProgressEvent(
   event: ZwjsProtocolEventPayload,
 ): event is ZwjsControllerNvmRestoreProgressEventPayload {
@@ -57,5 +72,43 @@ export function isZwjsControllerNvmRestoreProgressEvent(
     event.event === 'nvm restore progress' &&
     typeof event.bytesWritten === 'number' &&
     typeof event.total === 'number'
+  );
+}
+
+export function isZwjsNodeTestPowerlevelProgressEvent(
+  event: ZwjsProtocolEventPayload,
+): event is ZwjsNodeTestPowerlevelProgressEventPayload {
+  return (
+    event.source === 'node' &&
+    event.event === 'test powerlevel progress' &&
+    typeof event.nodeId === 'number' &&
+    typeof event.acknowledged === 'number' &&
+    typeof event.total === 'number'
+  );
+}
+
+export function isZwjsNodeCheckLifelineHealthProgressEvent(
+  event: ZwjsProtocolEventPayload,
+): event is ZwjsNodeCheckLifelineHealthProgressEventPayload {
+  return (
+    event.source === 'node' &&
+    event.event === 'check lifeline health progress' &&
+    typeof event.nodeId === 'number' &&
+    typeof event.round === 'number' &&
+    typeof event.totalRounds === 'number' &&
+    typeof event.lastRating === 'number'
+  );
+}
+
+export function isZwjsNodeCheckRouteHealthProgressEvent(
+  event: ZwjsProtocolEventPayload,
+): event is ZwjsNodeCheckRouteHealthProgressEventPayload {
+  return (
+    event.source === 'node' &&
+    event.event === 'check route health progress' &&
+    typeof event.nodeId === 'number' &&
+    typeof event.rounds === 'number' &&
+    typeof event.totalRounds === 'number' &&
+    typeof event.lastRating === 'number'
   );
 }

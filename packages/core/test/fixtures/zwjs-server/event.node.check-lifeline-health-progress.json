@@ -1,0 +1,11 @@
+{
+  "type": "event",
+  "event": {
+    "source": "node",
+    "event": "check lifeline health progress",
+    "nodeId": 5,
+    "round": 2,
+    "totalRounds": 5,
+    "lastRating": 8
+  }
+}

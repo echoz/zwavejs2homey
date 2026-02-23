@@ -110,6 +110,11 @@ Tests:
 Progress (completed subset):
 - Added specialized node event typing + normalizer coverage for `value added` and `value removed`
 - Payload shapes aligned to upstream `zwave-js-server/src/lib/forward.ts` forwarding behavior (`nodeId` + `args`)
+- Added specialized progress event typing + fixture coverage for:
+  - `controller` NVM backup progress
+  - `node` test powerlevel progress
+  - `node` check lifeline health progress
+  - `node` check route health progress
 - Remaining high-value candidates still pending (`value notification`, wake/sleep, interview lifecycle)
 
 ## Phase P1 — Read-Only Operational Completeness

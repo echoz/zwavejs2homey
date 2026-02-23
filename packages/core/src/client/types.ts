@@ -297,11 +297,44 @@ export interface ZwjsControllerNvmConvertProgressEventPayload extends ZwjsProtoc
   total: number;
 }
 
+export interface ZwjsControllerNvmBackupProgressEventPayload extends ZwjsProtocolEventPayload {
+  source: 'controller';
+  event: 'nvm backup progress';
+  bytesRead: number;
+  total: number;
+}
+
 export interface ZwjsControllerNvmRestoreProgressEventPayload extends ZwjsProtocolEventPayload {
   source: 'controller';
   event: 'nvm restore progress';
   bytesWritten: number;
   total: number;
+}
+
+export interface ZwjsNodeTestPowerlevelProgressEventPayload extends ZwjsProtocolEventPayload {
+  source: 'node';
+  event: 'test powerlevel progress';
+  nodeId: number;
+  acknowledged: number;
+  total: number;
+}
+
+export interface ZwjsNodeCheckLifelineHealthProgressEventPayload extends ZwjsProtocolEventPayload {
+  source: 'node';
+  event: 'check lifeline health progress';
+  nodeId: number;
+  round: number;
+  totalRounds: number;
+  lastRating: number;
+}
+
+export interface ZwjsNodeCheckRouteHealthProgressEventPayload extends ZwjsProtocolEventPayload {
+  source: 'node';
+  event: 'check route health progress';
+  nodeId: number;
+  rounds: number;
+  totalRounds: number;
+  lastRating: number;
 }
 
 export interface ZwjsEventBase {
@@ -326,8 +359,12 @@ export interface ZwjsEventBase {
     | 'zwjs.event.node.metadata-updated'
     | 'zwjs.event.node.notification'
     | 'zwjs.event.driver.logging'
+    | 'zwjs.event.controller.nvm-backup-progress'
     | 'zwjs.event.controller.nvm-convert-progress'
     | 'zwjs.event.controller.nvm-restore-progress'
+    | 'zwjs.event.node.test-powerlevel-progress'
+    | 'zwjs.event.node.check-lifeline-health-progress'
+    | 'zwjs.event.node.check-route-health-progress'
     | 'node.event.raw-normalized';
   ts: string;
   source: 'zwjs-client';
@@ -354,8 +391,12 @@ export type ZwjsClientEvent =
   | (ZwjsEventBase & { type: 'zwjs.event.node.metadata-updated'; event: ZwjsNodeMetadataUpdatedEventPayload })
   | (ZwjsEventBase & { type: 'zwjs.event.node.notification'; event: ZwjsNodeNotificationEventPayload })
   | (ZwjsEventBase & { type: 'zwjs.event.driver.logging'; event: ZwjsDriverLoggingEventPayload })
+  | (ZwjsEventBase & { type: 'zwjs.event.controller.nvm-backup-progress'; event: ZwjsControllerNvmBackupProgressEventPayload })
   | (ZwjsEventBase & { type: 'zwjs.event.controller.nvm-convert-progress'; event: ZwjsControllerNvmConvertProgressEventPayload })
   | (ZwjsEventBase & { type: 'zwjs.event.controller.nvm-restore-progress'; event: ZwjsControllerNvmRestoreProgressEventPayload })
+  | (ZwjsEventBase & { type: 'zwjs.event.node.test-powerlevel-progress'; event: ZwjsNodeTestPowerlevelProgressEventPayload })
+  | (ZwjsEventBase & { type: 'zwjs.event.node.check-lifeline-health-progress'; event: ZwjsNodeCheckLifelineHealthProgressEventPayload })
+  | (ZwjsEventBase & { type: 'zwjs.event.node.check-route-health-progress'; event: ZwjsNodeCheckRouteHealthProgressEventPayload })
   | (ZwjsEventBase & { type: 'node.event.raw-normalized'; event: Record<string, unknown> });
 
 export type ZwjsClientEventInput = ZwjsClientEvent extends infer T

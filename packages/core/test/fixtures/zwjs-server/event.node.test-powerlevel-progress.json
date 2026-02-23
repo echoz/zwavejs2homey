@@ -1,0 +1,10 @@
+{
+  "type": "event",
+  "event": {
+    "source": "node",
+    "event": "test powerlevel progress",
+    "nodeId": 5,
+    "acknowledged": 7,
+    "total": 10
+  }
+}

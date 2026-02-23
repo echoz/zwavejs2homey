@@ -2,11 +2,15 @@ import type { NodeListResult, ServerInfoResult, ZwjsClientEvent, ZwjsProtocolEve
 import { ZwjsClientError } from '../../errors';
 import { isRecord, isZwjsEventFrame, isZwjsResultFrame, isZwjsVersionFrame } from '../raw-frame-types';
 import {
+  isZwjsControllerNvmBackupProgressEvent,
   isZwjsControllerNvmConvertProgressEvent,
   isZwjsControllerNvmRestoreProgressEvent,
   isZwjsDriverLoggingEvent,
+  isZwjsNodeCheckLifelineHealthProgressEvent,
+  isZwjsNodeCheckRouteHealthProgressEvent,
   isZwjsNodeMetadataUpdatedEvent,
   isZwjsNodeNotificationEvent,
+  isZwjsNodeTestPowerlevelProgressEvent,
   isZwjsNodeValueAddedEvent,
   isZwjsNodeValueRemovedEvent,
   isZwjsNodeValueUpdatedEvent,
@@ -122,6 +126,13 @@ export class DefaultZwjsFamilyNormalizer implements ZwjsProtocolAdapter {
           source: 'zwjs-client',
           event: protocolEvent,
         });
+      } else if (isZwjsControllerNvmBackupProgressEvent(protocolEvent)) {
+        events.push({
+          type: 'zwjs.event.controller.nvm-backup-progress',
+          ts: new Date().toISOString(),
+          source: 'zwjs-client',
+          event: protocolEvent,
+        });
       } else if (isZwjsControllerNvmConvertProgressEvent(protocolEvent)) {
         events.push({
           type: 'zwjs.event.controller.nvm-convert-progress',
@@ -155,6 +166,27 @@ export class DefaultZwjsFamilyNormalizer implements ZwjsProtocolAdapter {
       } else if (isZwjsNodeValueRemovedEvent(protocolEvent)) {
         events.push({
           type: 'zwjs.event.node.value-removed',
+          ts: new Date().toISOString(),
+          source: 'zwjs-client',
+          event: protocolEvent,
+        });
+      } else if (isZwjsNodeTestPowerlevelProgressEvent(protocolEvent)) {
+        events.push({
+          type: 'zwjs.event.node.test-powerlevel-progress',
+          ts: new Date().toISOString(),
+          source: 'zwjs-client',
+          event: protocolEvent,
+        });
+      } else if (isZwjsNodeCheckLifelineHealthProgressEvent(protocolEvent)) {
+        events.push({
+          type: 'zwjs.event.node.check-lifeline-health-progress',
+          ts: new Date().toISOString(),
+          source: 'zwjs-client',
+          event: protocolEvent,
+        });
+      } else if (isZwjsNodeCheckRouteHealthProgressEvent(protocolEvent)) {
+        events.push({
+          type: 'zwjs.event.node.check-route-health-progress',
           ts: new Date().toISOString(),
           source: 'zwjs-client',
           event: protocolEvent,
