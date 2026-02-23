@@ -1,0 +1,11 @@
+{
+  "type": "event",
+  "event": {
+    "source": "node",
+    "event": "interview failed",
+    "nodeId": 5,
+    "args": {
+      "reason": "timeout"
+    }
+  }
+}

@@ -308,6 +308,34 @@ export interface ZwjsNodeSleepEventPayload extends ZwjsProtocolEventPayload {
   oldStatus?: unknown;
 }
 
+export interface ZwjsNodeInterviewStartedEventPayload extends ZwjsProtocolEventPayload {
+  source: 'node';
+  event: 'interview started';
+  nodeId: number;
+  args?: Record<string, unknown>;
+}
+
+export interface ZwjsNodeInterviewCompletedEventPayload extends ZwjsProtocolEventPayload {
+  source: 'node';
+  event: 'interview completed';
+  nodeId: number;
+  args?: Record<string, unknown>;
+}
+
+export interface ZwjsNodeInterviewFailedEventPayload extends ZwjsProtocolEventPayload {
+  source: 'node';
+  event: 'interview failed';
+  nodeId: number;
+  args?: Record<string, unknown>;
+}
+
+export interface ZwjsNodeInterviewStageCompletedEventPayload extends ZwjsProtocolEventPayload {
+  source: 'node';
+  event: 'interview stage completed';
+  nodeId: number;
+  stageName: string;
+}
+
 export interface ZwjsDriverLoggingEventPayload extends ZwjsProtocolEventPayload {
   source: 'driver';
   event: 'logging';
@@ -387,6 +415,10 @@ export interface ZwjsEventBase {
     | 'zwjs.event.node.notification'
     | 'zwjs.event.node.wake-up'
     | 'zwjs.event.node.sleep'
+    | 'zwjs.event.node.interview-started'
+    | 'zwjs.event.node.interview-completed'
+    | 'zwjs.event.node.interview-failed'
+    | 'zwjs.event.node.interview-stage-completed'
     | 'zwjs.event.driver.logging'
     | 'zwjs.event.controller.nvm-backup-progress'
     | 'zwjs.event.controller.nvm-convert-progress'
@@ -422,6 +454,10 @@ export type ZwjsClientEvent =
   | (ZwjsEventBase & { type: 'zwjs.event.node.notification'; event: ZwjsNodeNotificationEventPayload })
   | (ZwjsEventBase & { type: 'zwjs.event.node.wake-up'; event: ZwjsNodeWakeUpEventPayload })
   | (ZwjsEventBase & { type: 'zwjs.event.node.sleep'; event: ZwjsNodeSleepEventPayload })
+  | (ZwjsEventBase & { type: 'zwjs.event.node.interview-started'; event: ZwjsNodeInterviewStartedEventPayload })
+  | (ZwjsEventBase & { type: 'zwjs.event.node.interview-completed'; event: ZwjsNodeInterviewCompletedEventPayload })
+  | (ZwjsEventBase & { type: 'zwjs.event.node.interview-failed'; event: ZwjsNodeInterviewFailedEventPayload })
+  | (ZwjsEventBase & { type: 'zwjs.event.node.interview-stage-completed'; event: ZwjsNodeInterviewStageCompletedEventPayload })
   | (ZwjsEventBase & { type: 'zwjs.event.driver.logging'; event: ZwjsDriverLoggingEventPayload })
   | (ZwjsEventBase & { type: 'zwjs.event.controller.nvm-backup-progress'; event: ZwjsControllerNvmBackupProgressEventPayload })
   | (ZwjsEventBase & { type: 'zwjs.event.controller.nvm-convert-progress'; event: ZwjsControllerNvmConvertProgressEventPayload })

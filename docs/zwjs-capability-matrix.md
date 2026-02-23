@@ -176,6 +176,10 @@ This first-pass matrix is decision-oriented: all currently implemented wrappers 
 | node | `notification` | yes | UI emits `NODE_EVENT` and feature-specific UI updates | `zwjs.event.node` + raw-normalized | `zwjs.event.node.notification` | `fixture`, `normalizer` | not recorded | P1 | Important for alarms/notifications |
 | node | `wake up` | forwarded in server source (`forward.ts`) | UI updates node state/app status | `zwjs.event.node` + raw-normalized | `zwjs.event.node.wake-up` | `fixture`, `normalizer` | not recorded | P1 | Useful for battery/sleeping-device state sync |
 | node | `sleep` | forwarded in server source (`forward.ts`) | UI updates node state/app status | `zwjs.event.node` + raw-normalized | `zwjs.event.node.sleep` | `fixture`, `normalizer` | not recorded | P1 | Useful for battery/sleeping-device state sync |
+| node | `interview started` | forwarded in server source (`forward.ts`) | UI/backend updates node lifecycle state | `zwjs.event.node` + raw-normalized | `zwjs.event.node.interview-started` | `fixture`, `normalizer` | not recorded | P1 | Payload uses `{ nodeId, args }` forwarding shape |
+| node | `interview completed` | forwarded in server source (`forward.ts`) | UI/backend updates node lifecycle state | `zwjs.event.node` + raw-normalized | `zwjs.event.node.interview-completed` | `fixture`, `normalizer` | not recorded | P1 | Payload uses `{ nodeId, args }` forwarding shape |
+| node | `interview failed` | forwarded in server source (`forward.ts`) | UI/backend updates node lifecycle/error state | `zwjs.event.node` + raw-normalized | `zwjs.event.node.interview-failed` | `fixture`, `normalizer` | not recorded | P1 | Payload uses `{ nodeId, args }` forwarding shape |
+| node | `interview stage completed` | forwarded in server source (`forward.ts`) | UI/backend updates interview progress state | `zwjs.event.node` + raw-normalized | `zwjs.event.node.interview-stage-completed` | `fixture`, `normalizer` | not recorded | P1 | Payload uses `{ nodeId, stageName }` forwarding shape |
 | node | `test powerlevel progress` | yes | UI emits progress/state updates via app events | `zwjs.event.node` + raw-normalized | `zwjs.event.node.test-powerlevel-progress` | `fixture`, `normalizer` | no | P2 | Specialized typing added; mutating command wrapper still pending |
 | node | `check lifeline health progress` | yes | UI emits `HEALTH_CHECK_PROGRESS` and related app updates | `zwjs.event.node` + raw-normalized | `zwjs.event.node.check-lifeline-health-progress` | `fixture`, `normalizer` | no | P2 | Specialized typing added; workflow wrappers still generic |
 | node | `check route health progress` | yes | UI emits route health progress app updates | `zwjs.event.node` + raw-normalized | `zwjs.event.node.check-route-health-progress` | `fixture`, `normalizer` | no | P2 | Specialized typing added; workflow wrappers still generic |
@@ -201,7 +205,7 @@ These are included to prevent architectural confusion and to show where UI/backe
 ### P0 Gaps (Bridge-Critical)
 
 - Stronger typing for node value payloads used by Homey mapping (`node.get_value`) and deeper metadata typing beyond common fields
-- Additional specialized node event typing needed for capability sync (interview lifecycle and other high-frequency node events remain)
+- Additional specialized node event typing needed for capability sync (remaining high-frequency/edge node events still to be observed and prioritized)
 - Deeper typing for command-class-specific `node.get_value` payloads after more observed value samples are cataloged (generic envelope shape now handled)
 
 ### P1 Gaps (Read-Only Ops Completeness)

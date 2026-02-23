@@ -5,6 +5,10 @@ import type {
   ZwjsDriverLoggingEventPayload,
   ZwjsNodeCheckLifelineHealthProgressEventPayload,
   ZwjsNodeCheckRouteHealthProgressEventPayload,
+  ZwjsNodeInterviewCompletedEventPayload,
+  ZwjsNodeInterviewFailedEventPayload,
+  ZwjsNodeInterviewStageCompletedEventPayload,
+  ZwjsNodeInterviewStartedEventPayload,
   ZwjsNodeMetadataUpdatedEventPayload,
   ZwjsNodeNotificationEventPayload,
   ZwjsNodeSleepEventPayload,
@@ -35,6 +39,31 @@ export function isZwjsNodeValueRemovedEvent(event: ZwjsProtocolEventPayload): ev
 
 export function isZwjsNodeValueNotificationEvent(event: ZwjsProtocolEventPayload): event is ZwjsNodeValueNotificationEventPayload {
   return isNodeEventBase(event, 'value notification');
+}
+
+export function isZwjsNodeInterviewStartedEvent(event: ZwjsProtocolEventPayload): event is ZwjsNodeInterviewStartedEventPayload {
+  return isNodeEventBase(event, 'interview started');
+}
+
+export function isZwjsNodeInterviewCompletedEvent(
+  event: ZwjsProtocolEventPayload,
+): event is ZwjsNodeInterviewCompletedEventPayload {
+  return isNodeEventBase(event, 'interview completed');
+}
+
+export function isZwjsNodeInterviewFailedEvent(event: ZwjsProtocolEventPayload): event is ZwjsNodeInterviewFailedEventPayload {
+  return isNodeEventBase(event, 'interview failed');
+}
+
+export function isZwjsNodeInterviewStageCompletedEvent(
+  event: ZwjsProtocolEventPayload,
+): event is ZwjsNodeInterviewStageCompletedEventPayload {
+  return (
+    event.source === 'node' &&
+    event.event === 'interview stage completed' &&
+    typeof event.nodeId === 'number' &&
+    typeof event.stageName === 'string'
+  );
 }
 
 export function isZwjsNodeMetadataUpdatedEvent(event: ZwjsProtocolEventPayload): event is ZwjsNodeMetadataUpdatedEventPayload {

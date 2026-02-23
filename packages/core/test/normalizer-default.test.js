@@ -147,6 +147,38 @@ test('emits specialized node sleep event', () => {
   assert.equal(specialized.event.oldStatus, 'awake');
 });
 
+test('emits specialized node interview-started event', () => {
+  const msg = loadFixture('zwjs-server', 'event.node.interview-started.json');
+  const out = normalizer.normalizeIncoming(msg);
+  const specialized = out.events.find((e) => e.type === 'zwjs.event.node.interview-started');
+  assert.ok(specialized);
+  assert.equal(specialized.event.nodeId, 5);
+});
+
+test('emits specialized node interview-completed event', () => {
+  const msg = loadFixture('zwjs-server', 'event.node.interview-completed.json');
+  const out = normalizer.normalizeIncoming(msg);
+  const specialized = out.events.find((e) => e.type === 'zwjs.event.node.interview-completed');
+  assert.ok(specialized);
+  assert.equal(specialized.event.nodeId, 5);
+});
+
+test('emits specialized node interview-failed event', () => {
+  const msg = loadFixture('zwjs-server', 'event.node.interview-failed.json');
+  const out = normalizer.normalizeIncoming(msg);
+  const specialized = out.events.find((e) => e.type === 'zwjs.event.node.interview-failed');
+  assert.ok(specialized);
+  assert.equal(specialized.event.args.reason, 'timeout');
+});
+
+test('emits specialized node interview-stage-completed event', () => {
+  const msg = loadFixture('zwjs-server', 'event.node.interview-stage-completed.json');
+  const out = normalizer.normalizeIncoming(msg);
+  const specialized = out.events.find((e) => e.type === 'zwjs.event.node.interview-stage-completed');
+  assert.ok(specialized);
+  assert.equal(specialized.event.stageName, 'CommandClasses');
+});
+
 test('emits specialized driver logging event', () => {
   const msg = loadFixture('zwjs-server', 'event.driver.logging.json');
   const out = normalizer.normalizeIncoming(msg);

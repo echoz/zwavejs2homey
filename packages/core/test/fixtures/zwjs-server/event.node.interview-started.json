@@ -1,0 +1,9 @@
+{
+  "type": "event",
+  "event": {
+    "source": "node",
+    "event": "interview started",
+    "nodeId": 5,
+    "args": {}
+  }
+}

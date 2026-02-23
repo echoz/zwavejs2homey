@@ -117,7 +117,12 @@ Progress (completed subset):
   - `node` check lifeline health progress
   - `node` check route health progress
 - Added specialized node event typing + fixture coverage for `value notification`, `wake up`, and `sleep`
-- Remaining high-value candidates still pending (interview lifecycle and selected controller inclusion/security events)
+- Added specialized node event typing + fixture coverage for interview lifecycle events:
+  - `interview started`
+  - `interview completed`
+  - `interview failed`
+  - `interview stage completed`
+- Remaining high-value candidates still pending (selected controller inclusion/security events and additional observed node events)
 
 ## Phase P1 — Read-Only Operational Completeness
 
@@ -331,5 +336,5 @@ This roadmap is considered complete when:
 ## Immediate Next Tasks (Recommended Sequence)
 
 1. Complete remaining P0.1 value payload typing tightening from observed `node.get_value` payloads
-2. Continue P0.3 node event typing expansion from observed traffic (interview lifecycle and selected controller inclusion/security events)
-3. P1.1 Log streaming wrappers (`start_listening_logs` / `stop_listening_logs`)
+2. Continue P0.3/P2.3 event typing expansion for controller inclusion/security events (`grant security classes`, `validate dsk`, `inclusion aborted`)
+3. P1.1 live validation for log streaming (`start_listening_logs` + `driver.logging`)

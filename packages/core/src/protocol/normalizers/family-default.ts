@@ -8,6 +8,10 @@ import {
   isZwjsDriverLoggingEvent,
   isZwjsNodeCheckLifelineHealthProgressEvent,
   isZwjsNodeCheckRouteHealthProgressEvent,
+  isZwjsNodeInterviewCompletedEvent,
+  isZwjsNodeInterviewFailedEvent,
+  isZwjsNodeInterviewStageCompletedEvent,
+  isZwjsNodeInterviewStartedEvent,
   isZwjsNodeMetadataUpdatedEvent,
   isZwjsNodeNotificationEvent,
   isZwjsNodeSleepEvent,
@@ -176,6 +180,34 @@ export class DefaultZwjsFamilyNormalizer implements ZwjsProtocolAdapter {
       } else if (isZwjsNodeValueNotificationEvent(protocolEvent)) {
         events.push({
           type: 'zwjs.event.node.value-notification',
+          ts: new Date().toISOString(),
+          source: 'zwjs-client',
+          event: protocolEvent,
+        });
+      } else if (isZwjsNodeInterviewStartedEvent(protocolEvent)) {
+        events.push({
+          type: 'zwjs.event.node.interview-started',
+          ts: new Date().toISOString(),
+          source: 'zwjs-client',
+          event: protocolEvent,
+        });
+      } else if (isZwjsNodeInterviewCompletedEvent(protocolEvent)) {
+        events.push({
+          type: 'zwjs.event.node.interview-completed',
+          ts: new Date().toISOString(),
+          source: 'zwjs-client',
+          event: protocolEvent,
+        });
+      } else if (isZwjsNodeInterviewFailedEvent(protocolEvent)) {
+        events.push({
+          type: 'zwjs.event.node.interview-failed',
+          ts: new Date().toISOString(),
+          source: 'zwjs-client',
+          event: protocolEvent,
+        });
+      } else if (isZwjsNodeInterviewStageCompletedEvent(protocolEvent)) {
+        events.push({
+          type: 'zwjs.event.node.interview-stage-completed',
           ts: new Date().toISOString(),
           source: 'zwjs-client',
           event: protocolEvent,
