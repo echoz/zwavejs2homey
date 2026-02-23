@@ -32,7 +32,10 @@ export class WsTransport {
       });
 
       socket.on('close', (code: number, reason: Buffer) => {
-        events.onClose?.({ code, reason: reason.toString(), wasClean: true });
+        const closeFrameReceived = Boolean((socket as WebSocket & { _closeFrameReceived?: boolean })._closeFrameReceived);
+        const closeFrameSent = Boolean((socket as WebSocket & { _closeFrameSent?: boolean })._closeFrameSent);
+        const wasClean = closeFrameReceived && closeFrameSent;
+        events.onClose?.({ code, reason: reason.toString(), wasClean });
       });
 
       socket.on('error', (error: Error) => {
