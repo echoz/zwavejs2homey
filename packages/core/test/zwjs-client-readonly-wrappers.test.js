@@ -200,3 +200,19 @@ test('getNodeSupportedNotificationEvents sends correct command and returns proto
   assert.deepEqual(result.result['113']['1'], [0, 2, 8]);
   await client.stop();
 });
+
+test('setApiSchema sends correct command and returns success result', async () => {
+  const { client, transport } = makeClient();
+  await startConnected(client, transport);
+
+  const pending = client.setApiSchema(44);
+  const sent = transport.sent.at(-1);
+  assert.deepEqual(sent, withMessageId(loadFixture('zwjs-server', 'command.set_api_schema.json'), sent.messageId));
+
+  transport.triggerMessage(withMessageId(loadFixture('zwjs-server', 'result.set_api_schema.success.json'), sent.messageId));
+  const result = await pending;
+
+  assert.equal(result.success, true);
+  assert.equal(result.result.ok, true);
+  await client.stop();
+});

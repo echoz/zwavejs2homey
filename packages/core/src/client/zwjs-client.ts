@@ -146,6 +146,10 @@ export class ZwjsClientImpl implements ZwjsClient {
     return result;
   }
 
+  async setApiSchema(schemaVersion: number): Promise<ZwjsCommandResult> {
+    return this.sendCommand({ command: 'set_api_schema', args: { schemaVersion } });
+  }
+
   async startListening(): Promise<ZwjsCommandResult<{ state?: unknown }>> {
     this.ensureAdapter();
     if (this.listeningRequested) {

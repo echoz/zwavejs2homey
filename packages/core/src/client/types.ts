@@ -293,6 +293,7 @@ export interface ZwjsClient {
   getStatus(): ZwjsClientStatus;
   onEvent(handler: (event: ZwjsClientEvent) => void): () => void;
   initialize(options: ZwjsInitializeOptions): Promise<ZwjsCommandResult>;
+  setApiSchema(schemaVersion: number): Promise<ZwjsCommandResult>;
   startListening(): Promise<ZwjsCommandResult<{ state?: unknown }>>;
   sendCommand<TResult = unknown, TArgs = Record<string, unknown>>(request: ZwjsCommandRequest<TArgs>): Promise<ZwjsCommandResult<TResult>>;
   getDriverConfig(): Promise<ZwjsCommandResult<ZwjsDriverConfig>>;
