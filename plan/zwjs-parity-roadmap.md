@@ -517,6 +517,29 @@ Progress (completed firmware mutation wrapper subset):
 - Added fixture-backed mutation-policy tests for default blocking and allowlisted exact command envelopes/results
 - Intentionally no default firmware mutation preset added in this slice (high-risk operations require explicit allowlist selection)
 
+Safety guidance (documented posture for firmware operations):
+
+- Firmware mutation wrappers are treated as high-risk operational commands
+- They must remain disabled by default and require explicit allowlisting
+- No `firmware-maintenance` preset is provided by default in core
+- Recommended approach:
+  - start from `createMutationPolicyPreset('destructive')` (empty allowlist)
+  - add only the exact firmware commands required for the planned operation
+  - validate on non-production hardware first
+
+Usage (explicit high-risk allowlist, example):
+
+```ts
+import { createZwjsClient, createMutationPolicyPreset } from '@zwavejs2homey/core';
+
+const client = createZwjsClient({
+  url: 'ws://127.0.0.1:3000',
+  mutationPolicy: createMutationPolicyPreset('destructive', {
+    additionalAllowCommands: ['node.update_firmware', 'node.abort_firmware_update'],
+  }),
+});
+```
+
 ## Acceptance Criteria (Roadmap-Level)
 
 This roadmap is considered complete when:

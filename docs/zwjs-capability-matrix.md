@@ -295,6 +295,15 @@ Current zniffer status:
 - Recommended mutation policy preset for zniffer ops: `zniffer-maintenance`
 - Remaining gap is live validation and fixture expansion from observed zniffer traffic
 
+Firmware mutation safety posture:
+
+- Firmware workflow mutations are implemented as typed wrappers, but intentionally remain high-risk and policy-gated.
+- There is no default `firmware-maintenance` preset in core.
+- Recommended operator posture:
+  - use `createMutationPolicyPreset('destructive', { additionalAllowCommands: [...] })`
+  - allowlist only the exact firmware commands required for the current maintenance step
+  - test on non-production hardware before any production usage
+
 ## Notes on Naming and Mapping
 
 - Protocol command names are kept exact (`node.get_value`), never renamed in the matrix.
