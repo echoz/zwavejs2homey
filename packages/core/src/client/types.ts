@@ -128,6 +128,12 @@ export interface NodeListResult {
   snapshotVersion?: string;
 }
 
+export interface ZwjsProtocolEventPayload {
+  source: 'driver' | 'controller' | 'node' | 'zniffer' | string;
+  event: string;
+  [key: string]: unknown;
+}
+
 export interface ZwjsEventBase {
   type:
     | 'client.lifecycle'
@@ -140,6 +146,10 @@ export interface ZwjsEventBase {
     | 'protocol.error'
     | 'server.info'
     | 'nodes.snapshot'
+    | 'zwjs.event.driver'
+    | 'zwjs.event.controller'
+    | 'zwjs.event.node'
+    | 'zwjs.event.zniffer'
     | 'node.event.raw-normalized';
   ts: string;
   source: 'zwjs-client';
@@ -156,6 +166,10 @@ export type ZwjsClientEvent =
   | (ZwjsEventBase & { type: 'protocol.error'; error: ClientErrorSummary; context?: unknown })
   | (ZwjsEventBase & { type: 'server.info'; info: ServerInfoResult })
   | (ZwjsEventBase & { type: 'nodes.snapshot'; nodes: NodeListResult })
+  | (ZwjsEventBase & { type: 'zwjs.event.driver'; event: ZwjsProtocolEventPayload })
+  | (ZwjsEventBase & { type: 'zwjs.event.controller'; event: ZwjsProtocolEventPayload })
+  | (ZwjsEventBase & { type: 'zwjs.event.node'; event: ZwjsProtocolEventPayload })
+  | (ZwjsEventBase & { type: 'zwjs.event.zniffer'; event: ZwjsProtocolEventPayload })
   | (ZwjsEventBase & { type: 'node.event.raw-normalized'; event: Record<string, unknown> });
 
 export type ZwjsClientEventInput = ZwjsClientEvent extends infer T

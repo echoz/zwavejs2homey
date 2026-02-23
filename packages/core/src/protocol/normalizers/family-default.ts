@@ -1,4 +1,4 @@
-import type { NodeListResult, ServerInfoResult, ZwjsClientEvent } from '../../client/types';
+import type { NodeListResult, ServerInfoResult, ZwjsClientEvent, ZwjsProtocolEventPayload } from '../../client/types';
 import { ZwjsClientError } from '../../errors';
 import type { ZwjsProtocolAdapter } from './types';
 
@@ -82,11 +82,33 @@ export class DefaultZwjsFamilyNormalizer implements ZwjsProtocolAdapter {
     }
 
     if (type === 'event' && typeof record.event === 'object' && record.event !== null) {
+      const protocolEvent = record.event as ZwjsProtocolEventPayload;
+      const protocolSource = typeof protocolEvent.source === 'string' ? protocolEvent.source : undefined;
+      const typedEventType =
+        protocolSource === 'driver'
+          ? 'zwjs.event.driver'
+          : protocolSource === 'controller'
+            ? 'zwjs.event.controller'
+            : protocolSource === 'node'
+              ? 'zwjs.event.node'
+              : protocolSource === 'zniffer'
+                ? 'zwjs.event.zniffer'
+                : undefined;
+
+      if (typedEventType) {
+        events.push({
+          type: typedEventType,
+          ts: new Date().toISOString(),
+          source: 'zwjs-client',
+          event: protocolEvent,
+        });
+      }
+
       events.push({
         type: 'node.event.raw-normalized',
         ts: new Date().toISOString(),
         source: 'zwjs-client',
-        event: record.event as Record<string, unknown>,
+        event: protocolEvent,
       });
     } else if (type && type.startsWith('node.')) {
       events.push({

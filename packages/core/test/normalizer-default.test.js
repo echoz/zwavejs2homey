@@ -61,9 +61,26 @@ test('normalizes event frame to raw-normalized event', () => {
   };
 
   const out = normalizer.normalizeIncoming(msg);
-  assert.equal(out.events.length, 1);
-  assert.equal(out.events[0].type, 'node.event.raw-normalized');
+  assert.equal(out.events.length, 2);
+  assert.equal(out.events[0].type, 'zwjs.event.node');
   assert.equal(out.events[0].event.source, 'node');
+  assert.equal(out.events[1].type, 'node.event.raw-normalized');
+  assert.equal(out.events[1].event.source, 'node');
+});
+
+test('normalizes controller event frame to source-aware typed event', () => {
+  const msg = {
+    type: 'event',
+    event: {
+      source: 'controller',
+      event: 'statistics updated',
+      stats: { messagesTX: 12 },
+    },
+  };
+
+  const out = normalizer.normalizeIncoming(msg);
+  assert.equal(out.events[0].type, 'zwjs.event.controller');
+  assert.equal(out.events[0].event.event, 'statistics updated');
 });
 
 test('normalizes failed result as requestError only', () => {
