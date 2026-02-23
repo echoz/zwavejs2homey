@@ -358,6 +358,23 @@ export interface ZwjsControllerNvmBackupProgressEventPayload extends ZwjsProtoco
   total: number;
 }
 
+export interface ZwjsControllerGrantSecurityClassesEventPayload extends ZwjsProtocolEventPayload {
+  source: 'controller';
+  event: 'grant security classes';
+  requested: Record<string, unknown>;
+}
+
+export interface ZwjsControllerValidateDskAndEnterPinEventPayload extends ZwjsProtocolEventPayload {
+  source: 'controller';
+  event: 'validate dsk and enter pin';
+  dsk: string;
+}
+
+export interface ZwjsControllerInclusionAbortedEventPayload extends ZwjsProtocolEventPayload {
+  source: 'controller';
+  event: 'inclusion aborted';
+}
+
 export interface ZwjsControllerNvmRestoreProgressEventPayload extends ZwjsProtocolEventPayload {
   source: 'controller';
   event: 'nvm restore progress';
@@ -420,6 +437,9 @@ export interface ZwjsEventBase {
     | 'zwjs.event.node.interview-failed'
     | 'zwjs.event.node.interview-stage-completed'
     | 'zwjs.event.driver.logging'
+    | 'zwjs.event.controller.grant-security-classes'
+    | 'zwjs.event.controller.validate-dsk-and-enter-pin'
+    | 'zwjs.event.controller.inclusion-aborted'
     | 'zwjs.event.controller.nvm-backup-progress'
     | 'zwjs.event.controller.nvm-convert-progress'
     | 'zwjs.event.controller.nvm-restore-progress'
@@ -459,6 +479,9 @@ export type ZwjsClientEvent =
   | (ZwjsEventBase & { type: 'zwjs.event.node.interview-failed'; event: ZwjsNodeInterviewFailedEventPayload })
   | (ZwjsEventBase & { type: 'zwjs.event.node.interview-stage-completed'; event: ZwjsNodeInterviewStageCompletedEventPayload })
   | (ZwjsEventBase & { type: 'zwjs.event.driver.logging'; event: ZwjsDriverLoggingEventPayload })
+  | (ZwjsEventBase & { type: 'zwjs.event.controller.grant-security-classes'; event: ZwjsControllerGrantSecurityClassesEventPayload })
+  | (ZwjsEventBase & { type: 'zwjs.event.controller.validate-dsk-and-enter-pin'; event: ZwjsControllerValidateDskAndEnterPinEventPayload })
+  | (ZwjsEventBase & { type: 'zwjs.event.controller.inclusion-aborted'; event: ZwjsControllerInclusionAbortedEventPayload })
   | (ZwjsEventBase & { type: 'zwjs.event.controller.nvm-backup-progress'; event: ZwjsControllerNvmBackupProgressEventPayload })
   | (ZwjsEventBase & { type: 'zwjs.event.controller.nvm-convert-progress'; event: ZwjsControllerNvmConvertProgressEventPayload })
   | (ZwjsEventBase & { type: 'zwjs.event.controller.nvm-restore-progress'; event: ZwjsControllerNvmRestoreProgressEventPayload })

@@ -1,7 +1,10 @@
 import type {
+  ZwjsControllerGrantSecurityClassesEventPayload,
+  ZwjsControllerInclusionAbortedEventPayload,
   ZwjsControllerNvmBackupProgressEventPayload,
   ZwjsControllerNvmConvertProgressEventPayload,
   ZwjsControllerNvmRestoreProgressEventPayload,
+  ZwjsControllerValidateDskAndEnterPinEventPayload,
   ZwjsDriverLoggingEventPayload,
   ZwjsNodeCheckLifelineHealthProgressEventPayload,
   ZwjsNodeCheckRouteHealthProgressEventPayload,
@@ -84,6 +87,29 @@ export function isZwjsNodeSleepEvent(event: ZwjsProtocolEventPayload): event is 
 
 export function isZwjsDriverLoggingEvent(event: ZwjsProtocolEventPayload): event is ZwjsDriverLoggingEventPayload {
   return event.source === 'driver' && event.event === 'logging' && typeof event.formattedMessage === 'string';
+}
+
+export function isZwjsControllerGrantSecurityClassesEvent(
+  event: ZwjsProtocolEventPayload,
+): event is ZwjsControllerGrantSecurityClassesEventPayload {
+  return (
+    event.source === 'controller' &&
+    event.event === 'grant security classes' &&
+    typeof event.requested === 'object' &&
+    event.requested !== null
+  );
+}
+
+export function isZwjsControllerValidateDskAndEnterPinEvent(
+  event: ZwjsProtocolEventPayload,
+): event is ZwjsControllerValidateDskAndEnterPinEventPayload {
+  return event.source === 'controller' && event.event === 'validate dsk and enter pin' && typeof event.dsk === 'string';
+}
+
+export function isZwjsControllerInclusionAbortedEvent(
+  event: ZwjsProtocolEventPayload,
+): event is ZwjsControllerInclusionAbortedEventPayload {
+  return event.source === 'controller' && event.event === 'inclusion aborted';
 }
 
 export function isZwjsControllerNvmConvertProgressEvent(

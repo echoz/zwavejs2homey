@@ -38,6 +38,21 @@ Make value/state sync reliable enough for the first Homey device/capability vert
 - Expand node event typing based on observed protocol traffic
 - Validate representative value flows on real nodes (read-only)
 
+### P0 Exit Gate (Required)
+
+Before starting P1 implementation slices, run a dedicated code review over **all changes completed during P0** (not just the most recent slice), with a review focus on:
+
+- protocol correctness vs `zwave-js-server` docs/source
+- behavioral regressions in normalizer/event emission ordering
+- result typing compatibility/backward-compatibility risk
+- mutation-policy leakage (even though P0 is mostly read/event work)
+- test coverage gaps and fixture realism
+
+Expected output:
+- findings ordered by severity with file references
+- explicit statement if no findings
+- residual risks / test gaps called out
+
 ### Slices (Decision Complete)
 
 #### P0.1 Value ID + Value Payload Typing Tightening
@@ -122,7 +137,11 @@ Progress (completed subset):
   - `interview completed`
   - `interview failed`
   - `interview stage completed`
-- Remaining high-value candidates still pending (selected controller inclusion/security events and additional observed node events)
+- Added specialized controller inclusion/security event typing + fixture coverage for:
+  - `grant security classes`
+  - `validate dsk and enter pin`
+  - `inclusion aborted`
+- Remaining high-value candidates still pending (additional observed node events and full inclusion/exclusion command wrappers)
 
 ## Phase P1 — Read-Only Operational Completeness
 
@@ -319,6 +338,7 @@ This roadmap is considered complete when:
 - `ZwjsClient` remains protocol-first and backward-compatible for existing wrappers
 - Mutating wrappers never bypass `sendMutationCommand()` and mutation policy checks
 - UI/backend (`zwave-js-ui`) and protocol (`zwave-js-server`) layers remain clearly separated in docs and code review decisions
+- P0 exit gate code review completed before P1 implementation work begins
 
 ## Validation and Monitoring Notes
 
@@ -337,5 +357,5 @@ This roadmap is considered complete when:
 ## Immediate Next Tasks (Recommended Sequence)
 
 1. Complete remaining P0.1 value payload typing tightening from observed `node.get_value` payloads
-2. Continue P0.3/P2.3 event typing expansion for controller inclusion/security events (`grant security classes`, `validate dsk`, `inclusion aborted`)
-3. P1.1 live validation for log streaming (`start_listening_logs` + `driver.logging`)
+2. P2.3 protocol wrappers for inclusion/exclusion commands (mutation-gated) to pair with existing controller inclusion/security event typing
+3. Continue P0.3 event typing expansion for any newly observed node/controller events

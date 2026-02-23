@@ -1,0 +1,12 @@
+{
+  "type": "event",
+  "event": {
+    "source": "controller",
+    "event": "grant security classes",
+    "requested": {
+      "s2AccessControl": true,
+      "s2Authenticated": true,
+      "s2Unauthenticated": false
+    }
+  }
+}

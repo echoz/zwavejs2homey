@@ -1,0 +1,8 @@
+{
+  "type": "event",
+  "event": {
+    "source": "controller",
+    "event": "validate dsk and enter pin",
+    "dsk": "12345-67890-12345-67890-12345-67890-12345-67890"
+  }
+}

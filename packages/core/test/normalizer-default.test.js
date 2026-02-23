@@ -187,6 +187,30 @@ test('emits specialized driver logging event', () => {
   assert.equal(specialized.event.formattedMessage, 'Controller ready');
 });
 
+test('emits specialized controller grant security classes event', () => {
+  const msg = loadFixture('zwjs-server', 'event.controller.grant-security-classes.json');
+  const out = normalizer.normalizeIncoming(msg);
+  const specialized = out.events.find((e) => e.type === 'zwjs.event.controller.grant-security-classes');
+  assert.ok(specialized);
+  assert.equal(specialized.event.requested.s2AccessControl, true);
+});
+
+test('emits specialized controller validate dsk and enter pin event', () => {
+  const msg = loadFixture('zwjs-server', 'event.controller.validate-dsk-and-enter-pin.json');
+  const out = normalizer.normalizeIncoming(msg);
+  const specialized = out.events.find((e) => e.type === 'zwjs.event.controller.validate-dsk-and-enter-pin');
+  assert.ok(specialized);
+  assert.equal(typeof specialized.event.dsk, 'string');
+});
+
+test('emits specialized controller inclusion aborted event', () => {
+  const msg = loadFixture('zwjs-server', 'event.controller.inclusion-aborted.json');
+  const out = normalizer.normalizeIncoming(msg);
+  const specialized = out.events.find((e) => e.type === 'zwjs.event.controller.inclusion-aborted');
+  assert.ok(specialized);
+  assert.equal(specialized.event.event, 'inclusion aborted');
+});
+
 test('emits specialized controller nvm convert progress event', () => {
   const msg = loadFixture('zwjs-server', 'event.controller.nvm-convert-progress.json');
   const out = normalizer.normalizeIncoming(msg);

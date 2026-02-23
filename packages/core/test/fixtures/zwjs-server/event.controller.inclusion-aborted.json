@@ -1,0 +1,7 @@
+{
+  "type": "event",
+  "event": {
+    "source": "controller",
+    "event": "inclusion aborted"
+  }
+}

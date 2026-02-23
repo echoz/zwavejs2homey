@@ -2,9 +2,12 @@ import type { NodeListResult, ServerInfoResult, ZwjsClientEvent, ZwjsProtocolEve
 import { ZwjsClientError } from '../../errors';
 import { isRecord, isZwjsEventFrame, isZwjsResultFrame, isZwjsVersionFrame } from '../raw-frame-types';
 import {
+  isZwjsControllerGrantSecurityClassesEvent,
+  isZwjsControllerInclusionAbortedEvent,
   isZwjsControllerNvmBackupProgressEvent,
   isZwjsControllerNvmConvertProgressEvent,
   isZwjsControllerNvmRestoreProgressEvent,
+  isZwjsControllerValidateDskAndEnterPinEvent,
   isZwjsDriverLoggingEvent,
   isZwjsNodeCheckLifelineHealthProgressEvent,
   isZwjsNodeCheckRouteHealthProgressEvent,
@@ -129,6 +132,27 @@ export class DefaultZwjsFamilyNormalizer implements ZwjsProtocolAdapter {
       if (isZwjsDriverLoggingEvent(protocolEvent)) {
         events.push({
           type: 'zwjs.event.driver.logging',
+          ts: new Date().toISOString(),
+          source: 'zwjs-client',
+          event: protocolEvent,
+        });
+      } else if (isZwjsControllerGrantSecurityClassesEvent(protocolEvent)) {
+        events.push({
+          type: 'zwjs.event.controller.grant-security-classes',
+          ts: new Date().toISOString(),
+          source: 'zwjs-client',
+          event: protocolEvent,
+        });
+      } else if (isZwjsControllerValidateDskAndEnterPinEvent(protocolEvent)) {
+        events.push({
+          type: 'zwjs.event.controller.validate-dsk-and-enter-pin',
+          ts: new Date().toISOString(),
+          source: 'zwjs-client',
+          event: protocolEvent,
+        });
+      } else if (isZwjsControllerInclusionAbortedEvent(protocolEvent)) {
+        events.push({
+          type: 'zwjs.event.controller.inclusion-aborted',
           ts: new Date().toISOString(),
           source: 'zwjs-client',
           event: protocolEvent,
