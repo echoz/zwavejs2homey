@@ -524,6 +524,7 @@ Progress (completed firmware mutation wrapper subset):
   - reject ambiguous `driver.firmware_update_otw` payload mode (`raw file` + `updateInfo`)
   - reject empty `node.update_firmware` `updates` arrays before send
 - Tightened firmware mutation test coverage by command family (driver/controller/node) instead of one shared grouped success assertion
+- Aligned firmware wrapper error semantics to policy-first behavior for blocked mutations (policy errors now surface before wrapper payload validation)
 
 Safety guidance (documented posture for firmware operations):
 

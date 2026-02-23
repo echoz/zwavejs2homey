@@ -540,6 +540,7 @@ export class ZwjsClientImpl implements ZwjsClient {
   async driverFirmwareUpdateOtw(
     args: ZwjsDriverFirmwareUpdateOtwArgs,
   ): Promise<ZwjsCommandResult<ZwjsFirmwareUpdateCommandResult>> {
+    this.assertMutationAllowed('driver.firmware_update_otw');
     this.assertDriverFirmwareUpdateOtwArgs(args);
     return this.sendMutationCommand<
       ZwjsFirmwareUpdateCommandResult,
@@ -589,6 +590,7 @@ export class ZwjsClientImpl implements ZwjsClient {
   async updateNodeFirmware(
     args: ZwjsNodeUpdateFirmwareArgs,
   ): Promise<ZwjsCommandResult<ZwjsFirmwareUpdateCommandResult>> {
+    this.assertMutationAllowed('node.update_firmware');
     this.assertNodeUpdateFirmwareArgs(args);
     return this.sendMutationCommand<ZwjsFirmwareUpdateCommandResult, ZwjsNodeUpdateFirmwareArgs>({
       command: 'node.update_firmware',

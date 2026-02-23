@@ -834,6 +834,35 @@ test('updateNodeFirmware rejects empty updates array before sending', async () =
   await client.stop();
 });
 
+test('driverFirmwareUpdateOtw returns policy error before payload validation when blocked', async () => {
+  const { client, transport } = makeClient();
+  await startConnected(client, transport);
+
+  await assert.rejects(
+    () =>
+      client.driverFirmwareUpdateOtw({
+        filename: 'controller.gbl',
+        file: 'AQID',
+        updateInfo: { version: '2.0.0' },
+      }),
+    (err) => err && err.code === 'UNSUPPORTED_OPERATION' && /blocked by policy/.test(err.message),
+  );
+  assert.equal(transport.sent.length, 0);
+  await client.stop();
+});
+
+test('updateNodeFirmware returns policy error before payload validation when blocked', async () => {
+  const { client, transport } = makeClient();
+  await startConnected(client, transport);
+
+  await assert.rejects(
+    () => client.updateNodeFirmware({ nodeId: 5, updates: [] }),
+    (err) => err && err.code === 'UNSUPPORTED_OPERATION' && /blocked by policy/.test(err.message),
+  );
+  assert.equal(transport.sent.length, 0);
+  await client.stop();
+});
+
 test('firmware mutation wrappers are blocked by default mutation policy', async () => {
   const { client, transport } = makeClient();
   await startConnected(client, transport);
