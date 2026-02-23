@@ -1,0 +1,8 @@
+{
+  "type": "result",
+  "messageId": "fixture-21",
+  "success": true,
+  "result": {
+    "statisticsEnabled": true
+  }
+}

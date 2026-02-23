@@ -1,0 +1,5 @@
+{
+  "messageId": "fixture-22",
+  "command": "node.get_supported_notification_events",
+  "nodeId": 5
+}

@@ -1,0 +1,14 @@
+{
+  "type": "result",
+  "messageId": "fixture-20",
+  "success": true,
+  "result": {
+    "config": {
+      "enabled": true,
+      "level": "info",
+      "logToFile": false,
+      "filename": "zwavejs.log",
+      "forceConsole": false
+    }
+  }
+}

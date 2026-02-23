@@ -146,3 +146,57 @@ test('getNodeValueTimestamp sends correct command and returns timestamp result',
   assert.equal(result.result, 1730000000000);
   await client.stop();
 });
+
+test('getDriverLogConfig sends correct command and returns log config', async () => {
+  const { client, transport } = makeClient();
+  await startConnected(client, transport);
+
+  const pending = client.getDriverLogConfig();
+  const sent = transport.sent.at(-1);
+  assert.deepEqual(sent, withMessageId(loadFixture('zwjs-server', 'command.driver.get_log_config.json'), sent.messageId));
+
+  transport.triggerMessage(withMessageId(loadFixture('zwjs-server', 'result.driver.get_log_config.success.json'), sent.messageId));
+  const result = await pending;
+
+  assert.equal(result.success, true);
+  assert.equal(result.result.config.level, 'info');
+  assert.equal(result.result.config.enabled, true);
+  await client.stop();
+});
+
+test('isDriverStatisticsEnabled sends correct command and returns statisticsEnabled', async () => {
+  const { client, transport } = makeClient();
+  await startConnected(client, transport);
+
+  const pending = client.isDriverStatisticsEnabled();
+  const sent = transport.sent.at(-1);
+  assert.deepEqual(sent, withMessageId(loadFixture('zwjs-server', 'command.driver.is_statistics_enabled.json'), sent.messageId));
+
+  transport.triggerMessage(withMessageId(loadFixture('zwjs-server', 'result.driver.is_statistics_enabled.success.json'), sent.messageId));
+  const result = await pending;
+
+  assert.equal(result.success, true);
+  assert.equal(result.result.statisticsEnabled, true);
+  await client.stop();
+});
+
+test('getNodeSupportedNotificationEvents sends correct command and returns protocol-native payload', async () => {
+  const { client, transport } = makeClient();
+  await startConnected(client, transport);
+
+  const pending = client.getNodeSupportedNotificationEvents(5);
+  const sent = transport.sent.at(-1);
+  assert.deepEqual(
+    sent,
+    withMessageId(loadFixture('zwjs-server', 'command.node.get_supported_notification_events.json'), sent.messageId),
+  );
+
+  transport.triggerMessage(
+    withMessageId(loadFixture('zwjs-server', 'result.node.get_supported_notification_events.success.json'), sent.messageId),
+  );
+  const result = await pending;
+
+  assert.equal(result.success, true);
+  assert.deepEqual(result.result['113']['1'], [0, 2, 8]);
+  await client.stop();
+});

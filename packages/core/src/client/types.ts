@@ -83,6 +83,22 @@ export interface ZwjsDriverConfig {
   [key: string]: unknown;
 }
 
+export interface ZwjsDriverLogConfigResult {
+  config?: {
+    enabled?: boolean;
+    level?: string | number;
+    logToFile?: boolean;
+    filename?: string;
+    forceConsole?: boolean;
+  };
+  [key: string]: unknown;
+}
+
+export interface ZwjsDriverStatisticsEnabledResult {
+  statisticsEnabled?: boolean;
+  [key: string]: unknown;
+}
+
 export interface ZwjsControllerStateResult {
   state?: Record<string, unknown>;
   [key: string]: unknown;
@@ -100,6 +116,7 @@ export type ZwjsDefinedValueIdsResult = Array<Record<string, unknown>> | { value
 export type ZwjsNodeValueResult = unknown;
 export type ZwjsNodeValueMetadataResult = Record<string, unknown>;
 export type ZwjsNodeValueTimestampResult = number | string | null;
+export type ZwjsNodeSupportedNotificationEventsResult = Record<string, unknown> | Array<unknown>;
 
 export interface ClientLogger {
   debug?(msg: string, meta?: unknown): void;
@@ -279,6 +296,8 @@ export interface ZwjsClient {
   startListening(): Promise<ZwjsCommandResult<{ state?: unknown }>>;
   sendCommand<TResult = unknown, TArgs = Record<string, unknown>>(request: ZwjsCommandRequest<TArgs>): Promise<ZwjsCommandResult<TResult>>;
   getDriverConfig(): Promise<ZwjsCommandResult<ZwjsDriverConfig>>;
+  getDriverLogConfig(): Promise<ZwjsCommandResult<ZwjsDriverLogConfigResult>>;
+  isDriverStatisticsEnabled(): Promise<ZwjsCommandResult<ZwjsDriverStatisticsEnabledResult>>;
   getControllerState(): Promise<ZwjsCommandResult<ZwjsControllerStateResult>>;
   getControllerNodeNeighbors(nodeId: number): Promise<ZwjsCommandResult<ZwjsControllerNodeNeighborsResult>>;
   getNodeState(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeStateResult>>;
@@ -286,6 +305,7 @@ export interface ZwjsClient {
   getNodeValueMetadata(nodeId: number, valueId: ZwjsValueId): Promise<ZwjsCommandResult<ZwjsNodeValueMetadataResult>>;
   getNodeValue(nodeId: number, valueId: ZwjsValueId): Promise<ZwjsCommandResult<ZwjsNodeValueResult>>;
   getNodeValueTimestamp(nodeId: number, valueId: ZwjsValueId): Promise<ZwjsCommandResult<ZwjsNodeValueTimestampResult>>;
+  getNodeSupportedNotificationEvents(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeSupportedNotificationEventsResult>>;
   getServerInfo(): Promise<ServerInfoResult>;
   getNodeList(): Promise<NodeListResult>;
 }

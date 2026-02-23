@@ -1,0 +1,4 @@
+{
+  "messageId": "fixture-20",
+  "command": "driver.get_log_config"
+}

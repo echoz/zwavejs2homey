@@ -15,6 +15,8 @@ import type {
   ZwjsControllerStateResult,
   ZwjsControllerNodeNeighborsResult,
   ZwjsDriverConfig,
+  ZwjsDriverLogConfigResult,
+  ZwjsDriverStatisticsEnabledResult,
   ZwjsClientEvent,
   ZwjsClientEventInput,
   ZwjsInitializeOptions,
@@ -23,6 +25,7 @@ import type {
   ZwjsNodeValueMetadataResult,
   ZwjsNodeValueResult,
   ZwjsNodeValueTimestampResult,
+  ZwjsNodeSupportedNotificationEventsResult,
   ZwjsValueId,
   ZwjsClientStatus,
   ZwjsLifecycleState,
@@ -176,6 +179,14 @@ export class ZwjsClientImpl implements ZwjsClient {
     return this.sendCommand<ZwjsDriverConfig>({ command: 'driver.get_config' });
   }
 
+  async getDriverLogConfig(): Promise<ZwjsCommandResult<ZwjsDriverLogConfigResult>> {
+    return this.sendCommand<ZwjsDriverLogConfigResult>({ command: 'driver.get_log_config' });
+  }
+
+  async isDriverStatisticsEnabled(): Promise<ZwjsCommandResult<ZwjsDriverStatisticsEnabledResult>> {
+    return this.sendCommand<ZwjsDriverStatisticsEnabledResult>({ command: 'driver.is_statistics_enabled' });
+  }
+
   async getControllerState(): Promise<ZwjsCommandResult<ZwjsControllerStateResult>> {
     return this.sendCommand<ZwjsControllerStateResult>({ command: 'controller.get_state' });
   }
@@ -216,6 +227,13 @@ export class ZwjsClientImpl implements ZwjsClient {
     return this.sendCommand<ZwjsNodeValueTimestampResult, { nodeId: number; valueId: ZwjsValueId }>({
       command: 'node.get_value_timestamp',
       args: { nodeId, valueId },
+    });
+  }
+
+  async getNodeSupportedNotificationEvents(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeSupportedNotificationEventsResult>> {
+    return this.sendCommand<ZwjsNodeSupportedNotificationEventsResult, { nodeId: number }>({
+      command: 'node.get_supported_notification_events',
+      args: { nodeId },
     });
   }
 

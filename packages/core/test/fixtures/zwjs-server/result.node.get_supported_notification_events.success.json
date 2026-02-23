@@ -1,0 +1,14 @@
+{
+  "type": "result",
+  "messageId": "fixture-22",
+  "success": true,
+  "result": {
+    "113": {
+      "1": [
+        0,
+        2,
+        8
+      ]
+    }
+  }
+}
