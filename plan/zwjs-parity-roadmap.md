@@ -159,7 +159,8 @@ Progress (completed subset):
 - Implemented `startListeningLogs(filter?)` and `stopListeningLogs()` typed wrappers
 - Added fixture-backed mocked transport tests for no-filter and filtered start commands and stop command
 - Driver `logging` event specialized typing/normalizer coverage already exists from earlier slice
-- Live validation of `start_listening_logs` + real `driver.logging` stream still pending
+- Live wrapper validation completed on 2026-02-23 (`start_listening_logs`/`stop_listening_logs` succeeded)
+- No `driver.logging` events were observed during two read-only validation windows (filtered and unfiltered), so event-stream live observation remains pending active log output
 
 #### P1.2 Controller/Node Read Wrapper Expansion Set A
 
