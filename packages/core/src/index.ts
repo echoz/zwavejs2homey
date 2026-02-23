@@ -51,6 +51,8 @@ export type {
   ZwjsDriverConfig,
   ZwjsDriverLogConfigResult,
   ZwjsDriverStatisticsEnabledResult,
+  ZwjsDriverCheckForConfigUpdatesResult,
+  ZwjsDriverInstallConfigUpdateResult,
   ZwjsDriverOtwFirmwareUpdateInProgressResult,
   ZwjsDefinedValueIdsResult,
   ZwjsDefinedValueId,

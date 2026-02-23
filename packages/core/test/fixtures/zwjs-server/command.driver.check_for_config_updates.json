@@ -1,0 +1,4 @@
+{
+  "messageId": "fixture-driver-check-config-updates-1",
+  "command": "driver.check_for_config_updates"
+}

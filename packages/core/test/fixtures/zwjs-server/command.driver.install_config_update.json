@@ -1,0 +1,4 @@
+{
+  "messageId": "fixture-driver-install-config-update-1",
+  "command": "driver.install_config_update"
+}

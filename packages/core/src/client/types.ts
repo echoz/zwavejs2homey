@@ -150,6 +150,16 @@ export interface ZwjsDriverStatisticsEnabledResult {
   statisticsEnabled?: boolean;
   [key: string]: unknown;
 }
+export interface ZwjsDriverCheckForConfigUpdatesResult {
+  installedVersion?: string;
+  updateAvailable?: boolean;
+  newVersion?: string;
+  [key: string]: unknown;
+}
+export interface ZwjsDriverInstallConfigUpdateResult {
+  success?: boolean;
+  [key: string]: unknown;
+}
 export interface ZwjsDriverOtwFirmwareUpdateInProgressResult {
   progress?: boolean;
   [key: string]: unknown;
@@ -930,6 +940,8 @@ export interface ZwjsClient {
   getDriverConfig(): Promise<ZwjsCommandResult<ZwjsDriverConfig>>;
   getDriverLogConfig(): Promise<ZwjsCommandResult<ZwjsDriverLogConfigResult>>;
   isDriverStatisticsEnabled(): Promise<ZwjsCommandResult<ZwjsDriverStatisticsEnabledResult>>;
+  checkDriverConfigUpdates(): Promise<ZwjsCommandResult<ZwjsDriverCheckForConfigUpdatesResult>>;
+  installDriverConfigUpdate(): Promise<ZwjsCommandResult<ZwjsDriverInstallConfigUpdateResult>>;
   isDriverOtwFirmwareUpdateInProgress(): Promise<
     ZwjsCommandResult<ZwjsDriverOtwFirmwareUpdateInProgressResult>
   >;

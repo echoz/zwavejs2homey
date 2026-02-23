@@ -125,6 +125,44 @@ test('sendMutationCommand sends allowed mutation command and returns result', as
   await client.stop();
 });
 
+test('installDriverConfigUpdate sends mutation-gated protocol command and returns success', async () => {
+  const { client, transport } = makeClient({
+    enabled: true,
+    allowCommands: ['driver.install_config_update'],
+  });
+  await startConnected(client, transport);
+
+  const pending = client.installDriverConfigUpdate();
+  const sent = transport.sent.at(-1);
+  assert.deepEqual(
+    sent,
+    withMessageId(
+      loadFixture('zwjs-server', 'command.driver.install_config_update.json'),
+      sent.messageId,
+    ),
+  );
+
+  transport.triggerMessage(
+    withMessageId(
+      loadFixture('zwjs-server', 'result.driver.install_config_update.success.json'),
+      sent.messageId,
+    ),
+  );
+  const result = await pending;
+  assert.equal(result.success, true);
+  assert.equal(result.result.success, true);
+  await client.stop();
+});
+
+test('installDriverConfigUpdate is blocked by default mutation policy', async () => {
+  const { client, transport } = makeClient();
+  await startConnected(client, transport);
+
+  await assert.rejects(() => client.installDriverConfigUpdate(), /blocked by policy/);
+  assert.equal(transport.sent.length, 0);
+  await client.stop();
+});
+
 test('beginInclusion sends mutation-gated protocol command and returns result', async () => {
   const { client, transport } = makeClient({
     enabled: true,

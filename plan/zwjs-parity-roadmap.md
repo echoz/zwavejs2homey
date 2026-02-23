@@ -337,6 +337,9 @@ Progress (completed subset):
   - `node.poll_value`
 - Added default-policy blocking coverage for the P2.2 wrapper set
 - Result typing is `partial` for common success fields (`success`, optional `value`)
+- Added driver config-update maintenance wrappers with fixture-backed coverage:
+  - `checkDriverConfigUpdates()` (`driver.check_for_config_updates`, read)
+  - `installDriverConfigUpdate()` (`driver.install_config_update`, mutation-gated)
 
 #### P2.3 Inclusion/Exclusion Workflow Foundation (Protocol Layer Only)
 

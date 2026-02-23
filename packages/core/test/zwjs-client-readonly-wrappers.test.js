@@ -332,6 +332,34 @@ test('isDriverStatisticsEnabled sends correct command and returns statisticsEnab
   await client.stop();
 });
 
+test('checkDriverConfigUpdates sends correct command and returns update metadata', async () => {
+  const { client, transport } = makeClient();
+  await startConnected(client, transport);
+
+  const pending = client.checkDriverConfigUpdates();
+  const sent = transport.sent.at(-1);
+  assert.deepEqual(
+    sent,
+    withMessageId(
+      loadFixture('zwjs-server', 'command.driver.check_for_config_updates.json'),
+      sent.messageId,
+    ),
+  );
+
+  transport.triggerMessage(
+    withMessageId(
+      loadFixture('zwjs-server', 'result.driver.check_for_config_updates.success.json'),
+      sent.messageId,
+    ),
+  );
+  const result = await pending;
+
+  assert.equal(result.success, true);
+  assert.equal(result.result.updateAvailable, true);
+  assert.equal(result.result.newVersion, '12.4.0');
+  await client.stop();
+});
+
 test('getNodeSupportedNotificationEvents sends correct command and returns protocol-native payload', async () => {
   const { client, transport } = makeClient();
   await startConnected(client, transport);

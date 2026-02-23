@@ -23,6 +23,8 @@ import type {
   ZwjsDriverConfig,
   ZwjsDriverLogConfigResult,
   ZwjsDriverStatisticsEnabledResult,
+  ZwjsDriverCheckForConfigUpdatesResult,
+  ZwjsDriverInstallConfigUpdateResult,
   ZwjsDriverOtwFirmwareUpdateInProgressResult,
   ZwjsClientEvent,
   ZwjsClientEventInput,
@@ -329,6 +331,22 @@ export class ZwjsClientImpl implements ZwjsClient {
   async isDriverStatisticsEnabled(): Promise<ZwjsCommandResult<ZwjsDriverStatisticsEnabledResult>> {
     return this.sendCommand<ZwjsDriverStatisticsEnabledResult>({
       command: 'driver.is_statistics_enabled',
+    });
+  }
+
+  async checkDriverConfigUpdates(): Promise<
+    ZwjsCommandResult<ZwjsDriverCheckForConfigUpdatesResult>
+  > {
+    return this.sendCommand<ZwjsDriverCheckForConfigUpdatesResult>({
+      command: 'driver.check_for_config_updates',
+    });
+  }
+
+  async installDriverConfigUpdate(): Promise<
+    ZwjsCommandResult<ZwjsDriverInstallConfigUpdateResult>
+  > {
+    return this.sendMutationCommand<ZwjsDriverInstallConfigUpdateResult>({
+      command: 'driver.install_config_update',
     });
   }
 

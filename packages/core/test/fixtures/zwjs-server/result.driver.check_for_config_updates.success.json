@@ -1,0 +1,10 @@
+{
+  "type": "result",
+  "messageId": "fixture-driver-check-config-updates-1",
+  "success": true,
+  "result": {
+    "installedVersion": "12.3.0",
+    "updateAvailable": true,
+    "newVersion": "12.4.0"
+  }
+}
