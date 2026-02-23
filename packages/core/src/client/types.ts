@@ -267,6 +267,9 @@ export interface ZwjsEndpointTarget {
 export interface ZwjsEndpointCcQuery extends ZwjsEndpointTarget {
   commandClass: number | string;
 }
+export type ZwjsEndpointSupportsCcApiResult =
+  | boolean
+  | { supported?: boolean; [key: string]: unknown };
 export type ZwjsEndpointSupportsCcResult =
   | boolean
   | { supported?: boolean; [key: string]: unknown };
@@ -285,6 +288,9 @@ export type ZwjsVirtualEndpointEndpointCountResult =
   | number
   | { count?: number; [key: string]: unknown };
 export type ZwjsVirtualEndpointSupportsCcResult =
+  | boolean
+  | { supported?: boolean; [key: string]: unknown };
+export type ZwjsVirtualEndpointSupportsCcApiResult =
   | boolean
   | { supported?: boolean; [key: string]: unknown };
 export type ZwjsVirtualEndpointGetCcVersionResult =
@@ -742,6 +748,9 @@ export interface ZwjsClient {
   endpointSupportsCc(
     args: ZwjsEndpointCcQuery,
   ): Promise<ZwjsCommandResult<ZwjsEndpointSupportsCcResult>>;
+  endpointSupportsCcApi(
+    args: ZwjsEndpointCcQuery,
+  ): Promise<ZwjsCommandResult<ZwjsEndpointSupportsCcApiResult>>;
   endpointControlsCc(
     args: ZwjsEndpointCcQuery,
   ): Promise<ZwjsCommandResult<ZwjsEndpointControlsCcResult>>;
@@ -763,6 +772,9 @@ export interface ZwjsClient {
   broadcastNodeSupportsCc(
     args: Pick<ZwjsVirtualEndpointCcQuery, 'index' | 'commandClass'>,
   ): Promise<ZwjsCommandResult<ZwjsVirtualEndpointSupportsCcResult>>;
+  broadcastNodeSupportsCcApi(
+    args: Pick<ZwjsVirtualEndpointCcQuery, 'index' | 'commandClass'>,
+  ): Promise<ZwjsCommandResult<ZwjsVirtualEndpointSupportsCcApiResult>>;
   broadcastNodeGetCcVersion(
     args: Pick<ZwjsVirtualEndpointCcQuery, 'index' | 'commandClass'>,
   ): Promise<ZwjsCommandResult<ZwjsVirtualEndpointGetCcVersionResult>>;
@@ -772,6 +784,9 @@ export interface ZwjsClient {
   multicastGroupSupportsCc(
     args: ZwjsVirtualEndpointCcQuery,
   ): Promise<ZwjsCommandResult<ZwjsVirtualEndpointSupportsCcResult>>;
+  multicastGroupSupportsCcApi(
+    args: ZwjsVirtualEndpointCcQuery,
+  ): Promise<ZwjsCommandResult<ZwjsVirtualEndpointSupportsCcApiResult>>;
   multicastGroupGetCcVersion(
     args: ZwjsVirtualEndpointCcQuery,
   ): Promise<ZwjsCommandResult<ZwjsVirtualEndpointGetCcVersionResult>>;

@@ -1,0 +1,5 @@
+{
+  "command": "broadcast_node.supports_cc_api",
+  "index": 1,
+  "commandClass": 37
+}

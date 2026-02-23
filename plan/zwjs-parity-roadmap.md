@@ -416,10 +416,11 @@ Progress (completed subset):
 - Added first virtual endpoint read wrappers (`broadcast_node.*` / `multicast_group.*`) for:
   - `get_endpoint_count`
   - `supports_cc`
+  - `supports_cc_api`
   - `get_cc_version`
   - `multicast_group.get_defined_value_ids`
 - Added fixture-backed mocked transport tests for exact command envelopes and representative results for this virtual endpoint subset
-- Remaining virtual endpoint scope for this slice: broader `invoke_cc_api` / `supports_cc_api` and additional commands as needed
+- Remaining virtual endpoint scope for this slice: broader `invoke_cc_api` helpers and additional commands as needed
 
 #### P3.2 Zniffer Protocol Layer
 
