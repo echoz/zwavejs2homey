@@ -21,7 +21,10 @@ import type {
   ZwjsClientEvent,
   ZwjsClientEventInput,
   ZwjsInitializeOptions,
-  ZwjsLogFilter,
+    ZwjsLogFilter,
+    ZwjsControllerBeginInclusionArgs,
+    ZwjsControllerBeginExclusionArgs,
+    ZwjsControllerInclusionCommandResult,
   ZwjsNodeStateResult,
   ZwjsDefinedValueIdsResult,
   ZwjsNodeValueMetadataResult,
@@ -275,6 +278,28 @@ export class ZwjsClientImpl implements ZwjsClient {
       command: 'node.get_supported_notification_events',
       args: { nodeId },
     });
+  }
+
+  async beginInclusion(args?: ZwjsControllerBeginInclusionArgs): Promise<ZwjsCommandResult<ZwjsControllerInclusionCommandResult>> {
+    return this.sendMutationCommand<ZwjsControllerInclusionCommandResult, ZwjsControllerBeginInclusionArgs>({
+      command: 'controller.begin_inclusion',
+      ...(args ? { args } : {}),
+    });
+  }
+
+  async beginExclusion(args?: ZwjsControllerBeginExclusionArgs): Promise<ZwjsCommandResult<ZwjsControllerInclusionCommandResult>> {
+    return this.sendMutationCommand<ZwjsControllerInclusionCommandResult, ZwjsControllerBeginExclusionArgs>({
+      command: 'controller.begin_exclusion',
+      ...(args ? { args } : {}),
+    });
+  }
+
+  async stopInclusion(): Promise<ZwjsCommandResult<ZwjsControllerInclusionCommandResult>> {
+    return this.sendMutationCommand<ZwjsControllerInclusionCommandResult>({ command: 'controller.stop_inclusion' });
+  }
+
+  async stopExclusion(): Promise<ZwjsCommandResult<ZwjsControllerInclusionCommandResult>> {
+    return this.sendMutationCommand<ZwjsControllerInclusionCommandResult>({ command: 'controller.stop_exclusion' });
   }
 
   private async connectFlow(targetState: Extract<ZwjsLifecycleState, 'connecting' | 'reconnecting'>): Promise<void> {

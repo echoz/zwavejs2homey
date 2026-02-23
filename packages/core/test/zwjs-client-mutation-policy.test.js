@@ -80,3 +80,71 @@ test('sendMutationCommand sends allowed mutation command and returns result', as
   assert.equal(result.result.success, true);
   await client.stop();
 });
+
+test('beginInclusion sends mutation-gated protocol command and returns result', async () => {
+  const { client, transport } = makeClient({ enabled: true, allowCommands: ['controller.begin_inclusion'] });
+  await startConnected(client, transport);
+
+  const pending = client.beginInclusion();
+  const sent = transport.sent.at(-1);
+  assert.deepEqual(sent, withMessageId(loadFixture('zwjs-server', 'command.controller.begin_inclusion.json'), sent.messageId));
+
+  transport.triggerMessage(withMessageId(loadFixture('zwjs-server', 'result.command.success.empty.json'), sent.messageId));
+  const result = await pending;
+  assert.equal(result.success, true);
+  await client.stop();
+});
+
+test('beginExclusion sends mutation-gated protocol command and returns result', async () => {
+  const { client, transport } = makeClient({ enabled: true, allowCommands: ['controller.begin_exclusion'] });
+  await startConnected(client, transport);
+
+  const pending = client.beginExclusion();
+  const sent = transport.sent.at(-1);
+  assert.deepEqual(sent, withMessageId(loadFixture('zwjs-server', 'command.controller.begin_exclusion.json'), sent.messageId));
+
+  transport.triggerMessage(withMessageId(loadFixture('zwjs-server', 'result.command.success.empty.json'), sent.messageId));
+  const result = await pending;
+  assert.equal(result.success, true);
+  await client.stop();
+});
+
+test('stopInclusion sends mutation-gated protocol command and returns result', async () => {
+  const { client, transport } = makeClient({ enabled: true, allowCommands: ['controller.stop_inclusion'] });
+  await startConnected(client, transport);
+
+  const pending = client.stopInclusion();
+  const sent = transport.sent.at(-1);
+  assert.deepEqual(sent, withMessageId(loadFixture('zwjs-server', 'command.controller.stop_inclusion.json'), sent.messageId));
+
+  transport.triggerMessage(withMessageId(loadFixture('zwjs-server', 'result.command.success.empty.json'), sent.messageId));
+  const result = await pending;
+  assert.equal(result.success, true);
+  await client.stop();
+});
+
+test('stopExclusion sends mutation-gated protocol command and returns result', async () => {
+  const { client, transport } = makeClient({ enabled: true, allowCommands: ['controller.stop_exclusion'] });
+  await startConnected(client, transport);
+
+  const pending = client.stopExclusion();
+  const sent = transport.sent.at(-1);
+  assert.deepEqual(sent, withMessageId(loadFixture('zwjs-server', 'command.controller.stop_exclusion.json'), sent.messageId));
+
+  transport.triggerMessage(withMessageId(loadFixture('zwjs-server', 'result.command.success.empty.json'), sent.messageId));
+  const result = await pending;
+  assert.equal(result.success, true);
+  await client.stop();
+});
+
+test('inclusion wrappers are blocked by default mutation policy', async () => {
+  const { client, transport } = makeClient();
+  await startConnected(client, transport);
+
+  await assert.rejects(() => client.beginInclusion(), /blocked by policy/);
+  await assert.rejects(() => client.beginExclusion(), /blocked by policy/);
+  await assert.rejects(() => client.stopInclusion(), /blocked by policy/);
+  await assert.rejects(() => client.stopExclusion(), /blocked by policy/);
+  assert.equal(transport.sent.length, 0);
+  await client.stop();
+});

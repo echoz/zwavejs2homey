@@ -48,6 +48,16 @@ export interface ZwjsLogFilter {
   [key: string]: unknown;
 }
 
+export interface ZwjsControllerBeginInclusionArgs {
+  [key: string]: unknown;
+}
+
+export interface ZwjsControllerBeginExclusionArgs {
+  [key: string]: unknown;
+}
+
+export type ZwjsControllerInclusionCommandResult = Record<string, unknown> | undefined;
+
 export interface ZwjsCommandRequest<TArgs = Record<string, unknown>> {
   command: string;
   args?: TArgs;
@@ -519,6 +529,10 @@ export interface ZwjsClient {
   getNodeValue(nodeId: number, valueId: ZwjsValueId): Promise<ZwjsCommandResult<ZwjsNodeValueResult>>;
   getNodeValueTimestamp(nodeId: number, valueId: ZwjsValueId): Promise<ZwjsCommandResult<ZwjsNodeValueTimestampResult>>;
   getNodeSupportedNotificationEvents(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeSupportedNotificationEventsResult>>;
+  beginInclusion(args?: ZwjsControllerBeginInclusionArgs): Promise<ZwjsCommandResult<ZwjsControllerInclusionCommandResult>>;
+  beginExclusion(args?: ZwjsControllerBeginExclusionArgs): Promise<ZwjsCommandResult<ZwjsControllerInclusionCommandResult>>;
+  stopInclusion(): Promise<ZwjsCommandResult<ZwjsControllerInclusionCommandResult>>;
+  stopExclusion(): Promise<ZwjsCommandResult<ZwjsControllerInclusionCommandResult>>;
   getServerInfo(): Promise<ServerInfoResult>;
   getNodeList(): Promise<NodeListResult>;
 }

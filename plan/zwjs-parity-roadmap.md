@@ -287,6 +287,18 @@ Tests:
 - mocked transport wrapper tests
 - normalizer fixture tests for inclusion/security events
 
+Progress (completed subset):
+- Specialized controller inclusion/security event typing + fixture-backed normalizer coverage already implemented for:
+  - `grant security classes`
+  - `validate dsk and enter pin`
+  - `inclusion aborted`
+- Added mutation-gated protocol wrappers + fixture-backed mocked transport tests for:
+  - `controller.begin_inclusion`
+  - `controller.begin_exclusion`
+  - `controller.stop_inclusion`
+  - `controller.stop_exclusion`
+- Added default-policy blocking coverage for the inclusion/exclusion wrapper set
+
 ## Phase P3 — Advanced / Long-Tail Domains
 
 ### Objective
