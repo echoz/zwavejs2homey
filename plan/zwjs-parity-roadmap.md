@@ -303,8 +303,10 @@ Progress (completed subset):
   - `safe-ops`
   - `node-maintenance`
   - `controller-maintenance`
+  - `zniffer-maintenance`
   - `destructive` (empty allowlist by default; explicit opt-in commands required)
 - Added unit tests for preset allowlists, cloning behavior, and helper policy construction
+- Extended preset coverage with a `zniffer-maintenance` allowlist aligned to P3.2 lifecycle/frequency wrappers
 
 #### P2.2 Low-Risk Mutating Wrappers (First Wave)
 

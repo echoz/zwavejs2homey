@@ -4,6 +4,7 @@ export type MutationPolicyPresetName =
   | 'safe-ops'
   | 'node-maintenance'
   | 'controller-maintenance'
+  | 'zniffer-maintenance'
   | 'destructive';
 
 const SAFE_OPS_COMMANDS = [
@@ -22,10 +23,20 @@ const CONTROLLER_MAINTENANCE_COMMANDS = [
   'controller.stop_exclusion',
 ] as const;
 
+const ZNIFFER_MAINTENANCE_COMMANDS = [
+  'zniffer.init',
+  'zniffer.start',
+  'zniffer.stop',
+  'zniffer.destroy',
+  'zniffer.clear_captured_frames',
+  'zniffer.set_frequency',
+] as const;
+
 const PRESET_ALLOWLISTS: Record<MutationPolicyPresetName, readonly string[]> = {
   'safe-ops': SAFE_OPS_COMMANDS,
   'node-maintenance': NODE_MAINTENANCE_COMMANDS,
   'controller-maintenance': CONTROLLER_MAINTENANCE_COMMANDS,
+  'zniffer-maintenance': ZNIFFER_MAINTENANCE_COMMANDS,
   // Destructive is intentionally empty by default to force explicit opt-in commands.
   destructive: [],
 };

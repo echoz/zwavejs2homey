@@ -240,6 +240,7 @@ These are included to prevent architectural confusion and to show where UI/backe
 ### P2 Gaps (Safe Mutation Expansion)
 
 - Typed mutating wrappers routed through `sendMutationCommand()` with explicit allowlist presets
+- Mutation preset coverage now includes a `zniffer-maintenance` preset for P3.2 lifecycle/frequency wrappers
 - Inclusion/exclusion workflow wrappers + event typing + operational safeguards
 - Lower-risk mutating wrappers first (`node.ping`, `node.refresh_info`) before destructive operations
 

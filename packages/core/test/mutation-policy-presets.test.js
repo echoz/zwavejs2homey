@@ -26,6 +26,18 @@ test('controller-maintenance preset includes inclusion/exclusion workflow comman
   ]);
 });
 
+test('zniffer-maintenance preset includes zniffer lifecycle and frequency commands', () => {
+  const allowlist = getMutationPolicyPresetAllowlist('zniffer-maintenance');
+  assert.deepEqual(allowlist.sort(), [
+    'zniffer.clear_captured_frames',
+    'zniffer.destroy',
+    'zniffer.init',
+    'zniffer.set_frequency',
+    'zniffer.start',
+    'zniffer.stop',
+  ]);
+});
+
 test('destructive preset defaults to empty allowlist', () => {
   const allowlist = getMutationPolicyPresetAllowlist('destructive');
   assert.deepEqual(allowlist, []);
@@ -40,6 +52,14 @@ test('createMutationPolicyPreset returns enabled allowlist-enforced policy and m
   assert.equal(policy.requireAllowList, true);
   assert.equal(policy.allowCommands.includes('node.ping'), true);
   assert.equal(policy.allowCommands.includes('controller.stop_inclusion'), true);
+});
+
+test('createMutationPolicyPreset supports zniffer-maintenance baseline', () => {
+  const policy = createMutationPolicyPreset('zniffer-maintenance');
+  assert.equal(policy.enabled, true);
+  assert.equal(policy.requireAllowList, true);
+  assert.equal(policy.allowCommands.includes('zniffer.start'), true);
+  assert.equal(policy.allowCommands.includes('zniffer.set_frequency'), true);
 });
 
 test('preset helper returns cloned allowlists', () => {
