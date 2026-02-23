@@ -34,6 +34,10 @@ import {
   isZwjsNodeValueRemovedEvent,
   isZwjsNodeValueUpdatedEvent,
   isZwjsNodeWakeUpEvent,
+  isZwjsZnifferCorruptedFrameEvent,
+  isZwjsZnifferErrorEvent,
+  isZwjsZnifferFrameEvent,
+  isZwjsZnifferReadyEvent,
 } from '../event-guards';
 import type { ZwjsProtocolAdapter } from './types';
 
@@ -217,6 +221,34 @@ export class DefaultZwjsFamilyNormalizer implements ZwjsProtocolAdapter {
       } else if (isZwjsControllerNvmRestoreProgressEvent(protocolEvent)) {
         events.push({
           type: 'zwjs.event.controller.nvm-restore-progress',
+          ts: new Date().toISOString(),
+          source: 'zwjs-client',
+          event: protocolEvent,
+        });
+      } else if (isZwjsZnifferReadyEvent(protocolEvent)) {
+        events.push({
+          type: 'zwjs.event.zniffer.ready',
+          ts: new Date().toISOString(),
+          source: 'zwjs-client',
+          event: protocolEvent,
+        });
+      } else if (isZwjsZnifferCorruptedFrameEvent(protocolEvent)) {
+        events.push({
+          type: 'zwjs.event.zniffer.corrupted-frame',
+          ts: new Date().toISOString(),
+          source: 'zwjs-client',
+          event: protocolEvent,
+        });
+      } else if (isZwjsZnifferFrameEvent(protocolEvent)) {
+        events.push({
+          type: 'zwjs.event.zniffer.frame',
+          ts: new Date().toISOString(),
+          source: 'zwjs-client',
+          event: protocolEvent,
+        });
+      } else if (isZwjsZnifferErrorEvent(protocolEvent)) {
+        events.push({
+          type: 'zwjs.event.zniffer.error',
           ts: new Date().toISOString(),
           source: 'zwjs-client',
           event: protocolEvent,

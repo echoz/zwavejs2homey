@@ -831,3 +831,52 @@ test('stopListeningLogs sends correct command', async () => {
   assert.equal(result.success, true);
   await client.stop();
 });
+
+test('zniffer read wrappers send exact protocol commands and return representative results', async () => {
+  const { client, transport } = makeClient();
+  await startConnected(client, transport);
+
+  const checks = [
+    [
+      () => client.getZnifferCapturedFrames(),
+      'command.zniffer.captured_frames.json',
+      'result.zniffer.captured_frames.success.json',
+      (result) => assert.equal(Array.isArray(result.capturedFrames), true),
+    ],
+    [
+      () => client.getZnifferCaptureAsZlfBuffer(),
+      'command.zniffer.get_capture_as_zlf_buffer.json',
+      'result.zniffer.get_capture_as_zlf_buffer.success.json',
+      (result) => assert.equal(result.capture.type, 'Buffer'),
+    ],
+    [
+      () => client.getZnifferSupportedFrequencies(),
+      'command.zniffer.supported_frequencies.json',
+      'result.zniffer.supported_frequencies.success.json',
+      (result) => assert.equal(result.frequencies['1'], 'US'),
+    ],
+    [
+      () => client.getZnifferCurrentFrequency(),
+      'command.zniffer.current_frequency.json',
+      'result.zniffer.current_frequency.success.json',
+      (result) => assert.equal(result.frequency, 1),
+    ],
+  ];
+
+  for (const [call, commandFixture, resultFixture, assertResult] of checks) {
+    const pending = call();
+    const sent = transport.sent.at(-1);
+    assert.deepEqual(
+      sent,
+      withMessageId(loadFixture('zwjs-server', commandFixture), sent.messageId),
+    );
+    transport.triggerMessage(
+      withMessageId(loadFixture('zwjs-server', resultFixture), sent.messageId),
+    );
+    const response = await pending;
+    assert.equal(response.success, true);
+    assertResult(response.result);
+  }
+
+  await client.stop();
+});

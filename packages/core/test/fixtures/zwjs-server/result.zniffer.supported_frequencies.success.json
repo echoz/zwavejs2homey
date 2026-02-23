@@ -1,0 +1,11 @@
+{
+  "type": "result",
+  "messageId": "fixture-zniffer-frequencies-1",
+  "success": true,
+  "result": {
+    "frequencies": {
+      "0": "EU",
+      "1": "US"
+    }
+  }
+}

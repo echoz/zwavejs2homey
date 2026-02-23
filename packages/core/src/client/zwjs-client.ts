@@ -61,6 +61,10 @@ import type {
   ZwjsVirtualEndpointGetCcVersionResult,
   ZwjsVirtualEndpointDefinedValueIdsResult,
   ZwjsInvokeCcApiResult,
+  ZwjsZnifferCapturedFramesResult,
+  ZwjsZnifferCaptureAsZlfBufferResult,
+  ZwjsZnifferSupportedFrequenciesResult,
+  ZwjsZnifferCurrentFrequencyResult,
   ZwjsValueId,
   ZwjsClientStatus,
   ZwjsLifecycleState,
@@ -656,6 +660,36 @@ export class ZwjsClientImpl implements ZwjsClient {
     return this.sendCommand<ZwjsVirtualEndpointDefinedValueIdsResult, ZwjsMulticastGroupTarget>({
       command: 'multicast_group.get_defined_value_ids',
       args,
+    });
+  }
+
+  async getZnifferCapturedFrames(): Promise<ZwjsCommandResult<ZwjsZnifferCapturedFramesResult>> {
+    return this.sendCommand<ZwjsZnifferCapturedFramesResult>({
+      command: 'zniffer.captured_frames',
+    });
+  }
+
+  async getZnifferCaptureAsZlfBuffer(): Promise<
+    ZwjsCommandResult<ZwjsZnifferCaptureAsZlfBufferResult>
+  > {
+    return this.sendCommand<ZwjsZnifferCaptureAsZlfBufferResult>({
+      command: 'zniffer.get_capture_as_zlf_buffer',
+    });
+  }
+
+  async getZnifferSupportedFrequencies(): Promise<
+    ZwjsCommandResult<ZwjsZnifferSupportedFrequenciesResult>
+  > {
+    return this.sendCommand<ZwjsZnifferSupportedFrequenciesResult>({
+      command: 'zniffer.supported_frequencies',
+    });
+  }
+
+  async getZnifferCurrentFrequency(): Promise<
+    ZwjsCommandResult<ZwjsZnifferCurrentFrequencyResult>
+  > {
+    return this.sendCommand<ZwjsZnifferCurrentFrequencyResult>({
+      command: 'zniffer.current_frequency',
     });
   }
 

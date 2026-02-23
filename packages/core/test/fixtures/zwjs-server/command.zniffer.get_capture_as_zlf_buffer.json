@@ -1,0 +1,4 @@
+{
+  "messageId": "fixture-zniffer-zlf-1",
+  "command": "zniffer.get_capture_as_zlf_buffer"
+}

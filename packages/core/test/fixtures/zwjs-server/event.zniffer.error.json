@@ -1,0 +1,8 @@
+{
+  "type": "event",
+  "event": {
+    "source": "zniffer",
+    "event": "error",
+    "error": { "message": "serial timeout" }
+  }
+}

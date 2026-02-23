@@ -1,0 +1,8 @@
+{
+  "type": "result",
+  "messageId": "fixture-zniffer-current-frequency-1",
+  "success": true,
+  "result": {
+    "frequency": 1
+  }
+}

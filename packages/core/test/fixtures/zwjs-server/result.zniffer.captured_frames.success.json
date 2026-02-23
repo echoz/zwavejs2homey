@@ -1,0 +1,15 @@
+{
+  "type": "result",
+  "messageId": "fixture-zniffer-captured-1",
+  "success": true,
+  "result": {
+    "capturedFrames": [
+      {
+        "channel": 0,
+        "protocolDataRate": 40000,
+        "rssiRaw": -62,
+        "timestamp": 1730000000000
+      }
+    ]
+  }
+}

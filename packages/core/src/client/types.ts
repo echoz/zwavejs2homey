@@ -312,6 +312,22 @@ export type ZwjsInvokeCcApiResult =
   | number
   | boolean
   | null;
+export interface ZwjsZnifferCapturedFramesResult {
+  capturedFrames?: Array<unknown>;
+  [key: string]: unknown;
+}
+export interface ZwjsZnifferCaptureAsZlfBufferResult {
+  capture?: unknown;
+  [key: string]: unknown;
+}
+export interface ZwjsZnifferSupportedFrequenciesResult {
+  frequencies?: unknown;
+  [key: string]: unknown;
+}
+export interface ZwjsZnifferCurrentFrequencyResult {
+  frequency?: number;
+  [key: string]: unknown;
+}
 
 export interface ClientLogger {
   debug?(msg: string, meta?: unknown): void;
@@ -514,6 +530,31 @@ export interface ZwjsControllerNvmRestoreProgressEventPayload extends ZwjsProtoc
   total: number;
 }
 
+export interface ZwjsZnifferReadyEventPayload extends ZwjsProtocolEventPayload {
+  source: 'zniffer';
+  event: 'ready';
+}
+
+export interface ZwjsZnifferCorruptedFrameEventPayload extends ZwjsProtocolEventPayload {
+  source: 'zniffer';
+  event: 'corrupted frame';
+  corruptedFrame?: unknown;
+  rawDate?: unknown;
+}
+
+export interface ZwjsZnifferFrameEventPayload extends ZwjsProtocolEventPayload {
+  source: 'zniffer';
+  event: 'frame';
+  frame?: unknown;
+  rawData?: unknown;
+}
+
+export interface ZwjsZnifferErrorEventPayload extends ZwjsProtocolEventPayload {
+  source: 'zniffer';
+  event: 'error';
+  error?: unknown;
+}
+
 export interface ZwjsNodeTestPowerlevelProgressEventPayload extends ZwjsProtocolEventPayload {
   source: 'node';
   event: 'test powerlevel progress';
@@ -575,6 +616,10 @@ export interface ZwjsEventBase {
     | 'zwjs.event.controller.nvm-backup-progress'
     | 'zwjs.event.controller.nvm-convert-progress'
     | 'zwjs.event.controller.nvm-restore-progress'
+    | 'zwjs.event.zniffer.ready'
+    | 'zwjs.event.zniffer.corrupted-frame'
+    | 'zwjs.event.zniffer.frame'
+    | 'zwjs.event.zniffer.error'
     | 'zwjs.event.node.test-powerlevel-progress'
     | 'zwjs.event.node.check-lifeline-health-progress'
     | 'zwjs.event.node.check-route-health-progress'
@@ -676,6 +721,22 @@ export type ZwjsClientEvent =
   | (ZwjsEventBase & {
       type: 'zwjs.event.controller.nvm-restore-progress';
       event: ZwjsControllerNvmRestoreProgressEventPayload;
+    })
+  | (ZwjsEventBase & {
+      type: 'zwjs.event.zniffer.ready';
+      event: ZwjsZnifferReadyEventPayload;
+    })
+  | (ZwjsEventBase & {
+      type: 'zwjs.event.zniffer.corrupted-frame';
+      event: ZwjsZnifferCorruptedFrameEventPayload;
+    })
+  | (ZwjsEventBase & {
+      type: 'zwjs.event.zniffer.frame';
+      event: ZwjsZnifferFrameEventPayload;
+    })
+  | (ZwjsEventBase & {
+      type: 'zwjs.event.zniffer.error';
+      event: ZwjsZnifferErrorEventPayload;
     })
   | (ZwjsEventBase & {
       type: 'zwjs.event.node.test-powerlevel-progress';
@@ -820,6 +881,12 @@ export interface ZwjsClient {
   multicastGroupGetDefinedValueIds(
     args: ZwjsMulticastGroupTarget,
   ): Promise<ZwjsCommandResult<ZwjsVirtualEndpointDefinedValueIdsResult>>;
+  getZnifferCapturedFrames(): Promise<ZwjsCommandResult<ZwjsZnifferCapturedFramesResult>>;
+  getZnifferCaptureAsZlfBuffer(): Promise<ZwjsCommandResult<ZwjsZnifferCaptureAsZlfBufferResult>>;
+  getZnifferSupportedFrequencies(): Promise<
+    ZwjsCommandResult<ZwjsZnifferSupportedFrequenciesResult>
+  >;
+  getZnifferCurrentFrequency(): Promise<ZwjsCommandResult<ZwjsZnifferCurrentFrequencyResult>>;
   beginInclusion(
     args?: ZwjsControllerBeginInclusionArgs,
   ): Promise<ZwjsCommandResult<ZwjsControllerInclusionCommandResult>>;

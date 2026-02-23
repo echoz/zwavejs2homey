@@ -275,3 +275,38 @@ test('emits specialized node check route health progress event', () => {
   assert.equal(specialized.event.rounds, 3);
   assert.equal(specialized.event.lastRating, 7);
 });
+
+test('emits specialized zniffer ready event', () => {
+  const msg = loadFixture('zwjs-server', 'event.zniffer.ready.json');
+  const out = normalizer.normalizeIncoming(msg);
+  const generic = out.events.find((e) => e.type === 'zwjs.event.zniffer');
+  const specialized = out.events.find((e) => e.type === 'zwjs.event.zniffer.ready');
+  assert.ok(generic);
+  assert.ok(specialized);
+  assert.equal(specialized.event.source, 'zniffer');
+  assert.equal(specialized.event.event, 'ready');
+});
+
+test('emits specialized zniffer corrupted-frame event', () => {
+  const msg = loadFixture('zwjs-server', 'event.zniffer.corrupted-frame.json');
+  const out = normalizer.normalizeIncoming(msg);
+  const specialized = out.events.find((e) => e.type === 'zwjs.event.zniffer.corrupted-frame');
+  assert.ok(specialized);
+  assert.equal(typeof specialized.event.rawDate, 'number');
+});
+
+test('emits specialized zniffer frame event', () => {
+  const msg = loadFixture('zwjs-server', 'event.zniffer.frame.json');
+  const out = normalizer.normalizeIncoming(msg);
+  const specialized = out.events.find((e) => e.type === 'zwjs.event.zniffer.frame');
+  assert.ok(specialized);
+  assert.equal(specialized.event.frame.homeId, 1234);
+});
+
+test('emits specialized zniffer error event', () => {
+  const msg = loadFixture('zwjs-server', 'event.zniffer.error.json');
+  const out = normalizer.normalizeIncoming(msg);
+  const specialized = out.events.find((e) => e.type === 'zwjs.event.zniffer.error');
+  assert.ok(specialized);
+  assert.equal(specialized.event.error.message, 'serial timeout');
+});

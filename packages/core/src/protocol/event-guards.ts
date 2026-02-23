@@ -22,6 +22,10 @@ import type {
   ZwjsNodeValueUpdatedEventPayload,
   ZwjsNodeWakeUpEventPayload,
   ZwjsProtocolEventPayload,
+  ZwjsZnifferCorruptedFrameEventPayload,
+  ZwjsZnifferErrorEventPayload,
+  ZwjsZnifferFrameEventPayload,
+  ZwjsZnifferReadyEventPayload,
 } from '../client/types';
 
 function isNodeEventBase(
@@ -216,4 +220,28 @@ export function isZwjsNodeCheckRouteHealthProgressEvent(
     typeof event.totalRounds === 'number' &&
     typeof event.lastRating === 'number'
   );
+}
+
+export function isZwjsZnifferReadyEvent(
+  event: ZwjsProtocolEventPayload,
+): event is ZwjsZnifferReadyEventPayload {
+  return event.source === 'zniffer' && event.event === 'ready';
+}
+
+export function isZwjsZnifferCorruptedFrameEvent(
+  event: ZwjsProtocolEventPayload,
+): event is ZwjsZnifferCorruptedFrameEventPayload {
+  return event.source === 'zniffer' && event.event === 'corrupted frame';
+}
+
+export function isZwjsZnifferFrameEvent(
+  event: ZwjsProtocolEventPayload,
+): event is ZwjsZnifferFrameEventPayload {
+  return event.source === 'zniffer' && event.event === 'frame';
+}
+
+export function isZwjsZnifferErrorEvent(
+  event: ZwjsProtocolEventPayload,
+): event is ZwjsZnifferErrorEventPayload {
+  return event.source === 'zniffer' && event.event === 'error';
 }

@@ -83,9 +83,17 @@ export type {
   ZwjsVirtualEndpointGetCcVersionResult,
   ZwjsVirtualEndpointDefinedValueIdsResult,
   ZwjsInvokeCcApiResult,
+  ZwjsZnifferCapturedFramesResult,
+  ZwjsZnifferCaptureAsZlfBufferResult,
+  ZwjsZnifferSupportedFrequenciesResult,
+  ZwjsZnifferCurrentFrequencyResult,
   ZwjsNodeValueTimestampResult,
   ZwjsClientStatus,
   ZwjsValueId,
+  ZwjsZnifferReadyEventPayload,
+  ZwjsZnifferCorruptedFrameEventPayload,
+  ZwjsZnifferFrameEventPayload,
+  ZwjsZnifferErrorEventPayload,
 } from './client/types';
 export type { MutationPolicyPresetName } from './client/mutation-policy-presets';
 export type { ClientErrorSummary, ZwjsClientErrorCode } from './errors';

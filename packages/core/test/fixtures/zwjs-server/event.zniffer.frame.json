@@ -1,0 +1,9 @@
+{
+  "type": "event",
+  "event": {
+    "source": "zniffer",
+    "event": "frame",
+    "frame": { "homeId": 1234, "channel": 0 },
+    "rawData": { "type": "Buffer", "data": [1, 2, 3] }
+  }
+}

@@ -1,0 +1,4 @@
+{
+  "messageId": "fixture-zniffer-frequencies-1",
+  "command": "zniffer.supported_frequencies"
+}

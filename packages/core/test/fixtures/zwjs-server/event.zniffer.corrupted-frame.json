@@ -1,0 +1,9 @@
+{
+  "type": "event",
+  "event": {
+    "source": "zniffer",
+    "event": "corrupted frame",
+    "corruptedFrame": { "channel": 0 },
+    "rawDate": 1730000001000
+  }
+}

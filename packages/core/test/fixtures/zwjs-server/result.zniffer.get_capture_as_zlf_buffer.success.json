@@ -1,0 +1,11 @@
+{
+  "type": "result",
+  "messageId": "fixture-zniffer-zlf-1",
+  "success": true,
+  "result": {
+    "capture": {
+      "type": "Buffer",
+      "data": [90, 76, 70]
+    }
+  }
+}

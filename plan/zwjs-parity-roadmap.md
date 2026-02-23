@@ -436,6 +436,23 @@ Acceptance:
 - No Homey-specific zniffer UI abstractions introduced
 - Commands/events covered by fixtures and normalizer tests
 
+Progress (completed subset):
+
+- Added typed read-only zniffer wrappers for:
+  - `zniffer.captured_frames`
+  - `zniffer.get_capture_as_zlf_buffer`
+  - `zniffer.supported_frequencies`
+  - `zniffer.current_frequency`
+- Added fixture-backed mocked transport tests for exact zniffer command envelopes and representative result shapes
+- Added specialized zniffer event typing + fixture-backed normalizer coverage for:
+  - `ready`
+  - `corrupted frame`
+  - `frame`
+  - `error`
+- Remaining P3.2 scope:
+  - lifecycle/mutation wrappers (`init`, `start`, `stop`, `destroy`, `clear_captured_frames`, `set_frequency`) via mutation policy
+  - optional live validation on a non-production zniffer-capable setup
+
 #### P3.3 Firmware / Maintenance Workflows
 
 Implement protocol-layer wrappers and event typing for selected firmware flows after explicit need is confirmed.
