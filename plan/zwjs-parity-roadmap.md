@@ -289,6 +289,18 @@ Tests:
 
 - unit tests only if helper builders are added
 
+Progress (completed subset):
+
+- Added exported mutation policy preset helpers:
+  - `getMutationPolicyPresetAllowlist(...)`
+  - `createMutationPolicyPreset(...)`
+- Added preset names for:
+  - `safe-ops`
+  - `node-maintenance`
+  - `controller-maintenance`
+  - `destructive` (empty allowlist by default; explicit opt-in commands required)
+- Added unit tests for preset allowlists, cloning behavior, and helper policy construction
+
 #### P2.2 Low-Risk Mutating Wrappers (First Wave)
 
 Implement typed wrappers for lower-risk commands:

@@ -69,6 +69,7 @@ export type {
   ZwjsClientStatus,
   ZwjsValueId,
 } from './client/types';
+export type { MutationPolicyPresetName } from './client/mutation-policy-presets';
 export type { ClientErrorSummary, ZwjsClientErrorCode } from './errors';
 export type {
   ZwjsEventFrame,
@@ -88,6 +89,10 @@ export {
   hasZwjsNodeValue,
   isZwjsNodeValueEnvelopeResult,
 } from './protocol/value-result-guards';
+export {
+  createMutationPolicyPreset,
+  getMutationPolicyPresetAllowlist,
+} from './client/mutation-policy-presets';
 
 import { ZwjsClientImpl } from './client/zwjs-client';
 import type { ZwjsClient, ZwjsClientConfig } from './client/types';
