@@ -720,6 +720,41 @@ test('driverFirmwareUpdateOtw supports updateInfo command variant and protocol-n
   await client.stop();
 });
 
+test('driverFirmwareUpdateOtw rejects ambiguous payload mode before sending', async () => {
+  const { client, transport } = makeClient({
+    enabled: true,
+    allowCommands: ['driver.firmware_update_otw'],
+  });
+  await startConnected(client, transport);
+
+  await assert.rejects(
+    () =>
+      client.driverFirmwareUpdateOtw({
+        filename: 'controller.gbl',
+        file: 'AQID',
+        updateInfo: { version: '2.0.0' },
+      }),
+    /requires exactly one payload mode/,
+  );
+  assert.equal(transport.sent.length, 0);
+  await client.stop();
+});
+
+test('updateNodeFirmware rejects empty updates array before sending', async () => {
+  const { client, transport } = makeClient({
+    enabled: true,
+    allowCommands: ['node.update_firmware'],
+  });
+  await startConnected(client, transport);
+
+  await assert.rejects(
+    () => client.updateNodeFirmware({ nodeId: 5, updates: [] }),
+    /non-empty `updates` array/,
+  );
+  assert.equal(transport.sent.length, 0);
+  await client.stop();
+});
+
 test('firmware mutation wrappers are blocked by default mutation policy', async () => {
   const { client, transport } = makeClient();
   await startConnected(client, transport);

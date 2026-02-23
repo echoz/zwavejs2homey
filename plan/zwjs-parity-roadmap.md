@@ -520,6 +520,9 @@ Progress (completed firmware mutation wrapper subset):
   - raw file payload (`filename` + base64 `file`)
   - `updateInfo` payload (newer schema path)
 - Added firmware mutation result fixture variant coverage to preserve protocol-native passthrough behavior
+- Tightened firmware wrapper validation for common invalid request shapes:
+  - reject ambiguous `driver.firmware_update_otw` payload mode (`raw file` + `updateInfo`)
+  - reject empty `node.update_firmware` `updates` arrays before send
 
 Safety guidance (documented posture for firmware operations):
 

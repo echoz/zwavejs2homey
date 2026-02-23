@@ -290,9 +290,13 @@ export interface ZwjsDriverFirmwareUpdateOtwRawFileArgs {
   filename: string;
   file: string;
   fileFormat?: string | number;
+  updateInfo?: never;
 }
 export interface ZwjsDriverFirmwareUpdateOtwUpdateInfoArgs {
   updateInfo: Record<string, unknown>;
+  filename?: never;
+  file?: never;
+  fileFormat?: never;
 }
 export type ZwjsDriverFirmwareUpdateOtwArgs =
   | ZwjsDriverFirmwareUpdateOtwRawFileArgs
@@ -321,7 +325,7 @@ export interface ZwjsNodeFirmwareUpdateFileArgs {
 }
 export interface ZwjsNodeUpdateFirmwareArgs {
   nodeId: number;
-  updates: ZwjsNodeFirmwareUpdateFileArgs[];
+  updates: [ZwjsNodeFirmwareUpdateFileArgs, ...ZwjsNodeFirmwareUpdateFileArgs[]];
 }
 export interface ZwjsEndpointTarget {
   nodeId: number;

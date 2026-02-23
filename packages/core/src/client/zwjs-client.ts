@@ -540,6 +540,7 @@ export class ZwjsClientImpl implements ZwjsClient {
   async driverFirmwareUpdateOtw(
     args: ZwjsDriverFirmwareUpdateOtwArgs,
   ): Promise<ZwjsCommandResult<ZwjsFirmwareUpdateCommandResult>> {
+    this.assertDriverFirmwareUpdateOtwArgs(args);
     return this.sendMutationCommand<
       ZwjsFirmwareUpdateCommandResult,
       ZwjsDriverFirmwareUpdateOtwArgs
@@ -588,6 +589,7 @@ export class ZwjsClientImpl implements ZwjsClient {
   async updateNodeFirmware(
     args: ZwjsNodeUpdateFirmwareArgs,
   ): Promise<ZwjsCommandResult<ZwjsFirmwareUpdateCommandResult>> {
+    this.assertNodeUpdateFirmwareArgs(args);
     return this.sendMutationCommand<ZwjsFirmwareUpdateCommandResult, ZwjsNodeUpdateFirmwareArgs>({
       command: 'node.update_firmware',
       args,
@@ -992,6 +994,38 @@ export class ZwjsClientImpl implements ZwjsClient {
       this.emit({ type: 'auth.succeeded' });
     }
     this.setLifecycle('connected');
+  }
+
+  private assertDriverFirmwareUpdateOtwArgs(args: ZwjsDriverFirmwareUpdateOtwArgs): void {
+    const record = args as unknown as Record<string, unknown>;
+    const hasUpdateInfo =
+      typeof args === 'object' &&
+      args !== null &&
+      'updateInfo' in args &&
+      typeof record.updateInfo === 'object' &&
+      record.updateInfo !== null;
+    const hasRawFile =
+      typeof args === 'object' &&
+      args !== null &&
+      typeof record.filename === 'string' &&
+      typeof record.file === 'string';
+
+    if (hasUpdateInfo === hasRawFile) {
+      throw new ZwjsClientError({
+        code: 'PROTOCOL_ERROR',
+        message:
+          'driver.firmware_update_otw requires exactly one payload mode: raw file (`filename` + `file`) or `updateInfo`',
+      });
+    }
+  }
+
+  private assertNodeUpdateFirmwareArgs(args: ZwjsNodeUpdateFirmwareArgs): void {
+    if (!Array.isArray(args.updates) || args.updates.length === 0) {
+      throw new ZwjsClientError({
+        code: 'PROTOCOL_ERROR',
+        message: 'node.update_firmware requires a non-empty `updates` array',
+      });
+    }
   }
 
   private async handleIncoming(raw: string): Promise<void> {
