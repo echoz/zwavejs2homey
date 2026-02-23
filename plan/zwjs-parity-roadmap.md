@@ -235,10 +235,11 @@ Progress (completed subset):
   - `node.has_device_config_changed`
 - Added fixture-backed mocked transport tests for command envelopes and representative result passthrough for each wrapper
 - Read-only live validation completed on 2026-02-23 against node `5` for all wrappers in this set
-- Observed result shapes differ from initial fixtures for several commands and should be tightened in a follow-up typing slice:
+- Follow-up typing tightening completed for observed nested result wrapper keys with fixture-backed tests:
   - firmware capability reads returned `{ capabilities: ... }`
   - date/time read returned `{ dateAndTime: ... }`
   - firmware/health progress checks returned `{ progress: ... }`
+  - device config changed returned `{ changed: ... }`
 
 #### P1.3 Controller/Node Progress Event Typing Set A
 

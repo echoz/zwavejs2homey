@@ -1,0 +1,8 @@
+{
+  "type": "result",
+  "messageId": "fixture-message-id",
+  "success": true,
+  "result": {
+    "dateAndTime": "2026-02-23T21:15:00.000Z"
+  }
+}

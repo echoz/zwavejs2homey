@@ -488,6 +488,73 @@ test('hasNodeDeviceConfigChanged sends correct command and returns changed flag'
   await client.stop();
 });
 
+test('P1.2 diagnostic wrappers support observed nested result key shapes from live validation', async () => {
+  const { client, transport } = makeClient();
+  await startConnected(client, transport);
+
+  const checks = [
+    [
+      () => client.getNodeFirmwareUpdateCapabilities(5),
+      'command.node.get_firmware_update_capabilities.json',
+      'result.node.get_firmware_update_capabilities.success.observed.json',
+      (result) => assert.equal(typeof result.capabilities, 'object'),
+    ],
+    [
+      () => client.getNodeFirmwareUpdateCapabilitiesCached(5),
+      'command.node.get_firmware_update_capabilities_cached.json',
+      'result.node.get_firmware_update_capabilities_cached.success.observed.json',
+      (result) => assert.equal(typeof result.capabilities, 'object'),
+    ],
+    [
+      () => client.getNodeDateAndTime(5),
+      'command.node.get_date_and_time.json',
+      'result.node.get_date_and_time.success.observed.json',
+      (result) => assert.equal(typeof result.dateAndTime, 'string'),
+    ],
+    [
+      () => client.isNodeFirmwareUpdateInProgress(5),
+      'command.node.is_firmware_update_in_progress.json',
+      'result.node.is_firmware_update_in_progress.success.observed.json',
+      (result) => assert.equal(result.progress, false),
+    ],
+    [
+      () => client.getNodeFirmwareUpdateProgress(5),
+      'command.node.get_firmware_update_progress.json',
+      'result.node.get_firmware_update_progress.success.observed.json',
+      (result) => assert.equal(result.progress, 0),
+    ],
+    [
+      () => client.isNodeHealthCheckInProgress(5),
+      'command.node.is_health_check_in_progress.json',
+      'result.node.is_health_check_in_progress.success.observed.json',
+      (result) => assert.equal(result.progress, false),
+    ],
+    [
+      () => client.hasNodeDeviceConfigChanged(5),
+      'command.node.has_device_config_changed.json',
+      'result.node.has_device_config_changed.success.observed.json',
+      (result) => assert.equal(result.changed, false),
+    ],
+  ];
+
+  for (const [call, commandFixture, resultFixture, assertResult] of checks) {
+    const pending = call();
+    const sent = transport.sent.at(-1);
+    assert.deepEqual(
+      sent,
+      withMessageId(loadFixture('zwjs-server', commandFixture), sent.messageId),
+    );
+    transport.triggerMessage(
+      withMessageId(loadFixture('zwjs-server', resultFixture), sent.messageId),
+    );
+    const response = await pending;
+    assert.equal(response.success, true);
+    assertResult(response.result);
+  }
+
+  await client.stop();
+});
+
 test('setApiSchema sends correct command and returns success result', async () => {
   const { client, transport } = makeClient();
   await startConnected(client, transport);

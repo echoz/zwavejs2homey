@@ -205,23 +205,31 @@ export type ZwjsNodeValueTimestampResult =
       [key: string]: unknown;
     };
 export type ZwjsNodeSupportedNotificationEventsResult = Record<string, unknown> | Array<unknown>;
-export type ZwjsNodeFirmwareUpdateCapabilitiesResult = Record<string, unknown> | Array<unknown>;
-export type ZwjsNodeFirmwareUpdateCapabilitiesCachedResult =
-  | Record<string, unknown>
-  | Array<unknown>;
-export type ZwjsNodeDateAndTimeResult =
-  | Record<string, unknown>
-  | Array<unknown>
-  | string
-  | number
-  | null;
-export interface ZwjsNodeFirmwareUpdateInProgressResult {
-  inProgress?: boolean;
+export interface ZwjsNodeFirmwareUpdateCapabilitiesResult {
+  capabilities?: Record<string, unknown> | Array<unknown>;
   [key: string]: unknown;
 }
-export type ZwjsNodeFirmwareUpdateProgressResult = Record<string, unknown> | Array<unknown>;
+export interface ZwjsNodeFirmwareUpdateCapabilitiesCachedResult {
+  capabilities?: Record<string, unknown> | Array<unknown>;
+  cached?: boolean;
+  [key: string]: unknown;
+}
+export interface ZwjsNodeDateAndTimeResult {
+  dateAndTime?: Record<string, unknown> | string | number | null;
+  [key: string]: unknown;
+}
+export interface ZwjsNodeFirmwareUpdateInProgressResult {
+  inProgress?: boolean;
+  progress?: boolean | number | Record<string, unknown> | Array<unknown> | null;
+  [key: string]: unknown;
+}
+export interface ZwjsNodeFirmwareUpdateProgressResult {
+  progress?: number | Record<string, unknown> | Array<unknown> | null;
+  [key: string]: unknown;
+}
 export interface ZwjsNodeHealthCheckInProgressResult {
   inProgress?: boolean;
+  progress?: boolean | number | Record<string, unknown> | Array<unknown> | null;
   [key: string]: unknown;
 }
 export interface ZwjsNodeDeviceConfigChangedResult {
