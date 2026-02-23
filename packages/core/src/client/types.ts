@@ -39,6 +39,15 @@ export interface ZwjsInitializeOptions {
   additionalUserAgentComponents?: Record<string, string>;
 }
 
+export interface ZwjsLogFilter {
+  source?: string;
+  label?: string;
+  primaryTags?: string;
+  secondaryTags?: string;
+  direction?: string;
+  [key: string]: unknown;
+}
+
 export interface ZwjsCommandRequest<TArgs = Record<string, unknown>> {
   command: string;
   args?: TArgs;
@@ -363,6 +372,8 @@ export interface ZwjsClient {
   initialize(options: ZwjsInitializeOptions): Promise<ZwjsCommandResult>;
   setApiSchema(schemaVersion: number): Promise<ZwjsCommandResult>;
   startListening(): Promise<ZwjsCommandResult<{ state?: unknown }>>;
+  startListeningLogs(filter?: ZwjsLogFilter): Promise<ZwjsCommandResult>;
+  stopListeningLogs(): Promise<ZwjsCommandResult>;
   sendCommand<TResult = unknown, TArgs = Record<string, unknown>>(request: ZwjsCommandRequest<TArgs>): Promise<ZwjsCommandResult<TResult>>;
   sendMutationCommand<TResult = unknown, TArgs = Record<string, unknown>>(request: ZwjsCommandRequest<TArgs>): Promise<ZwjsCommandResult<TResult>>;
   getDriverConfig(): Promise<ZwjsCommandResult<ZwjsDriverConfig>>;

@@ -102,8 +102,8 @@ This first-pass matrix is decision-oriented: all currently implemented wrappers 
 | server | `set_api_schema` | 0 | yes | backend uses schema negotiation internally (not a UI API method) | `typed-wrapper` (`setApiSchema`) | `protocol-native` | `fixture`, `mocked-transport`, `ws-integration` | yes | P0 | Wrapper implemented; useful for explicit schema negotiation |
 | server | `initialize` | 0 | yes | backend initializes server/driver directly, not via WS client | `typed-wrapper` (`initialize`) | `protocol-native` | `mocked-transport`, `ws-integration` | yes | P0 | Kept protocol-native by design |
 | server | `start_listening` | 0 | yes | backend emits Socket.IO state/events instead | `typed-wrapper` (`startListening`) | `protocol-native` | `fixture`, `mocked-transport`, `ws-integration` | yes | P0 | Snapshot extraction feeds `getNodeList()` |
-| server | `start_listening_logs` | 31+ | yes | UI/backend supports logging features | `generic-read` | `protocol-native` | none | no | P2 | Add typed wrapper + driver logging event validation |
-| server | `stop_listening_logs` | 31+ | yes | UI/backend supports logging features | `generic-read` | `protocol-native` | none | no | P2 | Pair with `start_listening_logs` wrapper |
+| server | `start_listening_logs` | 31+ | yes | UI/backend supports logging features | `typed-wrapper` (`startListeningLogs`) | `protocol-native` | `fixture`, `mocked-transport` | no | P1 | Live validation of log stream still pending |
+| server | `stop_listening_logs` | 31+ | yes | UI/backend supports logging features | `typed-wrapper` (`stopListeningLogs`) | `protocol-native` | `fixture`, `mocked-transport` | no | P1 | Pair implemented; validate against real instance with `driver.logging` events |
 
 ### Driver Commands
 
@@ -161,7 +161,7 @@ This first-pass matrix is decision-oriented: all currently implemented wrappers 
 
 | Source | Event Name | ZWJS Server Docs | ZWJS UI Backend/UI | Our Generic Typing | Our Specialized Typing | Tests | Live Observed | Priority | Gap Notes |
 |---|---|---|---|---|---|---|---|---|---|
-| driver | `logging` | yes | UI has `DEBUG`/log-related Socket.IO outputs | `zwjs.event.driver` + raw-normalized | `zwjs.event.driver.logging` | `fixture`, `normalizer` | not explicitly recorded | P1 | Add `start_listening_logs` wrapper and live validation |
+| driver | `logging` | yes | UI has `DEBUG`/log-related Socket.IO outputs | `zwjs.event.driver` + raw-normalized | `zwjs.event.driver.logging` | `fixture`, `normalizer` | not explicitly recorded | P1 | Wrapper pair exists; next step is live validation of log streaming |
 | driver | `driver ready` | yes | UI emits connection/info/socket state | `zwjs.event.driver` + raw-normalized | none | none | not recorded | P1 | Good candidate specialized event |
 | driver | `log config updated` | yes | backend updates UI state via socket events | `zwjs.event.driver` + raw-normalized | none | none | not recorded | P2 | Add when mutating log config wrapper lands |
 | controller | `nvm convert progress` | yes | backend emits controller progress to UI | `zwjs.event.controller` + raw-normalized | `zwjs.event.controller.nvm-convert-progress` | `fixture`, `normalizer` | no | P2 | Done for typing; command workflow not yet wrapped |

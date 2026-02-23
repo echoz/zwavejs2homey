@@ -1,0 +1,8 @@
+{
+  "messageId": "fixture-51",
+  "command": "start_listening_logs",
+  "filter": {
+    "source": "driver",
+    "label": "ZWAVE"
+  }
+}

@@ -21,6 +21,7 @@ import type {
   ZwjsClientEvent,
   ZwjsClientEventInput,
   ZwjsInitializeOptions,
+  ZwjsLogFilter,
   ZwjsNodeStateResult,
   ZwjsDefinedValueIdsResult,
   ZwjsNodeValueMetadataResult,
@@ -173,6 +174,14 @@ export class ZwjsClientImpl implements ZwjsClient {
       this.startListeningState = result.result?.state;
     }
     return result;
+  }
+
+  async startListeningLogs(filter?: ZwjsLogFilter): Promise<ZwjsCommandResult> {
+    return this.sendCommand({ command: 'start_listening_logs', ...(filter ? { args: { filter } } : {}) });
+  }
+
+  async stopListeningLogs(): Promise<ZwjsCommandResult> {
+    return this.sendCommand({ command: 'stop_listening_logs' });
   }
 
   async sendCommand<TResult = unknown, TArgs = Record<string, unknown>>(

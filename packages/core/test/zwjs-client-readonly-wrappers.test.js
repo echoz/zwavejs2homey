@@ -233,3 +233,49 @@ test('setApiSchema sends correct command and returns success result', async () =
   assert.equal(result.result.ok, true);
   await client.stop();
 });
+
+test('startListeningLogs sends correct command without filter', async () => {
+  const { client, transport } = makeClient();
+  await startConnected(client, transport);
+
+  const pending = client.startListeningLogs();
+  const sent = transport.sent.at(-1);
+  assert.deepEqual(sent, withMessageId(loadFixture('zwjs-server', 'command.start_listening_logs.json'), sent.messageId));
+
+  transport.triggerMessage(withMessageId(loadFixture('zwjs-server', 'result.command.success.empty.json'), sent.messageId));
+  const result = await pending;
+  assert.equal(result.success, true);
+  await client.stop();
+});
+
+test('startListeningLogs sends correct command with filter', async () => {
+  const { client, transport } = makeClient();
+  await startConnected(client, transport);
+
+  const filter = { source: 'driver', label: 'ZWAVE' };
+  const pending = client.startListeningLogs(filter);
+  const sent = transport.sent.at(-1);
+  assert.deepEqual(
+    sent,
+    withMessageId(loadFixture('zwjs-server', 'command.start_listening_logs.with-filter.json'), sent.messageId),
+  );
+
+  transport.triggerMessage(withMessageId(loadFixture('zwjs-server', 'result.command.success.empty.json'), sent.messageId));
+  const result = await pending;
+  assert.equal(result.success, true);
+  await client.stop();
+});
+
+test('stopListeningLogs sends correct command', async () => {
+  const { client, transport } = makeClient();
+  await startConnected(client, transport);
+
+  const pending = client.stopListeningLogs();
+  const sent = transport.sent.at(-1);
+  assert.deepEqual(sent, withMessageId(loadFixture('zwjs-server', 'command.stop_listening_logs.json'), sent.messageId));
+
+  transport.triggerMessage(withMessageId(loadFixture('zwjs-server', 'result.command.success.empty.json'), sent.messageId));
+  const result = await pending;
+  assert.equal(result.success, true);
+  await client.stop();
+});

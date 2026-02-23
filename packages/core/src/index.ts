@@ -25,6 +25,7 @@ export type {
   ZwjsNodeValueRemovedEventPayload,
   ZwjsNodeValueUpdatedEventPayload,
   ZwjsInitializeOptions,
+  ZwjsLogFilter,
   ZwjsDriverConfig,
   ZwjsDriverLogConfigResult,
   ZwjsDriverStatisticsEnabledResult,
