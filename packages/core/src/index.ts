@@ -11,8 +11,11 @@ export type {
   ZwjsAuthConfig,
   ZwjsClient,
   ZwjsClientConfig,
+  ZwjsControllerStateResult,
   ZwjsClientEvent,
   ZwjsInitializeOptions,
+  ZwjsDriverConfig,
+  ZwjsNodeStateResult,
   ZwjsClientStatus,
 } from './client/types';
 export type { ClientErrorSummary, ZwjsClientErrorCode } from './errors';

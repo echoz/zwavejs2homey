@@ -11,9 +11,12 @@ import type {
   ZwjsCommandResult,
   ZwjsClient,
   ZwjsClientConfig,
+  ZwjsControllerStateResult,
+  ZwjsDriverConfig,
   ZwjsClientEvent,
   ZwjsClientEventInput,
   ZwjsInitializeOptions,
+  ZwjsNodeStateResult,
   ZwjsClientStatus,
   ZwjsLifecycleState,
 } from './types';
@@ -120,15 +123,21 @@ export class ZwjsClientImpl implements ZwjsClient {
   }
 
   async initialize(options: ZwjsInitializeOptions): Promise<ZwjsCommandResult> {
+    this.ensureAdapter();
     if (!this.adapter?.buildInitializeRequest) {
       throw new ZwjsClientError({ code: 'UNSUPPORTED_OPERATION', message: 'Initialize command not supported by selected adapter' });
     }
-    return this.requestProtocolCommand((id) =>
+    const result = await this.requestProtocolCommand((id) =>
       this.adapter!.buildInitializeRequest!(id, options.schemaVersion, options.additionalUserAgentComponents),
     );
+    if (result.success) {
+      this.status.initialized = true;
+    }
+    return result;
   }
 
   async startListening(): Promise<ZwjsCommandResult<{ state?: unknown }>> {
+    this.ensureAdapter();
     if (this.listeningRequested) {
       return { messageId: 'already-listening', success: true, result: { state: this.startListeningState } };
     }
@@ -138,6 +147,7 @@ export class ZwjsClientImpl implements ZwjsClient {
     const result = await this.requestProtocolCommand<{ state?: unknown }>((id) => this.adapter!.buildStartListeningRequest!(id));
     if (result.success) {
       this.listeningRequested = true;
+      this.status.listening = true;
       this.startListeningState = result.result?.state;
     }
     return result;
@@ -146,12 +156,25 @@ export class ZwjsClientImpl implements ZwjsClient {
   async sendCommand<TResult = unknown, TArgs = Record<string, unknown>>(
     request: ZwjsCommandRequest<TArgs>,
   ): Promise<ZwjsCommandResult<TResult>> {
+    this.ensureAdapter();
     if (!this.adapter?.buildCommandRequest) {
       throw new ZwjsClientError({ code: 'UNSUPPORTED_OPERATION', message: 'Generic command requests not supported by selected adapter' });
     }
     return this.requestProtocolCommand<TResult>((id) =>
       this.adapter!.buildCommandRequest!(id, request.command, (request.args ?? {}) as Record<string, unknown>),
     );
+  }
+
+  async getDriverConfig(): Promise<ZwjsCommandResult<ZwjsDriverConfig>> {
+    return this.sendCommand<ZwjsDriverConfig>({ command: 'driver.get_config' });
+  }
+
+  async getControllerState(): Promise<ZwjsCommandResult<ZwjsControllerStateResult>> {
+    return this.sendCommand<ZwjsControllerStateResult>({ command: 'controller.get_state' });
+  }
+
+  async getNodeState(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeStateResult>> {
+    return this.sendCommand<ZwjsNodeStateResult, { nodeId: number }>({ command: 'node.get_state', args: { nodeId } });
   }
 
   private async connectFlow(targetState: Extract<ZwjsLifecycleState, 'connecting' | 'reconnecting'>): Promise<void> {
@@ -161,6 +184,9 @@ export class ZwjsClientImpl implements ZwjsClient {
     const connectPromise = this.transport.connect(this.config.url, {
       onOpen: () => {
         this.status.transportConnected = true;
+        this.status.versionReceived = false;
+        this.status.initialized = false;
+        this.status.listening = false;
         this.status.connectedAt = new Date().toISOString();
         this.reconnectAttempt = 0;
         this.status.reconnectAttempt = undefined;
@@ -219,6 +245,7 @@ export class ZwjsClientImpl implements ZwjsClient {
       const normalized = this.adapter.normalizeIncoming(message);
       if (normalized.serverInfo) {
         this.cachedServerInfo = normalized.serverInfo;
+        this.status.versionReceived = true;
         this.status.serverVersion = normalized.serverInfo.serverVersion ?? this.status.serverVersion;
       }
       if (normalized.nodesSnapshot) {
@@ -296,7 +323,20 @@ export class ZwjsClientImpl implements ZwjsClient {
     const { id, promise } = this.requests.create<unknown>(this.timeouts.requestTimeoutMs);
     const frame = builder(id);
     this.transport.send(JSON.stringify(frame));
-    const payload = await promise;
+    let payload: unknown;
+    try {
+      payload = await promise;
+    } catch (error) {
+      if (error instanceof ZwjsClientError && error.code === 'PROTOCOL_ERROR') {
+        return {
+          messageId: id,
+          success: false,
+          error: error.cause ?? error.toSummary(),
+          raw: error.cause ?? error,
+        };
+      }
+      throw error;
+    }
     return {
       messageId: id,
       success: true,
@@ -338,5 +378,12 @@ export class ZwjsClientImpl implements ZwjsClient {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = undefined;
     }
+  }
+
+  private ensureAdapter(): void {
+    if (this.adapter) return;
+    const selection = selectAdapter(this.status.serverVersion);
+    this.adapter = selection.adapter;
+    this.status.adapterFamily = selection.adapter.family;
   }
 }

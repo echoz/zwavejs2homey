@@ -46,6 +46,30 @@ export interface ZwjsCommandResult<TResult = unknown> {
   raw?: unknown;
 }
 
+export interface ZwjsDriverConfig {
+  config?: {
+    logConfig?: {
+      enabled?: boolean;
+      level?: string | number;
+      logToFile?: boolean;
+      filename?: string;
+      forceConsole?: boolean;
+    };
+    statisticsEnabled?: boolean;
+  };
+  [key: string]: unknown;
+}
+
+export interface ZwjsControllerStateResult {
+  state?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+export interface ZwjsNodeStateResult {
+  state?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
 export interface ClientLogger {
   debug?(msg: string, meta?: unknown): void;
   info?(msg: string, meta?: unknown): void;
@@ -67,6 +91,9 @@ export interface ZwjsClientConfig {
 export interface ZwjsClientStatus {
   lifecycle: ZwjsLifecycleState;
   transportConnected: boolean;
+  versionReceived?: boolean;
+  initialized?: boolean;
+  listening?: boolean;
   authenticated?: boolean;
   serverVersion?: string;
   adapterFamily?: string;
@@ -145,6 +172,9 @@ export interface ZwjsClient {
   initialize(options: ZwjsInitializeOptions): Promise<ZwjsCommandResult>;
   startListening(): Promise<ZwjsCommandResult<{ state?: unknown }>>;
   sendCommand<TResult = unknown, TArgs = Record<string, unknown>>(request: ZwjsCommandRequest<TArgs>): Promise<ZwjsCommandResult<TResult>>;
+  getDriverConfig(): Promise<ZwjsCommandResult<ZwjsDriverConfig>>;
+  getControllerState(): Promise<ZwjsCommandResult<ZwjsControllerStateResult>>;
+  getNodeState(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeStateResult>>;
   getServerInfo(): Promise<ServerInfoResult>;
   getNodeList(): Promise<NodeListResult>;
 }
