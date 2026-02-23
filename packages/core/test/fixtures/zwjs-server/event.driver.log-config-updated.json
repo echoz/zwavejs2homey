@@ -1,0 +1,12 @@
+{
+  "type": "event",
+  "event": {
+    "source": "driver",
+    "event": "log config updated",
+    "config": {
+      "enabled": true,
+      "level": "debug",
+      "forceConsole": true
+    }
+  }
+}

@@ -5,6 +5,7 @@ import type {
   ZwjsControllerNvmConvertProgressEventPayload,
   ZwjsControllerNvmRestoreProgressEventPayload,
   ZwjsControllerValidateDskAndEnterPinEventPayload,
+  ZwjsDriverLogConfigUpdatedEventPayload,
   ZwjsDriverLoggingEventPayload,
   ZwjsDriverFirmwareUpdateFinishedEventPayload,
   ZwjsDriverFirmwareUpdateProgressEventPayload,
@@ -127,6 +128,17 @@ export function isZwjsDriverLoggingEvent(
     event.source === 'driver' &&
     event.event === 'logging' &&
     typeof event.formattedMessage === 'string'
+  );
+}
+
+export function isZwjsDriverLogConfigUpdatedEvent(
+  event: ZwjsProtocolEventPayload,
+): event is ZwjsDriverLogConfigUpdatedEventPayload {
+  return (
+    event.source === 'driver' &&
+    event.event === 'log config updated' &&
+    typeof event.config === 'object' &&
+    event.config !== null
   );
 }
 

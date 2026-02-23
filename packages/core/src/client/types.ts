@@ -145,6 +145,19 @@ export interface ZwjsDriverLogConfigResult {
   };
   [key: string]: unknown;
 }
+export interface ZwjsDriverUpdateLogConfigArgs {
+  config: {
+    enabled?: boolean;
+    level?: string | number;
+    logToFile?: boolean;
+    filename?: string;
+    forceConsole?: boolean;
+    [key: string]: unknown;
+  };
+}
+export interface ZwjsDriverUpdateLogConfigResult {
+  [key: string]: unknown;
+}
 
 export interface ZwjsDriverStatisticsEnabledResult {
   statisticsEnabled?: boolean;
@@ -582,6 +595,11 @@ export interface ZwjsDriverLoggingEventPayload extends ZwjsProtocolEventPayload 
   message: string | string[];
   [key: string]: unknown;
 }
+export interface ZwjsDriverLogConfigUpdatedEventPayload extends ZwjsProtocolEventPayload {
+  source: 'driver';
+  event: 'log config updated';
+  config: Record<string, unknown>;
+}
 
 export interface ZwjsControllerNvmConvertProgressEventPayload extends ZwjsProtocolEventPayload {
   source: 'controller';
@@ -743,6 +761,7 @@ export interface ZwjsEventBase {
     | 'zwjs.event.node.interview-failed'
     | 'zwjs.event.node.interview-stage-completed'
     | 'zwjs.event.driver.logging'
+    | 'zwjs.event.driver.log-config-updated'
     | 'zwjs.event.driver.firmware-update-progress'
     | 'zwjs.event.driver.firmware-update-finished'
     | 'zwjs.event.controller.grant-security-classes'
@@ -837,6 +856,10 @@ export type ZwjsClientEvent =
       event: ZwjsNodeInterviewStageCompletedEventPayload;
     })
   | (ZwjsEventBase & { type: 'zwjs.event.driver.logging'; event: ZwjsDriverLoggingEventPayload })
+  | (ZwjsEventBase & {
+      type: 'zwjs.event.driver.log-config-updated';
+      event: ZwjsDriverLogConfigUpdatedEventPayload;
+    })
   | (ZwjsEventBase & {
       type: 'zwjs.event.driver.firmware-update-progress';
       event: ZwjsDriverFirmwareUpdateProgressEventPayload;
@@ -939,6 +962,9 @@ export interface ZwjsClient {
   ): Promise<ZwjsCommandResult<TResult>>;
   getDriverConfig(): Promise<ZwjsCommandResult<ZwjsDriverConfig>>;
   getDriverLogConfig(): Promise<ZwjsCommandResult<ZwjsDriverLogConfigResult>>;
+  updateDriverLogConfig(
+    args: ZwjsDriverUpdateLogConfigArgs,
+  ): Promise<ZwjsCommandResult<ZwjsDriverUpdateLogConfigResult>>;
   isDriverStatisticsEnabled(): Promise<ZwjsCommandResult<ZwjsDriverStatisticsEnabledResult>>;
   checkDriverConfigUpdates(): Promise<ZwjsCommandResult<ZwjsDriverCheckForConfigUpdatesResult>>;
   installDriverConfigUpdate(): Promise<ZwjsCommandResult<ZwjsDriverInstallConfigUpdateResult>>;

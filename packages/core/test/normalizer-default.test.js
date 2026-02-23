@@ -195,6 +195,15 @@ test('emits specialized driver logging event', () => {
   assert.equal(specialized.event.formattedMessage, 'Controller ready');
 });
 
+test('emits specialized driver log-config-updated event', () => {
+  const msg = loadFixture('zwjs-server', 'event.driver.log-config-updated.json');
+  const out = normalizer.normalizeIncoming(msg);
+  const specialized = out.events.find((e) => e.type === 'zwjs.event.driver.log-config-updated');
+  assert.ok(specialized);
+  assert.equal(specialized.event.config.level, 'debug');
+  assert.equal(specialized.event.config.forceConsole, true);
+});
+
 test('emits specialized controller grant security classes event', () => {
   const msg = loadFixture('zwjs-server', 'event.controller.grant-security-classes.json');
   const out = normalizer.normalizeIncoming(msg);

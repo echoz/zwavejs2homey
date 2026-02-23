@@ -340,6 +340,8 @@ Progress (completed subset):
 - Added driver config-update maintenance wrappers with fixture-backed coverage:
   - `checkDriverConfigUpdates()` (`driver.check_for_config_updates`, read)
   - `installDriverConfigUpdate()` (`driver.install_config_update`, mutation-gated)
+- Added `updateDriverLogConfig()` (`driver.update_log_config`, mutation-gated) with fixture-backed mutation-policy tests
+- Added specialized `driver` event typing + normalizer coverage for `log config updated`
 
 #### P2.3 Inclusion/Exclusion Workflow Foundation (Protocol Layer Only)
 

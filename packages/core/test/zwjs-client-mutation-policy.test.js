@@ -163,6 +163,48 @@ test('installDriverConfigUpdate is blocked by default mutation policy', async ()
   await client.stop();
 });
 
+test('updateDriverLogConfig sends mutation-gated protocol command and returns success', async () => {
+  const { client, transport } = makeClient({
+    enabled: true,
+    allowCommands: ['driver.update_log_config'],
+  });
+  await startConnected(client, transport);
+
+  const pending = client.updateDriverLogConfig({
+    config: { enabled: true, level: 'debug', forceConsole: true },
+  });
+  const sent = transport.sent.at(-1);
+  assert.deepEqual(
+    sent,
+    withMessageId(
+      loadFixture('zwjs-server', 'command.driver.update_log_config.json'),
+      sent.messageId,
+    ),
+  );
+
+  transport.triggerMessage(
+    withMessageId(
+      loadFixture('zwjs-server', 'result.driver.update_log_config.success.json'),
+      sent.messageId,
+    ),
+  );
+  const result = await pending;
+  assert.equal(result.success, true);
+  await client.stop();
+});
+
+test('updateDriverLogConfig is blocked by default mutation policy', async () => {
+  const { client, transport } = makeClient();
+  await startConnected(client, transport);
+
+  await assert.rejects(
+    () => client.updateDriverLogConfig({ config: { enabled: true } }),
+    /blocked by policy/,
+  );
+  assert.equal(transport.sent.length, 0);
+  await client.stop();
+});
+
 test('beginInclusion sends mutation-gated protocol command and returns result', async () => {
   const { client, transport } = makeClient({
     enabled: true,

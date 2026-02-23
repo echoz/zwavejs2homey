@@ -20,6 +20,7 @@ import {
   isZwjsControllerNvmConvertProgressEvent,
   isZwjsControllerNvmRestoreProgressEvent,
   isZwjsControllerValidateDskAndEnterPinEvent,
+  isZwjsDriverLogConfigUpdatedEvent,
   isZwjsDriverLoggingEvent,
   isZwjsDriverFirmwareUpdateFinishedEvent,
   isZwjsDriverFirmwareUpdateProgressEvent,
@@ -185,6 +186,13 @@ export class DefaultZwjsFamilyNormalizer implements ZwjsProtocolAdapter {
       if (isZwjsDriverLoggingEvent(protocolEvent)) {
         events.push({
           type: 'zwjs.event.driver.logging',
+          ts: new Date().toISOString(),
+          source: 'zwjs-client',
+          event: protocolEvent,
+        });
+      } else if (isZwjsDriverLogConfigUpdatedEvent(protocolEvent)) {
+        events.push({
+          type: 'zwjs.event.driver.log-config-updated',
           ts: new Date().toISOString(),
           source: 'zwjs-client',
           event: protocolEvent,

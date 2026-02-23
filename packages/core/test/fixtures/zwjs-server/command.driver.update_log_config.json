@@ -1,0 +1,9 @@
+{
+  "messageId": "fixture-driver-update-log-config-1",
+  "command": "driver.update_log_config",
+  "config": {
+    "enabled": true,
+    "level": "debug",
+    "forceConsole": true
+  }
+}
