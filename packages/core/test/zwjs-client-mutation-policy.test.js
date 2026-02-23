@@ -687,6 +687,39 @@ test('firmware mutation wrappers send exact protocol commands when allowlisted',
   await client.stop();
 });
 
+test('driverFirmwareUpdateOtw supports updateInfo command variant and protocol-native result passthrough', async () => {
+  const { client, transport } = makeClient({
+    enabled: true,
+    allowCommands: ['driver.firmware_update_otw'],
+  });
+  await startConnected(client, transport);
+
+  const pending = client.driverFirmwareUpdateOtw({
+    updateInfo: { version: '2.0.0', channel: 'stable', files: [] },
+  });
+  const sent = transport.sent.at(-1);
+  assert.deepEqual(
+    sent,
+    withMessageId(
+      loadFixture('zwjs-server', 'command.driver.firmware_update_otw.update-info.json'),
+      sent.messageId,
+    ),
+  );
+
+  transport.triggerMessage(
+    withMessageId(
+      loadFixture('zwjs-server', 'result.firmware_update.command.success.variant.json'),
+      sent.messageId,
+    ),
+  );
+  const result = await pending;
+  assert.equal(result.success, true);
+  assert.equal(result.result.success, true);
+  assert.equal(result.result.status, 0);
+  assert.equal(result.result.details.scheduled, true);
+  await client.stop();
+});
+
 test('firmware mutation wrappers are blocked by default mutation policy', async () => {
   const { client, transport } = makeClient();
   await startConnected(client, transport);

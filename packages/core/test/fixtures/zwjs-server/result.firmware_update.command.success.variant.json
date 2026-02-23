@@ -1,0 +1,13 @@
+{
+  "type": "result",
+  "messageId": "fixture-firmware-update-result-variant-1",
+  "success": true,
+  "result": {
+    "success": true,
+    "status": 0,
+    "waitTime": 5,
+    "details": {
+      "scheduled": true
+    }
+  }
+}

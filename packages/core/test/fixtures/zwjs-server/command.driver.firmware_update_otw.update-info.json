@@ -1,0 +1,9 @@
+{
+  "messageId": "fixture-driver-fw-otw-updateinfo-1",
+  "command": "driver.firmware_update_otw",
+  "updateInfo": {
+    "version": "2.0.0",
+    "channel": "stable",
+    "files": []
+  }
+}

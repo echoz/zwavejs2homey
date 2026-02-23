@@ -516,6 +516,10 @@ Progress (completed firmware mutation wrapper subset):
   - `node.abort_firmware_update`
 - Added fixture-backed mutation-policy tests for default blocking and allowlisted exact command envelopes/results
 - Intentionally no default firmware mutation preset added in this slice (high-risk operations require explicit allowlist selection)
+- Added fixture coverage for `driver.firmware_update_otw` schema variants:
+  - raw file payload (`filename` + base64 `file`)
+  - `updateInfo` payload (newer schema path)
+- Added firmware mutation result fixture variant coverage to preserve protocol-native passthrough behavior
 
 Safety guidance (documented posture for firmware operations):
 
