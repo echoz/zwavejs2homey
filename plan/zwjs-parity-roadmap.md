@@ -156,7 +156,7 @@ Progress (completed subset):
   - `grant security classes`
   - `validate dsk and enter pin`
   - `inclusion aborted`
-- Remaining high-value candidates still pending (additional observed node events and full inclusion/exclusion command wrappers)
+- Remaining high-value candidates still pending (additional observed node events beyond the current P0/P1/P2 typed subset)
 
 ## Phase P1 — Read-Only Operational Completeness
 
@@ -169,6 +169,14 @@ Provide broad typed read coverage for diagnostics and operational introspection.
 - Driver/controller/node read wrappers
 - Log streaming wrapper pair
 - Event typing for common controller and node progress/diagnostic events
+
+### Current Status (2026-02-23)
+
+- P1 implementation slices are complete for the planned subset (`P1.1` / `P1.2` / `P1.3`)
+- Remaining P1 work is observational validation only for active `driver.logging` traffic:
+  - wrapper pair is implemented and live-validated read-only
+  - specialized `driver.logging` event typing is implemented and fixture-tested
+  - no logging events were observed during prior read-only validation windows
 
 ### Slices (Decision Complete)
 
@@ -260,6 +268,15 @@ Tests:
 
 - normalizer fixture tests
 
+Progress (completed subset):
+
+- Added specialized controller/node event typing + fixture-backed normalizer coverage for:
+  - `controller` `nvm backup progress`
+  - `node` `test powerlevel progress`
+  - `node` `check lifeline health progress`
+  - `node` `check route health progress`
+- Default normalizer emits specialized events alongside generic source events for all four progress event types
+
 ## Phase P2 — Safe Mutation Expansion
 
 ### Objective
@@ -271,6 +288,11 @@ Add typed mutating wrappers while preserving a strict safety posture.
 - Typed mutating wrappers through `sendMutationCommand()` only
 - Policy presets / classification docs
 - More mutation guard tests
+
+### Current Status (2026-02-23)
+
+- P2 implementation slices are complete for the planned subset (`P2.1` / `P2.2` / `P2.3`)
+- Remaining P2 work is parity expansion only (additional mutation wrappers/flows as needed), not foundation work
 
 ### Slices (Decision Complete)
 
