@@ -1,0 +1,9 @@
+{
+  "type": "result",
+  "messageId": "fixture-controller-powerlevel-1",
+  "success": true,
+  "result": {
+    "powerlevel": 0,
+    "measured0dBm": -1
+  }
+}

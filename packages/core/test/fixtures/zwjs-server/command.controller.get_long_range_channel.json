@@ -1,0 +1,4 @@
+{
+  "messageId": "fixture-controller-lr-channel-1",
+  "command": "controller.get_long_range_channel"
+}

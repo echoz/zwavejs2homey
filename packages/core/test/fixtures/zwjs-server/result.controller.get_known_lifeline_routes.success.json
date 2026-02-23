@@ -1,0 +1,10 @@
+{
+  "type": "result",
+  "messageId": "fixture-controller-lifeline-routes-1",
+  "success": true,
+  "result": {
+    "routes": {
+      "5": { "repeaters": [2, 7], "routeSpeed": 40000 }
+    }
+  }
+}

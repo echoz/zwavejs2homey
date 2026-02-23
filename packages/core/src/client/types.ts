@@ -212,6 +212,28 @@ export interface ZwjsControllerFirmwareUpdateInProgressResult {
   progress?: boolean;
   [key: string]: unknown;
 }
+export interface ZwjsControllerKnownLifelineRoutesResult {
+  routes?: unknown;
+  [key: string]: unknown;
+}
+export interface ZwjsControllerRfRegionResult {
+  region?: string | number;
+  [key: string]: unknown;
+}
+export interface ZwjsControllerPowerlevelResult {
+  powerlevel?: number;
+  measured0dBm?: number;
+  [key: string]: unknown;
+}
+export interface ZwjsControllerMaxLongRangePowerlevelResult {
+  limit?: number;
+  [key: string]: unknown;
+}
+export interface ZwjsControllerLongRangeChannelResult {
+  channel?: string | number;
+  supportsAutoChannelSelection?: boolean;
+  [key: string]: unknown;
+}
 
 export type ZwjsDefinedValueIdsResult =
   | ZwjsDefinedValueId[]
@@ -987,6 +1009,15 @@ export interface ZwjsClient {
   isControllerFirmwareUpdateInProgress(): Promise<
     ZwjsCommandResult<ZwjsControllerFirmwareUpdateInProgressResult>
   >;
+  getControllerKnownLifelineRoutes(): Promise<
+    ZwjsCommandResult<ZwjsControllerKnownLifelineRoutesResult>
+  >;
+  getControllerRfRegion(): Promise<ZwjsCommandResult<ZwjsControllerRfRegionResult>>;
+  getControllerPowerlevel(): Promise<ZwjsCommandResult<ZwjsControllerPowerlevelResult>>;
+  getControllerMaxLongRangePowerlevel(): Promise<
+    ZwjsCommandResult<ZwjsControllerMaxLongRangePowerlevelResult>
+  >;
+  getControllerLongRangeChannel(): Promise<ZwjsCommandResult<ZwjsControllerLongRangeChannelResult>>;
   getNodeState(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeStateResult>>;
   getNodeDefinedValueIds(nodeId: number): Promise<ZwjsCommandResult<ZwjsDefinedValueIdsResult>>;
   getNodeValueMetadata(

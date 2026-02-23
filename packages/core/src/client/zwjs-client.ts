@@ -20,6 +20,11 @@ import type {
   ZwjsControllerAvailableFirmwareUpdatesArgs,
   ZwjsControllerAvailableFirmwareUpdatesResult,
   ZwjsControllerFirmwareUpdateInProgressResult,
+  ZwjsControllerKnownLifelineRoutesResult,
+  ZwjsControllerRfRegionResult,
+  ZwjsControllerPowerlevelResult,
+  ZwjsControllerMaxLongRangePowerlevelResult,
+  ZwjsControllerLongRangeChannelResult,
   ZwjsDriverConfig,
   ZwjsDriverLogConfigResult,
   ZwjsDriverUpdateLogConfigArgs,
@@ -417,6 +422,42 @@ export class ZwjsClientImpl implements ZwjsClient {
   > {
     return this.sendCommand<ZwjsControllerFirmwareUpdateInProgressResult>({
       command: 'controller.is_firmware_update_in_progress',
+    });
+  }
+
+  async getControllerKnownLifelineRoutes(): Promise<
+    ZwjsCommandResult<ZwjsControllerKnownLifelineRoutesResult>
+  > {
+    return this.sendCommand<ZwjsControllerKnownLifelineRoutesResult>({
+      command: 'controller.get_known_lifeline_routes',
+    });
+  }
+
+  async getControllerRfRegion(): Promise<ZwjsCommandResult<ZwjsControllerRfRegionResult>> {
+    return this.sendCommand<ZwjsControllerRfRegionResult>({
+      command: 'controller.get_rf_region',
+    });
+  }
+
+  async getControllerPowerlevel(): Promise<ZwjsCommandResult<ZwjsControllerPowerlevelResult>> {
+    return this.sendCommand<ZwjsControllerPowerlevelResult>({
+      command: 'controller.get_powerlevel',
+    });
+  }
+
+  async getControllerMaxLongRangePowerlevel(): Promise<
+    ZwjsCommandResult<ZwjsControllerMaxLongRangePowerlevelResult>
+  > {
+    return this.sendCommand<ZwjsControllerMaxLongRangePowerlevelResult>({
+      command: 'controller.get_max_long_range_powerlevel',
+    });
+  }
+
+  async getControllerLongRangeChannel(): Promise<
+    ZwjsCommandResult<ZwjsControllerLongRangeChannelResult>
+  > {
+    return this.sendCommand<ZwjsControllerLongRangeChannelResult>({
+      command: 'controller.get_long_range_channel',
     });
   }
 

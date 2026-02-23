@@ -145,6 +145,61 @@ test('firmware status/read wrappers send exact protocol commands and return repr
   await client.stop();
 });
 
+test('controller diagnostics read wrappers send exact protocol commands and return representative results', async () => {
+  const { client, transport } = makeClient();
+  await startConnected(client, transport);
+
+  const checks = [
+    [
+      () => client.getControllerKnownLifelineRoutes(),
+      'command.controller.get_known_lifeline_routes.json',
+      'result.controller.get_known_lifeline_routes.success.json',
+      (result) => assert.equal(typeof result.routes, 'object'),
+    ],
+    [
+      () => client.getControllerRfRegion(),
+      'command.controller.get_rf_region.json',
+      'result.controller.get_rf_region.success.json',
+      (result) => assert.equal(result.region, 'US'),
+    ],
+    [
+      () => client.getControllerPowerlevel(),
+      'command.controller.get_powerlevel.json',
+      'result.controller.get_powerlevel.success.json',
+      (result) => assert.equal(result.measured0dBm, -1),
+    ],
+    [
+      () => client.getControllerMaxLongRangePowerlevel(),
+      'command.controller.get_max_long_range_powerlevel.json',
+      'result.controller.get_max_long_range_powerlevel.success.json',
+      (result) => assert.equal(result.limit, 14),
+    ],
+    [
+      () => client.getControllerLongRangeChannel(),
+      'command.controller.get_long_range_channel.json',
+      'result.controller.get_long_range_channel.success.json',
+      (result) => assert.equal(result.supportsAutoChannelSelection, true),
+    ],
+  ];
+
+  for (const [call, commandFixture, resultFixture, assertResult] of checks) {
+    const pending = call();
+    const sent = transport.sent.at(-1);
+    assert.deepEqual(
+      sent,
+      withMessageId(loadFixture('zwjs-server', commandFixture), sent.messageId),
+    );
+    transport.triggerMessage(
+      withMessageId(loadFixture('zwjs-server', resultFixture), sent.messageId),
+    );
+    const response = await pending;
+    assert.equal(response.success, true);
+    assertResult(response.result);
+  }
+
+  await client.stop();
+});
+
 test('getNodeDefinedValueIds sends correct command and returns result array', async () => {
   const { client, transport } = makeClient();
   await startConnected(client, transport);

@@ -530,6 +530,12 @@ Progress (completed firmware mutation wrapper subset):
   - reject empty `node.update_firmware` `updates` arrays before send
 - Tightened firmware mutation test coverage by command family (driver/controller/node) instead of one shared grouped success assertion
 - Aligned firmware wrapper error semantics to policy-first behavior for blocked mutations (policy errors now surface before wrapper payload validation)
+- Added advanced controller diagnostics read wrappers (fixture-backed mocked transport coverage):
+  - `controller.get_known_lifeline_routes`
+  - `controller.get_rf_region`
+  - `controller.get_powerlevel`
+  - `controller.get_max_long_range_powerlevel`
+  - `controller.get_long_range_channel`
 
 Safety guidance (documented posture for firmware operations):
 

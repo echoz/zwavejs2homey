@@ -1,0 +1,9 @@
+{
+  "type": "result",
+  "messageId": "fixture-controller-lr-channel-1",
+  "success": true,
+  "result": {
+    "channel": 2,
+    "supportsAutoChannelSelection": true
+  }
+}

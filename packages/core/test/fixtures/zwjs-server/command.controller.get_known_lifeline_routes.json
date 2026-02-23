@@ -1,0 +1,4 @@
+{
+  "messageId": "fixture-controller-lifeline-routes-1",
+  "command": "controller.get_known_lifeline_routes"
+}

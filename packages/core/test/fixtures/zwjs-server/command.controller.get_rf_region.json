@@ -1,0 +1,4 @@
+{
+  "messageId": "fixture-controller-rf-region-1",
+  "command": "controller.get_rf_region"
+}

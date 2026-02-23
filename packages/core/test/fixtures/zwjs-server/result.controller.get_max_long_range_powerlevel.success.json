@@ -1,0 +1,8 @@
+{
+  "type": "result",
+  "messageId": "fixture-controller-lr-powerlevel-1",
+  "success": true,
+  "result": {
+    "limit": 14
+  }
+}

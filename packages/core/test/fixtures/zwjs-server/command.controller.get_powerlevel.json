@@ -1,0 +1,4 @@
+{
+  "messageId": "fixture-controller-powerlevel-1",
+  "command": "controller.get_powerlevel"
+}
