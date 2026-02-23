@@ -180,7 +180,7 @@ Build a fully featured, protocol-oriented `zwjs` client in `packages/core` for `
 - mocked WebSocket unit tests for lifecycle/reconnect/request timeouts
 - fixture-based normalizer tests for version/schema variations
 - contract tests for public API (`onEvent`, ordering, unsubscribe, `getStatus`)
-- next: command/result/error frame fixtures from `zwave-js-server` docs/source
+- [x] command/result/error frame fixtures from `zwave-js-server` docs/source
 - next: handshake/integration sequence tests (`version` -> `initialize` -> `start_listening`)
 
 ### Fixture Coverage
@@ -232,11 +232,11 @@ Build a fully featured, protocol-oriented `zwjs` client in `packages/core` for `
 11. [x] Update docs + sprint plan
 
 ### Next (Protocol Coverage Expansion)
-1. [ ] Add exact typed protocol result/error frame models (`type: result`, `success`, `error`)
-2. [ ] Add explicit handshake state machine (`version received`, `initialized`, `listening`)
-3. [ ] Add typed wrappers for read-only commands (`driver.get_config`, `controller.get_state`, selected `node.*`)
-4. [ ] Expand event typing by source (`driver`, `controller`, `node`, `zniffer`)
-5. [ ] Add fixture suite from `zwave-js-server` README/API schema examples
+1. [x] Add exact typed protocol result/error frame models (`type: result`, `success`, `error`)
+2. [x] Add explicit handshake state machine (`version received`, `initialized`, `listening`)
+3. [x] Add typed wrappers for read-only commands (`driver.get_config`, `controller.get_state`, selected `node.*`)
+4. [x] Expand event typing by source (`driver`, `controller`, `node`, `zniffer`)
+5. [x] Add fixture suite from `zwave-js-server` README/API schema examples
 6. [ ] Add mocked WS tests for command correlation, failures, and reconnect recovery
 7. [ ] Validate expanded command/event coverage against real instance (read-only only)
 8. [ ] Add mutating-command layer (still protocol-oriented) with safety guards (separate phase)

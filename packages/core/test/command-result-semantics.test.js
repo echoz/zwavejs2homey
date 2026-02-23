@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 
 const { DefaultZwjsFamilyNormalizer } = require('../dist/protocol/normalizers/family-default.js');
 const { FallbackNormalizer } = require('../dist/protocol/normalizers/fallback.js');
+const { loadFixture } = require('./fixtures/_load-fixture.js');
 
 test('default normalizer exposes successful result via requestResponse', () => {
   const n = new DefaultZwjsFamilyNormalizer();
@@ -13,14 +14,14 @@ test('default normalizer exposes successful result via requestResponse', () => {
 
 test('default normalizer exposes failed result via requestError only', () => {
   const n = new DefaultZwjsFamilyNormalizer();
-  const out = n.normalizeIncoming({ type: 'result', messageId: '2', success: false, error: { message: 'bad' } });
+  const out = n.normalizeIncoming(loadFixture('zwjs-server', 'result.error.zwave-error.json'));
   assert.equal(out.requestResponse, undefined);
-  assert.deepEqual(out.requestError, { id: '2', error: { message: 'bad' } });
+  assert.deepEqual(out.requestError, { id: '1', error: loadFixture('zwjs-server', 'result.error.zwave-error.json') });
 });
 
 test('fallback normalizer exposes failed result via requestError only', () => {
   const n = new FallbackNormalizer();
-  const out = n.normalizeIncoming({ type: 'result', messageId: '3', success: false, error: { code: 500 } });
+  const out = n.normalizeIncoming(loadFixture('zwjs-server', 'result.error.schema-incompatible.json'));
   assert.equal(out.requestResponse, undefined);
-  assert.deepEqual(out.requestError, { id: '3', error: { code: 500 } });
+  assert.deepEqual(out.requestError, { id: '1', error: loadFixture('zwjs-server', 'result.error.schema-incompatible.json') });
 });

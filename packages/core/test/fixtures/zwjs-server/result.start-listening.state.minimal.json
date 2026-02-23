@@ -1,0 +1,25 @@
+{
+  "type": "result",
+  "messageId": "abc",
+  "success": true,
+  "result": {
+    "state": {
+      "nodes": [
+        {
+          "id": 2,
+          "name": "Kitchen Dimmer",
+          "loc": "Kitchen",
+          "ready": true,
+          "status": "alive"
+        },
+        {
+          "id": 3,
+          "name": "Door Sensor",
+          "loc": "Entry",
+          "ready": false,
+          "status": "asleep"
+        }
+      ]
+    }
+  }
+}

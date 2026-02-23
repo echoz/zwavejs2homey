@@ -1,0 +1,9 @@
+{
+  "type": "event",
+  "event": {
+    "source": "controller",
+    "event": "nvm restore progress",
+    "bytesWritten": 128,
+    "total": 1024
+  }
+}

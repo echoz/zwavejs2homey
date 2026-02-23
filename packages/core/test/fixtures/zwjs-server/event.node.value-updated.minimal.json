@@ -1,0 +1,8 @@
+{
+  "type": "event",
+  "event": {
+    "source": "node",
+    "event": "value updated",
+    "nodeId": 2
+  }
+}

@@ -2,40 +2,22 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const { DefaultZwjsFamilyNormalizer } = require('../dist/protocol/normalizers/family-default.js');
+const { loadFixture } = require('./fixtures/_load-fixture.js');
 
 const normalizer = new DefaultZwjsFamilyNormalizer();
 
 test('normalizes version frame to server.info', () => {
-  const msg = {
-    type: 'version',
-    driverVersion: '15.21.0',
-    serverVersion: '3.4.0',
-    homeId: 123,
-    minSchemaVersion: 0,
-    maxSchemaVersion: 44,
-  };
+  const msg = loadFixture('zwjs-server', 'version.frame.json');
 
   const out = normalizer.normalizeIncoming(msg);
-  assert.equal(out.serverInfo.serverVersion, '3.4.0');
-  assert.equal(out.serverInfo.zwaveJsVersion, '15.21.0');
-  assert.deepEqual(out.serverInfo.schemaHints, ['min:0', 'max:44']);
+  assert.equal(out.serverInfo.serverVersion, '1.0.0');
+  assert.equal(out.serverInfo.zwaveJsVersion, '6.5.0');
+  assert.deepEqual(out.serverInfo.schemaHints, ['min:0', 'max:1']);
   assert.equal(out.events[0].type, 'server.info');
 });
 
 test('normalizes start_listening result state nodes to snapshot', () => {
-  const msg = {
-    type: 'result',
-    messageId: 'abc',
-    success: true,
-    result: {
-      state: {
-        nodes: [
-          { id: 2, name: 'Kitchen Dimmer', loc: 'Kitchen', ready: true, status: 'alive' },
-          { id: 3, name: 'Door Sensor', loc: 'Entry', ready: false, status: 'asleep' },
-        ],
-      },
-    },
-  };
+  const msg = loadFixture('zwjs-server', 'result.start-listening.state.minimal.json');
 
   const out = normalizer.normalizeIncoming(msg);
   assert.equal(out.requestResponse.id, 'abc');
@@ -51,14 +33,7 @@ test('normalizes start_listening result state nodes to snapshot', () => {
 });
 
 test('normalizes event frame to raw-normalized event', () => {
-  const msg = {
-    type: 'event',
-    event: {
-      source: 'node',
-      event: 'value updated',
-      nodeId: 2,
-    },
-  };
+  const msg = loadFixture('zwjs-server', 'event.node.value-updated.minimal.json');
 
   const out = normalizer.normalizeIncoming(msg);
   assert.equal(out.events.length, 2);
@@ -69,30 +44,31 @@ test('normalizes event frame to raw-normalized event', () => {
 });
 
 test('normalizes controller event frame to source-aware typed event', () => {
-  const msg = {
-    type: 'event',
-    event: {
-      source: 'controller',
-      event: 'statistics updated',
-      stats: { messagesTX: 12 },
-    },
-  };
+  const msg = loadFixture('zwjs-server', 'event.controller.nvm-restore-progress.json');
 
   const out = normalizer.normalizeIncoming(msg);
   assert.equal(out.events[0].type, 'zwjs.event.controller');
-  assert.equal(out.events[0].event.event, 'statistics updated');
+  assert.equal(out.events[0].event.event, 'nvm restore progress');
+  assert.equal(out.events[0].event.bytesWritten, 128);
 });
 
 test('normalizes failed result as requestError only', () => {
-  const msg = {
-    type: 'result',
-    messageId: 'bad1',
-    success: false,
-    error: { code: 'boom' },
-  };
+  const msg = loadFixture('zwjs-server', 'result.error.schema-incompatible.json');
 
   const out = normalizer.normalizeIncoming(msg);
   assert.equal(out.requestResponse, undefined);
-  assert.equal(out.requestError.id, 'bad1');
-  assert.deepEqual(out.requestError.error, { code: 'boom' });
+  assert.equal(out.requestError.id, '1');
+  assert.deepEqual(out.requestError.error, msg);
+});
+
+test('builds start_listening command envelope', () => {
+  const built = normalizer.buildStartListeningRequest('fixture-1');
+  const expected = loadFixture('zwjs-server', 'command.start_listening.json');
+  assert.deepEqual(built, expected);
+});
+
+test('builds driver.get_config command envelope', () => {
+  const built = normalizer.buildCommandRequest('fixture-2', 'driver.get_config');
+  const expected = loadFixture('zwjs-server', 'command.driver.get_config.json');
+  assert.deepEqual(built, expected);
 });

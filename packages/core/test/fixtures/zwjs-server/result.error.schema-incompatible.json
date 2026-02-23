@@ -1,0 +1,6 @@
+{
+  "type": "result",
+  "success": false,
+  "messageId": "1",
+  "errorCode": "schema_incompatible"
+}

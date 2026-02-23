@@ -1,0 +1,8 @@
+{
+  "type": "result",
+  "success": false,
+  "messageId": "1",
+  "errorCode": "zwave_error",
+  "zwaveErrorCode": 18,
+  "zwaveErrorMessage": "The message cannot be sent because node 61 is dead"
+}
