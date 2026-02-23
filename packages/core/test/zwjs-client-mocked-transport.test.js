@@ -255,3 +255,29 @@ test('getNodeList waits for snapshot instead of returning an empty list when sta
 
   await client.stop();
 });
+
+test('start() waits for version frame before resolving and marking lifecycle connected', async () => {
+  const { client, transport } = makeClient({
+    timeouts: { connectTimeoutMs: 1000, requestTimeoutMs: 100 },
+  });
+
+  const startPromise = client.start();
+  transport.triggerOpen();
+
+  const early = await Promise.race([
+    startPromise.then(() => 'resolved'),
+    new Promise((resolve) => setTimeout(() => resolve('pending'), 5)),
+  ]);
+  assert.equal(early, 'pending');
+  assert.equal(client.getStatus().lifecycle, 'connecting');
+  assert.equal(client.getStatus().transportConnected, true);
+  assert.equal(client.getStatus().versionReceived, false);
+
+  transport.triggerMessage(loadFixture('zwjs-server', 'version.frame.json'));
+
+  await startPromise;
+  assert.equal(client.getStatus().lifecycle, 'connected');
+  assert.equal(client.getStatus().versionReceived, true);
+
+  await client.stop();
+});

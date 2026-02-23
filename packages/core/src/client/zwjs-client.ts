@@ -83,6 +83,11 @@ export class ZwjsClientImpl implements ZwjsClient {
     reject: (reason?: unknown) => void;
     timer: ReturnType<typeof setTimeout>;
   }> = [];
+  private pendingVersionWaiters: Array<{
+    resolve: () => void;
+    reject: (reason?: unknown) => void;
+    timer: ReturnType<typeof setTimeout>;
+  }> = [];
 
   constructor(config: ZwjsClientConfig) {
     this.config = config;
@@ -123,6 +128,7 @@ export class ZwjsClientImpl implements ZwjsClient {
     this.setLifecycle('stopping');
 
     this.stopPromise = Promise.resolve().then(() => {
+      this.clearVersionWaiters(new ZwjsClientError({ code: 'CLIENT_STOPPED', message: 'Client stopped', retryable: false }));
       this.clearNodeListWaiters(new ZwjsClientError({ code: 'CLIENT_STOPPED', message: 'Client stopped', retryable: false }));
       this.requests.rejectAll(new ZwjsClientError({ code: 'CLIENT_STOPPED', message: 'Client stopped', retryable: false }));
       this.transport.close();
@@ -296,6 +302,7 @@ export class ZwjsClientImpl implements ZwjsClient {
       onClose: (event) => {
         this.status.transportConnected = false;
         this.emit({ type: 'transport.disconnected', code: event.code, reason: event.reason, wasClean: event.wasClean });
+        this.clearVersionWaiters(new ZwjsClientError({ code: 'TRANSPORT_ERROR', message: 'Transport closed', retryable: true }));
         this.clearNodeListWaiters(new ZwjsClientError({ code: 'TRANSPORT_ERROR', message: 'Transport closed', retryable: true }));
         this.requests.rejectAll(new ZwjsClientError({ code: 'TRANSPORT_ERROR', message: 'Transport closed', retryable: true }));
         void this.handleDisconnect();
@@ -324,6 +331,7 @@ export class ZwjsClientImpl implements ZwjsClient {
       if (connectTimeout) clearTimeout(connectTimeout);
     }
 
+    await this.waitForVersionFrame();
     this.status.authenticated = this.config.auth?.type === 'bearer' ? true : undefined;
     if (this.config.auth?.type === 'bearer') {
       this.emit({ type: 'auth.succeeded' });
@@ -355,6 +363,7 @@ export class ZwjsClientImpl implements ZwjsClient {
         this.cachedServerInfo = normalized.serverInfo;
         this.status.versionReceived = true;
         this.status.serverVersion = normalized.serverInfo.serverVersion ?? this.status.serverVersion;
+        this.flushVersionWaiters();
       }
       if (normalized.nodesSnapshot) {
         this.cachedNodeList = normalized.nodesSnapshot;
@@ -519,6 +528,41 @@ export class ZwjsClientImpl implements ZwjsClient {
       }, this.timeouts.requestTimeoutMs);
       this.pendingNodeListWaiters.push({ resolve, reject, timer });
     });
+  }
+
+  private waitForVersionFrame(): Promise<void> {
+    if (this.status.versionReceived) return Promise.resolve();
+    return new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.pendingVersionWaiters = this.pendingVersionWaiters.filter((waiter) => waiter.timer !== timer);
+        reject(
+          new ZwjsClientError({
+            code: 'CONNECT_TIMEOUT',
+            message: 'Timed out waiting for version frame after transport connect',
+            retryable: true,
+          }),
+        );
+      }, this.timeouts.connectTimeoutMs);
+      this.pendingVersionWaiters.push({ resolve, reject, timer });
+    });
+  }
+
+  private flushVersionWaiters(): void {
+    const waiters = this.pendingVersionWaiters;
+    this.pendingVersionWaiters = [];
+    for (const waiter of waiters) {
+      clearTimeout(waiter.timer);
+      waiter.resolve();
+    }
+  }
+
+  private clearVersionWaiters(error: ZwjsClientError): void {
+    const waiters = this.pendingVersionWaiters;
+    this.pendingVersionWaiters = [];
+    for (const waiter of waiters) {
+      clearTimeout(waiter.timer);
+      waiter.reject(error);
+    }
   }
 
   private flushNodeListWaiters(snapshot: NodeListResult): void {
