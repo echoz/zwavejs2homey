@@ -1,0 +1,9 @@
+{
+  "command": "node.poll_value",
+  "nodeId": 5,
+  "valueId": {
+    "commandClass": 37,
+    "property": "currentValue",
+    "endpoint": 0
+  }
+}

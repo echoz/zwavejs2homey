@@ -295,3 +295,118 @@ test('inclusion wrappers are blocked by default mutation policy', async () => {
   assert.equal(transport.sent.length, 0);
   await client.stop();
 });
+
+test('pingNode sends mutation-gated protocol command and returns success', async () => {
+  const { client, transport } = makeClient({ enabled: true, allowCommands: ['node.ping'] });
+  await startConnected(client, transport);
+
+  const pending = client.pingNode(5);
+  const sent = transport.sent.at(-1);
+  assert.deepEqual(
+    sent,
+    withMessageId(loadFixture('zwjs-server', 'command.node.ping.json'), sent.messageId),
+  );
+
+  transport.triggerMessage(
+    withMessageId(loadFixture('zwjs-server', 'result.node.ping.success.json'), sent.messageId),
+  );
+  const result = await pending;
+  assert.equal(result.success, true);
+  assert.equal(result.result.success, true);
+  await client.stop();
+});
+
+test('refreshNodeInfo sends mutation-gated protocol command and returns success', async () => {
+  const { client, transport } = makeClient({ enabled: true, allowCommands: ['node.refresh_info'] });
+  await startConnected(client, transport);
+
+  const pending = client.refreshNodeInfo(5);
+  const sent = transport.sent.at(-1);
+  assert.deepEqual(
+    sent,
+    withMessageId(loadFixture('zwjs-server', 'command.node.refresh_info.json'), sent.messageId),
+  );
+
+  transport.triggerMessage(
+    withMessageId(
+      loadFixture('zwjs-server', 'result.node.refresh_info.success.json'),
+      sent.messageId,
+    ),
+  );
+  const result = await pending;
+  assert.equal(result.success, true);
+  assert.equal(result.result.success, true);
+  await client.stop();
+});
+
+test('refreshNodeValues sends mutation-gated protocol command and returns success', async () => {
+  const { client, transport } = makeClient({
+    enabled: true,
+    allowCommands: ['node.refresh_values'],
+  });
+  await startConnected(client, transport);
+
+  const pending = client.refreshNodeValues(5);
+  const sent = transport.sent.at(-1);
+  assert.deepEqual(
+    sent,
+    withMessageId(loadFixture('zwjs-server', 'command.node.refresh_values.json'), sent.messageId),
+  );
+
+  transport.triggerMessage(
+    withMessageId(
+      loadFixture('zwjs-server', 'result.node.refresh_values.success.json'),
+      sent.messageId,
+    ),
+  );
+  const result = await pending;
+  assert.equal(result.success, true);
+  assert.equal(result.result.success, true);
+  await client.stop();
+});
+
+test('pollNodeValue sends mutation-gated protocol command and returns result', async () => {
+  const { client, transport } = makeClient({ enabled: true, allowCommands: ['node.poll_value'] });
+  await startConnected(client, transport);
+
+  const pending = client.pollNodeValue({
+    nodeId: 5,
+    valueId: { commandClass: 37, property: 'currentValue', endpoint: 0 },
+  });
+  const sent = transport.sent.at(-1);
+  assert.deepEqual(
+    sent,
+    withMessageId(loadFixture('zwjs-server', 'command.node.poll_value.json'), sent.messageId),
+  );
+
+  transport.triggerMessage(
+    withMessageId(
+      loadFixture('zwjs-server', 'result.node.poll_value.success.json'),
+      sent.messageId,
+    ),
+  );
+  const result = await pending;
+  assert.equal(result.success, true);
+  assert.equal(result.result.success, true);
+  assert.equal(result.result.value, true);
+  await client.stop();
+});
+
+test('P2.2 low-risk mutating wrappers are blocked by default mutation policy', async () => {
+  const { client, transport } = makeClient();
+  await startConnected(client, transport);
+
+  await assert.rejects(() => client.pingNode(5), /blocked by policy/);
+  await assert.rejects(() => client.refreshNodeInfo(5), /blocked by policy/);
+  await assert.rejects(() => client.refreshNodeValues(5), /blocked by policy/);
+  await assert.rejects(
+    () =>
+      client.pollNodeValue({
+        nodeId: 5,
+        valueId: { commandClass: 37, property: 'currentValue', endpoint: 0 },
+      }),
+    /blocked by policy/,
+  );
+  assert.equal(transport.sent.length, 0);
+  await client.stop();
+});

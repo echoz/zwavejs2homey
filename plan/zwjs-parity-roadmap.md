@@ -309,6 +309,16 @@ Tests:
 - mutation policy tests
 - mocked transport wrapper tests
 
+Progress (completed subset):
+
+- Added typed mutation-gated wrappers + fixture-backed tests for all listed P2.2 commands:
+  - `node.ping`
+  - `node.refresh_info`
+  - `node.refresh_values`
+  - `node.poll_value`
+- Added default-policy blocking coverage for the P2.2 wrapper set
+- Result typing is `partial` for common success fields (`success`, optional `value`)
+
 #### P2.3 Inclusion/Exclusion Workflow Foundation (Protocol Layer Only)
 
 Implement typed wrappers + event typing for protocol workflow primitives:

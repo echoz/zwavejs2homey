@@ -38,6 +38,11 @@ import type {
   ZwjsNodeFirmwareUpdateProgressResult,
   ZwjsNodeHealthCheckInProgressResult,
   ZwjsNodeDeviceConfigChangedResult,
+  ZwjsNodePingResult,
+  ZwjsNodeRefreshInfoResult,
+  ZwjsNodeRefreshValuesResult,
+  ZwjsNodePollValueArgs,
+  ZwjsNodePollValueResult,
   ZwjsValueId,
   ZwjsClientStatus,
   ZwjsLifecycleState,
@@ -418,6 +423,36 @@ export class ZwjsClientImpl implements ZwjsClient {
     return this.sendCommand<ZwjsNodeDeviceConfigChangedResult, { nodeId: number }>({
       command: 'node.has_device_config_changed',
       args: { nodeId },
+    });
+  }
+
+  async pingNode(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodePingResult>> {
+    return this.sendMutationCommand<ZwjsNodePingResult, { nodeId: number }>({
+      command: 'node.ping',
+      args: { nodeId },
+    });
+  }
+
+  async refreshNodeInfo(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeRefreshInfoResult>> {
+    return this.sendMutationCommand<ZwjsNodeRefreshInfoResult, { nodeId: number }>({
+      command: 'node.refresh_info',
+      args: { nodeId },
+    });
+  }
+
+  async refreshNodeValues(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeRefreshValuesResult>> {
+    return this.sendMutationCommand<ZwjsNodeRefreshValuesResult, { nodeId: number }>({
+      command: 'node.refresh_values',
+      args: { nodeId },
+    });
+  }
+
+  async pollNodeValue(
+    args: ZwjsNodePollValueArgs,
+  ): Promise<ZwjsCommandResult<ZwjsNodePollValueResult>> {
+    return this.sendMutationCommand<ZwjsNodePollValueResult, ZwjsNodePollValueArgs>({
+      command: 'node.poll_value',
+      args,
     });
   }
 

@@ -229,6 +229,29 @@ export interface ZwjsNodeDeviceConfigChangedResult {
   changed?: boolean;
   [key: string]: unknown;
 }
+export interface ZwjsNodePingResult {
+  success?: boolean;
+  [key: string]: unknown;
+}
+export interface ZwjsNodeRefreshInfoResult {
+  success?: boolean;
+  [key: string]: unknown;
+}
+export interface ZwjsNodeRefreshValuesResult {
+  success?: boolean;
+  [key: string]: unknown;
+}
+export interface ZwjsNodePollValueArgs {
+  nodeId: number;
+  valueId: ZwjsValueId;
+  timeoutMs?: number;
+  [key: string]: unknown;
+}
+export interface ZwjsNodePollValueResult {
+  success?: boolean;
+  value?: unknown;
+  [key: string]: unknown;
+}
 
 export interface ClientLogger {
   debug?(msg: string, meta?: unknown): void;
@@ -673,6 +696,10 @@ export interface ZwjsClient {
   hasNodeDeviceConfigChanged(
     nodeId: number,
   ): Promise<ZwjsCommandResult<ZwjsNodeDeviceConfigChangedResult>>;
+  pingNode(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodePingResult>>;
+  refreshNodeInfo(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeRefreshInfoResult>>;
+  refreshNodeValues(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeRefreshValuesResult>>;
+  pollNodeValue(args: ZwjsNodePollValueArgs): Promise<ZwjsCommandResult<ZwjsNodePollValueResult>>;
   beginInclusion(
     args?: ZwjsControllerBeginInclusionArgs,
   ): Promise<ZwjsCommandResult<ZwjsControllerInclusionCommandResult>>;
