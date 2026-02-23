@@ -147,6 +147,23 @@ test('getNodeValueTimestamp sends correct command and returns timestamp result',
   await client.stop();
 });
 
+test('getNodeValueTimestamp supports object timestamp result shape', async () => {
+  const { client, transport } = makeClient();
+  await startConnected(client, transport);
+
+  const valueId = { commandClass: 37, property: 'currentValue', endpoint: 0 };
+  const pending = client.getNodeValueTimestamp(5, valueId);
+  const sent = transport.sent.at(-1);
+  assert.deepEqual(sent, withMessageId(loadFixture('zwjs-server', 'command.node.get_value_timestamp.json'), sent.messageId));
+
+  transport.triggerMessage(withMessageId(loadFixture('zwjs-server', 'result.node.get_value_timestamp.success.object.json'), sent.messageId));
+  const result = await pending;
+
+  assert.equal(result.success, true);
+  assert.equal(result.result.timestamp, 1771647088830);
+  await client.stop();
+});
+
 test('getDriverLogConfig sends correct command and returns log config', async () => {
   const { client, transport } = makeClient();
   await startConnected(client, transport);

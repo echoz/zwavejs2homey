@@ -53,6 +53,11 @@ Future likely additions:
 - Device discovery/mapping abstractions
 - Command translation layer
 
+## Capability Tracking
+
+- `docs/zwjs-capability-matrix.md`: 3-way comparison of `zwave-js-server`, `zwave-js-ui`, and our `ZwjsClient`
+- `plan/zwjs-parity-roadmap.md`: execution roadmap for closing prioritized parity gaps
+
 ## Runtime Flow (Target)
 
 1. Homey app starts

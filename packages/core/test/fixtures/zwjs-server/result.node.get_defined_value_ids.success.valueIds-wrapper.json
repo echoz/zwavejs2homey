@@ -1,0 +1,21 @@
+{
+  "valueIds": [
+    {
+      "commandClass": 37,
+      "endpoint": 0,
+      "property": "currentValue",
+      "propertyName": "Current value",
+      "readable": true,
+      "writeable": true
+    },
+    {
+      "commandClass": 128,
+      "endpoint": 0,
+      "property": "level",
+      "propertyName": "Level"
+    },
+    {
+      "unexpected": true
+    }
+  ]
+}

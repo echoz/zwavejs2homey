@@ -44,6 +44,14 @@ test('extracts defined value ids from object wrapper shape and filters invalid e
   assert.equal(out[1].propertyKey, 0);
 });
 
+test('extracts defined value ids from valueIds wrapper shape used by observed server responses', () => {
+  const fixture = loadFixture('zwjs-server', 'result.node.get_defined_value_ids.success.valueIds-wrapper.json');
+  const out = extractZwjsDefinedValueIds(fixture);
+  assert.equal(out.length, 2);
+  assert.equal(out[0].propertyName, 'Current value');
+  assert.equal(out[1].commandClass, 128);
+});
+
 test('returns empty list for unsupported defined value id result shapes', () => {
   assert.deepEqual(extractZwjsDefinedValueIds(null), []);
   assert.deepEqual(extractZwjsDefinedValueIds({ values: 'nope' }), []);

@@ -2,26 +2,29 @@
 
 ## Goal
 
-Build a protocol-first `zwjs` WebSocket client foundation (no Homey-specific API in core), validated against a real Z-Wave JS UI instance in read-only mode.
+Build the parity planning baseline for `ZwjsClient`: a 3-way capability matrix (`zwave-js-server` protocol, `zwave-js-ui` backend/UI, and our client) plus a phased implementation roadmap.
 
 ## In Progress
 
-- `zwjs` client foundation (transport/lifecycle/reconnect/normalizer scaffolding)
+- Capability comparison and parity roadmap documentation
 
 ## Next Tasks
 
-1. Lock protocol handshake to `zwave-js-server` docs (`version`, `initialize`, `start_listening`)
-2. Implement generic `sendCommand` path (`messageId` + `command`)
-3. Tighten real frame parsing (`result` / `event` / error frames)
-4. Add fixture tests from `docs/external/zwave-js-server` docs and live read-only captures
-5. Keep Homey app integration minimal (connect + log protocol events only)
+1. Use `docs/zwjs-capability-matrix.md` to select the first P0 parity slice (`getNodeValue*` live validation + typing tightening)
+2. Execute P0.2 read-only validation for `node.get_value`, `node.get_value_metadata`, `node.get_value_timestamp`
+3. Implement P0.1 value/metadata typing tightening from observed payloads
+4. Implement P0.3 node event typing expansion from observed traffic
+5. Keep the matrix and `plan/zwjs-parity-roadmap.md` updated as slices land
 
 ## Risks / Unknowns
 
-- Exact read-only command set to use for safe validation on production instance
+- Device-specific support for some protocol commands (e.g. notification event support queries)
 - Schema/version differences across `zwave-js-server` versions
-- Homey runtime packaging behavior with workspace dependencies
+- Risk of conflating UI Socket.IO events with protocol events when planning parity
 
 ## Notes
 
-Update this file as the active execution plan; move durable conclusions into `docs/` or `docs/decisions/`.
+- Durable comparison and parity tracking now live in:
+  - `docs/zwjs-capability-matrix.md`
+  - `plan/zwjs-parity-roadmap.md`
+- Update this file as the active sprint focus only.

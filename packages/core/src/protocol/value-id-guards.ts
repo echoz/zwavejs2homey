@@ -26,9 +26,13 @@ export function extractZwjsDefinedValueIds(result: ZwjsDefinedValueIdsResult | u
   if (Array.isArray(result)) {
     return result.filter(isZwjsDefinedValueId);
   }
-  if (isRecord(result) && Array.isArray(result.values)) {
-    return result.values.filter(isZwjsDefinedValueId);
+  if (isRecord(result)) {
+    if (Array.isArray(result.values)) {
+      return result.values.filter(isZwjsDefinedValueId);
+    }
+    if (Array.isArray(result.valueIds)) {
+      return result.valueIds.filter(isZwjsDefinedValueId);
+    }
   }
   return [];
 }
-

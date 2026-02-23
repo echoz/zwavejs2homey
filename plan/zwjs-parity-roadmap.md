@@ -79,6 +79,11 @@ Acceptance:
 Tests:
 - none required unless a bug is found and fixed
 
+Progress (completed on 2026-02-23):
+- Validated `node.get_value`, `node.get_value_metadata`, and `node.get_value_timestamp` against production instance on node `5`
+- Successful value IDs included `currentValue`, `duration`, and `targetValue` (CC 37)
+- Observed `node.get_value_timestamp` object result shape `{ timestamp: number }` and updated client result type + fixture test accordingly
+
 #### P0.3 Node Event Typing Expansion from Observed Traffic
 
 Implement:
@@ -307,7 +312,6 @@ This roadmap is considered complete when:
 
 ## Immediate Next Tasks (Recommended Sequence)
 
-1. Finish P0.2 real-instance read validation for `getNodeValue*` commands (read-only)
-2. Complete remaining P0.1 value payload typing tightening from observed `node.get_value` payloads
-3. P0.3 Node event typing expansion from observed traffic
-4. P1.1 Log streaming wrappers (`start_listening_logs` / `stop_listening_logs`)
+1. Complete remaining P0.1 value payload typing tightening from observed `node.get_value` payloads
+2. P0.3 Node event typing expansion from observed traffic
+3. P1.1 Log streaming wrappers (`start_listening_logs` / `stop_listening_logs`)

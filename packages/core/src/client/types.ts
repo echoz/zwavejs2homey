@@ -157,7 +157,14 @@ export interface ZwjsNodeValueMetadataResult {
   default?: unknown;
   [key: string]: unknown;
 }
-export type ZwjsNodeValueTimestampResult = number | string | null;
+export type ZwjsNodeValueTimestampResult =
+  | number
+  | string
+  | null
+  | {
+      timestamp?: number | string | null;
+      [key: string]: unknown;
+    };
 export type ZwjsNodeSupportedNotificationEventsResult = Record<string, unknown> | Array<unknown>;
 
 export interface ClientLogger {
