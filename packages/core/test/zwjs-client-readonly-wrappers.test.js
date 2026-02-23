@@ -114,7 +114,7 @@ test('firmware status/read wrappers send exact protocol commands and return repr
       (result) => assert.equal(result.progress, false),
     ],
     [
-      () => client.getControllerAvailableFirmwareUpdates(),
+      () => client.getControllerAvailableFirmwareUpdates({ nodeId: 5 }),
       'command.controller.get_available_firmware_updates.json',
       'result.controller.get_available_firmware_updates.success.json',
       (result) => assert.equal(Array.isArray(result.updates), true),

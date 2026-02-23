@@ -1,0 +1,9 @@
+{
+  "messageId": "fixture-node-begin-fw-1",
+  "command": "node.begin_firmware_update",
+  "nodeId": 5,
+  "firmwareFilename": "device.otz",
+  "firmwareFile": "AQID",
+  "firmwareFileFormat": "otz",
+  "target": 0
+}

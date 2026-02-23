@@ -503,8 +503,19 @@ Progress (completed first subset):
   - `node` firmware update progress/finished
 - Added fixture-backed wrapper tests and normalizer tests for the above
 - Remaining P3.3 scope:
-  - mutation wrappers for explicit firmware update workflows (`begin/update/abort`, OTW/OTA variants)
   - safety classification and validation strategy for destructive/high-risk firmware operations
+
+Progress (completed firmware mutation wrapper subset):
+
+- Added mutation-gated firmware workflow wrappers for:
+  - `driver.firmware_update_otw`
+  - `controller.firmware_update_ota`
+  - `controller.firmware_update_otw`
+  - `node.begin_firmware_update`
+  - `node.update_firmware`
+  - `node.abort_firmware_update`
+- Added fixture-backed mutation-policy tests for default blocking and allowlisted exact command envelopes/results
+- Intentionally no default firmware mutation preset added in this slice (high-risk operations require explicit allowlist selection)
 
 ## Acceptance Criteria (Roadmap-Level)
 

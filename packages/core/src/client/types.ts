@@ -180,6 +180,11 @@ export interface ZwjsControllerAvailableFirmwareUpdatesResult {
   updates?: Array<unknown>;
   [key: string]: unknown;
 }
+export interface ZwjsControllerAvailableFirmwareUpdatesArgs {
+  nodeId: number;
+  apiKey?: string;
+  includePrereleases?: boolean;
+}
 export interface ZwjsControllerFirmwareUpdateInProgressResult {
   progress?: boolean;
   [key: string]: unknown;
@@ -279,6 +284,44 @@ export interface ZwjsNodePollValueResult {
   success?: boolean;
   value?: unknown;
   [key: string]: unknown;
+}
+export type ZwjsFirmwareUpdateCommandResult = Record<string, unknown>;
+export interface ZwjsDriverFirmwareUpdateOtwRawFileArgs {
+  filename: string;
+  file: string;
+  fileFormat?: string | number;
+}
+export interface ZwjsDriverFirmwareUpdateOtwUpdateInfoArgs {
+  updateInfo: Record<string, unknown>;
+}
+export type ZwjsDriverFirmwareUpdateOtwArgs =
+  | ZwjsDriverFirmwareUpdateOtwRawFileArgs
+  | ZwjsDriverFirmwareUpdateOtwUpdateInfoArgs;
+export interface ZwjsControllerFirmwareUpdateOtaArgs {
+  nodeId: number;
+  updateInfo: Record<string, unknown>;
+}
+export interface ZwjsControllerFirmwareUpdateOtwArgs {
+  filename: string;
+  file: string;
+  fileFormat?: string | number;
+}
+export interface ZwjsNodeBeginFirmwareUpdateArgs {
+  nodeId: number;
+  firmwareFilename: string;
+  firmwareFile: string;
+  firmwareFileFormat?: string | number;
+  target?: number;
+}
+export interface ZwjsNodeFirmwareUpdateFileArgs {
+  filename: string;
+  file: string;
+  fileFormat?: string | number;
+  firmwareTarget?: number;
+}
+export interface ZwjsNodeUpdateFirmwareArgs {
+  nodeId: number;
+  updates: ZwjsNodeFirmwareUpdateFileArgs[];
 }
 export interface ZwjsEndpointTarget {
   nodeId: number;
@@ -890,9 +933,9 @@ export interface ZwjsClient {
   isControllerAnyOtaFirmwareUpdateInProgress(): Promise<
     ZwjsCommandResult<ZwjsControllerAnyOtaFirmwareUpdateInProgressResult>
   >;
-  getControllerAvailableFirmwareUpdates(): Promise<
-    ZwjsCommandResult<ZwjsControllerAvailableFirmwareUpdatesResult>
-  >;
+  getControllerAvailableFirmwareUpdates(
+    args: ZwjsControllerAvailableFirmwareUpdatesArgs,
+  ): Promise<ZwjsCommandResult<ZwjsControllerAvailableFirmwareUpdatesResult>>;
   isControllerFirmwareUpdateInProgress(): Promise<
     ZwjsCommandResult<ZwjsControllerFirmwareUpdateInProgressResult>
   >;
@@ -936,6 +979,24 @@ export interface ZwjsClient {
   refreshNodeInfo(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeRefreshInfoResult>>;
   refreshNodeValues(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeRefreshValuesResult>>;
   pollNodeValue(args: ZwjsNodePollValueArgs): Promise<ZwjsCommandResult<ZwjsNodePollValueResult>>;
+  driverFirmwareUpdateOtw(
+    args: ZwjsDriverFirmwareUpdateOtwArgs,
+  ): Promise<ZwjsCommandResult<ZwjsFirmwareUpdateCommandResult>>;
+  controllerFirmwareUpdateOta(
+    args: ZwjsControllerFirmwareUpdateOtaArgs,
+  ): Promise<ZwjsCommandResult<ZwjsFirmwareUpdateCommandResult>>;
+  controllerFirmwareUpdateOtw(
+    args: ZwjsControllerFirmwareUpdateOtwArgs,
+  ): Promise<ZwjsCommandResult<ZwjsFirmwareUpdateCommandResult>>;
+  beginNodeFirmwareUpdate(
+    args: ZwjsNodeBeginFirmwareUpdateArgs,
+  ): Promise<ZwjsCommandResult<ZwjsFirmwareUpdateCommandResult>>;
+  updateNodeFirmware(
+    args: ZwjsNodeUpdateFirmwareArgs,
+  ): Promise<ZwjsCommandResult<ZwjsFirmwareUpdateCommandResult>>;
+  abortNodeFirmwareUpdate(
+    nodeId: number,
+  ): Promise<ZwjsCommandResult<ZwjsFirmwareUpdateCommandResult>>;
   endpointSupportsCc(
     args: ZwjsEndpointCcQuery,
   ): Promise<ZwjsCommandResult<ZwjsEndpointSupportsCcResult>>;

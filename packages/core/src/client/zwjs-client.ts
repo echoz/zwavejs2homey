@@ -17,6 +17,7 @@ import type {
   ZwjsControllerNodeNeighborsResult,
   ZwjsControllerAnyFirmwareUpdateProgressResult,
   ZwjsControllerAnyOtaFirmwareUpdateInProgressResult,
+  ZwjsControllerAvailableFirmwareUpdatesArgs,
   ZwjsControllerAvailableFirmwareUpdatesResult,
   ZwjsControllerFirmwareUpdateInProgressResult,
   ZwjsDriverConfig,
@@ -48,6 +49,12 @@ import type {
   ZwjsNodeRefreshValuesResult,
   ZwjsNodePollValueArgs,
   ZwjsNodePollValueResult,
+  ZwjsFirmwareUpdateCommandResult,
+  ZwjsDriverFirmwareUpdateOtwArgs,
+  ZwjsControllerFirmwareUpdateOtaArgs,
+  ZwjsControllerFirmwareUpdateOtwArgs,
+  ZwjsNodeBeginFirmwareUpdateArgs,
+  ZwjsNodeUpdateFirmwareArgs,
   ZwjsEndpointTarget,
   ZwjsEndpointCcQuery,
   ZwjsEndpointInvokeCcApiArgs,
@@ -362,11 +369,15 @@ export class ZwjsClientImpl implements ZwjsClient {
     });
   }
 
-  async getControllerAvailableFirmwareUpdates(): Promise<
-    ZwjsCommandResult<ZwjsControllerAvailableFirmwareUpdatesResult>
-  > {
-    return this.sendCommand<ZwjsControllerAvailableFirmwareUpdatesResult>({
+  async getControllerAvailableFirmwareUpdates(
+    args: ZwjsControllerAvailableFirmwareUpdatesArgs,
+  ): Promise<ZwjsCommandResult<ZwjsControllerAvailableFirmwareUpdatesResult>> {
+    return this.sendCommand<
+      ZwjsControllerAvailableFirmwareUpdatesResult,
+      ZwjsControllerAvailableFirmwareUpdatesArgs
+    >({
       command: 'controller.get_available_firmware_updates',
+      args,
     });
   }
 
@@ -523,6 +534,72 @@ export class ZwjsClientImpl implements ZwjsClient {
     return this.sendMutationCommand<ZwjsNodePollValueResult, ZwjsNodePollValueArgs>({
       command: 'node.poll_value',
       args,
+    });
+  }
+
+  async driverFirmwareUpdateOtw(
+    args: ZwjsDriverFirmwareUpdateOtwArgs,
+  ): Promise<ZwjsCommandResult<ZwjsFirmwareUpdateCommandResult>> {
+    return this.sendMutationCommand<
+      ZwjsFirmwareUpdateCommandResult,
+      ZwjsDriverFirmwareUpdateOtwArgs
+    >({
+      command: 'driver.firmware_update_otw',
+      args,
+    });
+  }
+
+  async controllerFirmwareUpdateOta(
+    args: ZwjsControllerFirmwareUpdateOtaArgs,
+  ): Promise<ZwjsCommandResult<ZwjsFirmwareUpdateCommandResult>> {
+    return this.sendMutationCommand<
+      ZwjsFirmwareUpdateCommandResult,
+      ZwjsControllerFirmwareUpdateOtaArgs
+    >({
+      command: 'controller.firmware_update_ota',
+      args,
+    });
+  }
+
+  async controllerFirmwareUpdateOtw(
+    args: ZwjsControllerFirmwareUpdateOtwArgs,
+  ): Promise<ZwjsCommandResult<ZwjsFirmwareUpdateCommandResult>> {
+    return this.sendMutationCommand<
+      ZwjsFirmwareUpdateCommandResult,
+      ZwjsControllerFirmwareUpdateOtwArgs
+    >({
+      command: 'controller.firmware_update_otw',
+      args,
+    });
+  }
+
+  async beginNodeFirmwareUpdate(
+    args: ZwjsNodeBeginFirmwareUpdateArgs,
+  ): Promise<ZwjsCommandResult<ZwjsFirmwareUpdateCommandResult>> {
+    return this.sendMutationCommand<
+      ZwjsFirmwareUpdateCommandResult,
+      ZwjsNodeBeginFirmwareUpdateArgs
+    >({
+      command: 'node.begin_firmware_update',
+      args,
+    });
+  }
+
+  async updateNodeFirmware(
+    args: ZwjsNodeUpdateFirmwareArgs,
+  ): Promise<ZwjsCommandResult<ZwjsFirmwareUpdateCommandResult>> {
+    return this.sendMutationCommand<ZwjsFirmwareUpdateCommandResult, ZwjsNodeUpdateFirmwareArgs>({
+      command: 'node.update_firmware',
+      args,
+    });
+  }
+
+  async abortNodeFirmwareUpdate(
+    nodeId: number,
+  ): Promise<ZwjsCommandResult<ZwjsFirmwareUpdateCommandResult>> {
+    return this.sendMutationCommand<ZwjsFirmwareUpdateCommandResult, { nodeId: number }>({
+      command: 'node.abort_firmware_update',
+      args: { nodeId },
     });
   }
 

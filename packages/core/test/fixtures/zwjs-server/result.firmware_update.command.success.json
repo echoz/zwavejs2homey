@@ -1,0 +1,9 @@
+{
+  "type": "result",
+  "messageId": "fixture-firmware-update-result-1",
+  "success": true,
+  "result": {
+    "status": "started",
+    "waitTime": 0
+  }
+}

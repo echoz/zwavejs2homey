@@ -1,0 +1,13 @@
+{
+  "messageId": "fixture-node-update-fw-1",
+  "command": "node.update_firmware",
+  "nodeId": 5,
+  "updates": [
+    {
+      "filename": "device.otz",
+      "file": "AQID",
+      "fileFormat": "otz",
+      "firmwareTarget": 0
+    }
+  ]
+}

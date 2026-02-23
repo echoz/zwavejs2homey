@@ -1,0 +1,9 @@
+{
+  "messageId": "fixture-controller-fw-ota-1",
+  "command": "controller.firmware_update_ota",
+  "nodeId": 5,
+  "updateInfo": {
+    "version": "1.2.3",
+    "files": []
+  }
+}

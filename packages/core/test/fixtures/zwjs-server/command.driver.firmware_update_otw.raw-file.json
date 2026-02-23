@@ -1,0 +1,7 @@
+{
+  "messageId": "fixture-driver-fw-otw-1",
+  "command": "driver.firmware_update_otw",
+  "filename": "controller.gbl",
+  "file": "AQID",
+  "fileFormat": "gbl"
+}

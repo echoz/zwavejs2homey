@@ -602,3 +602,121 @@ test('zniffer mutation wrappers are blocked by default mutation policy', async (
   assert.equal(transport.sent.length, 0);
   await client.stop();
 });
+
+test('firmware mutation wrappers send exact protocol commands when allowlisted', async () => {
+  const { client, transport } = makeClient({
+    enabled: true,
+    allowCommands: [
+      'driver.firmware_update_otw',
+      'controller.firmware_update_ota',
+      'controller.firmware_update_otw',
+      'node.begin_firmware_update',
+      'node.update_firmware',
+      'node.abort_firmware_update',
+    ],
+  });
+  await startConnected(client, transport);
+
+  const checks = [
+    [
+      () =>
+        client.driverFirmwareUpdateOtw({
+          filename: 'controller.gbl',
+          file: 'AQID',
+          fileFormat: 'gbl',
+        }),
+      'command.driver.firmware_update_otw.raw-file.json',
+    ],
+    [
+      () =>
+        client.controllerFirmwareUpdateOta({
+          nodeId: 5,
+          updateInfo: { version: '1.2.3', files: [] },
+        }),
+      'command.controller.firmware_update_ota.json',
+    ],
+    [
+      () =>
+        client.controllerFirmwareUpdateOtw({
+          filename: 'controller.gbl',
+          file: 'AQID',
+          fileFormat: 'gbl',
+        }),
+      'command.controller.firmware_update_otw.json',
+    ],
+    [
+      () =>
+        client.beginNodeFirmwareUpdate({
+          nodeId: 5,
+          firmwareFilename: 'device.otz',
+          firmwareFile: 'AQID',
+          firmwareFileFormat: 'otz',
+          target: 0,
+        }),
+      'command.node.begin_firmware_update.json',
+    ],
+    [
+      () =>
+        client.updateNodeFirmware({
+          nodeId: 5,
+          updates: [{ filename: 'device.otz', file: 'AQID', fileFormat: 'otz', firmwareTarget: 0 }],
+        }),
+      'command.node.update_firmware.json',
+    ],
+    [() => client.abortNodeFirmwareUpdate(5), 'command.node.abort_firmware_update.json'],
+  ];
+
+  for (const [call, commandFixture] of checks) {
+    const pending = call();
+    const sent = transport.sent.at(-1);
+    assert.deepEqual(
+      sent,
+      withMessageId(loadFixture('zwjs-server', commandFixture), sent.messageId),
+    );
+    transport.triggerMessage(
+      withMessageId(
+        loadFixture('zwjs-server', 'result.firmware_update.command.success.json'),
+        sent.messageId,
+      ),
+    );
+    const result = await pending;
+    assert.equal(result.success, true);
+    assert.equal(result.result.status, 'started');
+  }
+
+  await client.stop();
+});
+
+test('firmware mutation wrappers are blocked by default mutation policy', async () => {
+  const { client, transport } = makeClient();
+  await startConnected(client, transport);
+
+  await assert.rejects(
+    () => client.driverFirmwareUpdateOtw({ filename: 'x.gbl', file: 'AQID' }),
+    /blocked by policy/,
+  );
+  await assert.rejects(
+    () => client.controllerFirmwareUpdateOta({ nodeId: 5, updateInfo: { version: '1.2.3' } }),
+    /blocked by policy/,
+  );
+  await assert.rejects(
+    () => client.controllerFirmwareUpdateOtw({ filename: 'x.gbl', file: 'AQID' }),
+    /blocked by policy/,
+  );
+  await assert.rejects(
+    () =>
+      client.beginNodeFirmwareUpdate({
+        nodeId: 5,
+        firmwareFilename: 'x.otz',
+        firmwareFile: 'AQID',
+      }),
+    /blocked by policy/,
+  );
+  await assert.rejects(
+    () => client.updateNodeFirmware({ nodeId: 5, updates: [{ filename: 'x.otz', file: 'AQID' }] }),
+    /blocked by policy/,
+  );
+  await assert.rejects(() => client.abortNodeFirmwareUpdate(5), /blocked by policy/);
+  assert.equal(transport.sent.length, 0);
+  await client.stop();
+});

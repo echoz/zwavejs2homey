@@ -1,0 +1,5 @@
+{
+  "messageId": "fixture-node-abort-fw-1",
+  "command": "node.abort_firmware_update",
+  "nodeId": 5
+}
