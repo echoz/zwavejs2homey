@@ -90,6 +90,16 @@ Validated against `ws://192.168.1.15:3000`:
   - `node.get_value`
   - `node.get_value_metadata`
   - `node.get_value_timestamp`
+- P1.2 diagnostic node wrappers validated read-only on node `5`:
+  - `node.get_firmware_update_capabilities`
+  - `node.get_firmware_update_capabilities_cached`
+  - `node.get_date_and_time`
+  - `node.is_firmware_update_in_progress`
+  - `node.get_firmware_update_progress`
+  - `node.is_health_check_in_progress`
+  - `node.has_device_config_changed`
+- Observed P1.2 result wrappers on this instance commonly use nested object keys:
+  - `{ capabilities: ... }`, `{ dateAndTime: ... }`, `{ progress: ... }`, `{ changed: ... }`
 - `node.get_supported_notification_events` failed on node `5` (device/feature-specific protocol failure, not client transport failure)
 - `start_listening_logs` / `stop_listening_logs` wrappers succeeded, but no `driver.logging` events were emitted during two read-only validation windows (filtered and unfiltered)
 

@@ -234,7 +234,11 @@ Progress (completed subset):
   - `node.is_health_check_in_progress`
   - `node.has_device_config_changed`
 - Added fixture-backed mocked transport tests for command envelopes and representative result passthrough for each wrapper
-- Live validation for this wrapper set remains pending (device/firmware support dependent)
+- Read-only live validation completed on 2026-02-23 against node `5` for all wrappers in this set
+- Observed result shapes differ from initial fixtures for several commands and should be tightened in a follow-up typing slice:
+  - firmware capability reads returned `{ capabilities: ... }`
+  - date/time read returned `{ dateAndTime: ... }`
+  - firmware/health progress checks returned `{ progress: ... }`
 
 #### P1.3 Controller/Node Progress Event Typing Set A
 
