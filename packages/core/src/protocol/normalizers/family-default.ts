@@ -10,10 +10,13 @@ import {
   isZwjsNodeCheckRouteHealthProgressEvent,
   isZwjsNodeMetadataUpdatedEvent,
   isZwjsNodeNotificationEvent,
+  isZwjsNodeSleepEvent,
   isZwjsNodeTestPowerlevelProgressEvent,
   isZwjsNodeValueAddedEvent,
+  isZwjsNodeValueNotificationEvent,
   isZwjsNodeValueRemovedEvent,
   isZwjsNodeValueUpdatedEvent,
+  isZwjsNodeWakeUpEvent,
 } from '../event-guards';
 import type { ZwjsProtocolAdapter } from './types';
 
@@ -170,6 +173,13 @@ export class DefaultZwjsFamilyNormalizer implements ZwjsProtocolAdapter {
           source: 'zwjs-client',
           event: protocolEvent,
         });
+      } else if (isZwjsNodeValueNotificationEvent(protocolEvent)) {
+        events.push({
+          type: 'zwjs.event.node.value-notification',
+          ts: new Date().toISOString(),
+          source: 'zwjs-client',
+          event: protocolEvent,
+        });
       } else if (isZwjsNodeTestPowerlevelProgressEvent(protocolEvent)) {
         events.push({
           type: 'zwjs.event.node.test-powerlevel-progress',
@@ -187,6 +197,20 @@ export class DefaultZwjsFamilyNormalizer implements ZwjsProtocolAdapter {
       } else if (isZwjsNodeCheckRouteHealthProgressEvent(protocolEvent)) {
         events.push({
           type: 'zwjs.event.node.check-route-health-progress',
+          ts: new Date().toISOString(),
+          source: 'zwjs-client',
+          event: protocolEvent,
+        });
+      } else if (isZwjsNodeWakeUpEvent(protocolEvent)) {
+        events.push({
+          type: 'zwjs.event.node.wake-up',
+          ts: new Date().toISOString(),
+          source: 'zwjs-client',
+          event: protocolEvent,
+        });
+      } else if (isZwjsNodeSleepEvent(protocolEvent)) {
+        events.push({
+          type: 'zwjs.event.node.sleep',
           ts: new Date().toISOString(),
           source: 'zwjs-client',
           event: protocolEvent,

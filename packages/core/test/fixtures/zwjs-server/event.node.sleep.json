@@ -1,0 +1,9 @@
+{
+  "type": "event",
+  "event": {
+    "source": "node",
+    "event": "sleep",
+    "nodeId": 5,
+    "oldStatus": "awake"
+  }
+}

@@ -7,10 +7,13 @@ import type {
   ZwjsNodeCheckRouteHealthProgressEventPayload,
   ZwjsNodeMetadataUpdatedEventPayload,
   ZwjsNodeNotificationEventPayload,
+  ZwjsNodeSleepEventPayload,
   ZwjsNodeTestPowerlevelProgressEventPayload,
   ZwjsNodeValueAddedEventPayload,
+  ZwjsNodeValueNotificationEventPayload,
   ZwjsNodeValueRemovedEventPayload,
   ZwjsNodeValueUpdatedEventPayload,
+  ZwjsNodeWakeUpEventPayload,
   ZwjsProtocolEventPayload,
 } from '../client/types';
 
@@ -30,12 +33,24 @@ export function isZwjsNodeValueRemovedEvent(event: ZwjsProtocolEventPayload): ev
   return isNodeEventBase(event, 'value removed');
 }
 
+export function isZwjsNodeValueNotificationEvent(event: ZwjsProtocolEventPayload): event is ZwjsNodeValueNotificationEventPayload {
+  return isNodeEventBase(event, 'value notification');
+}
+
 export function isZwjsNodeMetadataUpdatedEvent(event: ZwjsProtocolEventPayload): event is ZwjsNodeMetadataUpdatedEventPayload {
   return isNodeEventBase(event, 'metadata updated');
 }
 
 export function isZwjsNodeNotificationEvent(event: ZwjsProtocolEventPayload): event is ZwjsNodeNotificationEventPayload {
   return isNodeEventBase(event, 'notification');
+}
+
+export function isZwjsNodeWakeUpEvent(event: ZwjsProtocolEventPayload): event is ZwjsNodeWakeUpEventPayload {
+  return isNodeEventBase(event, 'wake up');
+}
+
+export function isZwjsNodeSleepEvent(event: ZwjsProtocolEventPayload): event is ZwjsNodeSleepEventPayload {
+  return isNodeEventBase(event, 'sleep');
 }
 
 export function isZwjsDriverLoggingEvent(event: ZwjsProtocolEventPayload): event is ZwjsDriverLoggingEventPayload {

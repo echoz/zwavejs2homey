@@ -102,6 +102,15 @@ test('emits specialized node value-removed event', () => {
   assert.equal(specialized.event.args.property, 'targetValue');
 });
 
+test('emits specialized node value-notification event', () => {
+  const msg = loadFixture('zwjs-server', 'event.node.value-notification.json');
+  const out = normalizer.normalizeIncoming(msg);
+  const specialized = out.events.find((e) => e.type === 'zwjs.event.node.value-notification');
+  assert.ok(specialized);
+  assert.equal(specialized.event.nodeId, 5);
+  assert.equal(specialized.event.args.commandClass, 113);
+});
+
 test('emits specialized node metadata-updated event', () => {
   const msg = loadFixture('zwjs-server', 'event.node.metadata-updated.json');
   const out = normalizer.normalizeIncoming(msg);
@@ -118,6 +127,24 @@ test('emits specialized node notification event', () => {
   assert.ok(specialized);
   assert.equal(specialized.event.nodeId, 5);
   assert.equal(specialized.event.args.label, 'Motion detected');
+});
+
+test('emits specialized node wake-up event', () => {
+  const msg = loadFixture('zwjs-server', 'event.node.wake-up.json');
+  const out = normalizer.normalizeIncoming(msg);
+  const specialized = out.events.find((e) => e.type === 'zwjs.event.node.wake-up');
+  assert.ok(specialized);
+  assert.equal(specialized.event.nodeId, 5);
+  assert.equal(specialized.event.oldStatus, 'asleep');
+});
+
+test('emits specialized node sleep event', () => {
+  const msg = loadFixture('zwjs-server', 'event.node.sleep.json');
+  const out = normalizer.normalizeIncoming(msg);
+  const specialized = out.events.find((e) => e.type === 'zwjs.event.node.sleep');
+  assert.ok(specialized);
+  assert.equal(specialized.event.nodeId, 5);
+  assert.equal(specialized.event.oldStatus, 'awake');
 });
 
 test('emits specialized driver logging event', () => {

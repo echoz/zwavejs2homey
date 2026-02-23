@@ -1,0 +1,13 @@
+{
+  "type": "event",
+  "event": {
+    "source": "node",
+    "event": "value notification",
+    "nodeId": 5,
+    "args": {
+      "commandClass": 113,
+      "property": "event",
+      "value": 2
+    }
+  }
+}

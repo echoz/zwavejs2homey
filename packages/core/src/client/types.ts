@@ -287,6 +287,27 @@ export interface ZwjsNodeNotificationEventPayload extends ZwjsProtocolEventPaylo
   args?: Record<string, unknown>;
 }
 
+export interface ZwjsNodeValueNotificationEventPayload extends ZwjsProtocolEventPayload {
+  source: 'node';
+  event: 'value notification';
+  nodeId: number;
+  args?: Record<string, unknown>;
+}
+
+export interface ZwjsNodeWakeUpEventPayload extends ZwjsProtocolEventPayload {
+  source: 'node';
+  event: 'wake up';
+  nodeId: number;
+  oldStatus?: unknown;
+}
+
+export interface ZwjsNodeSleepEventPayload extends ZwjsProtocolEventPayload {
+  source: 'node';
+  event: 'sleep';
+  nodeId: number;
+  oldStatus?: unknown;
+}
+
 export interface ZwjsDriverLoggingEventPayload extends ZwjsProtocolEventPayload {
   source: 'driver';
   event: 'logging';
@@ -361,8 +382,11 @@ export interface ZwjsEventBase {
     | 'zwjs.event.node.value-updated'
     | 'zwjs.event.node.value-added'
     | 'zwjs.event.node.value-removed'
+    | 'zwjs.event.node.value-notification'
     | 'zwjs.event.node.metadata-updated'
     | 'zwjs.event.node.notification'
+    | 'zwjs.event.node.wake-up'
+    | 'zwjs.event.node.sleep'
     | 'zwjs.event.driver.logging'
     | 'zwjs.event.controller.nvm-backup-progress'
     | 'zwjs.event.controller.nvm-convert-progress'
@@ -393,8 +417,11 @@ export type ZwjsClientEvent =
   | (ZwjsEventBase & { type: 'zwjs.event.node.value-updated'; event: ZwjsNodeValueUpdatedEventPayload })
   | (ZwjsEventBase & { type: 'zwjs.event.node.value-added'; event: ZwjsNodeValueAddedEventPayload })
   | (ZwjsEventBase & { type: 'zwjs.event.node.value-removed'; event: ZwjsNodeValueRemovedEventPayload })
+  | (ZwjsEventBase & { type: 'zwjs.event.node.value-notification'; event: ZwjsNodeValueNotificationEventPayload })
   | (ZwjsEventBase & { type: 'zwjs.event.node.metadata-updated'; event: ZwjsNodeMetadataUpdatedEventPayload })
   | (ZwjsEventBase & { type: 'zwjs.event.node.notification'; event: ZwjsNodeNotificationEventPayload })
+  | (ZwjsEventBase & { type: 'zwjs.event.node.wake-up'; event: ZwjsNodeWakeUpEventPayload })
+  | (ZwjsEventBase & { type: 'zwjs.event.node.sleep'; event: ZwjsNodeSleepEventPayload })
   | (ZwjsEventBase & { type: 'zwjs.event.driver.logging'; event: ZwjsDriverLoggingEventPayload })
   | (ZwjsEventBase & { type: 'zwjs.event.controller.nvm-backup-progress'; event: ZwjsControllerNvmBackupProgressEventPayload })
   | (ZwjsEventBase & { type: 'zwjs.event.controller.nvm-convert-progress'; event: ZwjsControllerNvmConvertProgressEventPayload })
