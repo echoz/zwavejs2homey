@@ -169,3 +169,89 @@ test('reconnects after abnormal disconnect and can process commands again', asyn
 
   await client.stop();
 });
+
+test('clears cached server and node snapshots on reconnect before new frames arrive', async () => {
+  const { client, transport } = makeClient();
+  await startConnected(client, transport);
+
+  const firstNodeListPromise = client.getNodeList();
+  const startListeningFrame = transport.lastSentFrame();
+  assert.equal(startListeningFrame.command, 'start_listening');
+  transport.triggerMessage({
+    type: 'result',
+    messageId: startListeningFrame.messageId,
+    success: true,
+    result: { state: { nodes: [{ nodeId: 5, name: 'Kitchen' }] } },
+  });
+  const firstNodeList = await firstNodeListPromise;
+  assert.equal(firstNodeList.nodes.length, 1);
+  assert.equal((await client.getServerInfo()).serverVersion, '1.0.0');
+
+  transport.triggerClose({ code: 1006, reason: 'drop', wasClean: false });
+  await new Promise((resolve) => setTimeout(resolve, 15));
+  transport.triggerOpen();
+
+  await assert.rejects(() => client.getServerInfo(), /Server info not yet available/);
+
+  const pendingNodeList = client.getNodeList();
+  const earlyResult = await Promise.race([
+    pendingNodeList.then(() => 'resolved'),
+    new Promise((resolve) => setTimeout(() => resolve('pending'), 5)),
+  ]);
+  assert.equal(earlyResult, 'pending', 'node list should not resolve from stale cache before new snapshot');
+
+  transport.triggerMessage({
+    type: 'version',
+    serverVersion: '3.4.1',
+    driverVersion: '15.21.0',
+    minSchemaVersion: 0,
+    maxSchemaVersion: 39,
+  });
+  const secondStartListeningFrame = transport.lastSentFrame();
+  assert.equal(secondStartListeningFrame.command, 'start_listening');
+  transport.triggerMessage({
+    type: 'result',
+    messageId: secondStartListeningFrame.messageId,
+    success: true,
+    result: { state: { nodes: [{ nodeId: 7, name: 'Office' }] } },
+  });
+  const secondNodeList = await pendingNodeList;
+  assert.equal(secondNodeList.nodes[0].nodeId, 7);
+  assert.equal((await client.getServerInfo()).serverVersion, '3.4.1');
+
+  await client.stop();
+});
+
+test('getNodeList waits for snapshot instead of returning an empty list when start_listening has no state', async () => {
+  const { client, transport } = makeClient({
+    timeouts: { connectTimeoutMs: 100, requestTimeoutMs: 1000 },
+  });
+  await startConnected(client, transport);
+
+  const nodeListPromise = client.getNodeList();
+  const sent = transport.lastSentFrame();
+  assert.equal(sent.command, 'start_listening');
+
+  transport.triggerMessage({
+    type: 'result',
+    messageId: sent.messageId,
+    success: true,
+    result: {},
+  });
+
+  const earlyResult = await Promise.race([
+    nodeListPromise.then(() => 'resolved'),
+    new Promise((resolve) => setTimeout(() => resolve('pending'), 5)),
+  ]);
+  assert.equal(earlyResult, 'pending', 'should wait for a later snapshot event');
+
+  transport.triggerMessage({
+    type: 'nodes.snapshot',
+    payload: [{ nodeId: 11, name: 'Hallway' }],
+  });
+
+  const nodeList = await nodeListPromise;
+  assert.deepEqual(nodeList.nodes.map((n) => n.nodeId), [11]);
+
+  await client.stop();
+});

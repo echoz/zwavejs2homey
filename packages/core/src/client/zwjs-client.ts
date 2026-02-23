@@ -78,6 +78,11 @@ export class ZwjsClientImpl implements ZwjsClient {
   private cachedServerInfo?: ServerInfoResult;
   private cachedNodeList?: NodeListResult;
   private startListeningState?: unknown;
+  private pendingNodeListWaiters: Array<{
+    resolve: (value: NodeListResult) => void;
+    reject: (reason?: unknown) => void;
+    timer: ReturnType<typeof setTimeout>;
+  }> = [];
 
   constructor(config: ZwjsClientConfig) {
     this.config = config;
@@ -118,6 +123,7 @@ export class ZwjsClientImpl implements ZwjsClient {
     this.setLifecycle('stopping');
 
     this.stopPromise = Promise.resolve().then(() => {
+      this.clearNodeListWaiters(new ZwjsClientError({ code: 'CLIENT_STOPPED', message: 'Client stopped', retryable: false }));
       this.requests.rejectAll(new ZwjsClientError({ code: 'CLIENT_STOPPED', message: 'Client stopped', retryable: false }));
       this.transport.close();
       this.status.transportConnected = false;
@@ -138,7 +144,7 @@ export class ZwjsClientImpl implements ZwjsClient {
       await this.startListening();
     }
     if (this.cachedNodeList) return this.cachedNodeList;
-    return { nodes: [] };
+    return this.waitForNodeListSnapshot();
   }
 
   async initialize(options: ZwjsInitializeOptions): Promise<ZwjsCommandResult> {
@@ -275,9 +281,14 @@ export class ZwjsClientImpl implements ZwjsClient {
         this.status.versionReceived = false;
         this.status.initialized = false;
         this.status.listening = false;
+        this.status.serverVersion = undefined;
+        this.status.adapterFamily = undefined;
         this.status.connectedAt = new Date().toISOString();
         this.reconnectAttempt = 0;
         this.status.reconnectAttempt = undefined;
+        this.adapter = undefined;
+        this.cachedServerInfo = undefined;
+        this.cachedNodeList = undefined;
         this.listeningRequested = false;
         this.startListeningState = undefined;
         this.emit({ type: 'transport.connected' });
@@ -285,6 +296,7 @@ export class ZwjsClientImpl implements ZwjsClient {
       onClose: (event) => {
         this.status.transportConnected = false;
         this.emit({ type: 'transport.disconnected', code: event.code, reason: event.reason, wasClean: event.wasClean });
+        this.clearNodeListWaiters(new ZwjsClientError({ code: 'TRANSPORT_ERROR', message: 'Transport closed', retryable: true }));
         this.requests.rejectAll(new ZwjsClientError({ code: 'TRANSPORT_ERROR', message: 'Transport closed', retryable: true }));
         void this.handleDisconnect();
       },
@@ -297,12 +309,20 @@ export class ZwjsClientImpl implements ZwjsClient {
       },
     }, headers);
 
-    await Promise.race([
-      connectPromise,
-      new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new ZwjsClientError({ code: 'CONNECT_TIMEOUT', message: 'Connection timed out', retryable: true })), this.timeouts.connectTimeoutMs);
-      }),
-    ]);
+    let connectTimeout: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await Promise.race([
+        connectPromise,
+        new Promise<never>((_, reject) => {
+          connectTimeout = setTimeout(
+            () => reject(new ZwjsClientError({ code: 'CONNECT_TIMEOUT', message: 'Connection timed out', retryable: true })),
+            this.timeouts.connectTimeoutMs,
+          );
+        }),
+      ]);
+    } finally {
+      if (connectTimeout) clearTimeout(connectTimeout);
+    }
 
     this.status.authenticated = this.config.auth?.type === 'bearer' ? true : undefined;
     if (this.config.auth?.type === 'bearer') {
@@ -338,6 +358,7 @@ export class ZwjsClientImpl implements ZwjsClient {
       }
       if (normalized.nodesSnapshot) {
         this.cachedNodeList = normalized.nodesSnapshot;
+        this.flushNodeListWaiters(normalized.nodesSnapshot);
       }
       if (normalized.requestResponse) {
         this.requests.resolve(normalized.requestResponse.id, normalized.requestResponse.payload);
@@ -480,6 +501,41 @@ export class ZwjsClientImpl implements ZwjsClient {
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = undefined;
+    }
+  }
+
+  private waitForNodeListSnapshot(): Promise<NodeListResult> {
+    if (this.cachedNodeList) return Promise.resolve(this.cachedNodeList);
+    return new Promise<NodeListResult>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.pendingNodeListWaiters = this.pendingNodeListWaiters.filter((waiter) => waiter.timer !== timer);
+        reject(
+          new ZwjsClientError({
+            code: 'REQUEST_TIMEOUT',
+            message: 'Timed out waiting for node list snapshot after start_listening',
+            retryable: true,
+          }),
+        );
+      }, this.timeouts.requestTimeoutMs);
+      this.pendingNodeListWaiters.push({ resolve, reject, timer });
+    });
+  }
+
+  private flushNodeListWaiters(snapshot: NodeListResult): void {
+    const waiters = this.pendingNodeListWaiters;
+    this.pendingNodeListWaiters = [];
+    for (const waiter of waiters) {
+      clearTimeout(waiter.timer);
+      waiter.resolve(snapshot);
+    }
+  }
+
+  private clearNodeListWaiters(error: ZwjsClientError): void {
+    const waiters = this.pendingNodeListWaiters;
+    this.pendingNodeListWaiters = [];
+    for (const waiter of waiters) {
+      clearTimeout(waiter.timer);
+      waiter.reject(error);
     }
   }
 
