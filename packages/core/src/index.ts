@@ -2,6 +2,7 @@ export type {
   CanonicalNodeSummary,
   ClientLogger,
   NodeListResult,
+  MutationPolicy,
   ReconnectPolicy,
   ServerInfoResult,
   TimeoutPolicy,

@@ -245,8 +245,22 @@ Build a fully featured, protocol-oriented `zwjs` client in `packages/core` for `
 11. [x] Add specialized driver/controller event typing helpers (`driver.logging`, controller NVM progress events) and fixture-backed normalizer tests
 12. [x] Add in-process `ws` integration harness test covering real `WsTransport` + `ZwjsClient` handshake and command success/failure semantics
 13. [x] Add typed read-only wrappers for `driver.get_log_config`, `driver.is_statistics_enabled`, and `node.get_supported_notification_events` with fixture-backed tests
-7. [ ] Validate expanded command/event coverage against real instance (read-only only)
-8. [ ] Add mutating-command layer (still protocol-oriented) with safety guards (separate phase)
+7. [x] Validate expanded command/event coverage against real instance (read-only only)
+8. [x] Add mutating-command layer (still protocol-oriented) with safety guards (separate phase)
+
+### Read-only Validation Notes (2026-02-23, production instance `ws://192.168.1.15:3000`)
+- Verified handshake path: `version` -> `set_api_schema(0)` -> `initialize({ schemaVersion: 0 })` -> `start_listening`
+- Verified read-only wrappers succeed:
+  - `driver.get_config`
+  - `driver.get_log_config`
+  - `driver.is_statistics_enabled`
+  - `controller.get_state`
+  - `controller.get_node_neighbors` (node `5`)
+  - `node.get_state` (node `5`)
+  - `node.get_defined_value_ids` (node `5`)
+- `node.get_value` / `node.get_value_metadata` / `node.get_value_timestamp` were not executed in that run because no suitable `valueId` was derived from the sampled node payload path
+- `node.get_supported_notification_events` returned a protocol failure for node `5` (command path works; node/feature support appears device-specific)
+- Observed event stream included controller events and normalized generic events during listening
 
 ## Assumptions and Defaults
 - WebSocket-first (not MQTT/REST) for v1

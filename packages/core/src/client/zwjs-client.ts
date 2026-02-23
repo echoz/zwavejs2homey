@@ -7,6 +7,7 @@ import type {
   ServerInfoResult,
   TimeoutPolicy,
   VersionPolicy,
+  MutationPolicy,
   ZwjsCommandRequest,
   ZwjsCommandResult,
   ZwjsProtocolErrorPayload,
@@ -46,6 +47,11 @@ const DEFAULT_VERSION_POLICY: VersionPolicy = {
   strictFamilyMatch: false,
 };
 
+const DEFAULT_MUTATION_POLICY: MutationPolicy = {
+  enabled: false,
+  requireAllowList: true,
+};
+
 export class ZwjsClientImpl implements ZwjsClient {
   private readonly config: Required<Pick<ZwjsClientConfig, 'url'>> & ZwjsClientConfig;
   private readonly transport = new WsTransport();
@@ -54,6 +60,7 @@ export class ZwjsClientImpl implements ZwjsClient {
   private readonly reconnectPolicy;
   private readonly timeouts: TimeoutPolicy;
   private readonly versionPolicy: VersionPolicy;
+  private readonly mutationPolicy: MutationPolicy;
 
   private status: ZwjsClientStatus = {
     lifecycle: 'idle',
@@ -76,6 +83,7 @@ export class ZwjsClientImpl implements ZwjsClient {
     this.reconnectPolicy = mergeReconnectPolicy(config.reconnect);
     this.timeouts = { ...DEFAULT_TIMEOUTS, ...config.timeouts };
     this.versionPolicy = { ...DEFAULT_VERSION_POLICY, ...config.versionPolicy };
+    this.mutationPolicy = { ...DEFAULT_MUTATION_POLICY, ...config.mutationPolicy };
   }
 
   onEvent(handler: (event: ZwjsClientEvent) => void): () => void {
@@ -177,6 +185,13 @@ export class ZwjsClientImpl implements ZwjsClient {
     return this.requestProtocolCommand<TResult>((id) =>
       this.adapter!.buildCommandRequest!(id, request.command, (request.args ?? {}) as Record<string, unknown>),
     );
+  }
+
+  async sendMutationCommand<TResult = unknown, TArgs = Record<string, unknown>>(
+    request: ZwjsCommandRequest<TArgs>,
+  ): Promise<ZwjsCommandResult<TResult>> {
+    this.assertMutationAllowed(request.command);
+    return this.sendCommand<TResult, TArgs>(request);
   }
 
   async getDriverConfig(): Promise<ZwjsCommandResult<ZwjsDriverConfig>> {
@@ -464,5 +479,35 @@ export class ZwjsClientImpl implements ZwjsClient {
     const selection = selectAdapter(this.status.serverVersion);
     this.adapter = selection.adapter;
     this.status.adapterFamily = selection.adapter.family;
+  }
+
+  private assertMutationAllowed(command: string): void {
+    if (!this.mutationPolicy.enabled) {
+      throw new ZwjsClientError({
+        code: 'UNSUPPORTED_OPERATION',
+        message: `Mutation command blocked by policy: ${command}`,
+        retryable: false,
+      });
+    }
+
+    const allow = this.mutationPolicy.allowCommands;
+    if (Array.isArray(allow) && allow.length > 0) {
+      if (!allow.includes(command)) {
+        throw new ZwjsClientError({
+          code: 'UNSUPPORTED_OPERATION',
+          message: `Mutation command not in allowlist: ${command}`,
+          retryable: false,
+        });
+      }
+      return;
+    }
+
+    if (this.mutationPolicy.requireAllowList !== false) {
+      throw new ZwjsClientError({
+        code: 'UNSUPPORTED_OPERATION',
+        message: `Mutation command requires explicit allowlist: ${command}`,
+        retryable: false,
+      });
+    }
   }
 }

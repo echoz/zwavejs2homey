@@ -28,6 +28,12 @@ export interface VersionPolicy {
   strictFamilyMatch?: boolean;
 }
 
+export interface MutationPolicy {
+  enabled: boolean;
+  allowCommands?: string[];
+  requireAllowList?: boolean;
+}
+
 export interface ZwjsInitializeOptions {
   schemaVersion: number;
   additionalUserAgentComponents?: Record<string, string>;
@@ -133,6 +139,7 @@ export interface ZwjsClientConfig {
   reconnect?: Partial<ReconnectPolicy>;
   timeouts?: Partial<TimeoutPolicy>;
   versionPolicy?: VersionPolicy;
+  mutationPolicy?: Partial<MutationPolicy>;
   logger?: ClientLogger;
 }
 
@@ -296,6 +303,7 @@ export interface ZwjsClient {
   setApiSchema(schemaVersion: number): Promise<ZwjsCommandResult>;
   startListening(): Promise<ZwjsCommandResult<{ state?: unknown }>>;
   sendCommand<TResult = unknown, TArgs = Record<string, unknown>>(request: ZwjsCommandRequest<TArgs>): Promise<ZwjsCommandResult<TResult>>;
+  sendMutationCommand<TResult = unknown, TArgs = Record<string, unknown>>(request: ZwjsCommandRequest<TArgs>): Promise<ZwjsCommandResult<TResult>>;
   getDriverConfig(): Promise<ZwjsCommandResult<ZwjsDriverConfig>>;
   getDriverLogConfig(): Promise<ZwjsCommandResult<ZwjsDriverLogConfigResult>>;
   isDriverStatisticsEnabled(): Promise<ZwjsCommandResult<ZwjsDriverStatisticsEnabledResult>>;
