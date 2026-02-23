@@ -61,6 +61,7 @@ Future likely additions:
 ## Capability Tracking
 
 - `docs/zwjs-capability-matrix.md`: 3-way comparison of `zwave-js-server`, `zwave-js-ui`, and our `ZwjsClient`
+- `docs/zwjs-nonprod-live-validation-checklist.md`: repeatable non-production validation procedure for zniffer and firmware workflows
 - `plan/zwjs-parity-roadmap.md`: execution roadmap for closing prioritized parity gaps
 
 ## Runtime Flow (Target)

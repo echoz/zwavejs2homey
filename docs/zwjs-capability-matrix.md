@@ -305,6 +305,8 @@ Firmware mutation safety posture:
   - test on non-production hardware before any production usage
 - Test coverage note:
   - firmware mutation wrappers now have command-family-specific fixture tests (driver/controller/node), in addition to policy-blocking tests
+- Operational validation:
+  - use `docs/zwjs-nonprod-live-validation-checklist.md` for non-production firmware and zniffer validation runs
 
 ## Notes on Naming and Mapping
 

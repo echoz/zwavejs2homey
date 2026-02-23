@@ -567,6 +567,7 @@ This roadmap is considered complete when:
 - Default: read-only only on production instance
 - Mutations: only on test environment or with explicit approval
 - Always record validation date and exact node IDs/command caveats
+- Use `docs/zwjs-nonprod-live-validation-checklist.md` for zniffer/firmware operational validation runs
 
 ### Regression signals to track
 
