@@ -1,4 +1,7 @@
 import type {
+  ZwjsControllerNvmConvertProgressEventPayload,
+  ZwjsControllerNvmRestoreProgressEventPayload,
+  ZwjsDriverLoggingEventPayload,
   ZwjsNodeMetadataUpdatedEventPayload,
   ZwjsNodeNotificationEventPayload,
   ZwjsNodeValueUpdatedEventPayload,
@@ -21,3 +24,28 @@ export function isZwjsNodeNotificationEvent(event: ZwjsProtocolEventPayload): ev
   return isNodeEventBase(event, 'notification');
 }
 
+export function isZwjsDriverLoggingEvent(event: ZwjsProtocolEventPayload): event is ZwjsDriverLoggingEventPayload {
+  return event.source === 'driver' && event.event === 'logging' && typeof event.formattedMessage === 'string';
+}
+
+export function isZwjsControllerNvmConvertProgressEvent(
+  event: ZwjsProtocolEventPayload,
+): event is ZwjsControllerNvmConvertProgressEventPayload {
+  return (
+    event.source === 'controller' &&
+    event.event === 'nvm convert progress' &&
+    typeof event.bytesRead === 'number' &&
+    typeof event.total === 'number'
+  );
+}
+
+export function isZwjsControllerNvmRestoreProgressEvent(
+  event: ZwjsProtocolEventPayload,
+): event is ZwjsControllerNvmRestoreProgressEventPayload {
+  return (
+    event.source === 'controller' &&
+    event.event === 'nvm restore progress' &&
+    typeof event.bytesWritten === 'number' &&
+    typeof event.total === 'number'
+  );
+}

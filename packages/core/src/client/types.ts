@@ -192,6 +192,28 @@ export interface ZwjsNodeNotificationEventPayload extends ZwjsProtocolEventPaylo
   args?: Record<string, unknown>;
 }
 
+export interface ZwjsDriverLoggingEventPayload extends ZwjsProtocolEventPayload {
+  source: 'driver';
+  event: 'logging';
+  formattedMessage: string;
+  message: string | string[];
+  [key: string]: unknown;
+}
+
+export interface ZwjsControllerNvmConvertProgressEventPayload extends ZwjsProtocolEventPayload {
+  source: 'controller';
+  event: 'nvm convert progress';
+  bytesRead: number;
+  total: number;
+}
+
+export interface ZwjsControllerNvmRestoreProgressEventPayload extends ZwjsProtocolEventPayload {
+  source: 'controller';
+  event: 'nvm restore progress';
+  bytesWritten: number;
+  total: number;
+}
+
 export interface ZwjsEventBase {
   type:
     | 'client.lifecycle'
@@ -211,6 +233,9 @@ export interface ZwjsEventBase {
     | 'zwjs.event.node.value-updated'
     | 'zwjs.event.node.metadata-updated'
     | 'zwjs.event.node.notification'
+    | 'zwjs.event.driver.logging'
+    | 'zwjs.event.controller.nvm-convert-progress'
+    | 'zwjs.event.controller.nvm-restore-progress'
     | 'node.event.raw-normalized';
   ts: string;
   source: 'zwjs-client';
@@ -234,6 +259,9 @@ export type ZwjsClientEvent =
   | (ZwjsEventBase & { type: 'zwjs.event.node.value-updated'; event: ZwjsNodeValueUpdatedEventPayload })
   | (ZwjsEventBase & { type: 'zwjs.event.node.metadata-updated'; event: ZwjsNodeMetadataUpdatedEventPayload })
   | (ZwjsEventBase & { type: 'zwjs.event.node.notification'; event: ZwjsNodeNotificationEventPayload })
+  | (ZwjsEventBase & { type: 'zwjs.event.driver.logging'; event: ZwjsDriverLoggingEventPayload })
+  | (ZwjsEventBase & { type: 'zwjs.event.controller.nvm-convert-progress'; event: ZwjsControllerNvmConvertProgressEventPayload })
+  | (ZwjsEventBase & { type: 'zwjs.event.controller.nvm-restore-progress'; event: ZwjsControllerNvmRestoreProgressEventPayload })
   | (ZwjsEventBase & { type: 'node.event.raw-normalized'; event: Record<string, unknown> });
 
 export type ZwjsClientEventInput = ZwjsClientEvent extends infer T

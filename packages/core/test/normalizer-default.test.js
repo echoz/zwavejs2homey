@@ -51,6 +51,7 @@ test('normalizes controller event frame to source-aware typed event', () => {
   assert.equal(out.events[0].type, 'zwjs.event.controller');
   assert.equal(out.events[0].event.event, 'nvm restore progress');
   assert.equal(out.events[0].event.bytesWritten, 128);
+  assert.equal(out.events.some((e) => e.type === 'zwjs.event.controller.nvm-restore-progress'), true);
 });
 
 test('normalizes failed result as requestError only', () => {
@@ -99,4 +100,21 @@ test('emits specialized node notification event', () => {
   assert.ok(specialized);
   assert.equal(specialized.event.nodeId, 5);
   assert.equal(specialized.event.args.label, 'Motion detected');
+});
+
+test('emits specialized driver logging event', () => {
+  const msg = loadFixture('zwjs-server', 'event.driver.logging.json');
+  const out = normalizer.normalizeIncoming(msg);
+  const specialized = out.events.find((e) => e.type === 'zwjs.event.driver.logging');
+  assert.ok(specialized);
+  assert.equal(specialized.event.formattedMessage, 'Controller ready');
+});
+
+test('emits specialized controller nvm convert progress event', () => {
+  const msg = loadFixture('zwjs-server', 'event.controller.nvm-convert-progress.json');
+  const out = normalizer.normalizeIncoming(msg);
+  const specialized = out.events.find((e) => e.type === 'zwjs.event.controller.nvm-convert-progress');
+  assert.ok(specialized);
+  assert.equal(specialized.event.bytesRead, 256);
+  assert.equal(specialized.event.total, 1024);
 });

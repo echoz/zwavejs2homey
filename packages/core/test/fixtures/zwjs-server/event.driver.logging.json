@@ -1,0 +1,10 @@
+{
+  "type": "event",
+  "event": {
+    "source": "driver",
+    "event": "logging",
+    "formattedMessage": "Controller ready",
+    "direction": "none",
+    "message": "Controller ready"
+  }
+}

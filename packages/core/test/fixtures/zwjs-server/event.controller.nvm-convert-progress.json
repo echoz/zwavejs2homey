@@ -1,0 +1,9 @@
+{
+  "type": "event",
+  "event": {
+    "source": "controller",
+    "event": "nvm convert progress",
+    "bytesRead": 256,
+    "total": 1024
+  }
+}

@@ -1,7 +1,14 @@
 import type { NodeListResult, ServerInfoResult, ZwjsClientEvent, ZwjsProtocolEventPayload } from '../../client/types';
 import { ZwjsClientError } from '../../errors';
 import { isRecord, isZwjsEventFrame, isZwjsResultFrame, isZwjsVersionFrame } from '../raw-frame-types';
-import { isZwjsNodeMetadataUpdatedEvent, isZwjsNodeNotificationEvent, isZwjsNodeValueUpdatedEvent } from '../event-guards';
+import {
+  isZwjsControllerNvmConvertProgressEvent,
+  isZwjsControllerNvmRestoreProgressEvent,
+  isZwjsDriverLoggingEvent,
+  isZwjsNodeMetadataUpdatedEvent,
+  isZwjsNodeNotificationEvent,
+  isZwjsNodeValueUpdatedEvent,
+} from '../event-guards';
 import type { ZwjsProtocolAdapter } from './types';
 
 export class DefaultZwjsFamilyNormalizer implements ZwjsProtocolAdapter {
@@ -100,6 +107,29 @@ export class DefaultZwjsFamilyNormalizer implements ZwjsProtocolAdapter {
       if (typedEventType) {
         events.push({
           type: typedEventType,
+          ts: new Date().toISOString(),
+          source: 'zwjs-client',
+          event: protocolEvent,
+        });
+      }
+
+      if (isZwjsDriverLoggingEvent(protocolEvent)) {
+        events.push({
+          type: 'zwjs.event.driver.logging',
+          ts: new Date().toISOString(),
+          source: 'zwjs-client',
+          event: protocolEvent,
+        });
+      } else if (isZwjsControllerNvmConvertProgressEvent(protocolEvent)) {
+        events.push({
+          type: 'zwjs.event.controller.nvm-convert-progress',
+          ts: new Date().toISOString(),
+          source: 'zwjs-client',
+          event: protocolEvent,
+        });
+      } else if (isZwjsControllerNvmRestoreProgressEvent(protocolEvent)) {
+        events.push({
+          type: 'zwjs.event.controller.nvm-restore-progress',
           ts: new Date().toISOString(),
           source: 'zwjs-client',
           event: protocolEvent,
