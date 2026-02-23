@@ -45,6 +45,7 @@ import type {
   ZwjsNodePollValueResult,
   ZwjsEndpointTarget,
   ZwjsEndpointCcQuery,
+  ZwjsEndpointInvokeCcApiArgs,
   ZwjsEndpointSupportsCcResult,
   ZwjsEndpointSupportsCcApiResult,
   ZwjsEndpointControlsCcResult,
@@ -53,11 +54,13 @@ import type {
   ZwjsEndpointNodeRefResult,
   ZwjsMulticastGroupTarget,
   ZwjsVirtualEndpointCcQuery,
+  ZwjsVirtualEndpointInvokeCcApiArgs,
   ZwjsVirtualEndpointEndpointCountResult,
   ZwjsVirtualEndpointSupportsCcResult,
   ZwjsVirtualEndpointSupportsCcApiResult,
   ZwjsVirtualEndpointGetCcVersionResult,
   ZwjsVirtualEndpointDefinedValueIdsResult,
+  ZwjsInvokeCcApiResult,
   ZwjsValueId,
   ZwjsClientStatus,
   ZwjsLifecycleState,
@@ -480,6 +483,15 @@ export class ZwjsClientImpl implements ZwjsClient {
     });
   }
 
+  async endpointInvokeCcApi(
+    args: ZwjsEndpointInvokeCcApiArgs,
+  ): Promise<ZwjsCommandResult<ZwjsInvokeCcApiResult>> {
+    return this.sendCommand<ZwjsInvokeCcApiResult, ZwjsEndpointInvokeCcApiArgs>({
+      command: 'endpoint.invoke_cc_api',
+      args,
+    });
+  }
+
   async endpointSupportsCcApi(
     args: ZwjsEndpointCcQuery,
   ): Promise<ZwjsCommandResult<ZwjsEndpointSupportsCcApiResult>> {
@@ -554,6 +566,21 @@ export class ZwjsClientImpl implements ZwjsClient {
     });
   }
 
+  async broadcastNodeInvokeCcApi(
+    args: Pick<
+      ZwjsVirtualEndpointInvokeCcApiArgs,
+      'index' | 'commandClass' | 'methodName' | 'args'
+    >,
+  ): Promise<ZwjsCommandResult<ZwjsInvokeCcApiResult>> {
+    return this.sendCommand<
+      ZwjsInvokeCcApiResult,
+      Pick<ZwjsVirtualEndpointInvokeCcApiArgs, 'index' | 'commandClass' | 'methodName' | 'args'>
+    >({
+      command: 'broadcast_node.invoke_cc_api',
+      args,
+    });
+  }
+
   async broadcastNodeSupportsCcApi(
     args: Pick<ZwjsVirtualEndpointCcQuery, 'index' | 'commandClass'>,
   ): Promise<ZwjsCommandResult<ZwjsVirtualEndpointSupportsCcApiResult>> {
@@ -592,6 +619,15 @@ export class ZwjsClientImpl implements ZwjsClient {
   ): Promise<ZwjsCommandResult<ZwjsVirtualEndpointSupportsCcResult>> {
     return this.sendCommand<ZwjsVirtualEndpointSupportsCcResult, ZwjsVirtualEndpointCcQuery>({
       command: 'multicast_group.supports_cc',
+      args,
+    });
+  }
+
+  async multicastGroupInvokeCcApi(
+    args: ZwjsVirtualEndpointInvokeCcApiArgs,
+  ): Promise<ZwjsCommandResult<ZwjsInvokeCcApiResult>> {
+    return this.sendCommand<ZwjsInvokeCcApiResult, ZwjsVirtualEndpointInvokeCcApiArgs>({
+      command: 'multicast_group.invoke_cc_api',
       args,
     });
   }

@@ -570,6 +570,19 @@ test('endpoint support-check and node-helper wrappers send exact protocol comman
       (result) => assert.equal(result, true),
     ],
     [
+      () =>
+        client.endpointInvokeCcApi({
+          nodeId: 5,
+          endpoint: 1,
+          commandClass: 37,
+          methodName: 'get',
+          args: [],
+        }),
+      'command.endpoint.invoke_cc_api.json',
+      'result.endpoint.invoke_cc_api.success.json',
+      (result) => assert.equal(result.currentValue, true),
+    ],
+    [
       () => client.endpointSupportsCcApi(endpointCcArgs),
       'command.endpoint.supports_cc_api.json',
       'result.endpoint.supports_cc_api.success.json',
@@ -643,6 +656,18 @@ test('virtual endpoint read wrappers send exact broadcast/multicast protocol com
       (result) => assert.equal(result, true),
     ],
     [
+      () =>
+        client.broadcastNodeInvokeCcApi({
+          index: 1,
+          commandClass: 37,
+          methodName: 'get',
+          args: [],
+        }),
+      'command.broadcast_node.invoke_cc_api.json',
+      'result.broadcast_node.invoke_cc_api.success.json',
+      (result) => assert.equal(result.supported, true),
+    ],
+    [
       () => client.broadcastNodeSupportsCcApi({ index: 1, commandClass: 37 }),
       'command.broadcast_node.supports_cc_api.json',
       'result.broadcast_node.supports_cc_api.success.json',
@@ -665,6 +690,19 @@ test('virtual endpoint read wrappers send exact broadcast/multicast protocol com
       'command.multicast_group.supports_cc.json',
       'result.multicast_group.supports_cc.success.json',
       (result) => assert.equal(result, false),
+    ],
+    [
+      () =>
+        client.multicastGroupInvokeCcApi({
+          nodeIDs: [5, 7],
+          index: 1,
+          commandClass: 37,
+          methodName: 'get',
+          args: [],
+        }),
+      'command.multicast_group.invoke_cc_api.json',
+      'result.multicast_group.invoke_cc_api.success.json',
+      (result) => assert.equal(Array.isArray(result.values), true),
     ],
     [
       () => client.multicastGroupSupportsCcApi({ nodeIDs: [5, 7], index: 1, commandClass: 37 }),

@@ -267,6 +267,10 @@ export interface ZwjsEndpointTarget {
 export interface ZwjsEndpointCcQuery extends ZwjsEndpointTarget {
   commandClass: number | string;
 }
+export interface ZwjsEndpointInvokeCcApiArgs extends ZwjsEndpointCcQuery {
+  methodName: string;
+  args: unknown[];
+}
 export type ZwjsEndpointSupportsCcApiResult =
   | boolean
   | { supported?: boolean; [key: string]: unknown };
@@ -284,6 +288,10 @@ export interface ZwjsVirtualEndpointCcQuery extends ZwjsMulticastGroupTarget {
   index: number;
   commandClass: number | string;
 }
+export interface ZwjsVirtualEndpointInvokeCcApiArgs extends ZwjsVirtualEndpointCcQuery {
+  methodName: string;
+  args: unknown[];
+}
 export type ZwjsVirtualEndpointEndpointCountResult =
   | number
   | { count?: number; [key: string]: unknown };
@@ -297,6 +305,13 @@ export type ZwjsVirtualEndpointGetCcVersionResult =
   | number
   | { version?: number; [key: string]: unknown };
 export type ZwjsVirtualEndpointDefinedValueIdsResult = ZwjsDefinedValueIdsResult;
+export type ZwjsInvokeCcApiResult =
+  | Record<string, unknown>
+  | Array<unknown>
+  | string
+  | number
+  | boolean
+  | null;
 
 export interface ClientLogger {
   debug?(msg: string, meta?: unknown): void;
@@ -748,6 +763,9 @@ export interface ZwjsClient {
   endpointSupportsCc(
     args: ZwjsEndpointCcQuery,
   ): Promise<ZwjsCommandResult<ZwjsEndpointSupportsCcResult>>;
+  endpointInvokeCcApi(
+    args: ZwjsEndpointInvokeCcApiArgs,
+  ): Promise<ZwjsCommandResult<ZwjsInvokeCcApiResult>>;
   endpointSupportsCcApi(
     args: ZwjsEndpointCcQuery,
   ): Promise<ZwjsCommandResult<ZwjsEndpointSupportsCcApiResult>>;
@@ -772,6 +790,12 @@ export interface ZwjsClient {
   broadcastNodeSupportsCc(
     args: Pick<ZwjsVirtualEndpointCcQuery, 'index' | 'commandClass'>,
   ): Promise<ZwjsCommandResult<ZwjsVirtualEndpointSupportsCcResult>>;
+  broadcastNodeInvokeCcApi(
+    args: Pick<
+      ZwjsVirtualEndpointInvokeCcApiArgs,
+      'index' | 'commandClass' | 'methodName' | 'args'
+    >,
+  ): Promise<ZwjsCommandResult<ZwjsInvokeCcApiResult>>;
   broadcastNodeSupportsCcApi(
     args: Pick<ZwjsVirtualEndpointCcQuery, 'index' | 'commandClass'>,
   ): Promise<ZwjsCommandResult<ZwjsVirtualEndpointSupportsCcApiResult>>;
@@ -784,6 +808,9 @@ export interface ZwjsClient {
   multicastGroupSupportsCc(
     args: ZwjsVirtualEndpointCcQuery,
   ): Promise<ZwjsCommandResult<ZwjsVirtualEndpointSupportsCcResult>>;
+  multicastGroupInvokeCcApi(
+    args: ZwjsVirtualEndpointInvokeCcApiArgs,
+  ): Promise<ZwjsCommandResult<ZwjsInvokeCcApiResult>>;
   multicastGroupSupportsCcApi(
     args: ZwjsVirtualEndpointCcQuery,
   ): Promise<ZwjsCommandResult<ZwjsVirtualEndpointSupportsCcApiResult>>;

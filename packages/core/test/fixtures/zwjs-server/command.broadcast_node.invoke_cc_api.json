@@ -1,0 +1,7 @@
+{
+  "command": "broadcast_node.invoke_cc_api",
+  "index": 1,
+  "commandClass": 37,
+  "methodName": "get",
+  "args": []
+}

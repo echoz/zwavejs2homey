@@ -417,10 +417,12 @@ Progress (completed subset):
   - `get_endpoint_count`
   - `supports_cc`
   - `supports_cc_api`
+  - `invoke_cc_api` (protocol-native result typing)
   - `get_cc_version`
   - `multicast_group.get_defined_value_ids`
 - Added fixture-backed mocked transport tests for exact command envelopes and representative results for this virtual endpoint subset
-- Remaining virtual endpoint scope for this slice: broader `invoke_cc_api` helpers and additional commands as needed
+- Added endpoint `invoke_cc_api` wrapper with protocol-native result typing and fixture-backed mocked transport coverage
+- Remaining virtual endpoint scope for this slice: additional commands as needed (no broad `invoke_cc_api` typing beyond protocol-native result passthrough)
 
 #### P3.2 Zniffer Protocol Layer
 

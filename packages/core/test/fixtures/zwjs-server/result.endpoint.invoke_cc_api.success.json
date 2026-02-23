@@ -1,0 +1,8 @@
+{
+  "type": "result",
+  "messageId": "fixture-message-id",
+  "success": true,
+  "result": {
+    "currentValue": true
+  }
+}
