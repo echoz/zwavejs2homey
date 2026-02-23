@@ -1,0 +1,12 @@
+{
+  "type": "event",
+  "event": {
+    "source": "node",
+    "event": "notification",
+    "nodeId": 5,
+    "args": {
+      "label": "Motion detected",
+      "eventLabel": "Motion detected"
+    }
+  }
+}

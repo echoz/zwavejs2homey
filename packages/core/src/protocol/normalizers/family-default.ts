@@ -1,6 +1,7 @@
 import type { NodeListResult, ServerInfoResult, ZwjsClientEvent, ZwjsProtocolEventPayload } from '../../client/types';
 import { ZwjsClientError } from '../../errors';
 import { isRecord, isZwjsEventFrame, isZwjsResultFrame, isZwjsVersionFrame } from '../raw-frame-types';
+import { isZwjsNodeMetadataUpdatedEvent, isZwjsNodeNotificationEvent, isZwjsNodeValueUpdatedEvent } from '../event-guards';
 import type { ZwjsProtocolAdapter } from './types';
 
 export class DefaultZwjsFamilyNormalizer implements ZwjsProtocolAdapter {
@@ -99,6 +100,29 @@ export class DefaultZwjsFamilyNormalizer implements ZwjsProtocolAdapter {
       if (typedEventType) {
         events.push({
           type: typedEventType,
+          ts: new Date().toISOString(),
+          source: 'zwjs-client',
+          event: protocolEvent,
+        });
+      }
+
+      if (isZwjsNodeValueUpdatedEvent(protocolEvent)) {
+        events.push({
+          type: 'zwjs.event.node.value-updated',
+          ts: new Date().toISOString(),
+          source: 'zwjs-client',
+          event: protocolEvent,
+        });
+      } else if (isZwjsNodeMetadataUpdatedEvent(protocolEvent)) {
+        events.push({
+          type: 'zwjs.event.node.metadata-updated',
+          ts: new Date().toISOString(),
+          source: 'zwjs-client',
+          event: protocolEvent,
+        });
+      } else if (isZwjsNodeNotificationEvent(protocolEvent)) {
+        events.push({
+          type: 'zwjs.event.node.notification',
           ts: new Date().toISOString(),
           source: 'zwjs-client',
           event: protocolEvent,

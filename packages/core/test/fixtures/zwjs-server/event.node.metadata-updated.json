@@ -1,0 +1,14 @@
+{
+  "type": "event",
+  "event": {
+    "source": "node",
+    "event": "metadata updated",
+    "nodeId": 5,
+    "args": {
+      "propertyName": "currentValue",
+      "metadata": {
+        "label": "Current value"
+      }
+    }
+  }
+}

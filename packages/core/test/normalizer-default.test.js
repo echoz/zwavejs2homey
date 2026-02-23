@@ -36,11 +36,12 @@ test('normalizes event frame to raw-normalized event', () => {
   const msg = loadFixture('zwjs-server', 'event.node.value-updated.minimal.json');
 
   const out = normalizer.normalizeIncoming(msg);
-  assert.equal(out.events.length, 2);
+  assert.equal(out.events.length, 3);
   assert.equal(out.events[0].type, 'zwjs.event.node');
+  assert.equal(out.events[1].type, 'zwjs.event.node.value-updated');
   assert.equal(out.events[0].event.source, 'node');
-  assert.equal(out.events[1].type, 'node.event.raw-normalized');
-  assert.equal(out.events[1].event.source, 'node');
+  assert.equal(out.events[2].type, 'node.event.raw-normalized');
+  assert.equal(out.events[2].event.source, 'node');
 });
 
 test('normalizes controller event frame to source-aware typed event', () => {
@@ -71,4 +72,31 @@ test('builds driver.get_config command envelope', () => {
   const built = normalizer.buildCommandRequest('fixture-2', 'driver.get_config');
   const expected = loadFixture('zwjs-server', 'command.driver.get_config.json');
   assert.deepEqual(built, expected);
+});
+
+test('emits specialized node value-updated event', () => {
+  const msg = loadFixture('zwjs-server', 'event.node.value-updated.args.json');
+  const out = normalizer.normalizeIncoming(msg);
+  const specialized = out.events.find((e) => e.type === 'zwjs.event.node.value-updated');
+  assert.ok(specialized);
+  assert.equal(specialized.event.nodeId, 5);
+  assert.equal(specialized.event.args.newValue, true);
+});
+
+test('emits specialized node metadata-updated event', () => {
+  const msg = loadFixture('zwjs-server', 'event.node.metadata-updated.json');
+  const out = normalizer.normalizeIncoming(msg);
+  const specialized = out.events.find((e) => e.type === 'zwjs.event.node.metadata-updated');
+  assert.ok(specialized);
+  assert.equal(specialized.event.nodeId, 5);
+  assert.equal(specialized.event.args.propertyName, 'currentValue');
+});
+
+test('emits specialized node notification event', () => {
+  const msg = loadFixture('zwjs-server', 'event.node.notification.json');
+  const out = normalizer.normalizeIncoming(msg);
+  const specialized = out.events.find((e) => e.type === 'zwjs.event.node.notification');
+  assert.ok(specialized);
+  assert.equal(specialized.event.nodeId, 5);
+  assert.equal(specialized.event.args.label, 'Motion detected');
 });

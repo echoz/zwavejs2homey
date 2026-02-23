@@ -165,6 +165,33 @@ export interface ZwjsProtocolEventPayload {
   [key: string]: unknown;
 }
 
+export interface ZwjsNodeValueUpdatedEventPayload extends ZwjsProtocolEventPayload {
+  source: 'node';
+  event: 'value updated';
+  nodeId: number;
+  args?: {
+    newValue?: unknown;
+    prevValue?: unknown;
+    propertyName?: string;
+    propertyKeyName?: string;
+    [key: string]: unknown;
+  };
+}
+
+export interface ZwjsNodeMetadataUpdatedEventPayload extends ZwjsProtocolEventPayload {
+  source: 'node';
+  event: 'metadata updated';
+  nodeId: number;
+  args?: Record<string, unknown>;
+}
+
+export interface ZwjsNodeNotificationEventPayload extends ZwjsProtocolEventPayload {
+  source: 'node';
+  event: 'notification';
+  nodeId: number;
+  args?: Record<string, unknown>;
+}
+
 export interface ZwjsEventBase {
   type:
     | 'client.lifecycle'
@@ -181,6 +208,9 @@ export interface ZwjsEventBase {
     | 'zwjs.event.controller'
     | 'zwjs.event.node'
     | 'zwjs.event.zniffer'
+    | 'zwjs.event.node.value-updated'
+    | 'zwjs.event.node.metadata-updated'
+    | 'zwjs.event.node.notification'
     | 'node.event.raw-normalized';
   ts: string;
   source: 'zwjs-client';
@@ -201,6 +231,9 @@ export type ZwjsClientEvent =
   | (ZwjsEventBase & { type: 'zwjs.event.controller'; event: ZwjsProtocolEventPayload })
   | (ZwjsEventBase & { type: 'zwjs.event.node'; event: ZwjsProtocolEventPayload })
   | (ZwjsEventBase & { type: 'zwjs.event.zniffer'; event: ZwjsProtocolEventPayload })
+  | (ZwjsEventBase & { type: 'zwjs.event.node.value-updated'; event: ZwjsNodeValueUpdatedEventPayload })
+  | (ZwjsEventBase & { type: 'zwjs.event.node.metadata-updated'; event: ZwjsNodeMetadataUpdatedEventPayload })
+  | (ZwjsEventBase & { type: 'zwjs.event.node.notification'; event: ZwjsNodeNotificationEventPayload })
   | (ZwjsEventBase & { type: 'node.event.raw-normalized'; event: Record<string, unknown> });
 
 export type ZwjsClientEventInput = ZwjsClientEvent extends infer T
