@@ -438,7 +438,7 @@ Acceptance:
 - No Homey-specific zniffer UI abstractions introduced
 - Commands/events covered by fixtures and normalizer tests
 
-Progress (completed subset):
+Progress (completed read/event subset):
 
 - Added typed read-only zniffer wrappers for:
   - `zniffer.captured_frames`
@@ -451,10 +451,7 @@ Progress (completed subset):
   - `corrupted frame`
   - `frame`
   - `error`
-- Remaining P3.2 scope:
-  - optional live validation on a non-production zniffer-capable setup
-
-Progress (completed lifecycle/mutation subset):
+    Progress (completed lifecycle/mutation subset):
 
 - Added mutation-gated zniffer wrappers for:
   - `zniffer.init`
@@ -464,6 +461,24 @@ Progress (completed lifecycle/mutation subset):
   - `zniffer.clear_captured_frames`
   - `zniffer.set_frequency`
 - Added fixture-backed mutation-policy tests for default blocking and allowlisted exact command envelopes
+
+Usage (recommended preset for zniffer workflows):
+
+```ts
+import { createZwjsClient, createMutationPolicyPreset } from '@zwavejs2homey/core';
+
+const client = createZwjsClient({
+  url: 'ws://127.0.0.1:3000',
+  mutationPolicy: createMutationPolicyPreset('zniffer-maintenance'),
+});
+```
+
+Implementation status:
+
+- P3.2 command/event typing implementation is complete for the planned zniffer subset
+- Remaining work is operational validation only:
+  - live validation on a non-production zniffer-capable setup
+  - capture observed result/event variants for fixture expansion
 
 #### P3.3 Firmware / Maintenance Workflows
 

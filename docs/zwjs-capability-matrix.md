@@ -247,7 +247,7 @@ These are included to prevent architectural confusion and to show where UI/backe
 ### P3 Gaps (Advanced Domains)
 
 - Endpoint/virtual endpoint typed wrappers
-- Zniffer command wrappers + event payload typing
+- Zniffer live validation on a non-production zniffer-capable setup (wrappers/event typing implemented for current P3.2 subset)
 - Firmware and advanced maintenance workflows
 
 ## Parity Roadmap Summary
@@ -278,6 +278,13 @@ Add typed mutating wrappers with safety policy presets and explicit guardrails:
 ### Phase P3 (Advanced/Long Tail)
 
 Endpoint/virtual endpoint/zniffer and firmware-heavy flows.
+
+Current zniffer status:
+
+- Typed wrappers implemented for zniffer read + lifecycle/frequency commands
+- Specialized zniffer event typing implemented for `ready`, `corrupted frame`, `frame`, `error`
+- Recommended mutation policy preset for zniffer ops: `zniffer-maintenance`
+- Remaining gap is live validation and fixture expansion from observed zniffer traffic
 
 ## Notes on Naming and Mapping
 
