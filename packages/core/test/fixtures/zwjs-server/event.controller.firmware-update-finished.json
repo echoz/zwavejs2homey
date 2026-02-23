@@ -1,0 +1,8 @@
+{
+  "type": "event",
+  "event": {
+    "source": "controller",
+    "event": "firmware update finished",
+    "result": { "status": 0 }
+  }
+}

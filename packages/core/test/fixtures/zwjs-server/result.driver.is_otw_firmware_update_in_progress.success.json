@@ -1,0 +1,6 @@
+{
+  "type": "result",
+  "messageId": "fixture-driver-otw-progress-1",
+  "success": true,
+  "result": { "progress": false }
+}

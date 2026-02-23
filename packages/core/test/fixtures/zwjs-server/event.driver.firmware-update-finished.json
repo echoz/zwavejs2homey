@@ -1,0 +1,8 @@
+{
+  "type": "event",
+  "event": {
+    "source": "driver",
+    "event": "firmware update finished",
+    "result": { "status": 0 }
+  }
+}

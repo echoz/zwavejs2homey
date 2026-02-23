@@ -1,0 +1,9 @@
+{
+  "type": "event",
+  "event": {
+    "source": "node",
+    "event": "firmware update finished",
+    "nodeId": 5,
+    "result": { "status": 0, "waitTime": 0 }
+  }
+}

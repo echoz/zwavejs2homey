@@ -1,0 +1,4 @@
+{
+  "messageId": "fixture-driver-otw-progress-1",
+  "command": "driver.is_otw_firmware_update_in_progress"
+}

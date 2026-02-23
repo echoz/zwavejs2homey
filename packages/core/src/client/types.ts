@@ -150,6 +150,10 @@ export interface ZwjsDriverStatisticsEnabledResult {
   statisticsEnabled?: boolean;
   [key: string]: unknown;
 }
+export interface ZwjsDriverOtwFirmwareUpdateInProgressResult {
+  progress?: boolean;
+  [key: string]: unknown;
+}
 
 export interface ZwjsControllerStateResult {
   state?: Record<string, unknown>;
@@ -164,6 +168,22 @@ export interface ZwjsNodeStateResult {
 export type ZwjsControllerNodeNeighborsResult =
   | number[]
   | { neighbors?: number[]; [key: string]: unknown };
+export interface ZwjsControllerAnyFirmwareUpdateProgressResult {
+  progress?: boolean;
+  [key: string]: unknown;
+}
+export interface ZwjsControllerAnyOtaFirmwareUpdateInProgressResult {
+  progress?: boolean;
+  [key: string]: unknown;
+}
+export interface ZwjsControllerAvailableFirmwareUpdatesResult {
+  updates?: Array<unknown>;
+  [key: string]: unknown;
+}
+export interface ZwjsControllerFirmwareUpdateInProgressResult {
+  progress?: boolean;
+  [key: string]: unknown;
+}
 
 export type ZwjsDefinedValueIdsResult =
   | ZwjsDefinedValueId[]
@@ -538,6 +558,30 @@ export interface ZwjsControllerNvmRestoreProgressEventPayload extends ZwjsProtoc
   total: number;
 }
 
+export interface ZwjsDriverFirmwareUpdateProgressEventPayload extends ZwjsProtocolEventPayload {
+  source: 'driver';
+  event: 'firmware update progress';
+  progress?: unknown;
+}
+
+export interface ZwjsDriverFirmwareUpdateFinishedEventPayload extends ZwjsProtocolEventPayload {
+  source: 'driver';
+  event: 'firmware update finished';
+  result?: unknown;
+}
+
+export interface ZwjsControllerFirmwareUpdateProgressEventPayload extends ZwjsProtocolEventPayload {
+  source: 'controller';
+  event: 'firmware update progress';
+  progress?: unknown;
+}
+
+export interface ZwjsControllerFirmwareUpdateFinishedEventPayload extends ZwjsProtocolEventPayload {
+  source: 'controller';
+  event: 'firmware update finished';
+  result?: unknown;
+}
+
 export interface ZwjsZnifferReadyEventPayload extends ZwjsProtocolEventPayload {
   source: 'zniffer';
   event: 'ready';
@@ -589,6 +633,24 @@ export interface ZwjsNodeCheckRouteHealthProgressEventPayload extends ZwjsProtoc
   lastRating: number;
 }
 
+export interface ZwjsNodeFirmwareUpdateProgressEventPayload extends ZwjsProtocolEventPayload {
+  source: 'node';
+  event: 'firmware update progress';
+  nodeId: number;
+  progress?: unknown;
+  sentFragments?: number;
+  totalFragments?: number;
+}
+
+export interface ZwjsNodeFirmwareUpdateFinishedEventPayload extends ZwjsProtocolEventPayload {
+  source: 'node';
+  event: 'firmware update finished';
+  nodeId: number;
+  result?: unknown;
+  status?: unknown;
+  waitTime?: unknown;
+}
+
 export interface ZwjsEventBase {
   type:
     | 'client.lifecycle'
@@ -618,12 +680,16 @@ export interface ZwjsEventBase {
     | 'zwjs.event.node.interview-failed'
     | 'zwjs.event.node.interview-stage-completed'
     | 'zwjs.event.driver.logging'
+    | 'zwjs.event.driver.firmware-update-progress'
+    | 'zwjs.event.driver.firmware-update-finished'
     | 'zwjs.event.controller.grant-security-classes'
     | 'zwjs.event.controller.validate-dsk-and-enter-pin'
     | 'zwjs.event.controller.inclusion-aborted'
     | 'zwjs.event.controller.nvm-backup-progress'
     | 'zwjs.event.controller.nvm-convert-progress'
     | 'zwjs.event.controller.nvm-restore-progress'
+    | 'zwjs.event.controller.firmware-update-progress'
+    | 'zwjs.event.controller.firmware-update-finished'
     | 'zwjs.event.zniffer.ready'
     | 'zwjs.event.zniffer.corrupted-frame'
     | 'zwjs.event.zniffer.frame'
@@ -631,6 +697,8 @@ export interface ZwjsEventBase {
     | 'zwjs.event.node.test-powerlevel-progress'
     | 'zwjs.event.node.check-lifeline-health-progress'
     | 'zwjs.event.node.check-route-health-progress'
+    | 'zwjs.event.node.firmware-update-progress'
+    | 'zwjs.event.node.firmware-update-finished'
     | 'node.event.raw-normalized';
   ts: string;
   source: 'zwjs-client';
@@ -707,6 +775,14 @@ export type ZwjsClientEvent =
     })
   | (ZwjsEventBase & { type: 'zwjs.event.driver.logging'; event: ZwjsDriverLoggingEventPayload })
   | (ZwjsEventBase & {
+      type: 'zwjs.event.driver.firmware-update-progress';
+      event: ZwjsDriverFirmwareUpdateProgressEventPayload;
+    })
+  | (ZwjsEventBase & {
+      type: 'zwjs.event.driver.firmware-update-finished';
+      event: ZwjsDriverFirmwareUpdateFinishedEventPayload;
+    })
+  | (ZwjsEventBase & {
       type: 'zwjs.event.controller.grant-security-classes';
       event: ZwjsControllerGrantSecurityClassesEventPayload;
     })
@@ -729,6 +805,14 @@ export type ZwjsClientEvent =
   | (ZwjsEventBase & {
       type: 'zwjs.event.controller.nvm-restore-progress';
       event: ZwjsControllerNvmRestoreProgressEventPayload;
+    })
+  | (ZwjsEventBase & {
+      type: 'zwjs.event.controller.firmware-update-progress';
+      event: ZwjsControllerFirmwareUpdateProgressEventPayload;
+    })
+  | (ZwjsEventBase & {
+      type: 'zwjs.event.controller.firmware-update-finished';
+      event: ZwjsControllerFirmwareUpdateFinishedEventPayload;
     })
   | (ZwjsEventBase & {
       type: 'zwjs.event.zniffer.ready';
@@ -758,6 +842,14 @@ export type ZwjsClientEvent =
       type: 'zwjs.event.node.check-route-health-progress';
       event: ZwjsNodeCheckRouteHealthProgressEventPayload;
     })
+  | (ZwjsEventBase & {
+      type: 'zwjs.event.node.firmware-update-progress';
+      event: ZwjsNodeFirmwareUpdateProgressEventPayload;
+    })
+  | (ZwjsEventBase & {
+      type: 'zwjs.event.node.firmware-update-finished';
+      event: ZwjsNodeFirmwareUpdateFinishedEventPayload;
+    })
   | (ZwjsEventBase & { type: 'node.event.raw-normalized'; event: Record<string, unknown> });
 
 export type ZwjsClientEventInput = ZwjsClientEvent extends infer T
@@ -785,10 +877,25 @@ export interface ZwjsClient {
   getDriverConfig(): Promise<ZwjsCommandResult<ZwjsDriverConfig>>;
   getDriverLogConfig(): Promise<ZwjsCommandResult<ZwjsDriverLogConfigResult>>;
   isDriverStatisticsEnabled(): Promise<ZwjsCommandResult<ZwjsDriverStatisticsEnabledResult>>;
+  isDriverOtwFirmwareUpdateInProgress(): Promise<
+    ZwjsCommandResult<ZwjsDriverOtwFirmwareUpdateInProgressResult>
+  >;
   getControllerState(): Promise<ZwjsCommandResult<ZwjsControllerStateResult>>;
   getControllerNodeNeighbors(
     nodeId: number,
   ): Promise<ZwjsCommandResult<ZwjsControllerNodeNeighborsResult>>;
+  getControllerAnyFirmwareUpdateProgress(): Promise<
+    ZwjsCommandResult<ZwjsControllerAnyFirmwareUpdateProgressResult>
+  >;
+  isControllerAnyOtaFirmwareUpdateInProgress(): Promise<
+    ZwjsCommandResult<ZwjsControllerAnyOtaFirmwareUpdateInProgressResult>
+  >;
+  getControllerAvailableFirmwareUpdates(): Promise<
+    ZwjsCommandResult<ZwjsControllerAvailableFirmwareUpdatesResult>
+  >;
+  isControllerFirmwareUpdateInProgress(): Promise<
+    ZwjsCommandResult<ZwjsControllerFirmwareUpdateInProgressResult>
+  >;
   getNodeState(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeStateResult>>;
   getNodeDefinedValueIds(nodeId: number): Promise<ZwjsCommandResult<ZwjsDefinedValueIdsResult>>;
   getNodeValueMetadata(

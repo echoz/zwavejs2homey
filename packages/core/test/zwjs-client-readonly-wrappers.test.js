@@ -90,6 +90,61 @@ test('getControllerNodeNeighbors sends correct command and returns result array'
   await client.stop();
 });
 
+test('firmware status/read wrappers send exact protocol commands and return representative results', async () => {
+  const { client, transport } = makeClient();
+  await startConnected(client, transport);
+
+  const checks = [
+    [
+      () => client.isDriverOtwFirmwareUpdateInProgress(),
+      'command.driver.is_otw_firmware_update_in_progress.json',
+      'result.driver.is_otw_firmware_update_in_progress.success.json',
+      (result) => assert.equal(result.progress, false),
+    ],
+    [
+      () => client.getControllerAnyFirmwareUpdateProgress(),
+      'command.controller.get_any_firmware_update_progress.json',
+      'result.controller.get_any_firmware_update_progress.success.json',
+      (result) => assert.equal(result.progress, true),
+    ],
+    [
+      () => client.isControllerAnyOtaFirmwareUpdateInProgress(),
+      'command.controller.is_any_ota_firmware_update_in_progress.json',
+      'result.controller.is_any_ota_firmware_update_in_progress.success.json',
+      (result) => assert.equal(result.progress, false),
+    ],
+    [
+      () => client.getControllerAvailableFirmwareUpdates(),
+      'command.controller.get_available_firmware_updates.json',
+      'result.controller.get_available_firmware_updates.success.json',
+      (result) => assert.equal(Array.isArray(result.updates), true),
+    ],
+    [
+      () => client.isControllerFirmwareUpdateInProgress(),
+      'command.controller.is_firmware_update_in_progress.json',
+      'result.controller.is_firmware_update_in_progress.success.json',
+      (result) => assert.equal(result.progress, true),
+    ],
+  ];
+
+  for (const [call, commandFixture, resultFixture, assertResult] of checks) {
+    const pending = call();
+    const sent = transport.sent.at(-1);
+    assert.deepEqual(
+      sent,
+      withMessageId(loadFixture('zwjs-server', commandFixture), sent.messageId),
+    );
+    transport.triggerMessage(
+      withMessageId(loadFixture('zwjs-server', resultFixture), sent.messageId),
+    );
+    const response = await pending;
+    assert.equal(response.success, true);
+    assertResult(response.result);
+  }
+
+  await client.stop();
+});
+
 test('getNodeDefinedValueIds sends correct command and returns result array', async () => {
   const { client, transport } = makeClient();
   await startConnected(client, transport);

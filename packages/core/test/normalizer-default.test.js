@@ -245,6 +245,46 @@ test('emits specialized controller nvm backup progress event', () => {
   assert.equal(specialized.event.total, 1024);
 });
 
+test('emits specialized driver firmware update progress event', () => {
+  const msg = loadFixture('zwjs-server', 'event.driver.firmware-update-progress.json');
+  const out = normalizer.normalizeIncoming(msg);
+  const specialized = out.events.find(
+    (e) => e.type === 'zwjs.event.driver.firmware-update-progress',
+  );
+  assert.ok(specialized);
+  assert.equal(specialized.event.progress.totalFragments, 10);
+});
+
+test('emits specialized driver firmware update finished event', () => {
+  const msg = loadFixture('zwjs-server', 'event.driver.firmware-update-finished.json');
+  const out = normalizer.normalizeIncoming(msg);
+  const specialized = out.events.find(
+    (e) => e.type === 'zwjs.event.driver.firmware-update-finished',
+  );
+  assert.ok(specialized);
+  assert.equal(specialized.event.result.status, 0);
+});
+
+test('emits specialized controller firmware update progress event', () => {
+  const msg = loadFixture('zwjs-server', 'event.controller.firmware-update-progress.json');
+  const out = normalizer.normalizeIncoming(msg);
+  const specialized = out.events.find(
+    (e) => e.type === 'zwjs.event.controller.firmware-update-progress',
+  );
+  assert.ok(specialized);
+  assert.equal(specialized.event.progress.sentFragments, 5);
+});
+
+test('emits specialized controller firmware update finished event', () => {
+  const msg = loadFixture('zwjs-server', 'event.controller.firmware-update-finished.json');
+  const out = normalizer.normalizeIncoming(msg);
+  const specialized = out.events.find(
+    (e) => e.type === 'zwjs.event.controller.firmware-update-finished',
+  );
+  assert.ok(specialized);
+  assert.equal(specialized.event.result.status, 0);
+});
+
 test('emits specialized node test powerlevel progress event', () => {
   const msg = loadFixture('zwjs-server', 'event.node.test-powerlevel-progress.json');
   const out = normalizer.normalizeIncoming(msg);
@@ -274,6 +314,24 @@ test('emits specialized node check route health progress event', () => {
   assert.ok(specialized);
   assert.equal(specialized.event.rounds, 3);
   assert.equal(specialized.event.lastRating, 7);
+});
+
+test('emits specialized node firmware update progress event', () => {
+  const msg = loadFixture('zwjs-server', 'event.node.firmware-update-progress.json');
+  const out = normalizer.normalizeIncoming(msg);
+  const specialized = out.events.find((e) => e.type === 'zwjs.event.node.firmware-update-progress');
+  assert.ok(specialized);
+  assert.equal(specialized.event.nodeId, 5);
+  assert.equal(specialized.event.progress.totalFragments, 12);
+});
+
+test('emits specialized node firmware update finished event', () => {
+  const msg = loadFixture('zwjs-server', 'event.node.firmware-update-finished.json');
+  const out = normalizer.normalizeIncoming(msg);
+  const specialized = out.events.find((e) => e.type === 'zwjs.event.node.firmware-update-finished');
+  assert.ok(specialized);
+  assert.equal(specialized.event.nodeId, 5);
+  assert.equal(specialized.event.result.status, 0);
 });
 
 test('emits specialized zniffer ready event', () => {

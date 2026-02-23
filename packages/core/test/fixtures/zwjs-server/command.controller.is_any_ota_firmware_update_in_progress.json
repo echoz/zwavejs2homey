@@ -1,0 +1,4 @@
+{
+  "messageId": "fixture-controller-any-ota-fw-progress-1",
+  "command": "controller.is_any_ota_firmware_update_in_progress"
+}

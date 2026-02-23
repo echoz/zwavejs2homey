@@ -1,0 +1,8 @@
+{
+  "type": "event",
+  "event": {
+    "source": "controller",
+    "event": "firmware update progress",
+    "progress": { "sentFragments": 5, "totalFragments": 20 }
+  }
+}

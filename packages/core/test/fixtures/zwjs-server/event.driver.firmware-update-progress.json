@@ -1,0 +1,8 @@
+{
+  "type": "event",
+  "event": {
+    "source": "driver",
+    "event": "firmware update progress",
+    "progress": { "sentFragments": 3, "totalFragments": 10 }
+  }
+}

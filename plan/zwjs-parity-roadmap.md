@@ -489,6 +489,23 @@ Acceptance:
 - Workflows documented with mutation risk and validation steps
 - High-risk commands remain policy-gated
 
+Progress (completed first subset):
+
+- Added typed read wrappers for firmware workflow status/discovery checks:
+  - `driver.is_otw_firmware_update_in_progress`
+  - `controller.get_any_firmware_update_progress`
+  - `controller.is_any_ota_firmware_update_in_progress`
+  - `controller.get_available_firmware_updates`
+  - `controller.is_firmware_update_in_progress`
+- Added specialized firmware event typing + normalizer coverage for:
+  - `driver` firmware update progress/finished
+  - `controller` firmware update progress/finished
+  - `node` firmware update progress/finished
+- Added fixture-backed wrapper tests and normalizer tests for the above
+- Remaining P3.3 scope:
+  - mutation wrappers for explicit firmware update workflows (`begin/update/abort`, OTW/OTA variants)
+  - safety classification and validation strategy for destructive/high-risk firmware operations
+
 ## Acceptance Criteria (Roadmap-Level)
 
 This roadmap is considered complete when:

@@ -13,14 +13,20 @@ import {
 } from '../raw-frame-types';
 import {
   isZwjsControllerGrantSecurityClassesEvent,
+  isZwjsControllerFirmwareUpdateFinishedEvent,
+  isZwjsControllerFirmwareUpdateProgressEvent,
   isZwjsControllerInclusionAbortedEvent,
   isZwjsControllerNvmBackupProgressEvent,
   isZwjsControllerNvmConvertProgressEvent,
   isZwjsControllerNvmRestoreProgressEvent,
   isZwjsControllerValidateDskAndEnterPinEvent,
   isZwjsDriverLoggingEvent,
+  isZwjsDriverFirmwareUpdateFinishedEvent,
+  isZwjsDriverFirmwareUpdateProgressEvent,
   isZwjsNodeCheckLifelineHealthProgressEvent,
   isZwjsNodeCheckRouteHealthProgressEvent,
+  isZwjsNodeFirmwareUpdateFinishedEvent,
+  isZwjsNodeFirmwareUpdateProgressEvent,
   isZwjsNodeInterviewCompletedEvent,
   isZwjsNodeInterviewFailedEvent,
   isZwjsNodeInterviewStageCompletedEvent,
@@ -183,6 +189,20 @@ export class DefaultZwjsFamilyNormalizer implements ZwjsProtocolAdapter {
           source: 'zwjs-client',
           event: protocolEvent,
         });
+      } else if (isZwjsDriverFirmwareUpdateProgressEvent(protocolEvent)) {
+        events.push({
+          type: 'zwjs.event.driver.firmware-update-progress',
+          ts: new Date().toISOString(),
+          source: 'zwjs-client',
+          event: protocolEvent,
+        });
+      } else if (isZwjsDriverFirmwareUpdateFinishedEvent(protocolEvent)) {
+        events.push({
+          type: 'zwjs.event.driver.firmware-update-finished',
+          ts: new Date().toISOString(),
+          source: 'zwjs-client',
+          event: protocolEvent,
+        });
       } else if (isZwjsControllerGrantSecurityClassesEvent(protocolEvent)) {
         events.push({
           type: 'zwjs.event.controller.grant-security-classes',
@@ -221,6 +241,20 @@ export class DefaultZwjsFamilyNormalizer implements ZwjsProtocolAdapter {
       } else if (isZwjsControllerNvmRestoreProgressEvent(protocolEvent)) {
         events.push({
           type: 'zwjs.event.controller.nvm-restore-progress',
+          ts: new Date().toISOString(),
+          source: 'zwjs-client',
+          event: protocolEvent,
+        });
+      } else if (isZwjsControllerFirmwareUpdateProgressEvent(protocolEvent)) {
+        events.push({
+          type: 'zwjs.event.controller.firmware-update-progress',
+          ts: new Date().toISOString(),
+          source: 'zwjs-client',
+          event: protocolEvent,
+        });
+      } else if (isZwjsControllerFirmwareUpdateFinishedEvent(protocolEvent)) {
+        events.push({
+          type: 'zwjs.event.controller.firmware-update-finished',
           ts: new Date().toISOString(),
           source: 'zwjs-client',
           event: protocolEvent,
@@ -328,6 +362,20 @@ export class DefaultZwjsFamilyNormalizer implements ZwjsProtocolAdapter {
       } else if (isZwjsNodeCheckRouteHealthProgressEvent(protocolEvent)) {
         events.push({
           type: 'zwjs.event.node.check-route-health-progress',
+          ts: new Date().toISOString(),
+          source: 'zwjs-client',
+          event: protocolEvent,
+        });
+      } else if (isZwjsNodeFirmwareUpdateProgressEvent(protocolEvent)) {
+        events.push({
+          type: 'zwjs.event.node.firmware-update-progress',
+          ts: new Date().toISOString(),
+          source: 'zwjs-client',
+          event: protocolEvent,
+        });
+      } else if (isZwjsNodeFirmwareUpdateFinishedEvent(protocolEvent)) {
+        events.push({
+          type: 'zwjs.event.node.firmware-update-finished',
           ts: new Date().toISOString(),
           source: 'zwjs-client',
           event: protocolEvent,

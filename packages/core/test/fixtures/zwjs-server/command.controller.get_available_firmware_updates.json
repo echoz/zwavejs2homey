@@ -1,0 +1,4 @@
+{
+  "messageId": "fixture-controller-available-fw-updates-1",
+  "command": "controller.get_available_firmware_updates"
+}

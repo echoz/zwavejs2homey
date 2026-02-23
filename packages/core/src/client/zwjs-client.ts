@@ -15,9 +15,14 @@ import type {
   ZwjsClientConfig,
   ZwjsControllerStateResult,
   ZwjsControllerNodeNeighborsResult,
+  ZwjsControllerAnyFirmwareUpdateProgressResult,
+  ZwjsControllerAnyOtaFirmwareUpdateInProgressResult,
+  ZwjsControllerAvailableFirmwareUpdatesResult,
+  ZwjsControllerFirmwareUpdateInProgressResult,
   ZwjsDriverConfig,
   ZwjsDriverLogConfigResult,
   ZwjsDriverStatisticsEnabledResult,
+  ZwjsDriverOtwFirmwareUpdateInProgressResult,
   ZwjsClientEvent,
   ZwjsClientEventInput,
   ZwjsInitializeOptions,
@@ -320,6 +325,14 @@ export class ZwjsClientImpl implements ZwjsClient {
     });
   }
 
+  async isDriverOtwFirmwareUpdateInProgress(): Promise<
+    ZwjsCommandResult<ZwjsDriverOtwFirmwareUpdateInProgressResult>
+  > {
+    return this.sendCommand<ZwjsDriverOtwFirmwareUpdateInProgressResult>({
+      command: 'driver.is_otw_firmware_update_in_progress',
+    });
+  }
+
   async getControllerState(): Promise<ZwjsCommandResult<ZwjsControllerStateResult>> {
     return this.sendCommand<ZwjsControllerStateResult>({ command: 'controller.get_state' });
   }
@@ -330,6 +343,38 @@ export class ZwjsClientImpl implements ZwjsClient {
     return this.sendCommand<ZwjsControllerNodeNeighborsResult, { nodeId: number }>({
       command: 'controller.get_node_neighbors',
       args: { nodeId },
+    });
+  }
+
+  async getControllerAnyFirmwareUpdateProgress(): Promise<
+    ZwjsCommandResult<ZwjsControllerAnyFirmwareUpdateProgressResult>
+  > {
+    return this.sendCommand<ZwjsControllerAnyFirmwareUpdateProgressResult>({
+      command: 'controller.get_any_firmware_update_progress',
+    });
+  }
+
+  async isControllerAnyOtaFirmwareUpdateInProgress(): Promise<
+    ZwjsCommandResult<ZwjsControllerAnyOtaFirmwareUpdateInProgressResult>
+  > {
+    return this.sendCommand<ZwjsControllerAnyOtaFirmwareUpdateInProgressResult>({
+      command: 'controller.is_any_ota_firmware_update_in_progress',
+    });
+  }
+
+  async getControllerAvailableFirmwareUpdates(): Promise<
+    ZwjsCommandResult<ZwjsControllerAvailableFirmwareUpdatesResult>
+  > {
+    return this.sendCommand<ZwjsControllerAvailableFirmwareUpdatesResult>({
+      command: 'controller.get_available_firmware_updates',
+    });
+  }
+
+  async isControllerFirmwareUpdateInProgress(): Promise<
+    ZwjsCommandResult<ZwjsControllerFirmwareUpdateInProgressResult>
+  > {
+    return this.sendCommand<ZwjsControllerFirmwareUpdateInProgressResult>({
+      command: 'controller.is_firmware_update_in_progress',
     });
   }
 

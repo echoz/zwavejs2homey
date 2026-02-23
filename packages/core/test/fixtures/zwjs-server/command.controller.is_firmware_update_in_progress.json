@@ -1,0 +1,4 @@
+{
+  "messageId": "fixture-controller-fw-progress-1",
+  "command": "controller.is_firmware_update_in_progress"
+}

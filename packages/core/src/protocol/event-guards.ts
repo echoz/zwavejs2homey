@@ -6,8 +6,14 @@ import type {
   ZwjsControllerNvmRestoreProgressEventPayload,
   ZwjsControllerValidateDskAndEnterPinEventPayload,
   ZwjsDriverLoggingEventPayload,
+  ZwjsDriverFirmwareUpdateFinishedEventPayload,
+  ZwjsDriverFirmwareUpdateProgressEventPayload,
+  ZwjsControllerFirmwareUpdateFinishedEventPayload,
+  ZwjsControllerFirmwareUpdateProgressEventPayload,
   ZwjsNodeCheckLifelineHealthProgressEventPayload,
   ZwjsNodeCheckRouteHealthProgressEventPayload,
+  ZwjsNodeFirmwareUpdateFinishedEventPayload,
+  ZwjsNodeFirmwareUpdateProgressEventPayload,
   ZwjsNodeInterviewCompletedEventPayload,
   ZwjsNodeInterviewFailedEventPayload,
   ZwjsNodeInterviewStageCompletedEventPayload,
@@ -124,6 +130,18 @@ export function isZwjsDriverLoggingEvent(
   );
 }
 
+export function isZwjsDriverFirmwareUpdateProgressEvent(
+  event: ZwjsProtocolEventPayload,
+): event is ZwjsDriverFirmwareUpdateProgressEventPayload {
+  return event.source === 'driver' && event.event === 'firmware update progress';
+}
+
+export function isZwjsDriverFirmwareUpdateFinishedEvent(
+  event: ZwjsProtocolEventPayload,
+): event is ZwjsDriverFirmwareUpdateFinishedEventPayload {
+  return event.source === 'driver' && event.event === 'firmware update finished';
+}
+
 export function isZwjsControllerGrantSecurityClassesEvent(
   event: ZwjsProtocolEventPayload,
 ): event is ZwjsControllerGrantSecurityClassesEventPayload {
@@ -184,6 +202,18 @@ export function isZwjsControllerNvmRestoreProgressEvent(
   );
 }
 
+export function isZwjsControllerFirmwareUpdateProgressEvent(
+  event: ZwjsProtocolEventPayload,
+): event is ZwjsControllerFirmwareUpdateProgressEventPayload {
+  return event.source === 'controller' && event.event === 'firmware update progress';
+}
+
+export function isZwjsControllerFirmwareUpdateFinishedEvent(
+  event: ZwjsProtocolEventPayload,
+): event is ZwjsControllerFirmwareUpdateFinishedEventPayload {
+  return event.source === 'controller' && event.event === 'firmware update finished';
+}
+
 export function isZwjsNodeTestPowerlevelProgressEvent(
   event: ZwjsProtocolEventPayload,
 ): event is ZwjsNodeTestPowerlevelProgressEventPayload {
@@ -219,6 +249,26 @@ export function isZwjsNodeCheckRouteHealthProgressEvent(
     typeof event.rounds === 'number' &&
     typeof event.totalRounds === 'number' &&
     typeof event.lastRating === 'number'
+  );
+}
+
+export function isZwjsNodeFirmwareUpdateProgressEvent(
+  event: ZwjsProtocolEventPayload,
+): event is ZwjsNodeFirmwareUpdateProgressEventPayload {
+  return (
+    event.source === 'node' &&
+    event.event === 'firmware update progress' &&
+    typeof event.nodeId === 'number'
+  );
+}
+
+export function isZwjsNodeFirmwareUpdateFinishedEvent(
+  event: ZwjsProtocolEventPayload,
+): event is ZwjsNodeFirmwareUpdateFinishedEventPayload {
+  return (
+    event.source === 'node' &&
+    event.event === 'firmware update finished' &&
+    typeof event.nodeId === 'number'
   );
 }
 
