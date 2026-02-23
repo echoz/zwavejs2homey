@@ -38,6 +38,13 @@ export interface ZwjsCommandRequest<TArgs = Record<string, unknown>> {
   args?: TArgs;
 }
 
+export interface ZwjsValueId {
+  commandClass: number | string;
+  endpoint?: number;
+  property: number | string;
+  propertyKey?: number | string;
+}
+
 export interface ZwjsProtocolErrorPayload {
   errorCode?: string;
   zwaveErrorCode?: number;
@@ -85,6 +92,12 @@ export interface ZwjsNodeStateResult {
   state?: Record<string, unknown>;
   [key: string]: unknown;
 }
+
+export type ZwjsControllerNodeNeighborsResult = number[] | { neighbors?: number[]; [key: string]: unknown };
+
+export type ZwjsDefinedValueIdsResult = Array<Record<string, unknown>> | { values?: Array<Record<string, unknown>>; [key: string]: unknown };
+
+export type ZwjsNodeValueResult = unknown;
 
 export interface ClientLogger {
   debug?(msg: string, meta?: unknown): void;
@@ -204,7 +217,10 @@ export interface ZwjsClient {
   sendCommand<TResult = unknown, TArgs = Record<string, unknown>>(request: ZwjsCommandRequest<TArgs>): Promise<ZwjsCommandResult<TResult>>;
   getDriverConfig(): Promise<ZwjsCommandResult<ZwjsDriverConfig>>;
   getControllerState(): Promise<ZwjsCommandResult<ZwjsControllerStateResult>>;
+  getControllerNodeNeighbors(nodeId: number): Promise<ZwjsCommandResult<ZwjsControllerNodeNeighborsResult>>;
   getNodeState(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeStateResult>>;
+  getNodeDefinedValueIds(nodeId: number): Promise<ZwjsCommandResult<ZwjsDefinedValueIdsResult>>;
+  getNodeValue(nodeId: number, valueId: ZwjsValueId): Promise<ZwjsCommandResult<ZwjsNodeValueResult>>;
   getServerInfo(): Promise<ServerInfoResult>;
   getNodeList(): Promise<NodeListResult>;
 }

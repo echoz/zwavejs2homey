@@ -1,0 +1,6 @@
+{
+  "type": "result",
+  "messageId": "fixture-10",
+  "success": true,
+  "result": [2, 7, 12]
+}

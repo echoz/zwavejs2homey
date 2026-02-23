@@ -1,0 +1,19 @@
+{
+  "type": "result",
+  "messageId": "fixture-11",
+  "success": true,
+  "result": [
+    {
+      "commandClass": 37,
+      "endpoint": 0,
+      "property": "currentValue",
+      "propertyName": "Current value"
+    },
+    {
+      "commandClass": 38,
+      "endpoint": 0,
+      "property": "targetValue",
+      "propertyName": "Target value"
+    }
+  ]
+}

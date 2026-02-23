@@ -1,0 +1,5 @@
+{
+  "messageId": "fixture-10",
+  "command": "controller.get_node_neighbors",
+  "nodeId": 5
+}

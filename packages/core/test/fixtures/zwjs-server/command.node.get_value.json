@@ -1,0 +1,10 @@
+{
+  "messageId": "fixture-12",
+  "command": "node.get_value",
+  "nodeId": 5,
+  "valueId": {
+    "commandClass": 37,
+    "property": "currentValue",
+    "endpoint": 0
+  }
+}

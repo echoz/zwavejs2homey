@@ -13,11 +13,15 @@ export type {
   ZwjsClient,
   ZwjsClientConfig,
   ZwjsControllerStateResult,
+  ZwjsControllerNodeNeighborsResult,
   ZwjsClientEvent,
   ZwjsInitializeOptions,
   ZwjsDriverConfig,
+  ZwjsDefinedValueIdsResult,
   ZwjsNodeStateResult,
+  ZwjsNodeValueResult,
   ZwjsClientStatus,
+  ZwjsValueId,
 } from './client/types';
 export type { ClientErrorSummary, ZwjsClientErrorCode } from './errors';
 export type {

@@ -13,11 +13,15 @@ import type {
   ZwjsClient,
   ZwjsClientConfig,
   ZwjsControllerStateResult,
+  ZwjsControllerNodeNeighborsResult,
   ZwjsDriverConfig,
   ZwjsClientEvent,
   ZwjsClientEventInput,
   ZwjsInitializeOptions,
   ZwjsNodeStateResult,
+  ZwjsDefinedValueIdsResult,
+  ZwjsNodeValueResult,
+  ZwjsValueId,
   ZwjsClientStatus,
   ZwjsLifecycleState,
 } from './types';
@@ -174,8 +178,29 @@ export class ZwjsClientImpl implements ZwjsClient {
     return this.sendCommand<ZwjsControllerStateResult>({ command: 'controller.get_state' });
   }
 
+  async getControllerNodeNeighbors(nodeId: number): Promise<ZwjsCommandResult<ZwjsControllerNodeNeighborsResult>> {
+    return this.sendCommand<ZwjsControllerNodeNeighborsResult, { nodeId: number }>({
+      command: 'controller.get_node_neighbors',
+      args: { nodeId },
+    });
+  }
+
   async getNodeState(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeStateResult>> {
     return this.sendCommand<ZwjsNodeStateResult, { nodeId: number }>({ command: 'node.get_state', args: { nodeId } });
+  }
+
+  async getNodeDefinedValueIds(nodeId: number): Promise<ZwjsCommandResult<ZwjsDefinedValueIdsResult>> {
+    return this.sendCommand<ZwjsDefinedValueIdsResult, { nodeId: number }>({
+      command: 'node.get_defined_value_ids',
+      args: { nodeId },
+    });
+  }
+
+  async getNodeValue(nodeId: number, valueId: ZwjsValueId): Promise<ZwjsCommandResult<ZwjsNodeValueResult>> {
+    return this.sendCommand<ZwjsNodeValueResult, { nodeId: number; valueId: ZwjsValueId }>({
+      command: 'node.get_value',
+      args: { nodeId, valueId },
+    });
   }
 
   private async connectFlow(targetState: Extract<ZwjsLifecycleState, 'connecting' | 'reconnecting'>): Promise<void> {

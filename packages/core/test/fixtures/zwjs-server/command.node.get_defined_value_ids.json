@@ -1,0 +1,5 @@
+{
+  "messageId": "fixture-11",
+  "command": "node.get_defined_value_ids",
+  "nodeId": 5
+}
