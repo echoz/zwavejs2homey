@@ -21,6 +21,8 @@ export type {
   ZwjsDriverLoggingEventPayload,
   ZwjsNodeMetadataUpdatedEventPayload,
   ZwjsNodeNotificationEventPayload,
+  ZwjsNodeValueAddedEventPayload,
+  ZwjsNodeValueRemovedEventPayload,
   ZwjsNodeValueUpdatedEventPayload,
   ZwjsInitializeOptions,
   ZwjsDriverConfig,

@@ -1,0 +1,12 @@
+{
+  "type": "event",
+  "event": {
+    "source": "node",
+    "event": "value removed",
+    "nodeId": 5,
+    "args": {
+      "commandClass": 37,
+      "property": "targetValue"
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "type": "event",
+  "event": {
+    "source": "node",
+    "event": "value added",
+    "nodeId": 5,
+    "args": {
+      "commandClass": 37,
+      "property": "currentValue",
+      "newValue": true
+    }
+  }
+}

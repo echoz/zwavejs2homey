@@ -7,6 +7,8 @@ import {
   isZwjsDriverLoggingEvent,
   isZwjsNodeMetadataUpdatedEvent,
   isZwjsNodeNotificationEvent,
+  isZwjsNodeValueAddedEvent,
+  isZwjsNodeValueRemovedEvent,
   isZwjsNodeValueUpdatedEvent,
 } from '../event-guards';
 import type { ZwjsProtocolAdapter } from './types';
@@ -139,6 +141,20 @@ export class DefaultZwjsFamilyNormalizer implements ZwjsProtocolAdapter {
       if (isZwjsNodeValueUpdatedEvent(protocolEvent)) {
         events.push({
           type: 'zwjs.event.node.value-updated',
+          ts: new Date().toISOString(),
+          source: 'zwjs-client',
+          event: protocolEvent,
+        });
+      } else if (isZwjsNodeValueAddedEvent(protocolEvent)) {
+        events.push({
+          type: 'zwjs.event.node.value-added',
+          ts: new Date().toISOString(),
+          source: 'zwjs-client',
+          event: protocolEvent,
+        });
+      } else if (isZwjsNodeValueRemovedEvent(protocolEvent)) {
+        events.push({
+          type: 'zwjs.event.node.value-removed',
           ts: new Date().toISOString(),
           source: 'zwjs-client',
           event: protocolEvent,

@@ -245,6 +245,20 @@ export interface ZwjsNodeValueUpdatedEventPayload extends ZwjsProtocolEventPaylo
   };
 }
 
+export interface ZwjsNodeValueAddedEventPayload extends ZwjsProtocolEventPayload {
+  source: 'node';
+  event: 'value added';
+  nodeId: number;
+  args?: Record<string, unknown>;
+}
+
+export interface ZwjsNodeValueRemovedEventPayload extends ZwjsProtocolEventPayload {
+  source: 'node';
+  event: 'value removed';
+  nodeId: number;
+  args?: Record<string, unknown>;
+}
+
 export interface ZwjsNodeMetadataUpdatedEventPayload extends ZwjsProtocolEventPayload {
   source: 'node';
   event: 'metadata updated';
@@ -298,6 +312,8 @@ export interface ZwjsEventBase {
     | 'zwjs.event.node'
     | 'zwjs.event.zniffer'
     | 'zwjs.event.node.value-updated'
+    | 'zwjs.event.node.value-added'
+    | 'zwjs.event.node.value-removed'
     | 'zwjs.event.node.metadata-updated'
     | 'zwjs.event.node.notification'
     | 'zwjs.event.driver.logging'
@@ -324,6 +340,8 @@ export type ZwjsClientEvent =
   | (ZwjsEventBase & { type: 'zwjs.event.node'; event: ZwjsProtocolEventPayload })
   | (ZwjsEventBase & { type: 'zwjs.event.zniffer'; event: ZwjsProtocolEventPayload })
   | (ZwjsEventBase & { type: 'zwjs.event.node.value-updated'; event: ZwjsNodeValueUpdatedEventPayload })
+  | (ZwjsEventBase & { type: 'zwjs.event.node.value-added'; event: ZwjsNodeValueAddedEventPayload })
+  | (ZwjsEventBase & { type: 'zwjs.event.node.value-removed'; event: ZwjsNodeValueRemovedEventPayload })
   | (ZwjsEventBase & { type: 'zwjs.event.node.metadata-updated'; event: ZwjsNodeMetadataUpdatedEventPayload })
   | (ZwjsEventBase & { type: 'zwjs.event.node.notification'; event: ZwjsNodeNotificationEventPayload })
   | (ZwjsEventBase & { type: 'zwjs.event.driver.logging'; event: ZwjsDriverLoggingEventPayload })

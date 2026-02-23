@@ -169,6 +169,8 @@ This first-pass matrix is decision-oriented: all currently implemented wrappers 
 | controller | `nvm backup progress` | yes | backend emits progress | `zwjs.event.controller` + raw-normalized | none | none | no | P2 | Add specialized payload type if backup workflows prioritized |
 | controller | inclusion/security events (`grant security classes`, `validate dsk...`, `inclusion aborted`) | yes | UI has dedicated Socket.IO events (`GRANT_SECURITY_CLASSES`, `VALIDATE_DSK`, `INCLUSION_ABORTED`) | `zwjs.event.controller` + raw-normalized | none | none | no | P2 | High-value once inclusion support starts |
 | node | `value updated` | yes (node events section) | UI emits `VALUE_UPDATED`, `NODE_EVENT` | `zwjs.event.node` + raw-normalized | `zwjs.event.node.value-updated` | `fixture`, `normalizer` | generic controller/node events observed | P0 | Key for Homey capability sync |
+| node | `value added` | forwarded in server source (`forward.ts`) | UI emits `VALUE_UPDATED`/node state diffs depending on app flow | `zwjs.event.node` + raw-normalized | `zwjs.event.node.value-added` | `fixture`, `normalizer` | not recorded | P0 | Added from upstream source payload shape (`event`, `nodeId`, `args`) |
+| node | `value removed` | forwarded in server source (`forward.ts`) | UI emits `VALUE_REMOVED`/node state diffs depending on app flow | `zwjs.event.node` + raw-normalized | `zwjs.event.node.value-removed` | `fixture`, `normalizer` | not recorded | P0 | Added from upstream source payload shape (`event`, `nodeId`, `args`) |
 | node | `metadata updated` | yes | UI emits `METADATA_UPDATED` | `zwjs.event.node` + raw-normalized | `zwjs.event.node.metadata-updated` | `fixture`, `normalizer` | not recorded | P1 | Important for dynamic capability metadata |
 | node | `notification` | yes | UI emits `NODE_EVENT` and feature-specific UI updates | `zwjs.event.node` + raw-normalized | `zwjs.event.node.notification` | `fixture`, `normalizer` | not recorded | P1 | Important for alarms/notifications |
 | node | `statistics updated` and other node events | yes (broadly forwarded) | UI emits `STATISTICS`, `NODE_EVENT`, node updates | `zwjs.event.node` + raw-normalized | none | none | controller/node generic observed | P1 | Add targeted specializations as needed |
@@ -193,7 +195,7 @@ These are included to prevent architectural confusion and to show where UI/backe
 ### P0 Gaps (Bridge-Critical)
 
 - Stronger typing for node value payloads used by Homey mapping (`node.get_value`) and deeper metadata typing beyond common fields
-- Additional specialized node event typing needed for capability sync (beyond current `value updated` / `metadata updated` / `notification` as real traffic reveals)
+- Additional specialized node event typing needed for capability sync (beyond current `value updated` / `value added` / `value removed` / `metadata updated` / `notification` as real traffic reveals)
 - Deeper typing for object-shaped `node.get_value` payloads after observed value samples are cataloged
 
 ### P1 Gaps (Read-Only Ops Completeness)

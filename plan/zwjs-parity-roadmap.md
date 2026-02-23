@@ -107,6 +107,11 @@ Tests:
 - fixture normalizer tests
 - existing integration/mocked tests remain green
 
+Progress (completed subset):
+- Added specialized node event typing + normalizer coverage for `value added` and `value removed`
+- Payload shapes aligned to upstream `zwave-js-server/src/lib/forward.ts` forwarding behavior (`nodeId` + `args`)
+- Remaining high-value candidates still pending (`value notification`, wake/sleep, interview lifecycle)
+
 ## Phase P1 — Read-Only Operational Completeness
 
 ### Objective
@@ -313,5 +318,5 @@ This roadmap is considered complete when:
 ## Immediate Next Tasks (Recommended Sequence)
 
 1. Complete remaining P0.1 value payload typing tightening from observed `node.get_value` payloads
-2. P0.3 Node event typing expansion from observed traffic
+2. Continue P0.3 node event typing expansion from observed traffic (`value notification`, wake/sleep, interview lifecycle)
 3. P1.1 Log streaming wrappers (`start_listening_logs` / `stop_listening_logs`)

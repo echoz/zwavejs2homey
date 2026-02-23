@@ -84,6 +84,24 @@ test('emits specialized node value-updated event', () => {
   assert.equal(specialized.event.args.newValue, true);
 });
 
+test('emits specialized node value-added event', () => {
+  const msg = loadFixture('zwjs-server', 'event.node.value-added.json');
+  const out = normalizer.normalizeIncoming(msg);
+  const specialized = out.events.find((e) => e.type === 'zwjs.event.node.value-added');
+  assert.ok(specialized);
+  assert.equal(specialized.event.nodeId, 5);
+  assert.equal(specialized.event.args.property, 'currentValue');
+});
+
+test('emits specialized node value-removed event', () => {
+  const msg = loadFixture('zwjs-server', 'event.node.value-removed.json');
+  const out = normalizer.normalizeIncoming(msg);
+  const specialized = out.events.find((e) => e.type === 'zwjs.event.node.value-removed');
+  assert.ok(specialized);
+  assert.equal(specialized.event.nodeId, 5);
+  assert.equal(specialized.event.args.property, 'targetValue');
+});
+
 test('emits specialized node metadata-updated event', () => {
   const msg = loadFixture('zwjs-server', 'event.node.metadata-updated.json');
   const out = normalizer.normalizeIncoming(msg);

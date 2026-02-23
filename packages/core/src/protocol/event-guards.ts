@@ -4,6 +4,8 @@ import type {
   ZwjsDriverLoggingEventPayload,
   ZwjsNodeMetadataUpdatedEventPayload,
   ZwjsNodeNotificationEventPayload,
+  ZwjsNodeValueAddedEventPayload,
+  ZwjsNodeValueRemovedEventPayload,
   ZwjsNodeValueUpdatedEventPayload,
   ZwjsProtocolEventPayload,
 } from '../client/types';
@@ -14,6 +16,14 @@ function isNodeEventBase(event: ZwjsProtocolEventPayload, expectedName: string):
 
 export function isZwjsNodeValueUpdatedEvent(event: ZwjsProtocolEventPayload): event is ZwjsNodeValueUpdatedEventPayload {
   return isNodeEventBase(event, 'value updated');
+}
+
+export function isZwjsNodeValueAddedEvent(event: ZwjsProtocolEventPayload): event is ZwjsNodeValueAddedEventPayload {
+  return isNodeEventBase(event, 'value added');
+}
+
+export function isZwjsNodeValueRemovedEvent(event: ZwjsProtocolEventPayload): event is ZwjsNodeValueRemovedEventPayload {
+  return isNodeEventBase(event, 'value removed');
 }
 
 export function isZwjsNodeMetadataUpdatedEvent(event: ZwjsProtocolEventPayload): event is ZwjsNodeMetadataUpdatedEventPayload {
