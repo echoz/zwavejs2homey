@@ -40,11 +40,12 @@ class FakeTransport {
   }
 }
 
-function makeClient() {
+function makeClient(overrides = {}) {
   const client = new ZwjsClientImpl({
     url: 'ws://example.test:3000',
     reconnect: { enabled: false },
     timeouts: { connectTimeoutMs: 100, requestTimeoutMs: 100 },
+    ...overrides,
   });
   const transport = new FakeTransport();
   client.transport = transport;
@@ -556,7 +557,9 @@ test('P1.2 diagnostic wrappers support observed nested result key shapes from li
 });
 
 test('endpoint support-check and node-helper wrappers send exact protocol commands and return results', async () => {
-  const { client, transport } = makeClient();
+  const { client, transport } = makeClient({
+    mutationPolicy: { enabled: true, allowCommands: ['endpoint.invoke_cc_api'] },
+  });
   await startConnected(client, transport);
 
   const endpointCcArgs = { nodeId: 5, endpoint: 1, commandClass: 37 };
@@ -639,7 +642,12 @@ test('endpoint support-check and node-helper wrappers send exact protocol comman
 });
 
 test('virtual endpoint read wrappers send exact broadcast/multicast protocol commands and return results', async () => {
-  const { client, transport } = makeClient();
+  const { client, transport } = makeClient({
+    mutationPolicy: {
+      enabled: true,
+      allowCommands: ['broadcast_node.invoke_cc_api', 'multicast_group.invoke_cc_api'],
+    },
+  });
   await startConnected(client, transport);
 
   const checks = [

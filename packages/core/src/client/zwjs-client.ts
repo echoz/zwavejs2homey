@@ -486,7 +486,7 @@ export class ZwjsClientImpl implements ZwjsClient {
   async endpointInvokeCcApi(
     args: ZwjsEndpointInvokeCcApiArgs,
   ): Promise<ZwjsCommandResult<ZwjsInvokeCcApiResult>> {
-    return this.sendCommand<ZwjsInvokeCcApiResult, ZwjsEndpointInvokeCcApiArgs>({
+    return this.sendMutationCommand<ZwjsInvokeCcApiResult, ZwjsEndpointInvokeCcApiArgs>({
       command: 'endpoint.invoke_cc_api',
       args,
     });
@@ -572,7 +572,7 @@ export class ZwjsClientImpl implements ZwjsClient {
       'index' | 'commandClass' | 'methodName' | 'args'
     >,
   ): Promise<ZwjsCommandResult<ZwjsInvokeCcApiResult>> {
-    return this.sendCommand<
+    return this.sendMutationCommand<
       ZwjsInvokeCcApiResult,
       Pick<ZwjsVirtualEndpointInvokeCcApiArgs, 'index' | 'commandClass' | 'methodName' | 'args'>
     >({
@@ -626,7 +626,7 @@ export class ZwjsClientImpl implements ZwjsClient {
   async multicastGroupInvokeCcApi(
     args: ZwjsVirtualEndpointInvokeCcApiArgs,
   ): Promise<ZwjsCommandResult<ZwjsInvokeCcApiResult>> {
-    return this.sendCommand<ZwjsInvokeCcApiResult, ZwjsVirtualEndpointInvokeCcApiArgs>({
+    return this.sendMutationCommand<ZwjsInvokeCcApiResult, ZwjsVirtualEndpointInvokeCcApiArgs>({
       command: 'multicast_group.invoke_cc_api',
       args,
     });

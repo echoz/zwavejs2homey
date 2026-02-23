@@ -410,3 +410,128 @@ test('P2.2 low-risk mutating wrappers are blocked by default mutation policy', a
   assert.equal(transport.sent.length, 0);
   await client.stop();
 });
+
+test('invoke_cc_api wrappers are blocked by default mutation policy', async () => {
+  const { client, transport } = makeClient();
+  await startConnected(client, transport);
+
+  await assert.rejects(
+    () =>
+      client.endpointInvokeCcApi({
+        nodeId: 5,
+        endpoint: 1,
+        commandClass: 37,
+        methodName: 'set',
+        args: [true],
+      }),
+    /blocked by policy/,
+  );
+  await assert.rejects(
+    () =>
+      client.broadcastNodeInvokeCcApi({
+        index: 1,
+        commandClass: 37,
+        methodName: 'set',
+        args: [true],
+      }),
+    /blocked by policy/,
+  );
+  await assert.rejects(
+    () =>
+      client.multicastGroupInvokeCcApi({
+        nodeIDs: [5, 7],
+        index: 1,
+        commandClass: 37,
+        methodName: 'set',
+        args: [true],
+      }),
+    /blocked by policy/,
+  );
+  assert.equal(transport.sent.length, 0);
+  await client.stop();
+});
+
+test('invoke_cc_api wrappers send when explicitly allowlisted', async () => {
+  const { client, transport } = makeClient({
+    enabled: true,
+    allowCommands: [
+      'endpoint.invoke_cc_api',
+      'broadcast_node.invoke_cc_api',
+      'multicast_group.invoke_cc_api',
+    ],
+  });
+  await startConnected(client, transport);
+
+  const endpointPending = client.endpointInvokeCcApi({
+    nodeId: 5,
+    endpoint: 1,
+    commandClass: 37,
+    methodName: 'get',
+    args: [],
+  });
+  let sent = transport.sent.at(-1);
+  assert.deepEqual(
+    sent,
+    withMessageId(
+      loadFixture('zwjs-server', 'command.endpoint.invoke_cc_api.json'),
+      sent.messageId,
+    ),
+  );
+  transport.triggerMessage(
+    withMessageId(
+      loadFixture('zwjs-server', 'result.endpoint.invoke_cc_api.success.json'),
+      sent.messageId,
+    ),
+  );
+  const endpointResult = await endpointPending;
+  assert.equal(endpointResult.success, true);
+
+  const broadcastPending = client.broadcastNodeInvokeCcApi({
+    index: 1,
+    commandClass: 37,
+    methodName: 'get',
+    args: [],
+  });
+  sent = transport.sent.at(-1);
+  assert.deepEqual(
+    sent,
+    withMessageId(
+      loadFixture('zwjs-server', 'command.broadcast_node.invoke_cc_api.json'),
+      sent.messageId,
+    ),
+  );
+  transport.triggerMessage(
+    withMessageId(
+      loadFixture('zwjs-server', 'result.broadcast_node.invoke_cc_api.success.json'),
+      sent.messageId,
+    ),
+  );
+  const broadcastResult = await broadcastPending;
+  assert.equal(broadcastResult.success, true);
+
+  const multicastPending = client.multicastGroupInvokeCcApi({
+    nodeIDs: [5, 7],
+    index: 1,
+    commandClass: 37,
+    methodName: 'get',
+    args: [],
+  });
+  sent = transport.sent.at(-1);
+  assert.deepEqual(
+    sent,
+    withMessageId(
+      loadFixture('zwjs-server', 'command.multicast_group.invoke_cc_api.json'),
+      sent.messageId,
+    ),
+  );
+  transport.triggerMessage(
+    withMessageId(
+      loadFixture('zwjs-server', 'result.multicast_group.invoke_cc_api.success.json'),
+      sent.messageId,
+    ),
+  );
+  const multicastResult = await multicastPending;
+  assert.equal(multicastResult.success, true);
+
+  await client.stop();
+});
