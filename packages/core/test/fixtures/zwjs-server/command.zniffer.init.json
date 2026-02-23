@@ -1,0 +1,9 @@
+{
+  "messageId": "fixture-zniffer-init-1",
+  "command": "zniffer.init",
+  "devicePath": "/dev/ttyUSB0",
+  "options": {
+    "region": 0,
+    "baudrate": 230400
+  }
+}

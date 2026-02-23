@@ -1,0 +1,4 @@
+{
+  "messageId": "fixture-zniffer-clear-1",
+  "command": "zniffer.clear_captured_frames"
+}

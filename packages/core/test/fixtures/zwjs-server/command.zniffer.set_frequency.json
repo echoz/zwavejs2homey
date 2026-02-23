@@ -1,0 +1,5 @@
+{
+  "messageId": "fixture-zniffer-set-frequency-1",
+  "command": "zniffer.set_frequency",
+  "frequency": 1
+}

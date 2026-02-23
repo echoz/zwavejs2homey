@@ -1,0 +1,4 @@
+{
+  "messageId": "fixture-zniffer-destroy-1",
+  "command": "zniffer.destroy"
+}

@@ -65,6 +65,9 @@ import type {
   ZwjsZnifferCaptureAsZlfBufferResult,
   ZwjsZnifferSupportedFrequenciesResult,
   ZwjsZnifferCurrentFrequencyResult,
+  ZwjsZnifferInitArgs,
+  ZwjsZnifferSetFrequencyArgs,
+  ZwjsZnifferCommandEmptyResult,
   ZwjsValueId,
   ZwjsClientStatus,
   ZwjsLifecycleState,
@@ -690,6 +693,48 @@ export class ZwjsClientImpl implements ZwjsClient {
   > {
     return this.sendCommand<ZwjsZnifferCurrentFrequencyResult>({
       command: 'zniffer.current_frequency',
+    });
+  }
+
+  async initZniffer(
+    args: ZwjsZnifferInitArgs,
+  ): Promise<ZwjsCommandResult<ZwjsZnifferCommandEmptyResult>> {
+    return this.sendMutationCommand<ZwjsZnifferCommandEmptyResult, ZwjsZnifferInitArgs>({
+      command: 'zniffer.init',
+      args,
+    });
+  }
+
+  async startZniffer(): Promise<ZwjsCommandResult<ZwjsZnifferCommandEmptyResult>> {
+    return this.sendMutationCommand<ZwjsZnifferCommandEmptyResult>({
+      command: 'zniffer.start',
+    });
+  }
+
+  async stopZniffer(): Promise<ZwjsCommandResult<ZwjsZnifferCommandEmptyResult>> {
+    return this.sendMutationCommand<ZwjsZnifferCommandEmptyResult>({
+      command: 'zniffer.stop',
+    });
+  }
+
+  async destroyZniffer(): Promise<ZwjsCommandResult<ZwjsZnifferCommandEmptyResult>> {
+    return this.sendMutationCommand<ZwjsZnifferCommandEmptyResult>({
+      command: 'zniffer.destroy',
+    });
+  }
+
+  async clearZnifferCapturedFrames(): Promise<ZwjsCommandResult<ZwjsZnifferCommandEmptyResult>> {
+    return this.sendMutationCommand<ZwjsZnifferCommandEmptyResult>({
+      command: 'zniffer.clear_captured_frames',
+    });
+  }
+
+  async setZnifferFrequency(
+    args: ZwjsZnifferSetFrequencyArgs,
+  ): Promise<ZwjsCommandResult<ZwjsZnifferCommandEmptyResult>> {
+    return this.sendMutationCommand<ZwjsZnifferCommandEmptyResult, ZwjsZnifferSetFrequencyArgs>({
+      command: 'zniffer.set_frequency',
+      args,
     });
   }
 

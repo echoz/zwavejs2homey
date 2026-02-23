@@ -328,6 +328,14 @@ export interface ZwjsZnifferCurrentFrequencyResult {
   frequency?: number;
   [key: string]: unknown;
 }
+export interface ZwjsZnifferInitArgs {
+  devicePath: string;
+  options: Record<string, unknown>;
+}
+export interface ZwjsZnifferSetFrequencyArgs {
+  frequency: number;
+}
+export type ZwjsZnifferCommandEmptyResult = Record<string, never>;
 
 export interface ClientLogger {
   debug?(msg: string, meta?: unknown): void;
@@ -887,6 +895,14 @@ export interface ZwjsClient {
     ZwjsCommandResult<ZwjsZnifferSupportedFrequenciesResult>
   >;
   getZnifferCurrentFrequency(): Promise<ZwjsCommandResult<ZwjsZnifferCurrentFrequencyResult>>;
+  initZniffer(args: ZwjsZnifferInitArgs): Promise<ZwjsCommandResult<ZwjsZnifferCommandEmptyResult>>;
+  startZniffer(): Promise<ZwjsCommandResult<ZwjsZnifferCommandEmptyResult>>;
+  stopZniffer(): Promise<ZwjsCommandResult<ZwjsZnifferCommandEmptyResult>>;
+  destroyZniffer(): Promise<ZwjsCommandResult<ZwjsZnifferCommandEmptyResult>>;
+  clearZnifferCapturedFrames(): Promise<ZwjsCommandResult<ZwjsZnifferCommandEmptyResult>>;
+  setZnifferFrequency(
+    args: ZwjsZnifferSetFrequencyArgs,
+  ): Promise<ZwjsCommandResult<ZwjsZnifferCommandEmptyResult>>;
   beginInclusion(
     args?: ZwjsControllerBeginInclusionArgs,
   ): Promise<ZwjsCommandResult<ZwjsControllerInclusionCommandResult>>;

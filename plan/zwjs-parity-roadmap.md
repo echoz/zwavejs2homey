@@ -450,8 +450,18 @@ Progress (completed subset):
   - `frame`
   - `error`
 - Remaining P3.2 scope:
-  - lifecycle/mutation wrappers (`init`, `start`, `stop`, `destroy`, `clear_captured_frames`, `set_frequency`) via mutation policy
   - optional live validation on a non-production zniffer-capable setup
+
+Progress (completed lifecycle/mutation subset):
+
+- Added mutation-gated zniffer wrappers for:
+  - `zniffer.init`
+  - `zniffer.start`
+  - `zniffer.stop`
+  - `zniffer.destroy`
+  - `zniffer.clear_captured_frames`
+  - `zniffer.set_frequency`
+- Added fixture-backed mutation-policy tests for default blocking and allowlisted exact command envelopes
 
 #### P3.3 Firmware / Maintenance Workflows
 

@@ -1,0 +1,4 @@
+{
+  "messageId": "fixture-zniffer-start-1",
+  "command": "zniffer.start"
+}

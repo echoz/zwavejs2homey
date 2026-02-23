@@ -535,3 +535,70 @@ test('invoke_cc_api wrappers send when explicitly allowlisted', async () => {
 
   await client.stop();
 });
+
+test('zniffer mutation wrappers send exact protocol commands when allowlisted', async () => {
+  const { client, transport } = makeClient({
+    enabled: true,
+    allowCommands: [
+      'zniffer.init',
+      'zniffer.start',
+      'zniffer.stop',
+      'zniffer.destroy',
+      'zniffer.clear_captured_frames',
+      'zniffer.set_frequency',
+    ],
+  });
+  await startConnected(client, transport);
+
+  const checks = [
+    [
+      () =>
+        client.initZniffer({
+          devicePath: '/dev/ttyUSB0',
+          options: { region: 0, baudrate: 230400 },
+        }),
+      'command.zniffer.init.json',
+    ],
+    [() => client.startZniffer(), 'command.zniffer.start.json'],
+    [() => client.stopZniffer(), 'command.zniffer.stop.json'],
+    [() => client.destroyZniffer(), 'command.zniffer.destroy.json'],
+    [() => client.clearZnifferCapturedFrames(), 'command.zniffer.clear_captured_frames.json'],
+    [() => client.setZnifferFrequency({ frequency: 1 }), 'command.zniffer.set_frequency.json'],
+  ];
+
+  for (const [call, commandFixture] of checks) {
+    const pending = call();
+    const sent = transport.sent.at(-1);
+    assert.deepEqual(
+      sent,
+      withMessageId(loadFixture('zwjs-server', commandFixture), sent.messageId),
+    );
+    transport.triggerMessage(
+      withMessageId(
+        loadFixture('zwjs-server', 'result.command.success.empty.json'),
+        sent.messageId,
+      ),
+    );
+    const result = await pending;
+    assert.equal(result.success, true);
+  }
+
+  await client.stop();
+});
+
+test('zniffer mutation wrappers are blocked by default mutation policy', async () => {
+  const { client, transport } = makeClient();
+  await startConnected(client, transport);
+
+  await assert.rejects(
+    () => client.initZniffer({ devicePath: '/dev/ttyUSB0', options: { region: 0 } }),
+    /blocked by policy/,
+  );
+  await assert.rejects(() => client.startZniffer(), /blocked by policy/);
+  await assert.rejects(() => client.stopZniffer(), /blocked by policy/);
+  await assert.rejects(() => client.destroyZniffer(), /blocked by policy/);
+  await assert.rejects(() => client.clearZnifferCapturedFrames(), /blocked by policy/);
+  await assert.rejects(() => client.setZnifferFrequency({ frequency: 1 }), /blocked by policy/);
+  assert.equal(transport.sent.length, 0);
+  await client.stop();
+});
