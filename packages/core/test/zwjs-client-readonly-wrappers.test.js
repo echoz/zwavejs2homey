@@ -218,6 +218,138 @@ test('getNodeSupportedNotificationEvents sends correct command and returns proto
   await client.stop();
 });
 
+test('getNodeFirmwareUpdateCapabilities sends correct command and returns protocol-native payload', async () => {
+  const { client, transport } = makeClient();
+  await startConnected(client, transport);
+
+  const pending = client.getNodeFirmwareUpdateCapabilities(5);
+  const sent = transport.sent.at(-1);
+  assert.deepEqual(sent, withMessageId(loadFixture('zwjs-server', 'command.node.get_firmware_update_capabilities.json'), sent.messageId));
+
+  transport.triggerMessage(
+    withMessageId(loadFixture('zwjs-server', 'result.node.get_firmware_update_capabilities.success.json'), sent.messageId),
+  );
+  const result = await pending;
+  assert.equal(result.success, true);
+  assert.equal(result.result.firmwareUpgradable, true);
+  await client.stop();
+});
+
+test('getNodeFirmwareUpdateCapabilitiesCached sends correct command and returns protocol-native payload', async () => {
+  const { client, transport } = makeClient();
+  await startConnected(client, transport);
+
+  const pending = client.getNodeFirmwareUpdateCapabilitiesCached(5);
+  const sent = transport.sent.at(-1);
+  assert.deepEqual(
+    sent,
+    withMessageId(loadFixture('zwjs-server', 'command.node.get_firmware_update_capabilities_cached.json'), sent.messageId),
+  );
+
+  transport.triggerMessage(
+    withMessageId(loadFixture('zwjs-server', 'result.node.get_firmware_update_capabilities_cached.success.json'), sent.messageId),
+  );
+  const result = await pending;
+  assert.equal(result.success, true);
+  assert.equal(result.result.cached, true);
+  await client.stop();
+});
+
+test('getNodeDateAndTime sends correct command and returns protocol-native payload', async () => {
+  const { client, transport } = makeClient();
+  await startConnected(client, transport);
+
+  const pending = client.getNodeDateAndTime(5);
+  const sent = transport.sent.at(-1);
+  assert.deepEqual(sent, withMessageId(loadFixture('zwjs-server', 'command.node.get_date_and_time.json'), sent.messageId));
+
+  transport.triggerMessage(withMessageId(loadFixture('zwjs-server', 'result.node.get_date_and_time.success.json'), sent.messageId));
+  const result = await pending;
+  assert.equal(result.success, true);
+  assert.equal(result.result.year, 2026);
+  await client.stop();
+});
+
+test('isNodeFirmwareUpdateInProgress sends correct command and returns inProgress flag', async () => {
+  const { client, transport } = makeClient();
+  await startConnected(client, transport);
+
+  const pending = client.isNodeFirmwareUpdateInProgress(5);
+  const sent = transport.sent.at(-1);
+  assert.deepEqual(
+    sent,
+    withMessageId(loadFixture('zwjs-server', 'command.node.is_firmware_update_in_progress.json'), sent.messageId),
+  );
+
+  transport.triggerMessage(
+    withMessageId(loadFixture('zwjs-server', 'result.node.is_firmware_update_in_progress.success.json'), sent.messageId),
+  );
+  const result = await pending;
+  assert.equal(result.success, true);
+  assert.equal(result.result.inProgress, false);
+  await client.stop();
+});
+
+test('getNodeFirmwareUpdateProgress sends correct command and returns protocol-native payload', async () => {
+  const { client, transport } = makeClient();
+  await startConnected(client, transport);
+
+  const pending = client.getNodeFirmwareUpdateProgress(5);
+  const sent = transport.sent.at(-1);
+  assert.deepEqual(
+    sent,
+    withMessageId(loadFixture('zwjs-server', 'command.node.get_firmware_update_progress.json'), sent.messageId),
+  );
+
+  transport.triggerMessage(
+    withMessageId(loadFixture('zwjs-server', 'result.node.get_firmware_update_progress.success.json'), sent.messageId),
+  );
+  const result = await pending;
+  assert.equal(result.success, true);
+  assert.equal(result.result.progress, 25);
+  await client.stop();
+});
+
+test('isNodeHealthCheckInProgress sends correct command and returns inProgress flag', async () => {
+  const { client, transport } = makeClient();
+  await startConnected(client, transport);
+
+  const pending = client.isNodeHealthCheckInProgress(5);
+  const sent = transport.sent.at(-1);
+  assert.deepEqual(
+    sent,
+    withMessageId(loadFixture('zwjs-server', 'command.node.is_health_check_in_progress.json'), sent.messageId),
+  );
+
+  transport.triggerMessage(
+    withMessageId(loadFixture('zwjs-server', 'result.node.is_health_check_in_progress.success.json'), sent.messageId),
+  );
+  const result = await pending;
+  assert.equal(result.success, true);
+  assert.equal(result.result.inProgress, true);
+  await client.stop();
+});
+
+test('hasNodeDeviceConfigChanged sends correct command and returns changed flag', async () => {
+  const { client, transport } = makeClient();
+  await startConnected(client, transport);
+
+  const pending = client.hasNodeDeviceConfigChanged(5);
+  const sent = transport.sent.at(-1);
+  assert.deepEqual(
+    sent,
+    withMessageId(loadFixture('zwjs-server', 'command.node.has_device_config_changed.json'), sent.messageId),
+  );
+
+  transport.triggerMessage(
+    withMessageId(loadFixture('zwjs-server', 'result.node.has_device_config_changed.success.json'), sent.messageId),
+  );
+  const result = await pending;
+  assert.equal(result.success, true);
+  assert.equal(result.result.hasChanged, false);
+  await client.stop();
+});
+
 test('setApiSchema sends correct command and returns success result', async () => {
   const { client, transport } = makeClient();
   await startConnected(client, transport);

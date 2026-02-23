@@ -30,8 +30,15 @@ import type {
   ZwjsNodeValueMetadataResult,
   ZwjsNodeValueResult,
   ZwjsNodeValueTimestampResult,
-  ZwjsNodeSupportedNotificationEventsResult,
-  ZwjsValueId,
+    ZwjsNodeSupportedNotificationEventsResult,
+    ZwjsNodeFirmwareUpdateCapabilitiesResult,
+    ZwjsNodeFirmwareUpdateCapabilitiesCachedResult,
+    ZwjsNodeDateAndTimeResult,
+    ZwjsNodeFirmwareUpdateInProgressResult,
+    ZwjsNodeFirmwareUpdateProgressResult,
+    ZwjsNodeHealthCheckInProgressResult,
+    ZwjsNodeDeviceConfigChangedResult,
+    ZwjsValueId,
   ZwjsClientStatus,
   ZwjsLifecycleState,
 } from './types';
@@ -276,6 +283,59 @@ export class ZwjsClientImpl implements ZwjsClient {
   async getNodeSupportedNotificationEvents(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeSupportedNotificationEventsResult>> {
     return this.sendCommand<ZwjsNodeSupportedNotificationEventsResult, { nodeId: number }>({
       command: 'node.get_supported_notification_events',
+      args: { nodeId },
+    });
+  }
+
+  async getNodeFirmwareUpdateCapabilities(
+    nodeId: number,
+  ): Promise<ZwjsCommandResult<ZwjsNodeFirmwareUpdateCapabilitiesResult>> {
+    return this.sendCommand<ZwjsNodeFirmwareUpdateCapabilitiesResult, { nodeId: number }>({
+      command: 'node.get_firmware_update_capabilities',
+      args: { nodeId },
+    });
+  }
+
+  async getNodeFirmwareUpdateCapabilitiesCached(
+    nodeId: number,
+  ): Promise<ZwjsCommandResult<ZwjsNodeFirmwareUpdateCapabilitiesCachedResult>> {
+    return this.sendCommand<ZwjsNodeFirmwareUpdateCapabilitiesCachedResult, { nodeId: number }>({
+      command: 'node.get_firmware_update_capabilities_cached',
+      args: { nodeId },
+    });
+  }
+
+  async getNodeDateAndTime(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeDateAndTimeResult>> {
+    return this.sendCommand<ZwjsNodeDateAndTimeResult, { nodeId: number }>({
+      command: 'node.get_date_and_time',
+      args: { nodeId },
+    });
+  }
+
+  async isNodeFirmwareUpdateInProgress(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeFirmwareUpdateInProgressResult>> {
+    return this.sendCommand<ZwjsNodeFirmwareUpdateInProgressResult, { nodeId: number }>({
+      command: 'node.is_firmware_update_in_progress',
+      args: { nodeId },
+    });
+  }
+
+  async getNodeFirmwareUpdateProgress(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeFirmwareUpdateProgressResult>> {
+    return this.sendCommand<ZwjsNodeFirmwareUpdateProgressResult, { nodeId: number }>({
+      command: 'node.get_firmware_update_progress',
+      args: { nodeId },
+    });
+  }
+
+  async isNodeHealthCheckInProgress(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeHealthCheckInProgressResult>> {
+    return this.sendCommand<ZwjsNodeHealthCheckInProgressResult, { nodeId: number }>({
+      command: 'node.is_health_check_in_progress',
+      args: { nodeId },
+    });
+  }
+
+  async hasNodeDeviceConfigChanged(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeDeviceConfigChangedResult>> {
+    return this.sendCommand<ZwjsNodeDeviceConfigChangedResult, { nodeId: number }>({
+      command: 'node.has_device_config_changed',
       args: { nodeId },
     });
   }

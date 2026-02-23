@@ -1,0 +1,10 @@
+{
+  "type": "result",
+  "messageId": "fixture-message-id",
+  "success": true,
+  "result": {
+    "sentFragments": 12,
+    "totalFragments": 48,
+    "progress": 25
+  }
+}

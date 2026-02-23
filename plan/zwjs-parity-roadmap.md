@@ -202,6 +202,18 @@ Tests:
 - mocked transport wrapper suite (expand existing file or add grouped suite)
 - fixtures for each command envelope/result example
 
+Progress (completed subset):
+- Added typed read-only wrappers (protocol-native/partial result typing) for all listed P1.2 commands:
+  - `node.get_firmware_update_capabilities`
+  - `node.get_firmware_update_capabilities_cached`
+  - `node.get_date_and_time`
+  - `node.is_firmware_update_in_progress`
+  - `node.get_firmware_update_progress`
+  - `node.is_health_check_in_progress`
+  - `node.has_device_config_changed`
+- Added fixture-backed mocked transport tests for command envelopes and representative result passthrough for each wrapper
+- Live validation for this wrapper set remains pending (device/firmware support dependent)
+
 #### P1.3 Controller/Node Progress Event Typing Set A
 
 Implement specialized controller/node event typing for common progress events:

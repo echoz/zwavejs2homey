@@ -190,6 +190,23 @@ export type ZwjsNodeValueTimestampResult =
       [key: string]: unknown;
     };
 export type ZwjsNodeSupportedNotificationEventsResult = Record<string, unknown> | Array<unknown>;
+export type ZwjsNodeFirmwareUpdateCapabilitiesResult = Record<string, unknown> | Array<unknown>;
+export type ZwjsNodeFirmwareUpdateCapabilitiesCachedResult = Record<string, unknown> | Array<unknown>;
+export type ZwjsNodeDateAndTimeResult = Record<string, unknown> | Array<unknown> | string | number | null;
+export interface ZwjsNodeFirmwareUpdateInProgressResult {
+  inProgress?: boolean;
+  [key: string]: unknown;
+}
+export type ZwjsNodeFirmwareUpdateProgressResult = Record<string, unknown> | Array<unknown>;
+export interface ZwjsNodeHealthCheckInProgressResult {
+  inProgress?: boolean;
+  [key: string]: unknown;
+}
+export interface ZwjsNodeDeviceConfigChangedResult {
+  hasChanged?: boolean;
+  changed?: boolean;
+  [key: string]: unknown;
+}
 
 export interface ClientLogger {
   debug?(msg: string, meta?: unknown): void;
@@ -529,6 +546,15 @@ export interface ZwjsClient {
   getNodeValue(nodeId: number, valueId: ZwjsValueId): Promise<ZwjsCommandResult<ZwjsNodeValueResult>>;
   getNodeValueTimestamp(nodeId: number, valueId: ZwjsValueId): Promise<ZwjsCommandResult<ZwjsNodeValueTimestampResult>>;
   getNodeSupportedNotificationEvents(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeSupportedNotificationEventsResult>>;
+  getNodeFirmwareUpdateCapabilities(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeFirmwareUpdateCapabilitiesResult>>;
+  getNodeFirmwareUpdateCapabilitiesCached(
+    nodeId: number,
+  ): Promise<ZwjsCommandResult<ZwjsNodeFirmwareUpdateCapabilitiesCachedResult>>;
+  getNodeDateAndTime(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeDateAndTimeResult>>;
+  isNodeFirmwareUpdateInProgress(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeFirmwareUpdateInProgressResult>>;
+  getNodeFirmwareUpdateProgress(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeFirmwareUpdateProgressResult>>;
+  isNodeHealthCheckInProgress(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeHealthCheckInProgressResult>>;
+  hasNodeDeviceConfigChanged(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeDeviceConfigChangedResult>>;
   beginInclusion(args?: ZwjsControllerBeginInclusionArgs): Promise<ZwjsCommandResult<ZwjsControllerInclusionCommandResult>>;
   beginExclusion(args?: ZwjsControllerBeginExclusionArgs): Promise<ZwjsCommandResult<ZwjsControllerInclusionCommandResult>>;
   stopInclusion(): Promise<ZwjsCommandResult<ZwjsControllerInclusionCommandResult>>;

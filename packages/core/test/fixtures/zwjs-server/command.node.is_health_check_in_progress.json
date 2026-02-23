@@ -1,0 +1,4 @@
+{
+  "command": "node.is_health_check_in_progress",
+  "nodeId": 5
+}

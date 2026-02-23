@@ -1,0 +1,4 @@
+{
+  "command": "node.has_device_config_changed",
+  "nodeId": 5
+}

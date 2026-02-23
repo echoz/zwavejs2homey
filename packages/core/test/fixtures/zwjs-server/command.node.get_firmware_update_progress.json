@@ -1,0 +1,4 @@
+{
+  "command": "node.get_firmware_update_progress",
+  "nodeId": 5
+}
