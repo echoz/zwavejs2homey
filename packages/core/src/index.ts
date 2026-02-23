@@ -27,6 +27,7 @@ export type {
   ZwjsDriverLogConfigResult,
   ZwjsDriverStatisticsEnabledResult,
   ZwjsDefinedValueIdsResult,
+  ZwjsDefinedValueId,
   ZwjsNodeStateResult,
   ZwjsNodeValueMetadataResult,
   ZwjsNodeValueResult,
@@ -44,6 +45,7 @@ export type {
   ZwjsResultSuccessFrame,
   ZwjsVersionFrame,
 } from './protocol/raw-frame-types';
+export { extractZwjsDefinedValueIds, isZwjsDefinedValueId, isZwjsValueId } from './protocol/value-id-guards';
 
 import { ZwjsClientImpl } from './client/zwjs-client';
 import type { ZwjsClient, ZwjsClientConfig } from './client/types';

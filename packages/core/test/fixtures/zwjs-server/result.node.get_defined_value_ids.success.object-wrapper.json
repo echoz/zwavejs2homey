@@ -1,0 +1,25 @@
+{
+  "values": [
+    {
+      "commandClass": 37,
+      "endpoint": 0,
+      "property": "currentValue",
+      "propertyName": "Current value",
+      "readable": true,
+      "writeable": true
+    },
+    {
+      "commandClass": 112,
+      "endpoint": 0,
+      "property": 1,
+      "propertyKey": 0,
+      "propertyName": "Configuration parameter",
+      "readable": true,
+      "writeable": true
+    },
+    {
+      "not": "a-value-id"
+    }
+  ],
+  "source": "fixture"
+}

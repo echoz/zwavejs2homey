@@ -51,6 +51,22 @@ export interface ZwjsValueId {
   propertyKey?: number | string;
 }
 
+export interface ZwjsDefinedValueId extends ZwjsValueId {
+  propertyName?: string;
+  propertyKeyName?: string;
+  readable?: boolean;
+  writeable?: boolean;
+  label?: string;
+  description?: string;
+  unit?: string;
+  type?: string;
+  min?: number;
+  max?: number;
+  default?: unknown;
+  states?: Record<string, unknown> | Array<unknown>;
+  [key: string]: unknown;
+}
+
 export interface ZwjsProtocolErrorPayload {
   errorCode?: string;
   zwaveErrorCode?: number;
@@ -117,10 +133,30 @@ export interface ZwjsNodeStateResult {
 
 export type ZwjsControllerNodeNeighborsResult = number[] | { neighbors?: number[]; [key: string]: unknown };
 
-export type ZwjsDefinedValueIdsResult = Array<Record<string, unknown>> | { values?: Array<Record<string, unknown>>; [key: string]: unknown };
+export type ZwjsDefinedValueIdsResult = ZwjsDefinedValueId[] | { values?: ZwjsDefinedValueId[]; [key: string]: unknown };
 
-export type ZwjsNodeValueResult = unknown;
-export type ZwjsNodeValueMetadataResult = Record<string, unknown>;
+export type ZwjsNodeValueResult =
+  | string
+  | number
+  | boolean
+  | null
+  | Record<string, unknown>
+  | Array<unknown>;
+
+export interface ZwjsNodeValueMetadataResult {
+  type?: string;
+  label?: string;
+  description?: string;
+  readable?: boolean;
+  writeable?: boolean;
+  unit?: string;
+  min?: number;
+  max?: number;
+  steps?: number;
+  states?: Record<string, unknown> | Array<unknown>;
+  default?: unknown;
+  [key: string]: unknown;
+}
 export type ZwjsNodeValueTimestampResult = number | string | null;
 export type ZwjsNodeSupportedNotificationEventsResult = Record<string, unknown> | Array<unknown>;
 
