@@ -98,6 +98,8 @@ export type ZwjsControllerNodeNeighborsResult = number[] | { neighbors?: number[
 export type ZwjsDefinedValueIdsResult = Array<Record<string, unknown>> | { values?: Array<Record<string, unknown>>; [key: string]: unknown };
 
 export type ZwjsNodeValueResult = unknown;
+export type ZwjsNodeValueMetadataResult = Record<string, unknown>;
+export type ZwjsNodeValueTimestampResult = number | string | null;
 
 export interface ClientLogger {
   debug?(msg: string, meta?: unknown): void;
@@ -220,7 +222,9 @@ export interface ZwjsClient {
   getControllerNodeNeighbors(nodeId: number): Promise<ZwjsCommandResult<ZwjsControllerNodeNeighborsResult>>;
   getNodeState(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeStateResult>>;
   getNodeDefinedValueIds(nodeId: number): Promise<ZwjsCommandResult<ZwjsDefinedValueIdsResult>>;
+  getNodeValueMetadata(nodeId: number, valueId: ZwjsValueId): Promise<ZwjsCommandResult<ZwjsNodeValueMetadataResult>>;
   getNodeValue(nodeId: number, valueId: ZwjsValueId): Promise<ZwjsCommandResult<ZwjsNodeValueResult>>;
+  getNodeValueTimestamp(nodeId: number, valueId: ZwjsValueId): Promise<ZwjsCommandResult<ZwjsNodeValueTimestampResult>>;
   getServerInfo(): Promise<ServerInfoResult>;
   getNodeList(): Promise<NodeListResult>;
 }

@@ -111,3 +111,38 @@ test('getNodeValue sends correct command and returns raw value result', async ()
   assert.equal(result.result, true);
   await client.stop();
 });
+
+test('getNodeValueMetadata sends correct command and returns metadata object', async () => {
+  const { client, transport } = makeClient();
+  await startConnected(client, transport);
+
+  const valueId = { commandClass: 37, property: 'currentValue', endpoint: 0 };
+  const pending = client.getNodeValueMetadata(5, valueId);
+  const sent = transport.sent.at(-1);
+  assert.deepEqual(sent, withMessageId(loadFixture('zwjs-server', 'command.node.get_value_metadata.json'), sent.messageId));
+
+  transport.triggerMessage(withMessageId(loadFixture('zwjs-server', 'result.node.get_value_metadata.success.json'), sent.messageId));
+  const result = await pending;
+
+  assert.equal(result.success, true);
+  assert.equal(result.result.label, 'Current value');
+  assert.equal(result.result.max, 99);
+  await client.stop();
+});
+
+test('getNodeValueTimestamp sends correct command and returns timestamp result', async () => {
+  const { client, transport } = makeClient();
+  await startConnected(client, transport);
+
+  const valueId = { commandClass: 37, property: 'currentValue', endpoint: 0 };
+  const pending = client.getNodeValueTimestamp(5, valueId);
+  const sent = transport.sent.at(-1);
+  assert.deepEqual(sent, withMessageId(loadFixture('zwjs-server', 'command.node.get_value_timestamp.json'), sent.messageId));
+
+  transport.triggerMessage(withMessageId(loadFixture('zwjs-server', 'result.node.get_value_timestamp.success.json'), sent.messageId));
+  const result = await pending;
+
+  assert.equal(result.success, true);
+  assert.equal(result.result, 1730000000000);
+  await client.stop();
+});

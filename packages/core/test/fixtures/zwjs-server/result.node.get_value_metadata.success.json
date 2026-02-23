@@ -1,0 +1,13 @@
+{
+  "type": "result",
+  "messageId": "fixture-13",
+  "success": true,
+  "result": {
+    "type": "number",
+    "label": "Current value",
+    "readable": true,
+    "writeable": true,
+    "min": 0,
+    "max": 99
+  }
+}

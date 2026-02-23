@@ -240,6 +240,7 @@ Build a fully featured, protocol-oriented `zwjs` client in `packages/core` for `
 6. [x] Add mocked WS tests for command correlation, failures, and reconnect recovery
 7. [x] Return typed protocol error payloads from failed command results (`errorCode`, Z-Wave error metadata, raw frame)
 8. [x] Add typed read-only wrappers for `controller.get_node_neighbors`, `node.get_defined_value_ids`, and `node.get_value` with fixture-backed wrapper tests
+9. [x] Add typed value wrappers for `node.get_value_metadata` and `node.get_value_timestamp` with fixture-backed wrapper tests
 7. [ ] Validate expanded command/event coverage against real instance (read-only only)
 8. [ ] Add mutating-command layer (still protocol-oriented) with safety guards (separate phase)
 

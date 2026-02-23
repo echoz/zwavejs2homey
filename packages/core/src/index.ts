@@ -19,7 +19,9 @@ export type {
   ZwjsDriverConfig,
   ZwjsDefinedValueIdsResult,
   ZwjsNodeStateResult,
+  ZwjsNodeValueMetadataResult,
   ZwjsNodeValueResult,
+  ZwjsNodeValueTimestampResult,
   ZwjsClientStatus,
   ZwjsValueId,
 } from './client/types';

@@ -20,7 +20,9 @@ import type {
   ZwjsInitializeOptions,
   ZwjsNodeStateResult,
   ZwjsDefinedValueIdsResult,
+  ZwjsNodeValueMetadataResult,
   ZwjsNodeValueResult,
+  ZwjsNodeValueTimestampResult,
   ZwjsValueId,
   ZwjsClientStatus,
   ZwjsLifecycleState,
@@ -196,9 +198,23 @@ export class ZwjsClientImpl implements ZwjsClient {
     });
   }
 
+  async getNodeValueMetadata(nodeId: number, valueId: ZwjsValueId): Promise<ZwjsCommandResult<ZwjsNodeValueMetadataResult>> {
+    return this.sendCommand<ZwjsNodeValueMetadataResult, { nodeId: number; valueId: ZwjsValueId }>({
+      command: 'node.get_value_metadata',
+      args: { nodeId, valueId },
+    });
+  }
+
   async getNodeValue(nodeId: number, valueId: ZwjsValueId): Promise<ZwjsCommandResult<ZwjsNodeValueResult>> {
     return this.sendCommand<ZwjsNodeValueResult, { nodeId: number; valueId: ZwjsValueId }>({
       command: 'node.get_value',
+      args: { nodeId, valueId },
+    });
+  }
+
+  async getNodeValueTimestamp(nodeId: number, valueId: ZwjsValueId): Promise<ZwjsCommandResult<ZwjsNodeValueTimestampResult>> {
+    return this.sendCommand<ZwjsNodeValueTimestampResult, { nodeId: number; valueId: ZwjsValueId }>({
+      command: 'node.get_value_timestamp',
       args: { nodeId, valueId },
     });
   }
