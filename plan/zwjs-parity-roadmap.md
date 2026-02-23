@@ -60,7 +60,8 @@ Progress (completed subset):
 - Exported `ZwjsDefinedValueId` plus value-id guards/extractor helpers
 - Added guard tests for array and object-wrapped `node.get_defined_value_ids` result shapes
 - Tightened `ZwjsNodeValueMetadataResult` common-field typing to `partial`
-- `ZwjsNodeValueResult` remains intentionally broad (JSON-like union) pending real payload sampling
+- Added `node.get_value` envelope helper for observed result shapes (`{ value: ... }` and `{}`) plus fixture-backed tests
+- `ZwjsNodeValueResult` improved to partial envelope typing, while remaining broad for command-class-specific payloads
 
 #### P0.2 Real-Instance Read Validation for Value Flows (Read-Only)
 

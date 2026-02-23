@@ -144,12 +144,17 @@ export type ZwjsControllerNodeNeighborsResult = number[] | { neighbors?: number[
 
 export type ZwjsDefinedValueIdsResult = ZwjsDefinedValueId[] | { values?: ZwjsDefinedValueId[]; [key: string]: unknown };
 
+export interface ZwjsNodeValueEnvelopeResult {
+  value?: unknown;
+  [key: string]: unknown;
+}
+
 export type ZwjsNodeValueResult =
   | string
   | number
   | boolean
   | null
-  | Record<string, unknown>
+  | ZwjsNodeValueEnvelopeResult
   | Array<unknown>;
 
 export interface ZwjsNodeValueMetadataResult {
