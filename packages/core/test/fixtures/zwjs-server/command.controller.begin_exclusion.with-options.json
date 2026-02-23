@@ -1,0 +1,4 @@
+{
+  "command": "controller.begin_exclusion",
+  "strategy": "default"
+}

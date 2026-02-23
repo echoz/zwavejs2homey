@@ -1,0 +1,5 @@
+{
+  "command": "controller.begin_inclusion",
+  "strategy": "default",
+  "forceSecurity": false
+}

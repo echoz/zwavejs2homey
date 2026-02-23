@@ -49,14 +49,25 @@ export interface ZwjsLogFilter {
 }
 
 export interface ZwjsControllerBeginInclusionArgs {
+  strategy?: string;
+  forceSecurity?: boolean;
+  provisioning?: boolean;
+  dsk?: string;
   [key: string]: unknown;
 }
 
 export interface ZwjsControllerBeginExclusionArgs {
+  strategy?: string;
+  provisionSmartStart?: boolean;
   [key: string]: unknown;
 }
 
-export type ZwjsControllerInclusionCommandResult = Record<string, unknown> | undefined;
+export interface ZwjsControllerInclusionCommandResult {
+  success?: boolean;
+  started?: boolean;
+  status?: string;
+  [key: string]: unknown;
+}
 
 export interface ZwjsCommandRequest<TArgs = Record<string, unknown>> {
   command: string;

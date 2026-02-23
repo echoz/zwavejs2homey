@@ -150,6 +150,36 @@ test('beginInclusion sends mutation-gated protocol command and returns result', 
   await client.stop();
 });
 
+test('beginInclusion flattens option args into protocol command frame', async () => {
+  const { client, transport } = makeClient({
+    enabled: true,
+    allowCommands: ['controller.begin_inclusion'],
+  });
+  await startConnected(client, transport);
+
+  const pending = client.beginInclusion({ strategy: 'default', forceSecurity: false });
+  const sent = transport.sent.at(-1);
+  assert.deepEqual(
+    sent,
+    withMessageId(
+      loadFixture('zwjs-server', 'command.controller.begin_inclusion.with-options.json'),
+      sent.messageId,
+    ),
+  );
+
+  transport.triggerMessage(
+    withMessageId(
+      loadFixture('zwjs-server', 'result.controller.workflow.started.success.json'),
+      sent.messageId,
+    ),
+  );
+  const result = await pending;
+  assert.equal(result.success, true);
+  assert.equal(result.result.started, true);
+  assert.equal(result.result.status, 'started');
+  await client.stop();
+});
+
 test('beginExclusion sends mutation-gated protocol command and returns result', async () => {
   const { client, transport } = makeClient({
     enabled: true,
@@ -172,6 +202,35 @@ test('beginExclusion sends mutation-gated protocol command and returns result', 
   );
   const result = await pending;
   assert.equal(result.success, true);
+  await client.stop();
+});
+
+test('beginExclusion flattens option args into protocol command frame', async () => {
+  const { client, transport } = makeClient({
+    enabled: true,
+    allowCommands: ['controller.begin_exclusion'],
+  });
+  await startConnected(client, transport);
+
+  const pending = client.beginExclusion({ strategy: 'default' });
+  const sent = transport.sent.at(-1);
+  assert.deepEqual(
+    sent,
+    withMessageId(
+      loadFixture('zwjs-server', 'command.controller.begin_exclusion.with-options.json'),
+      sent.messageId,
+    ),
+  );
+
+  transport.triggerMessage(
+    withMessageId(
+      loadFixture('zwjs-server', 'result.controller.workflow.started.success.json'),
+      sent.messageId,
+    ),
+  );
+  const result = await pending;
+  assert.equal(result.success, true);
+  assert.equal(result.result.started, true);
   await client.stop();
 });
 

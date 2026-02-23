@@ -345,6 +345,8 @@ Progress (completed subset):
   - `controller.stop_inclusion`
   - `controller.stop_exclusion`
 - Added default-policy blocking coverage for the inclusion/exclusion wrapper set
+- Tightened inclusion/exclusion wrapper arg/result typing to `partial` (common options + workflow start result fields)
+- Added fixture-backed wrapper tests for begin inclusion/exclusion option-arg frame flattening and representative workflow start results
 
 ## Phase P3 — Advanced / Long-Tail Domains
 
