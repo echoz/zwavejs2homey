@@ -1,0 +1,15 @@
+{
+  "name": "zwavejs2homey-workspace",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "packages/*",
+    "co.lazylabs.zwavejs2homey"
+  ],
+  "scripts": {
+    "build": "npm run build -w @zwavejs2homey/core && npm run build -w co.lazylabs.zwavejs2homey",
+    "build:core": "npm run build -w @zwavejs2homey/core",
+    "build:homey": "npm run build -w co.lazylabs.zwavejs2homey",
+    "lint": "npm run lint -w co.lazylabs.zwavejs2homey"
+  }
+}
