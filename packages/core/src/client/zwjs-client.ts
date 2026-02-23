@@ -9,6 +9,7 @@ import type {
   VersionPolicy,
   ZwjsCommandRequest,
   ZwjsCommandResult,
+  ZwjsProtocolErrorPayload,
   ZwjsClient,
   ZwjsClientConfig,
   ZwjsControllerStateResult,
@@ -328,11 +329,12 @@ export class ZwjsClientImpl implements ZwjsClient {
       payload = await promise;
     } catch (error) {
       if (error instanceof ZwjsClientError && error.code === 'PROTOCOL_ERROR') {
+        const protocolError = this.toProtocolErrorPayload(error.cause ?? error.toSummary());
         return {
           messageId: id,
           success: false,
-          error: error.cause ?? error.toSummary(),
-          raw: error.cause ?? error,
+          error: protocolError,
+          raw: protocolError.raw,
         };
       }
       throw error;
@@ -342,6 +344,20 @@ export class ZwjsClientImpl implements ZwjsClient {
       success: true,
       result: payload as TResult,
       raw: payload,
+    };
+  }
+
+  private toProtocolErrorPayload(raw: unknown): ZwjsProtocolErrorPayload {
+    const record = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : undefined;
+    return {
+      errorCode: typeof record?.errorCode === 'string' ? record.errorCode : undefined,
+      zwaveErrorCode: typeof record?.zwaveErrorCode === 'number' ? record.zwaveErrorCode : undefined,
+      zwaveErrorMessage: typeof record?.zwaveErrorMessage === 'string' ? record.zwaveErrorMessage : undefined,
+      error:
+        record && 'error' in record
+          ? record.error
+          : undefined,
+      raw,
     };
   }
 

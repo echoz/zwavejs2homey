@@ -38,13 +38,29 @@ export interface ZwjsCommandRequest<TArgs = Record<string, unknown>> {
   args?: TArgs;
 }
 
-export interface ZwjsCommandResult<TResult = unknown> {
-  messageId: string;
-  success: boolean;
-  result?: TResult;
+export interface ZwjsProtocolErrorPayload {
+  errorCode?: string;
+  zwaveErrorCode?: number;
+  zwaveErrorMessage?: string;
   error?: unknown;
-  raw?: unknown;
+  raw: unknown;
 }
+
+export type ZwjsCommandResult<TResult = unknown> =
+  | {
+      messageId: string;
+      success: true;
+      result?: TResult;
+      error?: undefined;
+      raw?: unknown;
+    }
+  | {
+      messageId: string;
+      success: false;
+      result?: undefined;
+      error: ZwjsProtocolErrorPayload;
+      raw?: unknown;
+    };
 
 export interface ZwjsDriverConfig {
   config?: {

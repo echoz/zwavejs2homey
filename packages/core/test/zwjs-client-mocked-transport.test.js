@@ -130,6 +130,7 @@ test('returns protocol failure result (success=false) without throwing', async (
   assert.equal(result.success, false);
   assert.equal(result.messageId, frame.messageId);
   assert.equal(result.error.errorCode, 'schema_incompatible');
+  assert.equal(result.error.raw.errorCode, 'schema_incompatible');
 
   await client.stop();
 });

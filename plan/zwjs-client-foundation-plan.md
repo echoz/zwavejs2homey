@@ -238,6 +238,7 @@ Build a fully featured, protocol-oriented `zwjs` client in `packages/core` for `
 4. [x] Expand event typing by source (`driver`, `controller`, `node`, `zniffer`)
 5. [x] Add fixture suite from `zwave-js-server` README/API schema examples
 6. [x] Add mocked WS tests for command correlation, failures, and reconnect recovery
+7. [x] Return typed protocol error payloads from failed command results (`errorCode`, Z-Wave error metadata, raw frame)
 7. [ ] Validate expanded command/event coverage against real instance (read-only only)
 8. [ ] Add mutating-command layer (still protocol-oriented) with safety guards (separate phase)
 

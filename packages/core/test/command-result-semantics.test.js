@@ -14,14 +14,16 @@ test('default normalizer exposes successful result via requestResponse', () => {
 
 test('default normalizer exposes failed result via requestError only', () => {
   const n = new DefaultZwjsFamilyNormalizer();
-  const out = n.normalizeIncoming(loadFixture('zwjs-server', 'result.error.zwave-error.json'));
+  const fixture = loadFixture('zwjs-server', 'result.error.zwave-error.json');
+  const out = n.normalizeIncoming(fixture);
   assert.equal(out.requestResponse, undefined);
-  assert.deepEqual(out.requestError, { id: '1', error: loadFixture('zwjs-server', 'result.error.zwave-error.json') });
+  assert.deepEqual(out.requestError, { id: '1', error: fixture });
 });
 
 test('fallback normalizer exposes failed result via requestError only', () => {
   const n = new FallbackNormalizer();
-  const out = n.normalizeIncoming(loadFixture('zwjs-server', 'result.error.schema-incompatible.json'));
+  const fixture = loadFixture('zwjs-server', 'result.error.schema-incompatible.json');
+  const out = n.normalizeIncoming(fixture);
   assert.equal(out.requestResponse, undefined);
-  assert.deepEqual(out.requestError, { id: '1', error: loadFixture('zwjs-server', 'result.error.schema-incompatible.json') });
+  assert.deepEqual(out.requestError, { id: '1', error: fixture });
 });

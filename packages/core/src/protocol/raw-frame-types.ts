@@ -20,13 +20,24 @@ export interface ZwjsEventFrame extends RawFrame {
   };
 }
 
-export interface ZwjsResultFrame<TResult = unknown> extends RawFrame {
+export interface ZwjsResultSuccessFrame<TResult = unknown> extends RawFrame {
   type: 'result';
   messageId: string;
-  success: boolean;
-  result?: TResult;
+  success: true;
+  result: TResult;
+}
+
+export interface ZwjsResultErrorFrame extends RawFrame {
+  type: 'result';
+  messageId: string;
+  success: false;
+  errorCode?: string;
+  zwaveErrorCode?: number;
+  zwaveErrorMessage?: string;
   error?: unknown;
 }
+
+export type ZwjsResultFrame<TResult = unknown> = ZwjsResultSuccessFrame<TResult> | ZwjsResultErrorFrame;
 
 export interface ZwjsProtocolCommandFrame<TArgs = Record<string, unknown>> extends RawFrame {
   messageId: string;
@@ -66,4 +77,12 @@ export function isZwjsResultFrame(value: unknown): value is ZwjsResultFrame {
     typeof value.messageId === 'string' &&
     typeof value.success === 'boolean'
   );
+}
+
+export function isZwjsResultSuccessFrame(value: unknown): value is ZwjsResultSuccessFrame {
+  return isZwjsResultFrame(value) && value.success === true && 'result' in value;
+}
+
+export function isZwjsResultErrorFrame(value: unknown): value is ZwjsResultErrorFrame {
+  return isZwjsResultFrame(value) && value.success === false;
 }

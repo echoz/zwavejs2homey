@@ -8,6 +8,7 @@ export type {
   VersionPolicy,
   ZwjsCommandRequest,
   ZwjsCommandResult,
+  ZwjsProtocolErrorPayload,
   ZwjsAuthConfig,
   ZwjsClient,
   ZwjsClientConfig,
@@ -22,7 +23,9 @@ export type { ClientErrorSummary, ZwjsClientErrorCode } from './errors';
 export type {
   ZwjsEventFrame,
   ZwjsProtocolCommandFrame,
+  ZwjsResultErrorFrame,
   ZwjsResultFrame,
+  ZwjsResultSuccessFrame,
   ZwjsVersionFrame,
 } from './protocol/raw-frame-types';
 
