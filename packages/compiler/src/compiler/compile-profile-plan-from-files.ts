@@ -16,6 +16,7 @@ export interface RuleSourceMetadata {
 export interface CompileProfilePlanFromFilesResult {
   profile: ReturnType<typeof compileProfilePlan>['profile'];
   report: ReturnType<typeof compileProfilePlan>['report'] & {
+    profileOutcome: 'curated' | 'ha-derived' | 'generic' | 'empty';
     byRule: Array<{
       ruleId: string;
       layer: string;
@@ -106,6 +107,7 @@ function groupSuppressedBySlot(
 
 function deriveCurationCandidates(
   report: ReturnType<typeof compileProfilePlan>['report'],
+  profile: ReturnType<typeof compileProfilePlan>['profile'],
 ): CompileProfilePlanFromFilesResult['report']['curationCandidates'] {
   const reasons: string[] = [];
   if (report.summary.suppressedFillActions > 0) {
@@ -119,10 +121,24 @@ function deriveCurationCandidates(
   if (unmatchedRatio > 0.75) {
     reasons.push(`high-unmatched-ratio:${unmatchedRatio.toFixed(2)}`);
   }
+  if ((profile.capabilities?.length ?? 0) === 0 && !profile.classification.driverTemplateId) {
+    reasons.push('no-meaningful-mapping');
+  } else if (profile.classification.uncurated) {
+    reasons.push(`uncurated-profile:${profile.classification.confidence}`);
+  }
   return {
     likelyNeedsReview: reasons.length > 0,
     reasons,
   };
+}
+
+function deriveProfileOutcome(
+  profile: ReturnType<typeof compileProfilePlan>['profile'],
+): CompileProfilePlanFromFilesResult['report']['profileOutcome'] {
+  if ((profile.capabilities?.length ?? 0) === 0 && !profile.classification.driverTemplateId) {
+    return 'empty';
+  }
+  return profile.classification.confidence;
 }
 
 function deriveClassificationProvenance(
@@ -153,9 +169,10 @@ export function compileProfilePlanFromRuleFiles(
     profile,
     report: {
       ...report,
+      profileOutcome: deriveProfileOutcome(profile),
       byRule: groupReportByRule(report),
       bySuppressedSlot: groupSuppressedBySlot(report),
-      curationCandidates: deriveCurationCandidates(report),
+      curationCandidates: deriveCurationCandidates(report, profile),
     },
     ruleSources: loaded.map((entry) => ({
       filePath: entry.filePath,
@@ -179,9 +196,10 @@ export function compileProfilePlanFromRuleSetManifest(
     profile,
     report: {
       ...report,
+      profileOutcome: deriveProfileOutcome(profile),
       byRule: groupReportByRule(report),
       bySuppressedSlot: groupSuppressedBySlot(report),
-      curationCandidates: deriveCurationCandidates(report),
+      curationCandidates: deriveCurationCandidates(report, profile),
     },
     ruleSources: loaded.entries.map((entry) => ({
       filePath: entry.filePath,

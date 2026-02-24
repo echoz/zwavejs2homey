@@ -108,7 +108,7 @@ export function formatCompileSummary(result) {
   );
   lines.push(`Ignored values: ${result.profile.ignoredValues?.length ?? 0}`);
   lines.push(
-    `Report: applied=${result.report.summary.appliedActions} unmatched=${result.report.summary.unmatchedActions} suppressedFill=${result.report.summary.suppressedFillActions}`,
+    `Report: outcome=${result.report.profileOutcome} applied=${result.report.summary.appliedActions} unmatched=${result.report.summary.unmatchedActions} suppressedFill=${result.report.summary.suppressedFillActions}`,
   );
   if (result.report.bySuppressedSlot.length > 0) {
     const top = result.report.bySuppressedSlot

@@ -1,0 +1,13 @@
+{
+  "deviceKey": "fixture-unmapped-1",
+  "manufacturerId": 65535,
+  "productType": 65535,
+  "productId": 65535,
+  "firmwareVersion": "0.0",
+  "values": [
+    {
+      "valueId": { "commandClass": 153, "endpoint": 0, "property": "mystery" },
+      "metadata": { "type": "string", "readable": true, "writeable": false }
+    }
+  ]
+}

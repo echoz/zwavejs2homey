@@ -31,7 +31,7 @@ test('compileFromFiles compiles fixture device/rules and returns profile', async
   assert.equal(result.profile.classification.homeyClass, 'socket');
   const summary = formatCompileSummary(result);
   assert.match(summary, /Capabilities: .*onoff/);
-  assert.match(summary, /Report: applied=/);
+  assert.match(summary, /Report: outcome=/);
 });
 
 test('formatCompileSummary includes classification provenance and suppressed slot summary when present', async () => {
@@ -45,6 +45,7 @@ test('formatCompileSummary includes classification provenance and suppressed slo
     },
     classificationProvenance: { layer: 'project-product', ruleId: 'product-device-class' },
     report: {
+      profileOutcome: 'curated',
       summary: { appliedActions: 2, unmatchedActions: 1, suppressedFillActions: 1 },
       bySuppressedSlot: [
         {

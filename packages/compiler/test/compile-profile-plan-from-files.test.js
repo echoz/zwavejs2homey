@@ -4,6 +4,7 @@ const path = require('node:path');
 
 const compiler = require('../dist');
 const device = require('./fixtures/device-switch-meter.json');
+const unmappedDevice = require('./fixtures/device-unmapped.json');
 
 const fixturesDir = path.join(__dirname, 'fixtures');
 
@@ -51,6 +52,7 @@ test('compileProfilePlanFromRuleFiles returns rule source metadata and grouped r
     likelyNeedsReview: false,
     reasons: [],
   });
+  assert.equal(result.report.profileOutcome, 'curated');
 });
 
 test('compileProfilePlanFromRuleSetManifest supports manifest entries and grouped reporting', () => {
@@ -120,4 +122,13 @@ test('compileProfilePlanFromRuleSetManifest reports classification provenance fo
     ruleId: 'product-device-class',
     action: 'derived-from-device-identity-action',
   });
+});
+
+test('compileProfilePlanFromRuleFiles marks empty outcome and no-meaningful-mapping curation hint', () => {
+  const rulesFile = path.join(fixturesDir, 'rules-switch-meter.json');
+  const result = compiler.compileProfilePlanFromRuleFiles(unmappedDevice, [rulesFile]);
+  assert.equal(result.report.profileOutcome, 'empty');
+  assert.equal(result.profile.capabilities.length, 0);
+  assert.equal(result.report.curationCandidates.likelyNeedsReview, true);
+  assert.ok(result.report.curationCandidates.reasons.includes('no-meaningful-mapping'));
 });
