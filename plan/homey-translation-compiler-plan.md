@@ -882,6 +882,7 @@ Progress:
 - Added mixed compile compatibility tests (`ha-derived` + project rules) without HA Python parsing yet
 - Expanded mock HA translator to preserve a representative subset of HA-style predicates and companion constraints (`metadataType`, `readable`/`writeable`, `requiredValues`, `absentValues`) with compile-behavior tests
 - Added explicit mock translator unsupported-reason reporting (`unsupported-match-field`, `unsupported-output-shape`) and manifest/CLI compatibility for `ha-derived` generated artifact entries
+- Fixed Phase 2 review follow-ups: accurate translation `skipped` counts, unsupported nested constraint-field detection, explicit manifest `kind` validation, and extracted shared rule-array validation to avoid loader/importer coupling
 
 - Build HA extract/translate/validate tooling pipeline
 - Generate `ha-derived` rule artifacts with provenance
