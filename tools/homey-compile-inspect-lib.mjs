@@ -44,6 +44,7 @@ export function getUsageText() {
     '                     [--catalog-file <catalog.json>]',
     '                     [--focus all|unmatched|suppressed|curation]',
     '                     [--top <n>]',
+    '                     [--show rule|suppressed|curation|all]',
     '                     [--format summary|markdown|json|json-pretty|json-compact|ndjson] [--homey-class <class>] [--driver-template <id>]',
   ].join('\n');
 }
@@ -77,6 +78,10 @@ export function parseCliArgs(argv) {
   if (!Number.isInteger(top) || top <= 0) {
     return { ok: false, error: `--top must be a positive integer (received: ${String(topRaw)})` };
   }
+  const show = flags.get('--show') ?? 'none';
+  if (!['none', 'rule', 'suppressed', 'curation', 'all'].includes(show)) {
+    return { ok: false, error: `Unsupported show: ${show}` };
+  }
   return {
     ok: true,
     command: {
@@ -86,6 +91,7 @@ export function parseCliArgs(argv) {
       format,
       focus,
       top,
+      show,
       catalogFile: flags.get('--catalog-file'),
       homeyClass: flags.get('--homey-class'),
       driverTemplateId: flags.get('--driver-template'),
@@ -134,12 +140,18 @@ export function compileFromFiles(command) {
     homeyClass: command.homeyClass,
     driverTemplateId: command.driverTemplateId,
   });
-  return { ...compiled, __focus: command.focus ?? 'all', __top: command.top ?? 3 };
+  return {
+    ...compiled,
+    __focus: command.focus ?? 'all',
+    __top: command.top ?? 3,
+    __show: command.show ?? 'none',
+  };
 }
 
 export function formatCompileSummary(result) {
   const topLimit = Number.isInteger(result.__top) && result.__top > 0 ? result.__top : 3;
   const focus = result.__focus ?? 'all';
+  const show = result.__show ?? 'none';
   const topUnmatchedRules = [...(result.report.byRule ?? [])]
     .filter((row) => (row.unmatched ?? 0) > 0)
     .sort(
@@ -190,12 +202,37 @@ export function formatCompileSummary(result) {
       .join(', ');
     lines.push(`Suppressed slots: ${top}`);
   }
+  if ((show === 'suppressed' || show === 'all') && result.report.bySuppressedSlot.length > 0) {
+    lines.push('Suppressed detail:');
+    for (const row of result.report.bySuppressedSlot.slice(0, topLimit)) {
+      lines.push(`  - ${row.layer}:${row.ruleId} ${row.slot} x${row.count}`);
+    }
+  }
   if ((focus === 'all' || focus === 'unmatched') && topUnmatchedRules.length > 0) {
     lines.push(
       `Top unmatched rules: ${topUnmatchedRules
         .map((row) => `${row.layer}:${row.ruleId}=${row.unmatched}`)
         .join(', ')}`,
     );
+  }
+  if (show === 'rule' || show === 'all') {
+    const topRules = [...(result.report.byRule ?? [])]
+      .sort(
+        (a, b) =>
+          (b.applied ?? 0) - (a.applied ?? 0) ||
+          (b.unmatched ?? 0) - (a.unmatched ?? 0) ||
+          a.layer.localeCompare(b.layer) ||
+          a.ruleId.localeCompare(b.ruleId),
+      )
+      .slice(0, topLimit);
+    if (topRules.length > 0) {
+      lines.push('Rule detail:');
+      for (const row of topRules) {
+        lines.push(
+          `  - ${row.layer}:${row.ruleId} applied=${row.applied} unmatched=${row.unmatched}`,
+        );
+      }
+    }
   }
   if ((focus === 'all' || focus === 'curation') && result.report.catalogContext) {
     lines.push(
@@ -211,12 +248,22 @@ export function formatCompileSummary(result) {
       lines.push('Curation review: no');
     }
   }
+  if (
+    (show === 'curation' || show === 'all') &&
+    result.report.curationCandidates.reasons.length > 0
+  ) {
+    lines.push('Curation reasons detail:');
+    for (const reason of result.report.curationCandidates.reasons.slice(0, topLimit)) {
+      lines.push(`  - ${reason}`);
+    }
+  }
   return lines.join('\n');
 }
 
 export function formatCompileMarkdown(result) {
   const topLimit = Number.isInteger(result.__top) && result.__top > 0 ? result.__top : 3;
   const focus = result.__focus ?? 'all';
+  const show = result.__show ?? 'none';
   const topUnmatchedRules = [...(result.report.byRule ?? [])]
     .filter((row) => (row.unmatched ?? 0) > 0)
     .sort(
@@ -287,6 +334,40 @@ export function formatCompileMarkdown(result) {
         .map((row) => `\`${row.layer}:${row.ruleId}=${row.unmatched}\``)
         .join(', ')}`,
     );
+  }
+  if ((show === 'suppressed' || show === 'all') && result.report.bySuppressedSlot.length > 0) {
+    lines.push(`- Suppressed detail:`);
+    for (const row of result.report.bySuppressedSlot.slice(0, topLimit)) {
+      lines.push(`  - \`${row.layer}:${row.ruleId}\` \`${row.slot}\` x${row.count}`);
+    }
+  }
+  if (show === 'rule' || show === 'all') {
+    const topRules = [...(result.report.byRule ?? [])]
+      .sort(
+        (a, b) =>
+          (b.applied ?? 0) - (a.applied ?? 0) ||
+          (b.unmatched ?? 0) - (a.unmatched ?? 0) ||
+          a.layer.localeCompare(b.layer) ||
+          a.ruleId.localeCompare(b.ruleId),
+      )
+      .slice(0, topLimit);
+    if (topRules.length > 0) {
+      lines.push(`- Rule detail:`);
+      for (const row of topRules) {
+        lines.push(
+          `  - \`${row.layer}:${row.ruleId}\` applied=${row.applied}, unmatched=${row.unmatched}`,
+        );
+      }
+    }
+  }
+  if (
+    (show === 'curation' || show === 'all') &&
+    result.report.curationCandidates.reasons.length > 0
+  ) {
+    lines.push(`- Curation reasons detail:`);
+    for (const reason of result.report.curationCandidates.reasons.slice(0, topLimit)) {
+      lines.push(`  - \`${reason}\``);
+    }
   }
   return lines.join('\n');
 }

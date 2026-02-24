@@ -40,6 +40,10 @@ test('parseCliArgs validates required device and rule inputs', async () => {
     true,
   );
   assert.equal(
+    parseCliArgs(['--device-file', 'd.json', '--rules-file', 'r.json', '--show', 'rule']).ok,
+    true,
+  );
+  assert.equal(
     parseCliArgs(['--device-file', 'd.json', '--rules-file', 'r.json', '--format', 'yaml']).ok,
     false,
   );
@@ -49,6 +53,10 @@ test('parseCliArgs validates required device and rule inputs', async () => {
   );
   assert.equal(
     parseCliArgs(['--device-file', 'd.json', '--rules-file', 'r.json', '--top', '0']).ok,
+    false,
+  );
+  assert.equal(
+    parseCliArgs(['--device-file', 'd.json', '--rules-file', 'r.json', '--show', 'detail']).ok,
     false,
   );
 });
@@ -277,4 +285,43 @@ test('formatCompileSummary supports focus filters for unmatched/suppressed/curat
   assert.match(curation, /Curation review:/);
   assert.match(curation, /Report catalog context:/);
   assert.doesNotMatch(curation, /Top unmatched rules:/);
+});
+
+test('formatCompileSummary/markdown support --show detail sections', async () => {
+  const { formatCompileSummary, formatCompileOutput } = await loadLib();
+  const fixture = {
+    profile: {
+      profileId: 'p5',
+      classification: { homeyClass: 'other', confidence: 'generic', uncurated: true },
+      capabilities: [],
+      ignoredValues: [],
+    },
+    ruleSources: [],
+    report: {
+      profileOutcome: 'empty',
+      summary: { appliedActions: 1, unmatchedActions: 5, suppressedFillActions: 2 },
+      diagnosticDeviceKey: 'catalog:x',
+      byRule: [
+        { ruleId: 'r1', layer: 'ha-derived', applied: 1, unmatched: 4, actionTypes: {} },
+        { ruleId: 'r2', layer: 'project-generic', applied: 0, unmatched: 1, actionTypes: {} },
+      ],
+      bySuppressedSlot: [
+        { slot: 'capability:onoff', layer: 'project-generic', ruleId: 'r2', count: 2 },
+      ],
+      curationCandidates: {
+        likelyNeedsReview: true,
+        reasons: ['known-device-generic-fallback', 'suppressed-fill-actions:2'],
+      },
+    },
+    __show: 'all',
+    __top: 2,
+  };
+  const summary = formatCompileSummary(fixture);
+  assert.match(summary, /Rule detail:/);
+  assert.match(summary, /Suppressed detail:/);
+  assert.match(summary, /Curation reasons detail:/);
+  const markdown = formatCompileOutput(fixture, 'markdown');
+  assert.match(markdown, /- Rule detail:/);
+  assert.match(markdown, /- Suppressed detail:/);
+  assert.match(markdown, /- Curation reasons detail:/);
 });
