@@ -6,7 +6,7 @@ Close out Phase 3 catalog integration (current scope) and begin Phase 4 runtime 
 
 ## In Progress
 
-- Transition from Phase 3 catalog tooling/diagnostics into Phase 4 curation patch schema
+- Phase 4 runtime curation patch schema foundation (types + validation)
 
 ## Recently Completed
 
@@ -29,6 +29,10 @@ Close out Phase 3 catalog integration (current scope) and begin Phase 4 runtime 
 4. Closed Phase 3 scope decisions:
    - catalog/diagnostics foundation accepted for now
    - curation-seed generation explicitly deferred as unnecessary abstraction at this stage
+5. Started Phase 4 curation patch schema:
+   - `runtime-curation-patches/v1` types
+   - allowed targets/operations and validation
+   - unit tests for schema correctness
 
 ## Next Tasks
 

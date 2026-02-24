@@ -38,6 +38,18 @@ export type {
   ProvenanceRecord,
 } from './models/homey-plan';
 export type {
+  RuntimeCurationAddOperation,
+  RuntimeCurationDisableOperation,
+  RuntimeCurationPatch,
+  RuntimeCurationPatchOperation,
+  RuntimeCurationPatchSchemaVersion,
+  RuntimeCurationPatchSetV1,
+  RuntimeCurationPatchTarget,
+  RuntimeCurationPatchTargetDevice,
+  RuntimeCurationRemoveOperation,
+  RuntimeCurationReplaceOperation,
+} from './curation/types';
+export type {
   CapabilityRuleAction,
   DeviceIdentityRuleAction,
   IgnoreValueRuleAction,
@@ -166,3 +178,8 @@ export {
   matchesValue,
   valueMatcherMatchesAny,
 } from './compiler/rule-matcher';
+export {
+  RuntimeCurationPatchValidationError,
+  assertRuntimeCurationPatchSetV1,
+  validateRuntimeCurationPatchSetV1,
+} from './curation/validate-patch';

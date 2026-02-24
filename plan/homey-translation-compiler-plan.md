@@ -943,6 +943,14 @@ Deferred / later Phase 3 expansion (not required to start Phase 4):
 
 Status: Next (ready to start)
 
+Progress:
+
+- Added Phase 4 curation patch schema foundation in `packages/compiler`:
+  - `runtime-curation-patches/v1` types
+  - allowed patch targets and operations (`replace|add|remove|disable`)
+  - runtime validation with clear errors
+  - unit test coverage for valid/invalid patch sets
+
 - Define patch schema and allowed operations
 - Implement patch validation + apply
 - Add provenance/supersedes chain behavior
