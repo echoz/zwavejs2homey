@@ -1,0 +1,56 @@
+{
+  "schemaVersion": "ha-extracted-discovery/v1",
+  "source": {
+    "generatedAt": "2026-02-24T00:00:00Z",
+    "sourceRef": "homeassistant/components/zwave_js/discovery.py"
+  },
+  "entries": [
+    {
+      "id": "switch_binary_current_extracted",
+      "sourceRef": "discovery.py#switch_binary_current_extracted",
+      "valueMatch": {
+        "commandClass": 37,
+        "endpoint": 0,
+        "property": "currentValue",
+        "metadata": {
+          "type": "boolean",
+          "readable": true
+        }
+      },
+      "companions": {
+        "requiredValues": [
+          {
+            "commandClass": 37,
+            "endpoint": 0,
+            "property": "targetValue"
+          }
+        ],
+        "absentValues": [
+          {
+            "commandClass": 49,
+            "endpoint": 0,
+            "property": "Air temperature"
+          }
+        ]
+      },
+      "output": {
+        "homeyClass": "socket",
+        "driverTemplateId": "ha-generic-socket",
+        "capabilityId": "onoff"
+      }
+    },
+    {
+      "id": "unsupported_extracted_match_extra",
+      "sourceRef": "discovery.py#unsupported_extracted_match_extra",
+      "valueMatch": {
+        "commandClass": 49,
+        "endpoint": 0,
+        "property": "value",
+        "entityPlatform": "sensor"
+      },
+      "output": {
+        "capabilityId": "measure_temperature"
+      }
+    }
+  ]
+}

@@ -82,6 +82,14 @@ export {
   loadHaDerivedGeneratedRuleArtifact,
 } from './importers/ha/generated-rule-artifact';
 export type {
+  HaExtractedDiscoveryEntryV1,
+  HaExtractedDiscoveryInputV1,
+} from './importers/ha/translate-extracted-discovery';
+export {
+  HaExtractedTranslationError,
+  translateHaExtractedDiscoveryToGeneratedArtifact,
+} from './importers/ha/translate-extracted-discovery';
+export type {
   HaMockDiscoveryDefinitionV1,
   HaMockDiscoveryInputV1,
   HaMockTranslationReport,
