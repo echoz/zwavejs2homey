@@ -12,7 +12,7 @@ test('translateHaMockDiscoveryToGeneratedArtifact emits deterministic ha-derived
   const result = compiler.translateHaMockDiscoveryToGeneratedArtifact(mockInput);
 
   assert.equal(result.artifact.schemaVersion, 'ha-derived-rules/v1');
-  assert.equal(result.artifact.rules.length, 1);
+  assert.equal(result.artifact.rules.length, 2);
   assert.deepEqual(result.artifact.rules[0], {
     ruleId: 'ha:switch_binary_current',
     layer: 'ha-derived',
@@ -20,6 +20,24 @@ test('translateHaMockDiscoveryToGeneratedArtifact emits deterministic ha-derived
       commandClass: [37],
       endpoint: [0],
       property: ['currentValue'],
+      metadataType: ['boolean'],
+      readable: true,
+    },
+    constraints: {
+      requiredValues: [
+        {
+          commandClass: [37],
+          endpoint: [0],
+          property: ['targetValue'],
+        },
+      ],
+      absentValues: [
+        {
+          commandClass: [49],
+          endpoint: [0],
+          property: ['Air temperature'],
+        },
+      ],
     },
     actions: [
       {
@@ -37,11 +55,45 @@ test('translateHaMockDiscoveryToGeneratedArtifact emits deterministic ha-derived
       },
     ],
   });
+  assert.deepEqual(result.artifact.rules[1], {
+    ruleId: 'ha:contact_like_binary_without_target',
+    layer: 'ha-derived',
+    value: {
+      commandClass: [37],
+      endpoint: [0],
+      property: ['currentValue'],
+      metadataType: ['boolean'],
+      writeable: false,
+    },
+    constraints: {
+      absentValues: [
+        {
+          commandClass: [37],
+          endpoint: [0],
+          property: ['targetValue'],
+        },
+      ],
+    },
+    actions: [
+      {
+        type: 'capability',
+        capabilityId: 'alarm_contact',
+        inboundMapping: {
+          kind: 'value',
+          selector: { commandClass: 37, endpoint: 0, property: 'currentValue' },
+        },
+      },
+    ],
+  });
   assert.deepEqual(result.report, {
-    translated: 1,
+    translated: 2,
     skipped: 0,
     unsupported: [{ id: 'unsupported_no_output', reason: 'no-supported-output' }],
-    sourceRefs: ['discovery.py#switch_binary_current', 'discovery.py#unsupported_no_output'],
+    sourceRefs: [
+      'discovery.py#contact_like_binary_without_target',
+      'discovery.py#switch_binary_current',
+      'discovery.py#unsupported_no_output',
+    ],
   });
 });
 
@@ -68,6 +120,16 @@ test('translated ha-derived artifact rules are compiler-compatible with project 
   assert.ok(
     report.actions.some(
       (a) => a.ruleId === 'ha:switch_binary_current' && a.actionType === 'device-identity',
+    ),
+  );
+  assert.equal(
+    profile.capabilities.some((c) => c.capabilityId === 'alarm_contact'),
+    false,
+  );
+  assert.ok(
+    report.actions.some(
+      (a) =>
+        a.ruleId === 'ha:contact_like_binary_without_target' && a.reason === 'rule-not-matched',
     ),
   );
 });

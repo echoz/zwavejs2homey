@@ -11,12 +11,53 @@
       "match": {
         "commandClass": 37,
         "endpoint": 0,
-        "property": "currentValue"
+        "property": "currentValue",
+        "metadataType": "boolean",
+        "readable": true
+      },
+      "constraints": {
+        "requiredValues": [
+          {
+            "commandClass": 37,
+            "endpoint": 0,
+            "property": "targetValue"
+          }
+        ],
+        "absentValues": [
+          {
+            "commandClass": 49,
+            "endpoint": 0,
+            "property": "Air temperature"
+          }
+        ]
       },
       "output": {
         "homeyClass": "socket",
         "driverTemplateId": "ha-generic-socket",
         "capabilityId": "onoff"
+      }
+    },
+    {
+      "id": "contact_like_binary_without_target",
+      "sourceRef": "discovery.py#contact_like_binary_without_target",
+      "match": {
+        "commandClass": 37,
+        "endpoint": 0,
+        "property": "currentValue",
+        "metadataType": "boolean",
+        "writeable": false
+      },
+      "constraints": {
+        "absentValues": [
+          {
+            "commandClass": 37,
+            "endpoint": 0,
+            "property": "targetValue"
+          }
+        ]
+      },
+      "output": {
+        "capabilityId": "alarm_contact"
       }
     },
     {

@@ -25,6 +25,23 @@ export interface HaMockDiscoveryDefinitionV1 {
     endpoint?: number;
     property: string | number;
     propertyKey?: string | number;
+    metadataType?: string;
+    readable?: boolean;
+    writeable?: boolean;
+  };
+  constraints?: {
+    requiredValues?: Array<{
+      commandClass: number;
+      endpoint?: number;
+      property: string | number;
+      propertyKey?: string | number;
+    }>;
+    absentValues?: Array<{
+      commandClass: number;
+      endpoint?: number;
+      property: string | number;
+      propertyKey?: string | number;
+    }>;
   };
   output: {
     homeyClass?: string;
@@ -118,12 +135,102 @@ function validateInputShape(input: unknown): asserts input is HaMockDiscoveryInp
         `HA mock discovery definition ${definition.id} match.propertyKey must be string or number`,
       );
     }
+    if (
+      definition.match.metadataType !== undefined &&
+      typeof definition.match.metadataType !== 'string'
+    ) {
+      throw new HaMockTranslationError(
+        `HA mock discovery definition ${definition.id} match.metadataType must be a string`,
+      );
+    }
+    if (definition.match.readable !== undefined && typeof definition.match.readable !== 'boolean') {
+      throw new HaMockTranslationError(
+        `HA mock discovery definition ${definition.id} match.readable must be a boolean`,
+      );
+    }
+    if (
+      definition.match.writeable !== undefined &&
+      typeof definition.match.writeable !== 'boolean'
+    ) {
+      throw new HaMockTranslationError(
+        `HA mock discovery definition ${definition.id} match.writeable must be a boolean`,
+      );
+    }
+    if (definition.constraints !== undefined) {
+      if (!isObject(definition.constraints)) {
+        throw new HaMockTranslationError(
+          `HA mock discovery definition ${definition.id} constraints must be an object`,
+        );
+      }
+      for (const key of ['requiredValues', 'absentValues']) {
+        const list = definition.constraints[key as keyof typeof definition.constraints];
+        if (list === undefined) continue;
+        if (!Array.isArray(list)) {
+          throw new HaMockTranslationError(
+            `HA mock discovery definition ${definition.id} constraints.${key} must be an array`,
+          );
+        }
+        for (const [matcherIndex, matcher] of list.entries()) {
+          if (!isObject(matcher)) {
+            throw new HaMockTranslationError(
+              `HA mock discovery definition ${definition.id} constraints.${key}[${matcherIndex}] must be an object`,
+            );
+          }
+          if (typeof matcher.commandClass !== 'number') {
+            throw new HaMockTranslationError(
+              `HA mock discovery definition ${definition.id} constraints.${key}[${matcherIndex}].commandClass must be a number`,
+            );
+          }
+          if (matcher.endpoint !== undefined && typeof matcher.endpoint !== 'number') {
+            throw new HaMockTranslationError(
+              `HA mock discovery definition ${definition.id} constraints.${key}[${matcherIndex}].endpoint must be a number`,
+            );
+          }
+          if (
+            !['string', 'number'].includes(typeof matcher.property) ||
+            (matcher.property !== 0 && !matcher.property)
+          ) {
+            throw new HaMockTranslationError(
+              `HA mock discovery definition ${definition.id} constraints.${key}[${matcherIndex}].property must be string or number`,
+            );
+          }
+          if (
+            matcher.propertyKey !== undefined &&
+            !['string', 'number'].includes(typeof matcher.propertyKey)
+          ) {
+            throw new HaMockTranslationError(
+              `HA mock discovery definition ${definition.id} constraints.${key}[${matcherIndex}].propertyKey must be string or number`,
+            );
+          }
+        }
+      }
+    }
     if (!isObject(definition.output)) {
       throw new HaMockTranslationError(
         `HA mock discovery definition ${definition.id} missing output object`,
       );
     }
   }
+}
+
+function toValueMatcher(match: {
+  commandClass: number;
+  endpoint?: number;
+  property: string | number;
+  propertyKey?: string | number;
+  metadataType?: string;
+  readable?: boolean;
+  writeable?: boolean;
+}) {
+  return {
+    commandClass: [match.commandClass],
+    endpoint: [match.endpoint ?? 0],
+    property: [match.property],
+    ...(match.propertyKey !== undefined ? { propertyKey: [match.propertyKey] } : {}),
+    ...(match.metadataType !== undefined ? { metadataType: [match.metadataType] } : {}),
+    ...(match.readable !== undefined ? { readable: match.readable } : {}),
+    ...(match.writeable !== undefined ? { writeable: match.writeable } : {}),
+  };
 }
 
 function toRule(definition: HaMockDiscoveryDefinitionV1): MappingRule | null {
@@ -157,14 +264,27 @@ function toRule(definition: HaMockDiscoveryDefinitionV1): MappingRule | null {
   return {
     ruleId: `ha:${definition.id}`,
     layer: 'ha-derived',
-    value: {
-      commandClass: [definition.match.commandClass],
-      endpoint: [definition.match.endpoint ?? 0],
-      property: [definition.match.property],
-      ...(definition.match.propertyKey !== undefined
-        ? { propertyKey: [definition.match.propertyKey] }
-        : {}),
-    },
+    value: toValueMatcher(definition.match),
+    ...(definition.constraints
+      ? {
+          constraints: {
+            ...(definition.constraints.requiredValues
+              ? {
+                  requiredValues: definition.constraints.requiredValues.map((matcher) =>
+                    toValueMatcher(matcher),
+                  ),
+                }
+              : {}),
+            ...(definition.constraints.absentValues
+              ? {
+                  absentValues: definition.constraints.absentValues.map((matcher) =>
+                    toValueMatcher(matcher),
+                  ),
+                }
+              : {}),
+          },
+        }
+      : {}),
     actions,
   };
 }

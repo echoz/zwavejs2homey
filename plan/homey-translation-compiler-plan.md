@@ -880,6 +880,7 @@ Progress:
 - Completed generated `ha-derived` artifact contract + loader (`ha-derived-rules/v1`)
 - Added fixture-based mock HA discovery translator contract (input -> generated artifact + translation report)
 - Added mixed compile compatibility tests (`ha-derived` + project rules) without HA Python parsing yet
+- Expanded mock HA translator to preserve a representative subset of HA-style predicates and companion constraints (`metadataType`, `readable`/`writeable`, `requiredValues`, `absentValues`) with compile-behavior tests
 
 - Build HA extract/translate/validate tooling pipeline
 - Generate `ha-derived` rule artifacts with provenance
