@@ -32,7 +32,15 @@ test('parseCliArgs validates required device and rule inputs', async () => {
     true,
   );
   assert.equal(
+    parseCliArgs(['--device-file', 'd.json', '--rules-file', 'r.json', '--focus', 'unmatched']).ok,
+    true,
+  );
+  assert.equal(
     parseCliArgs(['--device-file', 'd.json', '--rules-file', 'r.json', '--format', 'yaml']).ok,
+    false,
+  );
+  assert.equal(
+    parseCliArgs(['--device-file', 'd.json', '--rules-file', 'r.json', '--focus', 'weird']).ok,
     false,
   );
 });
@@ -50,6 +58,7 @@ test('compileFromFiles compiles fixture device/rules and returns profile', async
   });
   assert.equal(result.profile.profileId, 'fixture-switch-meter-1');
   assert.equal(result.profile.classification.homeyClass, 'socket');
+  assert.equal(result.__focus, 'all');
   const summary = formatCompileSummary(result);
   assert.match(summary, /Capabilities: .*onoff/);
   assert.match(summary, /Report: outcome=/);
@@ -191,4 +200,42 @@ test('formatCompileSummary/markdown include top unmatched rule diagnostics', asy
   assert.match(markdown, /Top unmatched rules:/);
   const ndjson = formatCompileOutput(fixture, 'ndjson');
   assert.match(ndjson, /\"type\":\"topUnmatchedRule\"/);
+});
+
+test('formatCompileSummary supports focus filters for unmatched/suppressed/curation', async () => {
+  const { formatCompileSummary } = await loadLib();
+  const base = {
+    profile: {
+      profileId: 'p3',
+      classification: { homeyClass: 'other', confidence: 'generic', uncurated: true },
+      capabilities: [],
+      ignoredValues: [],
+    },
+    ruleSources: [],
+    report: {
+      profileOutcome: 'empty',
+      summary: { appliedActions: 0, unmatchedActions: 4, suppressedFillActions: 2 },
+      diagnosticDeviceKey: 'catalog:abc',
+      byRule: [{ ruleId: 'r1', layer: 'ha-derived', applied: 0, unmatched: 4, actionTypes: {} }],
+      bySuppressedSlot: [
+        { slot: 'capability:onoff', layer: 'project-generic', ruleId: 'r2', count: 2 },
+      ],
+      catalogContext: { knownCatalogDevice: true, matchRef: 'catalog:abc' },
+      curationCandidates: { likelyNeedsReview: true, reasons: ['known-device-generic-fallback'] },
+    },
+  };
+
+  const unmatched = formatCompileSummary({ ...base, __focus: 'unmatched' });
+  assert.match(unmatched, /Top unmatched rules:/);
+  assert.doesNotMatch(unmatched, /Curation review:/);
+  assert.doesNotMatch(unmatched, /Suppressed slots:/);
+
+  const suppressed = formatCompileSummary({ ...base, __focus: 'suppressed' });
+  assert.match(suppressed, /Suppressed slots:/);
+  assert.doesNotMatch(suppressed, /Top unmatched rules:/);
+
+  const curation = formatCompileSummary({ ...base, __focus: 'curation' });
+  assert.match(curation, /Curation review:/);
+  assert.match(curation, /Report catalog context:/);
+  assert.doesNotMatch(curation, /Top unmatched rules:/);
 });

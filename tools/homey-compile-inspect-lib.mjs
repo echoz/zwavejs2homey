@@ -42,6 +42,7 @@ export function getUsageText() {
     '  homey-compile-inspect --device-file <device.json> --rules-file <rules.json> [--rules-file <rules2.json> ...]',
     '  homey-compile-inspect --device-file <device.json> --manifest <manifest.json>',
     '                     [--catalog-file <catalog.json>]',
+    '                     [--focus all|unmatched|suppressed|curation]',
     '                     [--format summary|markdown|json|json-pretty|json-compact|ndjson] [--homey-class <class>] [--driver-template <id>]',
   ].join('\n');
 }
@@ -66,6 +67,10 @@ export function parseCliArgs(argv) {
   const format = flags.get('--format') ?? 'summary';
   if (!isSupportedDiagnosticFormat(format))
     return { ok: false, error: `Unsupported format: ${format}` };
+  const focus = flags.get('--focus') ?? 'all';
+  if (!['all', 'unmatched', 'suppressed', 'curation'].includes(focus)) {
+    return { ok: false, error: `Unsupported focus: ${focus}` };
+  }
   return {
     ok: true,
     command: {
@@ -73,6 +78,7 @@ export function parseCliArgs(argv) {
       manifest,
       rulesFiles,
       format,
+      focus,
       catalogFile: flags.get('--catalog-file'),
       homeyClass: flags.get('--homey-class'),
       driverTemplateId: flags.get('--driver-template'),
@@ -116,14 +122,16 @@ export function compileFromFiles(command) {
     ? coerceManifestEntries(readJson(command.manifest), command.manifest)
     : command.rulesFiles.map((filePath) => ({ filePath }));
 
-  return compileProfilePlanFromRuleSetManifest(device, manifestEntries, {
+  const compiled = compileProfilePlanFromRuleSetManifest(device, manifestEntries, {
     catalogArtifact: command.catalogFile ? readJson(command.catalogFile) : undefined,
     homeyClass: command.homeyClass,
     driverTemplateId: command.driverTemplateId,
   });
+  return { ...compiled, __focus: command.focus ?? 'all' };
 }
 
 export function formatCompileSummary(result) {
+  const focus = result.__focus ?? 'all';
   const topUnmatchedRules = [...(result.report.byRule ?? [])]
     .filter((row) => (row.unmatched ?? 0) > 0)
     .sort(
@@ -160,41 +168,46 @@ export function formatCompileSummary(result) {
   lines.push(
     `Capabilities: ${result.profile.capabilities.map((c) => c.capabilityId).join(', ') || '(none)'}`,
   );
-  lines.push(`Ignored values: ${result.profile.ignoredValues?.length ?? 0}`);
-  lines.push(
-    `Report: outcome=${result.report.profileOutcome} applied=${result.report.summary.appliedActions} unmatched=${result.report.summary.unmatchedActions} suppressedFill=${result.report.summary.suppressedFillActions}`,
-  );
-  lines.push(`Diagnostic device key: ${result.report.diagnosticDeviceKey}`);
-  if (result.report.bySuppressedSlot.length > 0) {
+  if (focus === 'all') {
+    lines.push(`Ignored values: ${result.profile.ignoredValues?.length ?? 0}`);
+    lines.push(
+      `Report: outcome=${result.report.profileOutcome} applied=${result.report.summary.appliedActions} unmatched=${result.report.summary.unmatchedActions} suppressedFill=${result.report.summary.suppressedFillActions}`,
+    );
+    lines.push(`Diagnostic device key: ${result.report.diagnosticDeviceKey}`);
+  }
+  if ((focus === 'all' || focus === 'suppressed') && result.report.bySuppressedSlot.length > 0) {
     const top = result.report.bySuppressedSlot
       .slice(0, 3)
       .map((row) => `${row.layer}:${row.ruleId}:${row.slot}=${row.count}`)
       .join(', ');
     lines.push(`Suppressed slots: ${top}`);
   }
-  if (topUnmatchedRules.length > 0) {
+  if ((focus === 'all' || focus === 'unmatched') && topUnmatchedRules.length > 0) {
     lines.push(
       `Top unmatched rules: ${topUnmatchedRules
         .map((row) => `${row.layer}:${row.ruleId}=${row.unmatched}`)
         .join(', ')}`,
     );
   }
-  if (result.report.catalogContext) {
+  if ((focus === 'all' || focus === 'curation') && result.report.catalogContext) {
     lines.push(
       `Report catalog context: known=${result.report.catalogContext.knownCatalogDevice}${
         result.report.catalogContext.matchRef ? ` (${result.report.catalogContext.matchRef})` : ''
       }`,
     );
   }
-  if (result.report.curationCandidates.likelyNeedsReview) {
-    lines.push(`Curation review: yes (${result.report.curationCandidates.reasons.join(', ')})`);
-  } else {
-    lines.push('Curation review: no');
+  if (focus === 'all' || focus === 'curation') {
+    if (result.report.curationCandidates.likelyNeedsReview) {
+      lines.push(`Curation review: yes (${result.report.curationCandidates.reasons.join(', ')})`);
+    } else {
+      lines.push('Curation review: no');
+    }
   }
   return lines.join('\n');
 }
 
 export function formatCompileMarkdown(result) {
+  const focus = result.__focus ?? 'all';
   const topUnmatchedRules = [...(result.report.byRule ?? [])]
     .filter((row) => (row.unmatched ?? 0) > 0)
     .sort(
@@ -233,17 +246,21 @@ export function formatCompileMarkdown(result) {
       result.profile.capabilities.map((c) => `\`${c.capabilityId}\``).join(', ') || '(none)'
     }`,
   );
-  lines.push(`- Ignored values: ${result.profile.ignoredValues?.length ?? 0}`);
-  lines.push(
-    `- Report: outcome=\`${result.report.profileOutcome}\`, applied=${result.report.summary.appliedActions}, unmatched=${result.report.summary.unmatchedActions}, suppressedFill=${result.report.summary.suppressedFillActions}`,
-  );
-  lines.push(`- Diagnostic device key: \`${result.report.diagnosticDeviceKey}\``);
-  if (result.report.curationCandidates.likelyNeedsReview) {
-    lines.push(`- Curation review: yes (${result.report.curationCandidates.reasons.join(', ')})`);
-  } else {
-    lines.push(`- Curation review: no`);
+  if (focus === 'all') {
+    lines.push(`- Ignored values: ${result.profile.ignoredValues?.length ?? 0}`);
+    lines.push(
+      `- Report: outcome=\`${result.report.profileOutcome}\`, applied=${result.report.summary.appliedActions}, unmatched=${result.report.summary.unmatchedActions}, suppressedFill=${result.report.summary.suppressedFillActions}`,
+    );
+    lines.push(`- Diagnostic device key: \`${result.report.diagnosticDeviceKey}\``);
   }
-  if (result.report.catalogContext) {
+  if (focus === 'all' || focus === 'curation') {
+    if (result.report.curationCandidates.likelyNeedsReview) {
+      lines.push(`- Curation review: yes (${result.report.curationCandidates.reasons.join(', ')})`);
+    } else {
+      lines.push(`- Curation review: no`);
+    }
+  }
+  if ((focus === 'all' || focus === 'curation') && result.report.catalogContext) {
     lines.push(
       `- Report catalog context: known=${result.report.catalogContext.knownCatalogDevice}${
         result.report.catalogContext.matchRef
@@ -252,7 +269,10 @@ export function formatCompileMarkdown(result) {
       }`,
     );
   }
-  if (topUnmatchedRules.length > 0) {
+  if (focus === 'all' || focus === 'unmatched') {
+    lines.push(`- Diagnostic device key: \`${result.report.diagnosticDeviceKey}\``);
+  }
+  if ((focus === 'all' || focus === 'unmatched') && topUnmatchedRules.length > 0) {
     lines.push(
       `- Top unmatched rules: ${topUnmatchedRules
         .map((row) => `\`${row.layer}:${row.ruleId}=${row.unmatched}\``)
@@ -305,11 +325,12 @@ export function formatCompileNdjson(result) {
 }
 
 export function formatCompileOutput(result, format) {
+  const output = result;
   switch (format) {
     case 'summary':
-      return formatCompileSummary(result);
+      return formatCompileSummary(output);
     case 'markdown':
-      return formatCompileMarkdown(result);
+      return formatCompileMarkdown(output);
     case 'json':
     case 'json-pretty':
       return formatJsonPretty(result);
