@@ -117,6 +117,31 @@ test('applyRuleToValue applies device-identity actions from matching values', ()
   assert.equal(identity.driverTemplateId, 'ha-socket');
 });
 
+test('applyRuleToValue deduplicates device-identity actions after first application', () => {
+  const device = makeDevice();
+  const value = device.values[0];
+  const state = compiler.createProfileBuildState();
+  const rule = {
+    ruleId: 'ha-device-class',
+    layer: 'ha-derived',
+    value: { commandClass: [37] },
+    actions: [{ type: 'device-identity', homeyClass: 'socket' }],
+  };
+
+  const first = compiler.applyRuleToValue(state, device, value, rule);
+  const second = compiler.applyRuleToValue(state, device, value, rule);
+
+  assert.equal(first[0].applied, true);
+  assert.deepEqual(second, [
+    {
+      ruleId: 'ha-device-class',
+      actionType: 'device-identity',
+      applied: false,
+      reason: 'device-identity-already-applied',
+    },
+  ]);
+});
+
 test('end-to-end hand-authored layering example preserves curated onoff and adds generic power', () => {
   const device = makeDevice();
   const state = compiler.createProfileBuildState();

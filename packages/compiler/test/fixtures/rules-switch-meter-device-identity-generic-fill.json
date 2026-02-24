@@ -1,0 +1,14 @@
+[
+  {
+    "ruleId": "generic-device-class-fill",
+    "layer": "project-generic",
+    "value": { "commandClass": [37], "property": ["currentValue"] },
+    "actions": [
+      {
+        "type": "device-identity",
+        "homeyClass": "socket",
+        "driverTemplateId": "generic-socket"
+      }
+    ]
+  }
+]

@@ -35,6 +35,12 @@ export interface CompileProfilePlanFromFilesResult {
     };
   };
   ruleSources: RuleSourceMetadata[];
+  classificationProvenance?: {
+    layer?: string;
+    ruleId?: string;
+    action?: string;
+    reason?: string;
+  };
 }
 
 function groupReportByRule(
@@ -119,6 +125,21 @@ function deriveCurationCandidates(
   };
 }
 
+function deriveClassificationProvenance(
+  report: ReturnType<typeof compileProfilePlan>['report'],
+): CompileProfilePlanFromFilesResult['classificationProvenance'] {
+  const appliedDeviceIdentityActions = report.actions.filter(
+    (action) => action.applied && action.actionType === 'device-identity',
+  );
+  const last = appliedDeviceIdentityActions[appliedDeviceIdentityActions.length - 1];
+  if (!last) return undefined;
+  return {
+    layer: last.layer,
+    ruleId: last.ruleId,
+    action: 'derived-from-device-identity-action',
+  };
+}
+
 export function compileProfilePlanFromRuleFiles(
   device: NormalizedZwaveDeviceFacts,
   ruleFilePaths: string[],
@@ -141,6 +162,7 @@ export function compileProfilePlanFromRuleFiles(
       ruleCount: entry.rules.length,
       ruleIds: entry.rules.map((rule) => rule.ruleId),
     })),
+    classificationProvenance: deriveClassificationProvenance(report),
   };
 }
 
@@ -166,5 +188,6 @@ export function compileProfilePlanFromRuleSetManifest(
       ruleCount: entry.rules.length,
       ruleIds: entry.rules.map((rule) => rule.ruleId),
     })),
+    classificationProvenance: deriveClassificationProvenance(report),
   };
 }

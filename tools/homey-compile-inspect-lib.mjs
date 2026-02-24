@@ -98,6 +98,11 @@ export function formatCompileSummary(result) {
   lines.push(
     `Class: ${result.profile.classification.homeyClass} (${result.profile.classification.confidence}, uncurated=${result.profile.classification.uncurated})`,
   );
+  if (result.classificationProvenance) {
+    lines.push(
+      `Class provenance: ${result.classificationProvenance.layer}:${result.classificationProvenance.ruleId}`,
+    );
+  }
   lines.push(
     `Capabilities: ${result.profile.capabilities.map((c) => c.capabilityId).join(', ') || '(none)'}`,
   );
@@ -105,6 +110,13 @@ export function formatCompileSummary(result) {
   lines.push(
     `Report: applied=${result.report.summary.appliedActions} unmatched=${result.report.summary.unmatchedActions} suppressedFill=${result.report.summary.suppressedFillActions}`,
   );
+  if (result.report.bySuppressedSlot.length > 0) {
+    const top = result.report.bySuppressedSlot
+      .slice(0, 3)
+      .map((row) => `${row.layer}:${row.ruleId}:${row.slot}=${row.count}`)
+      .join(', ');
+    lines.push(`Suppressed slots: ${top}`);
+  }
   if (result.report.curationCandidates.likelyNeedsReview) {
     lines.push(`Curation review: yes (${result.report.curationCandidates.reasons.join(', ')})`);
   } else {

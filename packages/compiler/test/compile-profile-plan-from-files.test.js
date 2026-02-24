@@ -62,11 +62,15 @@ test('compileProfilePlanFromRuleSetManifest supports manifest entries and groupe
   assert.equal(result.profile.classification.homeyClass, 'socket');
   assert.equal(result.ruleSources.length, 1);
   assert.equal(result.report.byRule.length >= 3, true);
+  assert.equal(result.classificationProvenance, undefined);
 });
 
 test('compileProfilePlanFromRuleSetManifest groups suppressed fills and flags curation review', () => {
-  const baseRules = path.join(fixturesDir, 'rules-switch-meter.json');
-  const extraGeneric = path.join(fixturesDir, 'rules-switch-meter-generic-onoff-fill.json');
+  const baseRules = path.join(fixturesDir, 'rules-switch-meter-device-identity.json');
+  const extraGeneric = path.join(
+    fixturesDir,
+    'rules-switch-meter-device-identity-generic-fill.json',
+  );
   const result = compiler.compileProfilePlanFromRuleSetManifest(device, [
     { filePath: baseRules },
     { filePath: extraGeneric, layer: 'project-generic' },
@@ -75,9 +79,9 @@ test('compileProfilePlanFromRuleSetManifest groups suppressed fills and flags cu
   assert.ok(
     result.report.bySuppressedSlot.some(
       (row) =>
-        row.ruleId === 'generic-onoff-fill' &&
+        row.ruleId === 'generic-device-class-fill' &&
         row.layer === 'project-generic' &&
-        row.slot === 'inboundMapping' &&
+        row.slot === 'deviceIdentity.homeyClass' &&
         row.count >= 1,
     ),
   );
@@ -87,4 +91,33 @@ test('compileProfilePlanFromRuleSetManifest groups suppressed fills and flags cu
       reason.startsWith('suppressed-fill-actions:'),
     ),
   );
+  const genericOnoff = result.report.byRule.find(
+    (row) => row.ruleId === 'generic-device-class-fill',
+  );
+  assert.equal(genericOnoff.applied, 1);
+  assert.equal(genericOnoff.unmatched, 2);
+  assert.equal(
+    result.report.actions.some(
+      (a) =>
+        a.ruleId === 'generic-device-class-fill' &&
+        a.actionType === 'device-identity' &&
+        a.reason === 'device-identity-already-applied',
+    ),
+    false,
+  );
+  assert.deepEqual(result.classificationProvenance, {
+    layer: 'project-product',
+    ruleId: 'product-device-class',
+    action: 'derived-from-device-identity-action',
+  });
+});
+
+test('compileProfilePlanFromRuleSetManifest reports classification provenance for device-identity actions', () => {
+  const rulesFile = path.join(fixturesDir, 'rules-switch-meter-device-identity.json');
+  const result = compiler.compileProfilePlanFromRuleSetManifest(device, [{ filePath: rulesFile }]);
+  assert.deepEqual(result.classificationProvenance, {
+    layer: 'project-product',
+    ruleId: 'product-device-class',
+    action: 'derived-from-device-identity-action',
+  });
 });

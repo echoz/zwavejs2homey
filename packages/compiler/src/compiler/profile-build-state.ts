@@ -25,6 +25,7 @@ export interface ProfileBuildStateCapability extends HomeyCapabilityPlan {
 }
 
 export interface ProfileBuildState {
+  appliedDeviceIdentityActions: Set<string>;
   deviceIdentity?: {
     homeyClass?: string;
     driverTemplateId?: string;
@@ -51,6 +52,7 @@ export interface ProfileBuildState {
 
 export function createProfileBuildState(): ProfileBuildState {
   return {
+    appliedDeviceIdentityActions: new Set(),
     deviceIdentity: undefined,
     capabilities: new Map(),
     ignoredValues: new Map(),

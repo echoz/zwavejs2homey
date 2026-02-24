@@ -33,3 +33,33 @@ test('compileFromFiles compiles fixture device/rules and returns profile', async
   assert.match(summary, /Capabilities: .*onoff/);
   assert.match(summary, /Report: applied=/);
 });
+
+test('formatCompileSummary includes classification provenance and suppressed slot summary when present', async () => {
+  const { formatCompileSummary } = await loadLib();
+  const summary = formatCompileSummary({
+    profile: {
+      profileId: 'p1',
+      classification: { homeyClass: 'light', confidence: 'curated', uncurated: false },
+      capabilities: [],
+      ignoredValues: [],
+    },
+    classificationProvenance: { layer: 'project-product', ruleId: 'product-device-class' },
+    report: {
+      summary: { appliedActions: 2, unmatchedActions: 1, suppressedFillActions: 1 },
+      bySuppressedSlot: [
+        {
+          layer: 'project-generic',
+          ruleId: 'generic-device-class-fill',
+          slot: 'deviceIdentity.homeyClass',
+          count: 1,
+        },
+      ],
+      curationCandidates: { likelyNeedsReview: true, reasons: ['suppressed-fill-actions:1'] },
+    },
+  });
+  assert.match(summary, /Class provenance: project-product:product-device-class/);
+  assert.match(
+    summary,
+    /Suppressed slots: project-generic:generic-device-class-fill:deviceIdentity.homeyClass=1/,
+  );
+});
