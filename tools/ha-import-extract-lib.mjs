@@ -2,10 +2,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { createRequire } from 'node:module';
-import { extractHaDiscoveryProbeArtifact } from './ha-import-extract-source-probe.mjs';
 
 const require = createRequire(import.meta.url);
-const { loadHaExtractedDiscoveryArtifact } = require('../packages/compiler/dist');
+const {
+  loadHaExtractedDiscoveryArtifact,
+  extractHaDiscoverySubsetFromFile,
+} = require('../packages/compiler/dist');
 
 function parseFlagMap(argv) {
   const flags = new Map();
@@ -88,20 +90,22 @@ function runSourceExtract(command) {
   if (!fs.existsSync(discoveryPy)) {
     throw new Error(`Home Assistant discovery source not found: ${discoveryPy}`);
   }
-  const artifact = extractHaDiscoveryProbeArtifact(discoveryPy);
+  const extracted = extractHaDiscoverySubsetFromFile(discoveryPy);
+  const artifact = extracted.artifact;
   if (command.outputExtracted) {
     const outPath = path.isAbsolute(command.outputExtracted)
       ? command.outputExtracted
       : path.resolve(process.cwd(), command.outputExtracted);
     fs.writeFileSync(outPath, `${JSON.stringify(artifact, null, 2)}\n`, 'utf8');
   }
-  return artifact;
+  return extracted;
 }
 
 export function runHaImportExtract(command) {
   const started = command.timing ? performance.now() : 0;
   if (command.sourceHomeAssistant) {
-    const artifact = runSourceExtract(command);
+    const extracted = runSourceExtract(command);
+    const artifact = extracted.artifact;
     const result = {
       artifact,
       summary: {
@@ -110,6 +114,7 @@ export function runHaImportExtract(command) {
           ? new Set(artifact.entries.map((entry) => entry.sourceRef)).size
           : 0,
       },
+      sourceReport: extracted.report,
     };
     if (command.timing) {
       return {
@@ -157,6 +162,11 @@ export function formatHaExtractSummary(result) {
   lines.push(`Extracted artifact: ${result.artifact.schemaVersion}`);
   lines.push(`Entries: ${result.summary.entries}`);
   lines.push(`Source refs: ${result.summary.sourceRefCount}`);
+  if (result.sourceReport) {
+    lines.push(
+      `Source parse: scanned=${result.sourceReport.scannedSchemas} translated=${result.sourceReport.translated} skipped=${result.sourceReport.skipped}`,
+    );
+  }
   if (result.meta && typeof result.meta.elapsedMs === 'number') {
     lines.push(`Timing: ${result.meta.elapsedMs.toFixed(3)}ms`);
   }

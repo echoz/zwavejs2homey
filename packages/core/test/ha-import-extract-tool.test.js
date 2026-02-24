@@ -114,9 +114,11 @@ ZWaveDiscoverySchema(
   });
   assert.equal(result.artifact.schemaVersion, 'ha-extracted-discovery/v1');
   assert.equal(result.artifact.entries.length, 3);
-  assert.equal(result.artifact.entries[0].id, 'ha_probe_honeywell_fan_39358');
-  assert.equal(result.artifact.entries[1].id, 'ha_probe_ge_jasco_fan_12730');
-  assert.equal(result.artifact.entries[2].id, 'ha_probe_thermostat_setpoint_without_mode');
+  assert.equal(result.artifact.entries[0].valueMatch.commandClass, 38);
+  assert.equal(result.artifact.entries[1].deviceMatch.manufacturerId, 99);
+  assert.equal(result.artifact.entries[2].companions.absentValues[0].commandClass, 64);
+  assert.equal(result.sourceReport.translated, 3);
+  assert.equal(result.sourceReport.skipped, 0);
   assert.equal(typeof result.meta.elapsedMs, 'number');
 });
 

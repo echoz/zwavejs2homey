@@ -890,6 +890,7 @@ Progress:
 - Added `ha-import:extract` tooling skeleton plus extracted-artifact loader/validator (`ha-extracted-discovery/v1`) so extraction and translation stages now have separate contract-checked CLI entry points
 - Replaced the `ha-import:extract` source parser stub with a narrow real-source probe parser for `discovery.py` (Honeywell fan + thermostat setpoint-without-mode examples), producing `ha-extracted-discovery/v1` output directly from a Home Assistant checkout path
 - Extended the narrow real-source probe parser to include a second fan pattern (GE/Jasco 12730 / ZW4002), extracted parser logic into a dedicated helper module, and added an end-to-end `ha-import:extract (source)` -> `ha-import:report` tool test
+- Added a compiler-owned constrained HA `discovery.py` subset extractor (`extractHaDiscoverySubsetFromFile/Source`) that scans many `ZWaveDiscoverySchema(...)` blocks, translates supported `FAN|CLIMATE|SWITCH` subset fields into `ha-extracted-discovery/v1`, and reports unsupported/skipped schema blocks for extraction coverage tracking
 - Added a real-source extraction probe fixture derived from Home Assistant `discovery.py` examples (including `required_values` and `absent_values`) and verified it through translation, compile behavior, and `ha-import:report`
 
 - Build HA extract/translate/validate tooling pipeline

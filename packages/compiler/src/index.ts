@@ -86,6 +86,16 @@ export {
   HaExtractedDiscoveryArtifactError,
   loadHaExtractedDiscoveryArtifact,
 } from './importers/ha/extracted-discovery-artifact';
+export type {
+  HaSourceSubsetExtractReport,
+  HaSourceSubsetExtractResult,
+  HaSourceSubsetUnsupportedItem,
+  HaSourceSubsetUnsupportedReason,
+} from './importers/ha/extract-discovery-source-subset';
+export {
+  extractHaDiscoverySubsetFromFile,
+  extractHaDiscoverySubsetFromSource,
+} from './importers/ha/extract-discovery-source-subset';
 export type { HaExtractedDiscoveryEntryV1 } from './importers/ha/translate-extracted-discovery';
 export {
   assertHaExtractedDiscoveryInputV1,
