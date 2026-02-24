@@ -432,6 +432,42 @@ function mapPlatformToOutput(
         driverTemplateId: 'ha-import-select',
         capabilityId: 'enum_select',
       };
+    case 'COVER':
+      return {
+        homeyClass: 'curtain',
+        driverTemplateId: 'ha-import-cover',
+        capabilityId: 'windowcoverings_set',
+      };
+    case 'SENSOR':
+      return {
+        homeyClass: 'sensor',
+        driverTemplateId: 'ha-import-sensor',
+        capabilityId: 'measure_generic',
+      };
+    case 'NUMBER':
+      return {
+        homeyClass: 'other',
+        driverTemplateId: 'ha-import-number',
+        capabilityId: 'number_value',
+      };
+    case 'BUTTON':
+      return {
+        homeyClass: 'button',
+        driverTemplateId: 'ha-import-button',
+        capabilityId: 'button_action',
+      };
+    case 'SIREN':
+      return {
+        homeyClass: 'alarm',
+        driverTemplateId: 'ha-import-siren',
+        capabilityId: 'alarm_siren',
+      };
+    case 'HUMIDIFIER':
+      return {
+        homeyClass: 'humidifier',
+        driverTemplateId: 'ha-import-humidifier',
+        capabilityId: 'dim',
+      };
     default:
       return null;
   }

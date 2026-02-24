@@ -27,13 +27,13 @@ ZWaveDiscoverySchema(
 
   const result = compiler.extractHaDiscoverySubsetFromSource(source, 'discovery.py');
   assert.equal(result.report.scannedSchemas, 3);
-  assert.equal(result.report.translated, 2);
-  assert.equal(result.report.skipped, 1);
-  assert.equal(result.artifact.entries.length, 2);
+  assert.equal(result.report.translated, 3);
+  assert.equal(result.report.skipped, 0);
+  assert.equal(result.artifact.entries.length, 3);
   assert.equal(result.artifact.entries[0].output.homeyClass, 'fan');
   assert.equal(result.artifact.entries[1].output.capabilityId, 'onoff');
-  assert.equal(result.report.unsupported[0].reason, 'unsupported-platform');
-  assert.equal(result.report.unsupportedByReason['unsupported-platform'], 1);
+  assert.equal(result.artifact.entries[2].output.homeyClass, 'curtain');
+  assert.equal(result.artifact.entries[2].output.capabilityId, 'windowcoverings_set');
 });
 
 test('extractHaDiscoverySubsetFromSource supports LIGHT and BINARY_SENSOR platform mappings', () => {
@@ -71,6 +71,51 @@ ZWaveDiscoverySchema(
   );
 });
 
+test('extractHaDiscoverySubsetFromSource supports additional platform mappings with existing value schemas', () => {
+  const source = `
+ZWaveDiscoverySchema(
+    platform=Platform.COVER,
+    primary_value=SWITCH_MULTILEVEL_CURRENT_VALUE_SCHEMA,
+),
+ZWaveDiscoverySchema(
+    platform=Platform.SENSOR,
+    primary_value=SWITCH_MULTILEVEL_CURRENT_VALUE_SCHEMA,
+),
+ZWaveDiscoverySchema(
+    platform=Platform.NUMBER,
+    primary_value=SWITCH_MULTILEVEL_CURRENT_VALUE_SCHEMA,
+),
+ZWaveDiscoverySchema(
+    platform=Platform.BUTTON,
+    primary_value=SWITCH_BINARY_CURRENT_VALUE_SCHEMA,
+),
+ZWaveDiscoverySchema(
+    platform=Platform.SIREN,
+    primary_value=SWITCH_BINARY_CURRENT_VALUE_SCHEMA,
+),
+ZWaveDiscoverySchema(
+    platform=Platform.HUMIDIFIER,
+    primary_value=SWITCH_MULTILEVEL_CURRENT_VALUE_SCHEMA,
+),
+`;
+  const result = compiler.extractHaDiscoverySubsetFromSource(source, 'discovery.py');
+  assert.equal(result.report.translated, 6);
+  assert.equal(result.report.skipped, 0);
+  assert.deepEqual(
+    result.artifact.entries.map((entry) => ({
+      homeyClass: entry.output.homeyClass,
+      capabilityId: entry.output.capabilityId,
+    })),
+    [
+      { homeyClass: 'curtain', capabilityId: 'windowcoverings_set' },
+      { homeyClass: 'sensor', capabilityId: 'measure_generic' },
+      { homeyClass: 'other', capabilityId: 'number_value' },
+      { homeyClass: 'button', capabilityId: 'button_action' },
+      { homeyClass: 'alarm', capabilityId: 'alarm_siren' },
+      { homeyClass: 'humidifier', capabilityId: 'dim' },
+    ],
+  );
+});
 test('extractHaDiscoverySubsetFromSource supports inline multi-cc and property-set patterns', () => {
   const source = `
 ZWaveDiscoverySchema(
