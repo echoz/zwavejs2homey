@@ -36,11 +36,19 @@ test('parseCliArgs validates required device and rule inputs', async () => {
     true,
   );
   assert.equal(
+    parseCliArgs(['--device-file', 'd.json', '--rules-file', 'r.json', '--top', '5']).ok,
+    true,
+  );
+  assert.equal(
     parseCliArgs(['--device-file', 'd.json', '--rules-file', 'r.json', '--format', 'yaml']).ok,
     false,
   );
   assert.equal(
     parseCliArgs(['--device-file', 'd.json', '--rules-file', 'r.json', '--focus', 'weird']).ok,
+    false,
+  );
+  assert.equal(
+    parseCliArgs(['--device-file', 'd.json', '--rules-file', 'r.json', '--top', '0']).ok,
     false,
   );
 });
@@ -59,6 +67,7 @@ test('compileFromFiles compiles fixture device/rules and returns profile', async
   assert.equal(result.profile.profileId, 'fixture-switch-meter-1');
   assert.equal(result.profile.classification.homeyClass, 'socket');
   assert.equal(result.__focus, 'all');
+  assert.equal(result.__top, 3);
   const summary = formatCompileSummary(result);
   assert.match(summary, /Capabilities: .*onoff/);
   assert.match(summary, /Report: outcome=/);
@@ -200,6 +209,36 @@ test('formatCompileSummary/markdown include top unmatched rule diagnostics', asy
   assert.match(markdown, /Top unmatched rules:/);
   const ndjson = formatCompileOutput(fixture, 'ndjson');
   assert.match(ndjson, /\"type\":\"topUnmatchedRule\"/);
+});
+
+test('formatCompileSummary respects --top limit for unmatched diagnostics', async () => {
+  const { formatCompileSummary } = await loadLib();
+  const fixture = {
+    profile: {
+      profileId: 'p4',
+      classification: { homeyClass: 'other', confidence: 'generic', uncurated: true },
+      capabilities: [],
+      ignoredValues: [],
+    },
+    ruleSources: [],
+    report: {
+      profileOutcome: 'empty',
+      summary: { appliedActions: 0, unmatchedActions: 6, suppressedFillActions: 0 },
+      diagnosticDeviceKey: 'product-triple:1-2-3',
+      byRule: [
+        { ruleId: 'r1', layer: 'ha-derived', applied: 0, unmatched: 3, actionTypes: {} },
+        { ruleId: 'r2', layer: 'project-generic', applied: 0, unmatched: 2, actionTypes: {} },
+        { ruleId: 'r3', layer: 'project-product', applied: 0, unmatched: 1, actionTypes: {} },
+      ],
+      bySuppressedSlot: [],
+      curationCandidates: { likelyNeedsReview: false, reasons: [] },
+    },
+    __focus: 'unmatched',
+    __top: 2,
+  };
+  const summary = formatCompileSummary(fixture);
+  assert.match(summary, /Top unmatched rules: ha-derived:r1=3, project-generic:r2=2/);
+  assert.doesNotMatch(summary, /project-product:r3=1/);
 });
 
 test('formatCompileSummary supports focus filters for unmatched/suppressed/curation', async () => {

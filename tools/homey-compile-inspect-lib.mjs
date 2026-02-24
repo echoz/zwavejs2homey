@@ -43,6 +43,7 @@ export function getUsageText() {
     '  homey-compile-inspect --device-file <device.json> --manifest <manifest.json>',
     '                     [--catalog-file <catalog.json>]',
     '                     [--focus all|unmatched|suppressed|curation]',
+    '                     [--top <n>]',
     '                     [--format summary|markdown|json|json-pretty|json-compact|ndjson] [--homey-class <class>] [--driver-template <id>]',
   ].join('\n');
 }
@@ -71,6 +72,11 @@ export function parseCliArgs(argv) {
   if (!['all', 'unmatched', 'suppressed', 'curation'].includes(focus)) {
     return { ok: false, error: `Unsupported focus: ${focus}` };
   }
+  const topRaw = flags.get('--top');
+  const top = topRaw === undefined ? 3 : Number.parseInt(topRaw, 10);
+  if (!Number.isInteger(top) || top <= 0) {
+    return { ok: false, error: `--top must be a positive integer (received: ${String(topRaw)})` };
+  }
   return {
     ok: true,
     command: {
@@ -79,6 +85,7 @@ export function parseCliArgs(argv) {
       rulesFiles,
       format,
       focus,
+      top,
       catalogFile: flags.get('--catalog-file'),
       homeyClass: flags.get('--homey-class'),
       driverTemplateId: flags.get('--driver-template'),
@@ -127,10 +134,11 @@ export function compileFromFiles(command) {
     homeyClass: command.homeyClass,
     driverTemplateId: command.driverTemplateId,
   });
-  return { ...compiled, __focus: command.focus ?? 'all' };
+  return { ...compiled, __focus: command.focus ?? 'all', __top: command.top ?? 3 };
 }
 
 export function formatCompileSummary(result) {
+  const topLimit = Number.isInteger(result.__top) && result.__top > 0 ? result.__top : 3;
   const focus = result.__focus ?? 'all';
   const topUnmatchedRules = [...(result.report.byRule ?? [])]
     .filter((row) => (row.unmatched ?? 0) > 0)
@@ -140,7 +148,7 @@ export function formatCompileSummary(result) {
         a.layer.localeCompare(b.layer) ||
         a.ruleId.localeCompare(b.ruleId),
     )
-    .slice(0, 3);
+    .slice(0, topLimit);
   const lines = [];
   lines.push(`Profile: ${result.profile.profileId}`);
   lines.push(
@@ -177,7 +185,7 @@ export function formatCompileSummary(result) {
   }
   if ((focus === 'all' || focus === 'suppressed') && result.report.bySuppressedSlot.length > 0) {
     const top = result.report.bySuppressedSlot
-      .slice(0, 3)
+      .slice(0, topLimit)
       .map((row) => `${row.layer}:${row.ruleId}:${row.slot}=${row.count}`)
       .join(', ');
     lines.push(`Suppressed slots: ${top}`);
@@ -207,6 +215,7 @@ export function formatCompileSummary(result) {
 }
 
 export function formatCompileMarkdown(result) {
+  const topLimit = Number.isInteger(result.__top) && result.__top > 0 ? result.__top : 3;
   const focus = result.__focus ?? 'all';
   const topUnmatchedRules = [...(result.report.byRule ?? [])]
     .filter((row) => (row.unmatched ?? 0) > 0)
@@ -216,7 +225,7 @@ export function formatCompileMarkdown(result) {
         a.layer.localeCompare(b.layer) ||
         a.ruleId.localeCompare(b.ruleId),
     )
-    .slice(0, 5);
+    .slice(0, topLimit);
   const lines = [];
   lines.push(`## Compiled Profile: \`${result.profile.profileId}\``);
   lines.push(
@@ -283,6 +292,7 @@ export function formatCompileMarkdown(result) {
 }
 
 export function formatCompileNdjson(result) {
+  const topLimit = Number.isInteger(result.__top) && result.__top > 0 ? result.__top : 3;
   const records = [
     { type: 'profile', profile: result.profile },
     ...(result.classificationProvenance
@@ -318,7 +328,7 @@ export function formatCompileNdjson(result) {
           a.layer.localeCompare(b.layer) ||
           a.ruleId.localeCompare(b.ruleId),
       )
-      .slice(0, 10)
+      .slice(0, topLimit)
       .map((row) => ({ type: 'topUnmatchedRule', row })),
   ];
   return formatNdjson(records);
