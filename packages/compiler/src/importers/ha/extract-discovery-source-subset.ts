@@ -8,7 +8,13 @@ import type {
 
 export type HaSourceSubsetUnsupportedReason =
   | 'unsupported-platform'
+  | 'unsupported-primary-value-alias'
+  | 'unsupported-primary-value-inline'
+  | 'unsupported-primary-value-shape'
   | 'unsupported-primary-value'
+  | 'unsupported-companion-alias'
+  | 'unsupported-companion-inline'
+  | 'unsupported-companion-shape'
   | 'missing-required-fields'
   | 'unsupported-companion-value'
   | 'parse-error';
@@ -24,6 +30,7 @@ export interface HaSourceSubsetExtractReport {
   translated: number;
   skipped: number;
   unsupported: HaSourceSubsetUnsupportedItem[];
+  unsupportedByReason: Partial<Record<HaSourceSubsetUnsupportedReason, number>>;
 }
 
 export interface HaSourceSubsetExtractResult {
@@ -216,7 +223,12 @@ function parseValueSchemaRef(
     const aliasMatch = block.match(/primary_value=([A-Z0-9_]+_SCHEMA)/);
     if (aliasMatch) {
       const alias = VALUE_ALIAS_DEFS[aliasMatch[1]];
-      if (!alias) return { unsupported: `Unsupported primary_value alias: ${aliasMatch[1]}` };
+      if (!alias) {
+        return {
+          unsupported: `Unsupported primary_value alias: ${aliasMatch[1]}`,
+          unsupportedReason: 'unsupported-primary-value-alias' as const,
+        };
+      }
       const value: ParsedValueMatcher = {
         commandClass: alias.commandClass,
         endpoint: alias.endpoint ?? 0,
@@ -226,9 +238,19 @@ function parseValueSchemaRef(
       return { value };
     }
     const inlineMatch = block.match(/primary_value=ZWaveValueDiscoverySchema\(([\s\S]*?)\)\s*,/);
-    if (!inlineMatch) return { unsupported: 'Missing or unsupported primary_value shape' };
+    if (!inlineMatch) {
+      return {
+        unsupported: 'Missing or unsupported primary_value shape',
+        unsupportedReason: 'unsupported-primary-value-shape' as const,
+      };
+    }
     const value = parseInlineValueSchema(inlineMatch[1]);
-    if (!value) return { unsupported: 'Unsupported primary_value inline schema' };
+    if (!value) {
+      return {
+        unsupported: 'Unsupported primary_value inline schema',
+        unsupportedReason: 'unsupported-primary-value-inline' as const,
+      };
+    }
     return { value: value as ParsedValueMatcher };
   }
 
@@ -239,7 +261,11 @@ function parseValueSchemaRef(
   if (aliasItems.length > 0 && !listBody.includes('ZWaveValueDiscoverySchema(')) {
     const mapped = aliasItems.map((aliasName) => {
       const alias = VALUE_ALIAS_DEFS[aliasName];
-      if (!alias) throw new Error(`Unsupported companion alias: ${aliasName}`);
+      if (!alias) {
+        const error = new Error(`Unsupported companion alias: ${aliasName}`);
+        error.name = 'UnsupportedCompanionAliasError';
+        throw error;
+      }
       return {
         commandClass: alias.commandClass,
         endpoint: alias.endpoint ?? 0,
@@ -253,13 +279,24 @@ function parseValueSchemaRef(
   const parsed: ParsedCompanion[] = [];
   for (const match of inlineItems) {
     const value = parseInlineValueSchema(match[1]);
-    if (!value) return { unsupported: `Unsupported ${fieldName} inline schema` };
+    if (!value) {
+      return {
+        unsupported: `Unsupported ${fieldName} inline schema`,
+        unsupportedReason: 'unsupported-companion-inline' as const,
+      };
+    }
     parsed.push({
       commandClass: value.commandClass,
       endpoint: value.endpoint,
       property: value.property,
       ...(value.propertyKey !== undefined ? { propertyKey: value.propertyKey } : {}),
     });
+  }
+  if (inlineItems.length === 0 && listBody.trim().length > 0) {
+    return {
+      unsupported: `Unsupported ${fieldName} list shape`,
+      unsupportedReason: 'unsupported-companion-shape' as const,
+    };
   }
   return { values: parsed };
 }
@@ -348,7 +385,7 @@ function buildEntryFromBlock(
       return {
         unsupported: {
           sourceRef,
-          reason: 'unsupported-primary-value',
+          reason: primary.unsupportedReason ?? 'unsupported-primary-value',
           detail: primary.unsupported ?? 'unsupported primary value',
         },
       };
@@ -372,7 +409,7 @@ function buildEntryFromBlock(
         return {
           unsupported: {
             sourceRef,
-            reason: 'unsupported-companion-value',
+            reason: required.unsupportedReason ?? 'unsupported-companion-value',
             detail: required.unsupported ?? 'unsupported required_values',
           },
         };
@@ -381,7 +418,7 @@ function buildEntryFromBlock(
         return {
           unsupported: {
             sourceRef,
-            reason: 'unsupported-companion-value',
+            reason: absent.unsupportedReason ?? 'unsupported-companion-value',
             detail: absent.unsupported ?? 'unsupported absent_values',
           },
         };
@@ -392,7 +429,10 @@ function buildEntryFromBlock(
       return {
         unsupported: {
           sourceRef,
-          reason: 'unsupported-companion-value',
+          reason:
+            error instanceof Error && error.name === 'UnsupportedCompanionAliasError'
+              ? 'unsupported-companion-alias'
+              : 'unsupported-companion-value',
           detail: error instanceof Error ? error.message : String(error),
         },
       };
@@ -447,6 +487,11 @@ export function extractHaDiscoverySubsetFromSource(
     }
   }
 
+  const unsupportedByReason: Partial<Record<HaSourceSubsetUnsupportedReason, number>> = {};
+  for (const item of unsupported) {
+    unsupportedByReason[item.reason] = (unsupportedByReason[item.reason] ?? 0) + 1;
+  }
+
   return {
     artifact: {
       schemaVersion: 'ha-extracted-discovery/v1',
@@ -461,6 +506,7 @@ export function extractHaDiscoverySubsetFromSource(
       translated: entries.length,
       skipped: unsupported.length,
       unsupported,
+      unsupportedByReason,
     },
   };
 }

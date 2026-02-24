@@ -58,7 +58,7 @@ test('runHaImportExtract validates and can write extracted artifact', async () =
 });
 
 test('runHaImportExtract extracts probe entries from source-home-assistant discovery.py', async () => {
-  const { runHaImportExtract } = await loadLib();
+  const { runHaImportExtract, formatHaExtractSummary } = await loadLib();
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ha-source-stub-'));
   const discoveryDir = path.join(tempDir, 'homeassistant/components/zwave_js');
   fs.mkdirSync(discoveryDir, { recursive: true });
@@ -120,6 +120,8 @@ ZWaveDiscoverySchema(
   assert.equal(result.sourceReport.translated, 3);
   assert.equal(result.sourceReport.skipped, 0);
   assert.equal(typeof result.meta.elapsedMs, 'number');
+  const summary = formatHaExtractSummary(result);
+  assert.match(summary, /Source parse: scanned=3 translated=3 skipped=0/);
 });
 
 test('source extract output feeds ha-import report end-to-end', async () => {

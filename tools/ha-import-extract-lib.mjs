@@ -166,6 +166,14 @@ export function formatHaExtractSummary(result) {
     lines.push(
       `Source parse: scanned=${result.sourceReport.scannedSchemas} translated=${result.sourceReport.translated} skipped=${result.sourceReport.skipped}`,
     );
+    const topReasons = Object.entries(result.sourceReport.unsupportedByReason ?? {})
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+    if (topReasons.length > 0) {
+      lines.push(
+        `Skipped reasons: ${topReasons.map(([reason, count]) => `${reason}=${count}`).join(', ')}`,
+      );
+    }
   }
   if (result.meta && typeof result.meta.elapsedMs === 'number') {
     lines.push(`Timing: ${result.meta.elapsedMs.toFixed(3)}ms`);

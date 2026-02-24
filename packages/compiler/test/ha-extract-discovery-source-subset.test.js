@@ -33,6 +33,7 @@ ZWaveDiscoverySchema(
   assert.equal(result.artifact.entries[0].output.homeyClass, 'fan');
   assert.equal(result.artifact.entries[1].output.capabilityId, 'onoff');
   assert.equal(result.report.unsupported[0].reason, 'unsupported-platform');
+  assert.equal(result.report.unsupportedByReason['unsupported-platform'], 1);
 });
 
 test('extractHaDiscoverySubsetFromFile parses real HA discovery.py probe patterns', () => {
@@ -52,4 +53,24 @@ test('extractHaDiscoverySubsetFromFile parses real HA discovery.py probe pattern
     result.artifact.entries.some((entry) => entry.output.capabilityId === 'target_temperature'),
     true,
   );
+  assert.equal(Object.keys(result.report.unsupportedByReason).length > 0, true);
+});
+
+test('extractHaDiscoverySubsetFromSource reports granular unsupported primary/companion reasons', () => {
+  const source = `
+ZWaveDiscoverySchema(
+    platform=Platform.FAN,
+    primary_value=UNSUPPORTED_ALIAS_SCHEMA,
+),
+ZWaveDiscoverySchema(
+    platform=Platform.SWITCH,
+    primary_value=SWITCH_BINARY_CURRENT_VALUE_SCHEMA,
+    required_values=[UNSUPPORTED_ALIAS_SCHEMA],
+),
+`;
+  const result = compiler.extractHaDiscoverySubsetFromSource(source, 'discovery.py');
+  assert.equal(result.report.translated, 0);
+  assert.equal(result.report.skipped, 2);
+  assert.equal(result.report.unsupportedByReason['unsupported-primary-value-alias'], 1);
+  assert.equal(result.report.unsupportedByReason['unsupported-companion-alias'], 1);
 });
