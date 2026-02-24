@@ -5,6 +5,10 @@ export type {
   NormalizedZwaveValueMetadata,
 } from './models/zwave-facts';
 export type {
+  CatalogDeviceRecordV1,
+  CatalogDevicesArtifactV1,
+} from './catalog/catalog-device-artifact';
+export type {
   CompiledHomeyProfilePlan,
   HomeyCapabilityPlan,
   HomeyInboundMapping,
@@ -29,6 +33,11 @@ export type {
   RuleValueMatcher,
 } from './rules/types';
 
+export {
+  CatalogDeviceArtifactError,
+  assertCatalogDevicesArtifactV1,
+  loadCatalogDevicesArtifact,
+} from './catalog/catalog-device-artifact';
 export {
   RULE_LAYER_ORDER,
   assertRuleActionModeAllowedForLayer,

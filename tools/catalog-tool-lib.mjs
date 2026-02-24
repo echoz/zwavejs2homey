@@ -1,0 +1,138 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { createRequire } from 'node:module';
+import {
+  formatJsonCompact,
+  formatJsonPretty,
+  formatNdjson,
+  isSupportedDiagnosticFormat,
+} from './output-format-lib.mjs';
+
+const require = createRequire(import.meta.url);
+const { loadCatalogDevicesArtifact } = require('../packages/compiler/dist');
+
+function parseFlagMap(argv) {
+  const flags = new Map();
+  const positionals = [];
+  for (let i = 0; i < argv.length; i += 1) {
+    const token = argv[i];
+    if (!token.startsWith('--')) {
+      positionals.push(token);
+      continue;
+    }
+    const [key, inline] = token.split('=', 2);
+    if (inline !== undefined) {
+      flags.set(key, inline);
+      continue;
+    }
+    const next = argv[i + 1];
+    if (next && !next.startsWith('--')) {
+      flags.set(key, next);
+      i += 1;
+    } else {
+      flags.set(key, 'true');
+    }
+  }
+  return { flags, positionals };
+}
+
+export function getUsageText() {
+  return [
+    'Usage:',
+    '  catalog summary --input-file <catalog-devices.json> [--format summary|markdown|json|json-pretty|json-compact|ndjson]',
+    '  catalog validate --input-file <catalog-devices.json> [--format summary|json|json-pretty|json-compact|ndjson]',
+    '  catalog fetch --source <name>    # scaffold only (not implemented)',
+  ].join('\n');
+}
+
+export function parseCliArgs(argv) {
+  if (argv.includes('--help') || argv.includes('-h')) return { ok: false, error: getUsageText() };
+  const { flags, positionals } = parseFlagMap(argv);
+  const subcommand = positionals[0];
+  if (!subcommand) return { ok: false, error: getUsageText() };
+  if (!['summary', 'validate', 'fetch'].includes(subcommand)) {
+    return { ok: false, error: `Unsupported catalog subcommand: ${subcommand}` };
+  }
+  const format = flags.get('--format') ?? 'summary';
+  if (!isSupportedDiagnosticFormat(format)) {
+    return { ok: false, error: `Unsupported format: ${format}` };
+  }
+  if (subcommand === 'fetch') {
+    return {
+      ok: true,
+      command: { subcommand, source: flags.get('--source'), format },
+    };
+  }
+  const inputFile = flags.get('--input-file');
+  if (!inputFile) return { ok: false, error: '--input-file is required' };
+  return {
+    ok: true,
+    command: { subcommand, inputFile, format },
+  };
+}
+
+export function runCatalogCommand(command) {
+  if (command.subcommand === 'fetch') {
+    throw new Error('catalog fetch is not implemented yet (Phase 3 scaffold)');
+  }
+  const artifact = loadCatalogDevicesArtifact(command.inputFile);
+  return {
+    artifact,
+    summary: {
+      deviceCount: artifact.devices.length,
+      sourceNames: [
+        ...new Set(artifact.devices.flatMap((d) => d.sources.map((s) => s.source))),
+      ].sort(),
+      identifiedDeviceCount: artifact.devices.filter(
+        (d) =>
+          d.manufacturerId !== undefined &&
+          d.productType !== undefined &&
+          d.productId !== undefined,
+      ).length,
+    },
+  };
+}
+
+export function formatCatalogSummary(result) {
+  const lines = [];
+  lines.push(`Catalog artifact: ${result.artifact.schemaVersion}`);
+  lines.push(`Devices: ${result.summary.deviceCount}`);
+  lines.push(`Fully identified devices: ${result.summary.identifiedDeviceCount}`);
+  lines.push(`Sources: ${result.summary.sourceNames.join(', ') || '(none)'}`);
+  return lines.join('\n');
+}
+
+export function formatCatalogMarkdown(result) {
+  return [
+    '## Catalog Summary',
+    `- Artifact: \`${result.artifact.schemaVersion}\``,
+    `- Devices: ${result.summary.deviceCount}`,
+    `- Fully identified devices: ${result.summary.identifiedDeviceCount}`,
+    `- Sources: ${result.summary.sourceNames.join(', ') || '(none)'}`,
+  ].join('\n');
+}
+
+export function formatCatalogNdjson(result) {
+  return formatNdjson([
+    { type: 'summary', summary: result.summary },
+    ...result.artifact.devices.map((device) => ({ type: 'device', device })),
+  ]);
+}
+
+export function formatCatalogOutput(result, format) {
+  switch (format) {
+    case 'summary':
+      return formatCatalogSummary(result);
+    case 'markdown':
+      return formatCatalogMarkdown(result);
+    case 'json':
+    case 'json-pretty':
+      return formatJsonPretty(result);
+    case 'json-compact':
+      return formatJsonCompact(result);
+    case 'ndjson':
+      return formatCatalogNdjson(result);
+    default:
+      throw new Error(`Unsupported format: ${format}`);
+  }
+}

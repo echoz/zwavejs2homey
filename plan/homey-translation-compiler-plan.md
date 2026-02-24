@@ -873,7 +873,7 @@ Status: Completed (models, rule loading/validation, layered application semantic
 
 ### Phase 2 — HA Rule Import Tooling + Representative Import Layer
 
-Status: In progress (initial generated `ha-derived` artifact contract + loader compatibility validation)
+Status: Complete (current scope)
 
 Progress:
 
@@ -898,6 +898,7 @@ Progress:
 - Added Phase 2 drift-guard coverage:
   - real-source extractor test now asserts full translation coverage on the checked-out `discovery.py` (`translated == scanned`, `skipped == 0`) and empty `unsupportedByReason`
 - Expanded mixed HA-derived + project-rule compiler tests so HA-derived `measure_power` can suppress generic fallback fills, with provenance/suppression reporting assertions
+- Phase 2 exit checkpoint reviewed with no blockers after extractor robustness hardening and pinned-source drift-guard clarification
 
 - Build HA extract/translate/validate tooling pipeline
 - Generate `ha-derived` rule artifacts with provenance
@@ -907,6 +908,13 @@ Progress:
 - Compile mixed HA + project rules
 
 ### Phase 3 — Catalog Ingestion / Merge Tooling + Unknown Device Reporting
+
+Status: In progress (catalog artifact contract + loader + CLI skeleton)
+
+Progress:
+
+- Added `catalog-devices/v1` artifact contract, loader/validator, and fixture coverage
+- Added `catalog` CLI skeleton with `summary`, `validate`, and `fetch` (stub) subcommands plus format support (`summary|markdown|json|json-pretty|json-compact|ndjson`)
 
 - Build catalog fetch/normalize/merge/validate/diff tooling pipeline
 - Add merged catalog normalization pipeline to compiler inputs

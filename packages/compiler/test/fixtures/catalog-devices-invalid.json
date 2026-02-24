@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "catalog-devices/v1",
+  "source": {
+    "generatedAt": "2026-02-24T00:00:00Z",
+    "sourceRef": "fixtures/catalog-devices-invalid.json"
+  },
+  "devices": [
+    {
+      "catalogId": "",
+      "sources": "zwave-alliance"
+    }
+  ]
+}

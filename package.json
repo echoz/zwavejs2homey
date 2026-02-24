@@ -17,6 +17,7 @@
     "compiler:bench": "node tools/homey-compile-bench.mjs",
     "ha-import:extract": "node tools/ha-import-extract.mjs",
     "ha-import:report": "node tools/ha-import-report.mjs",
+    "catalog": "node tools/catalog-tool.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

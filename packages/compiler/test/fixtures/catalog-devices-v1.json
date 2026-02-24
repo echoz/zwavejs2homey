@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "catalog-devices/v1",
+  "source": {
+    "generatedAt": "2026-02-24T00:00:00Z",
+    "sourceRef": "fixtures/catalog-devices-v1.json"
+  },
+  "devices": [
+    {
+      "catalogId": "zwavealliance:0001-0002-0003",
+      "manufacturerId": 1,
+      "productType": 2,
+      "productId": 3,
+      "label": "Fixture Switch",
+      "sources": [
+        {
+          "source": "zwave-alliance",
+          "sourceId": "0001-0002-0003",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "catalogId": "observed:29-13313-1",
+      "manufacturerId": 29,
+      "productType": 13313,
+      "productId": 1,
+      "sources": [
+        {
+          "source": "observed-capture",
+          "sourceId": "fixture-switch-meter-1",
+          "confidence": "medium"
+        }
+      ]
+    }
+  ]
+}
