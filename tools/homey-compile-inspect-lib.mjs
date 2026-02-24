@@ -124,6 +124,15 @@ export function compileFromFiles(command) {
 }
 
 export function formatCompileSummary(result) {
+  const topUnmatchedRules = [...(result.report.byRule ?? [])]
+    .filter((row) => (row.unmatched ?? 0) > 0)
+    .sort(
+      (a, b) =>
+        b.unmatched - a.unmatched ||
+        a.layer.localeCompare(b.layer) ||
+        a.ruleId.localeCompare(b.ruleId),
+    )
+    .slice(0, 3);
   const lines = [];
   lines.push(`Profile: ${result.profile.profileId}`);
   lines.push(
@@ -163,6 +172,13 @@ export function formatCompileSummary(result) {
       .join(', ');
     lines.push(`Suppressed slots: ${top}`);
   }
+  if (topUnmatchedRules.length > 0) {
+    lines.push(
+      `Top unmatched rules: ${topUnmatchedRules
+        .map((row) => `${row.layer}:${row.ruleId}=${row.unmatched}`)
+        .join(', ')}`,
+    );
+  }
   if (result.report.catalogContext) {
     lines.push(
       `Report catalog context: known=${result.report.catalogContext.knownCatalogDevice}${
@@ -179,6 +195,15 @@ export function formatCompileSummary(result) {
 }
 
 export function formatCompileMarkdown(result) {
+  const topUnmatchedRules = [...(result.report.byRule ?? [])]
+    .filter((row) => (row.unmatched ?? 0) > 0)
+    .sort(
+      (a, b) =>
+        b.unmatched - a.unmatched ||
+        a.layer.localeCompare(b.layer) ||
+        a.ruleId.localeCompare(b.ruleId),
+    )
+    .slice(0, 5);
   const lines = [];
   lines.push(`## Compiled Profile: \`${result.profile.profileId}\``);
   lines.push(
@@ -227,6 +252,13 @@ export function formatCompileMarkdown(result) {
       }`,
     );
   }
+  if (topUnmatchedRules.length > 0) {
+    lines.push(
+      `- Top unmatched rules: ${topUnmatchedRules
+        .map((row) => `\`${row.layer}:${row.ruleId}=${row.unmatched}\``)
+        .join(', ')}`,
+    );
+  }
   return lines.join('\n');
 }
 
@@ -258,6 +290,16 @@ export function formatCompileNdjson(result) {
       type: 'curationReason',
       reason,
     })),
+    ...[...(result.report.byRule ?? [])]
+      .filter((row) => (row.unmatched ?? 0) > 0)
+      .sort(
+        (a, b) =>
+          b.unmatched - a.unmatched ||
+          a.layer.localeCompare(b.layer) ||
+          a.ruleId.localeCompare(b.ruleId),
+      )
+      .slice(0, 10)
+      .map((row) => ({ type: 'topUnmatchedRule', row })),
   ];
   return formatNdjson(records);
 }

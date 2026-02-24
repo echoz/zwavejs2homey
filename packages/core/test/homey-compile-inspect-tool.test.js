@@ -158,3 +158,37 @@ test('formatCompileOutput supports markdown/json/ndjson variants', async () => {
   assert.match(ndjson, /\"catalogContext\"/);
   assert.match(ndjson, /\"diagnosticDeviceKey\":\"product-triple:1-2-3\"/);
 });
+
+test('formatCompileSummary/markdown include top unmatched rule diagnostics', async () => {
+  const { formatCompileSummary, formatCompileOutput } = await loadLib();
+  const fixture = {
+    profile: {
+      profileId: 'p2',
+      classification: { homeyClass: 'other', confidence: 'generic', uncurated: true },
+      capabilities: [],
+      ignoredValues: [],
+    },
+    ruleSources: [],
+    report: {
+      profileOutcome: 'empty',
+      summary: { appliedActions: 0, unmatchedActions: 9, suppressedFillActions: 0 },
+      diagnosticDeviceKey: 'product-triple:9-9-9',
+      byRule: [
+        { ruleId: 'rA', layer: 'ha-derived', applied: 0, unmatched: 5, actionTypes: {} },
+        { ruleId: 'rB', layer: 'project-generic', applied: 0, unmatched: 3, actionTypes: {} },
+        { ruleId: 'rC', layer: 'project-product', applied: 0, unmatched: 1, actionTypes: {} },
+      ],
+      bySuppressedSlot: [],
+      curationCandidates: { likelyNeedsReview: true, reasons: ['no-applied-actions'] },
+    },
+  };
+  const summary = formatCompileSummary(fixture);
+  assert.match(
+    summary,
+    /Top unmatched rules: ha-derived:rA=5, project-generic:rB=3, project-product:rC=1/,
+  );
+  const markdown = formatCompileOutput(fixture, 'markdown');
+  assert.match(markdown, /Top unmatched rules:/);
+  const ndjson = formatCompileOutput(fixture, 'ndjson');
+  assert.match(ndjson, /\"type\":\"topUnmatchedRule\"/);
+});
