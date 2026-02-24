@@ -47,6 +47,7 @@ export function getUsageText() {
     '                     [--show rule|suppressed|curation|all]',
     '                     [--explain <capabilityId>]',
     '                     [--explain-all]',
+    '                     [--explain-only]',
     '                     [--format summary|markdown|json|json-pretty|json-compact|ndjson] [--homey-class <class>] [--driver-template <id>]',
   ].join('\n');
 }
@@ -87,6 +88,9 @@ export function parseCliArgs(argv) {
   if (flags.has('--explain') && flags.has('--explain-all')) {
     return { ok: false, error: 'Use either --explain or --explain-all, not both' };
   }
+  if (flags.has('--explain-only') && !flags.has('--explain') && !flags.has('--explain-all')) {
+    return { ok: false, error: '--explain-only requires --explain or --explain-all' };
+  }
   return {
     ok: true,
     command: {
@@ -99,6 +103,7 @@ export function parseCliArgs(argv) {
       show,
       explainCapabilityId: flags.get('--explain'),
       explainAll: flags.has('--explain-all'),
+      explainOnly: flags.has('--explain-only'),
       catalogFile: flags.get('--catalog-file'),
       homeyClass: flags.get('--homey-class'),
       driverTemplateId: flags.get('--driver-template'),
@@ -154,6 +159,7 @@ export function compileFromFiles(command) {
     __show: command.show ?? 'none',
     __explainCapabilityId: command.explainCapabilityId,
     __explainAll: command.explainAll === true,
+    __explainOnly: command.explainOnly === true,
   };
 }
 
@@ -578,6 +584,7 @@ export function formatCompileNdjson(result) {
 
 export function formatCompileOutput(result, format) {
   const output = result;
+  const capabilityExplain = getCapabilityExplanationRecord(result);
   switch (format) {
     case 'summary':
       return formatCompileSummary(output);
@@ -585,9 +592,9 @@ export function formatCompileOutput(result, format) {
       return formatCompileMarkdown(output);
     case 'json':
     case 'json-pretty':
-      return formatJsonPretty(result);
+      return formatJsonPretty(result.__explainOnly ? { capabilityExplain } : result);
     case 'json-compact':
-      return formatJsonCompact(result);
+      return formatJsonCompact(result.__explainOnly ? { capabilityExplain } : result);
     case 'ndjson':
       return formatCompileNdjson(result);
     default:

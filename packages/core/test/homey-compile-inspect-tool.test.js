@@ -59,8 +59,24 @@ test('parseCliArgs validates required device and rule inputs', async () => {
       'r.json',
       '--explain',
       'onoff',
+      '--explain-only',
+    ]).ok,
+    true,
+  );
+  assert.equal(
+    parseCliArgs([
+      '--device-file',
+      'd.json',
+      '--rules-file',
+      'r.json',
+      '--explain',
+      'onoff',
       '--explain-all',
     ]).ok,
+    false,
+  );
+  assert.equal(
+    parseCliArgs(['--device-file', 'd.json', '--rules-file', 'r.json', '--explain-only']).ok,
     false,
   );
   assert.equal(
@@ -458,4 +474,52 @@ test('formatCompileSummary/markdown/ndjson support --explain-all', async () => {
   assert.match(ndjson, /\"type\":\"capabilityExplain\"/);
   assert.match(ndjson, /\"explainAll\":true/);
   assert.ok(ndjson.includes('\"capabilities\":['));
+});
+
+test('formatCompileOutput supports --explain-only json payloads', async () => {
+  const { formatCompileOutput } = await loadLib();
+  const fixture = {
+    profile: {
+      profileId: 'p8',
+      classification: { homeyClass: 'socket', confidence: 'curated', uncurated: false },
+      capabilities: [
+        {
+          capabilityId: 'onoff',
+          directionality: 'bidirectional',
+          inboundMapping: {
+            kind: 'value',
+            selector: { commandClass: 37, endpoint: 0, property: 'currentValue' },
+          },
+          outboundMapping: {
+            kind: 'set_value',
+            target: { commandClass: 37, endpoint: 0, property: 'targetValue' },
+          },
+          provenance: { layer: 'ha-derived', ruleId: 'r-onoff', action: 'fill' },
+        },
+      ],
+      ignoredValues: [],
+    },
+    ruleSources: [],
+    report: {
+      profileOutcome: 'curated',
+      summary: { appliedActions: 1, unmatchedActions: 0, suppressedFillActions: 0 },
+      diagnosticDeviceKey: 'catalog:demo3',
+      byRule: [],
+      bySuppressedSlot: [],
+      curationCandidates: { likelyNeedsReview: false, reasons: [] },
+    },
+    __explainCapabilityId: 'onoff',
+    __explainOnly: true,
+  };
+
+  const pretty = JSON.parse(formatCompileOutput(fixture, 'json-pretty'));
+  assert.deepEqual(Object.keys(pretty), ['capabilityExplain']);
+  assert.equal(pretty.capabilityExplain.found, true);
+  assert.equal(pretty.capabilityExplain.capabilityId, 'onoff');
+
+  const compact = JSON.parse(
+    formatCompileOutput({ ...fixture, __explainAll: true }, 'json-compact'),
+  );
+  assert.equal(compact.capabilityExplain.explainAll, true);
+  assert.equal(Array.isArray(compact.capabilityExplain.capabilities), true);
 });
