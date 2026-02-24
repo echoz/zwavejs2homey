@@ -1,0 +1,11 @@
+[
+  {
+    "ruleId": "bad-rule",
+    "layer": "project-generic",
+    "actions": [
+      {
+        "type": "capability"
+      }
+    ]
+  }
+]

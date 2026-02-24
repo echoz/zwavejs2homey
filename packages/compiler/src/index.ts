@@ -52,6 +52,12 @@ export type { CompileDeviceReportEntry, CompileDeviceResult } from './compiler/c
 export { compileDevice } from './compiler/compile-device';
 export type { CompileProfilePlanOptions } from './compiler/compile-profile-plan';
 export { compileProfilePlan } from './compiler/compile-profile-plan';
+export type {
+  CompileProfilePlanFromFilesResult,
+  RuleSourceMetadata,
+} from './compiler/compile-profile-plan-from-files';
+export { compileProfilePlanFromRuleFiles } from './compiler/compile-profile-plan-from-files';
+export { RuleFileLoadError, loadJsonRuleFile, loadJsonRuleFiles } from './compiler/rule-loader';
 export {
   matchesDevice,
   matchesRuleCompanionConstraints,
