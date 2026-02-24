@@ -155,6 +155,7 @@ export function formatCompileSummary(result) {
   lines.push(
     `Report: outcome=${result.report.profileOutcome} applied=${result.report.summary.appliedActions} unmatched=${result.report.summary.unmatchedActions} suppressedFill=${result.report.summary.suppressedFillActions}`,
   );
+  lines.push(`Diagnostic device key: ${result.report.diagnosticDeviceKey}`);
   if (result.report.bySuppressedSlot.length > 0) {
     const top = result.report.bySuppressedSlot
       .slice(0, 3)
@@ -211,6 +212,7 @@ export function formatCompileMarkdown(result) {
   lines.push(
     `- Report: outcome=\`${result.report.profileOutcome}\`, applied=${result.report.summary.appliedActions}, unmatched=${result.report.summary.unmatchedActions}, suppressedFill=${result.report.summary.suppressedFillActions}`,
   );
+  lines.push(`- Diagnostic device key: \`${result.report.diagnosticDeviceKey}\``);
   if (result.report.curationCandidates.likelyNeedsReview) {
     lines.push(`- Curation review: yes (${result.report.curationCandidates.reasons.join(', ')})`);
   } else {
@@ -248,6 +250,7 @@ export function formatCompileNdjson(result) {
       summary: result.report.summary,
       profileOutcome: result.report.profileOutcome,
       catalogContext: result.report.catalogContext,
+      diagnosticDeviceKey: result.report.diagnosticDeviceKey,
     },
     ...result.report.byRule.map((row) => ({ type: 'byRule', row })),
     ...result.report.bySuppressedSlot.map((row) => ({ type: 'bySuppressedSlot', row })),

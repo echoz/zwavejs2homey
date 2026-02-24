@@ -55,6 +55,7 @@ test('compileProfilePlanFromRuleFiles returns rule source metadata and grouped r
     likelyNeedsReview: false,
     reasons: [],
   });
+  assert.equal(result.report.diagnosticDeviceKey, 'product-triple:29-13313-1');
   assert.equal(result.report.profileOutcome, 'curated');
 });
 
@@ -162,6 +163,7 @@ test('compileProfilePlanFromRuleFilesWithCatalog annotates known catalog generic
     label: undefined,
     matchRef: 'catalog:observed:29-13313-1',
   });
+  assert.equal(result.report.diagnosticDeviceKey, 'catalog:observed:29-13313-1');
   assert.ok(result.report.curationCandidates.reasons.includes('known-device-generic-fallback'));
 });
 
@@ -175,6 +177,7 @@ test('compileProfilePlanFromRuleFilesWithCatalog annotates unknown catalog gener
   );
   assert.equal(miss.report.profileOutcome, 'empty');
   assert.deepEqual(miss.report.catalogContext, { knownCatalogDevice: false });
+  assert.equal(miss.report.diagnosticDeviceKey, 'product-triple:65535-65535-65535');
   assert.ok(miss.report.curationCandidates.reasons.includes('no-meaningful-mapping'));
 });
 
@@ -210,6 +213,7 @@ test('compileProfilePlanFromRuleFilesWithCatalog annotates known catalog unmappe
     label: undefined,
     matchRef: 'catalog:observed:29-13313-1',
   });
+  assert.equal(result.report.diagnosticDeviceKey, 'catalog:observed:29-13313-1');
   assert.ok(result.report.curationCandidates.reasons.includes('known-device-unmapped'));
 });
 

@@ -44,6 +44,7 @@ export interface CompileProfilePlanFromFilesResult {
       label?: string;
       matchRef?: string;
     };
+    diagnosticDeviceKey: string;
   };
   ruleSources: RuleSourceMetadata[];
   classificationProvenance?: {
@@ -58,6 +59,22 @@ export interface CompileProfilePlanFromFilesResult {
     catalogId?: string;
     label?: string;
   };
+}
+
+function deriveDiagnosticDeviceKey(
+  device: NormalizedZwaveDeviceFacts,
+  catalogLookup?: CompileProfilePlanFromFilesResult['catalogLookup'],
+): string {
+  if (catalogLookup?.matched && catalogLookup.catalogId)
+    return `catalog:${catalogLookup.catalogId}`;
+  if (
+    device.manufacturerId !== undefined &&
+    device.productType !== undefined &&
+    device.productId !== undefined
+  ) {
+    return `product-triple:${device.manufacturerId}-${device.productType}-${device.productId}`;
+  }
+  return `deviceKey:${device.deviceKey ?? 'unknown'}`;
 }
 
 function groupReportByRule(
@@ -212,6 +229,7 @@ export function compileProfilePlanFromRuleFiles(
               knownCatalogDevice: false,
             }
           : undefined,
+      diagnosticDeviceKey: deriveDiagnosticDeviceKey(device, catalogLookup),
     },
     ruleSources: loaded.map((entry) => ({
       filePath: entry.filePath,
@@ -252,6 +270,7 @@ export function compileProfilePlanFromRuleSetManifest(
               knownCatalogDevice: false,
             }
           : undefined,
+      diagnosticDeviceKey: deriveDiagnosticDeviceKey(device, catalogLookup),
     },
     ruleSources: loaded.entries.map((entry) => ({
       filePath: entry.filePath,

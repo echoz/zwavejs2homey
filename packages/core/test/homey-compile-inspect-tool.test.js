@@ -55,6 +55,7 @@ test('compileFromFiles compiles fixture device/rules and returns profile', async
   assert.match(summary, /Report: outcome=/);
   assert.match(summary, /Catalog: matched/);
   assert.match(summary, /Profile catalog match: product-triple/);
+  assert.match(summary, /Diagnostic device key: catalog:observed:29-13313-1/);
 });
 
 test('compileFromFiles supports manifest entries with ha-derived-generated kind', async () => {
@@ -98,6 +99,7 @@ test('formatCompileSummary includes classification provenance and suppressed slo
     report: {
       profileOutcome: 'curated',
       summary: { appliedActions: 2, unmatchedActions: 1, suppressedFillActions: 1 },
+      diagnosticDeviceKey: 'catalog:zwjs:0184-4447-3034',
       bySuppressedSlot: [
         {
           layer: 'project-generic',
@@ -117,6 +119,7 @@ test('formatCompileSummary includes classification provenance and suppressed slo
   assert.match(summary, /Catalog: matched \(product-triple\) zwjs:0184-4447-3034/);
   assert.match(summary, /Profile catalog match: product-triple zwjs:0184-4447-3034/);
   assert.match(summary, /Report catalog context: known=true \(catalog:zwjs:0184-4447-3034\)/);
+  assert.match(summary, /Diagnostic device key: catalog:zwjs:0184-4447-3034/);
   assert.match(
     summary,
     /Suppressed slots: project-generic:generic-device-class-fill:deviceIdentity.homeyClass=1/,
@@ -138,6 +141,7 @@ test('formatCompileOutput supports markdown/json/ndjson variants', async () => {
     report: {
       profileOutcome: 'curated',
       summary: { appliedActions: 1, unmatchedActions: 0, suppressedFillActions: 0 },
+      diagnosticDeviceKey: 'product-triple:1-2-3',
       catalogContext: { knownCatalogDevice: false },
       byRule: [{ ruleId: 'r1', layer: 'ha-derived', applied: 1, unmatched: 0, actionTypes: {} }],
       bySuppressedSlot: [],
@@ -152,4 +156,5 @@ test('formatCompileOutput supports markdown/json/ndjson variants', async () => {
   assert.match(ndjson, /\"type\":\"ruleSource\"/);
   assert.match(ndjson, /\"type\":\"catalogLookup\"/);
   assert.match(ndjson, /\"catalogContext\"/);
+  assert.match(ndjson, /\"diagnosticDeviceKey\":\"product-triple:1-2-3\"/);
 });
