@@ -71,3 +71,18 @@ test('translated ha-derived artifact rules are compiler-compatible with project 
     ),
   );
 });
+
+test('translateHaMockDiscoveryToGeneratedArtifact validates input shape with explicit error', () => {
+  assert.throws(
+    () =>
+      compiler.translateHaMockDiscoveryToGeneratedArtifact({
+        schemaVersion: 'ha-mock-discovery/v1',
+        source: { generatedAt: '2026-02-24T00:00:00Z', sourceRef: 'x' },
+        definitions: [{ id: 'bad', sourceRef: 'x', match: { commandClass: '37' }, output: {} }],
+      }),
+    (error) =>
+      error &&
+      error.name === 'HaMockTranslationError' &&
+      /match\.commandClass must be a number/i.test(error.message),
+  );
+});

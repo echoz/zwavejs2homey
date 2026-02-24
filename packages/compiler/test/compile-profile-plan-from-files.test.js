@@ -154,3 +154,28 @@ test('compileProfilePlanFromRuleSetManifest is stable across value ordering for 
   assert.deepEqual(a.profile.classification, b.profile.classification);
   assert.deepEqual(a.classificationProvenance, b.classificationProvenance);
 });
+
+test('compileProfilePlanFromRuleSetManifest supports ha-derived generated artifact entries', () => {
+  const haGeneratedRules = path.join(fixturesDir, 'ha-derived-rules-v1.json');
+  const projectRules = path.join(fixturesDir, 'rules-switch-meter.json');
+
+  const result = compiler.compileProfilePlanFromRuleSetManifest(device, [
+    { filePath: haGeneratedRules, kind: 'ha-derived-generated', layer: 'ha-derived' },
+    { filePath: projectRules },
+  ]);
+
+  assert.equal(result.profile.classification.homeyClass, 'socket');
+  assert.equal(
+    result.profile.capabilities.some((cap) => cap.capabilityId === 'onoff'),
+    true,
+  );
+  assert.equal(
+    result.ruleSources.some((src) => src.filePath === haGeneratedRules && src.ruleCount === 1),
+    true,
+  );
+  assert.ok(
+    result.report.byRule.some(
+      (row) => row.layer === 'ha-derived' && row.ruleId === 'ha-switch-binary-current',
+    ),
+  );
+});

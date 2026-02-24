@@ -5,6 +5,7 @@ const fs = require('node:fs') as {
 };
 
 import type { MappingRule } from '../rules/types';
+import { loadHaDerivedGeneratedRuleArtifact } from '../importers/ha/generated-rule-artifact';
 import {
   getRuleLayerOrder,
   isRuleActionModeAllowedForLayer,
@@ -31,6 +32,7 @@ export class RuleSetLoadError extends Error {
 export interface RuleSetManifestEntry {
   filePath: string;
   layer?: MappingRule['layer'];
+  kind?: 'rules-json' | 'ha-derived-generated';
 }
 
 export interface LoadedRuleFile {
@@ -188,7 +190,10 @@ export function loadJsonRuleSetManifest(entries: RuleSetManifestEntry[]): Loaded
   const loaded = entries.map((entry) => ({
     filePath: entry.filePath,
     declaredLayer: entry.layer,
-    rules: loadJsonRuleFile(entry.filePath),
+    rules:
+      entry.kind === 'ha-derived-generated'
+        ? loadHaDerivedGeneratedRuleArtifact(entry.filePath).rules
+        : loadJsonRuleFile(entry.filePath),
   }));
 
   const layerOrder = getRuleLayerOrder();

@@ -86,8 +86,12 @@ export type {
   HaMockDiscoveryInputV1,
   HaMockTranslationReport,
   HaMockTranslationResult,
+  HaMockUnsupportedReason,
 } from './importers/ha/translate-mock-discovery';
-export { translateHaMockDiscoveryToGeneratedArtifact } from './importers/ha/translate-mock-discovery';
+export {
+  HaMockTranslationError,
+  translateHaMockDiscoveryToGeneratedArtifact,
+} from './importers/ha/translate-mock-discovery';
 export {
   matchesDevice,
   matchesRuleCompanionConstraints,

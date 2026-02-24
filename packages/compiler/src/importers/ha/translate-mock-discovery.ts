@@ -1,6 +1,13 @@
 import type { HaDerivedGeneratedRuleArtifactV1 } from './generated-rule-artifact';
 import type { MappingRule } from '../../rules/types';
 
+export class HaMockTranslationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'HaMockTranslationError';
+  }
+}
+
 export interface HaMockDiscoveryInputV1 {
   schemaVersion: 'ha-mock-discovery/v1';
   source: {
@@ -29,13 +36,94 @@ export interface HaMockDiscoveryDefinitionV1 {
 export interface HaMockTranslationReport {
   translated: number;
   skipped: number;
-  unsupported: Array<{ id: string; reason: string }>;
+  unsupported: Array<{ id: string; reason: HaMockUnsupportedReason }>;
   sourceRefs: string[];
 }
 
 export interface HaMockTranslationResult {
   artifact: HaDerivedGeneratedRuleArtifactV1;
   report: HaMockTranslationReport;
+}
+
+export type HaMockUnsupportedReason =
+  | 'unsupported-output-shape'
+  | 'unsupported-match-field'
+  | 'no-supported-output';
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0;
+}
+
+function validateInputShape(input: unknown): asserts input is HaMockDiscoveryInputV1 {
+  if (!isObject(input)) {
+    throw new HaMockTranslationError('HA mock discovery input must be an object');
+  }
+  if (input.schemaVersion !== 'ha-mock-discovery/v1') {
+    throw new HaMockTranslationError(
+      `Unsupported HA mock discovery schemaVersion: ${String(input.schemaVersion)}`,
+    );
+  }
+  if (!isObject(input.source)) {
+    throw new HaMockTranslationError('HA mock discovery input is missing source metadata');
+  }
+  if (!isNonEmptyString(input.source.generatedAt) || !isNonEmptyString(input.source.sourceRef)) {
+    throw new HaMockTranslationError(
+      'HA mock discovery input source.generatedAt and source.sourceRef must be non-empty strings',
+    );
+  }
+  if (!Array.isArray(input.definitions)) {
+    throw new HaMockTranslationError('HA mock discovery input definitions must be an array');
+  }
+  for (const [index, definition] of input.definitions.entries()) {
+    if (!isObject(definition)) {
+      throw new HaMockTranslationError(`HA mock discovery definition ${index} must be an object`);
+    }
+    if (!isNonEmptyString(definition.id) || !isNonEmptyString(definition.sourceRef)) {
+      throw new HaMockTranslationError(
+        `HA mock discovery definition ${index} requires non-empty id and sourceRef`,
+      );
+    }
+    if (!isObject(definition.match)) {
+      throw new HaMockTranslationError(
+        `HA mock discovery definition ${definition.id} missing match`,
+      );
+    }
+    if (typeof definition.match.commandClass !== 'number') {
+      throw new HaMockTranslationError(
+        `HA mock discovery definition ${definition.id} match.commandClass must be a number`,
+      );
+    }
+    if (definition.match.endpoint !== undefined && typeof definition.match.endpoint !== 'number') {
+      throw new HaMockTranslationError(
+        `HA mock discovery definition ${definition.id} match.endpoint must be a number`,
+      );
+    }
+    if (
+      !['string', 'number'].includes(typeof definition.match.property) ||
+      (definition.match.property !== 0 && !definition.match.property)
+    ) {
+      throw new HaMockTranslationError(
+        `HA mock discovery definition ${definition.id} match.property must be string or number`,
+      );
+    }
+    if (
+      definition.match.propertyKey !== undefined &&
+      !['string', 'number'].includes(typeof definition.match.propertyKey)
+    ) {
+      throw new HaMockTranslationError(
+        `HA mock discovery definition ${definition.id} match.propertyKey must be string or number`,
+      );
+    }
+    if (!isObject(definition.output)) {
+      throw new HaMockTranslationError(
+        `HA mock discovery definition ${definition.id} missing output object`,
+      );
+    }
+  }
 }
 
 function toRule(definition: HaMockDiscoveryDefinitionV1): MappingRule | null {
@@ -82,8 +170,9 @@ function toRule(definition: HaMockDiscoveryDefinitionV1): MappingRule | null {
 }
 
 export function translateHaMockDiscoveryToGeneratedArtifact(
-  input: HaMockDiscoveryInputV1,
+  input: unknown,
 ): HaMockTranslationResult {
+  validateInputShape(input);
   const unsupported: HaMockTranslationReport['unsupported'] = [];
   const rules: MappingRule[] = [];
 
