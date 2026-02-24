@@ -15,6 +15,7 @@
     "zwjs:inspect": "node tools/zwjs-inspect.mjs",
     "compiler:inspect": "node tools/homey-compile-inspect.mjs",
     "compiler:bench": "node tools/homey-compile-bench.mjs",
+    "ha-import:report": "node tools/ha-import-report.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

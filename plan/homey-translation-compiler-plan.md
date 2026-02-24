@@ -884,6 +884,7 @@ Progress:
 - Added explicit mock translator unsupported-reason reporting (`unsupported-match-field`, `unsupported-output-shape`) and manifest/CLI compatibility for `ha-derived` generated artifact entries
 - Fixed Phase 2 review follow-ups: accurate translation `skipped` counts, unsupported nested constraint-field detection, explicit manifest `kind` validation, and extracted shared rule-array validation to avoid loader/importer coupling
 - Added a parser-free HA extracted-schema fixture contract and adapter translator (`ha-extracted-discovery/v1`) that feeds the existing generated `ha-derived` artifact path with compatibility tests
+- Added an initial `ha-import:report` tooling skeleton (fixture/parser-free path) to exercise extracted input -> generated `ha-derived` artifact -> translation report flow
 
 - Build HA extract/translate/validate tooling pipeline
 - Generate `ha-derived` rule artifacts with provenance
