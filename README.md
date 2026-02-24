@@ -1,0 +1,125 @@
+# zwavejs2homey
+
+`zwavejs2homey` is a bridge project for mapping Z-Wave devices (via `zwave-js-server` / Z-Wave JS UI) into Homey-compatible device profiles and, later, a Homey app adapter.
+
+The project is intentionally split into layers:
+
+- `packages/core`: protocol-first `ZwjsClient` (WebSocket client for `zwave-js-server`)
+- `packages/compiler`: Homey-targeted profile compiler (rules + HA import + catalog tooling)
+- `co.lazylabs.zwavejs2homey`: Homey app package (adapter/runtime integration, in progress)
+
+## Project Goals
+
+- Build a robust `zwave-js-server` client with strong typing and tests
+- Compile layered rules (HA-derived + project rules) into reusable Homey device profile artifacts
+- Validate compiled profiles against live ZWJS data before implementing the Homey adapter runtime
+- Keep compiler and Homey adapter responsibilities separate
+
+## Repository Layout
+
+- `co.lazylabs.zwavejs2homey/`
+  - Homey app scaffold and Homey-specific runtime code
+- `packages/core/`
+  - `ZwjsClient`, protocol types, transport, normalizers, tests
+- `packages/compiler/`
+  - compiler models, rule loading/matching/application, HA import pipeline, catalog tooling
+- `tools/`
+  - local CLIs for inspection, import, catalog operations, benchmarking, and compiler builds
+- `rules/`
+  - real rule pipeline inputs (HA-derived + project generic/product rules)
+- `docs/`
+  - architecture notes, capability matrix, validation checklists
+- `plan/`
+  - roadmaps, active plans, sprint notes
+
+## Key CLI Tools
+
+### ZWJS inspection (live, read-only)
+
+- `npm run zwjs:inspect -- --help`
+- `npm run zwjs:inspect -- nodes list --url ws://HOST:PORT --format table`
+- `npm run zwjs:inspect -- nodes show <nodeId> --url ws://HOST:PORT --format json --include-values full`
+
+### Compiler inspection (device facts -> compiled profile)
+
+- `npm run compiler:inspect -- --help`
+- `npm run compiler:inspect -- --device-file <device.json> --rules-file <rules.json> --format summary`
+- `npm run compiler:inspect -- --device-file <device.json> --manifest-file <manifest.json> --format markdown --explain-all`
+
+### Live compiler inspection (ZWJS -> compile on the fly)
+
+- `npm run compiler:inspect-live -- --help`
+- `npm run compiler:inspect-live -- --url ws://HOST:PORT --all-nodes --manifest-file <manifest.json> --format list`
+
+Note: this currently compiles on the fly. A compiled-artifact apply path is planned next.
+
+### Compiler build/export (compiled profiles artifact)
+
+- `npm run compiler:build -- --help`
+- `npm run compiler:build -- --device-file <device.json> --manifest-file <manifest.json> --output-file /tmp/compiled-profiles.json --format summary`
+
+This emits a `compiled-homey-profiles/v1` artifact.
+
+### HA import pipeline
+
+- `npm run ha-import:extract -- --help`
+- `npm run ha-import:extract -- --source-home-assistant docs/external/home-assistant --format summary --timing`
+- `npm run ha-import:report -- --input-file <ha-extracted.json> --format markdown`
+
+### Catalog tooling
+
+- `npm run catalog -- summary --input-file <catalog.json>`
+- `npm run catalog -- normalize --input-file <catalog.json> --conflict-mode warn`
+- `npm run catalog -- merge --input-file <a.json> --input-file <b.json>`
+- `npm run catalog -- diff --from-file <a.json> --to-file <b.json> --only changed`
+
+## Rules Pipeline (Current State)
+
+`rules/` is the canonical location for real compiler rules:
+
+- `rules/ha-derived/` (generated from Home Assistant extraction/translation)
+- `rules/project/generic/` (generic inference/fallback rules)
+- `rules/project/product/` (product-specific overrides)
+
+At the moment, many examples still live in `packages/compiler/test/fixtures/`. The next compiler slices will populate `rules/` with the real working rulesets.
+
+## Development Workflow
+
+The project is being built incrementally in slices:
+
+- implement one slice
+- add/update tests
+- run formatting + checks
+- commit with a descriptive message
+
+Primary local validation command:
+
+- `npm run check`
+
+This runs:
+
+- formatting check
+- lint (Homey app)
+- compiler tests
+- core tests
+- Homey app TypeScript build
+
+## Current Boundary Decisions
+
+- Compiler owns:
+  - compiled profile artifacts
+  - rule layering
+  - HA import pipeline
+  - catalog tooling
+  - provenance and diagnostics
+- Homey adapter owns:
+  - runtime curation behavior
+  - patch storage/application semantics
+  - runtime execution of compiled inbound/outbound mappings
+
+## Where to look next
+
+- `docs/architecture.md`
+- `plan/homey-translation-compiler-plan.md`
+- `plan/roadmap.md`
+- `plan/current-sprint.md`
