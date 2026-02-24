@@ -45,6 +45,7 @@ export function getUsageText() {
     '                     [--focus all|unmatched|suppressed|curation]',
     '                     [--top <n>]',
     '                     [--show rule|suppressed|curation|all]',
+    '                     [--explain <capabilityId>]',
     '                     [--format summary|markdown|json|json-pretty|json-compact|ndjson] [--homey-class <class>] [--driver-template <id>]',
   ].join('\n');
 }
@@ -92,6 +93,7 @@ export function parseCliArgs(argv) {
       focus,
       top,
       show,
+      explainCapabilityId: flags.get('--explain'),
       catalogFile: flags.get('--catalog-file'),
       homeyClass: flags.get('--homey-class'),
       driverTemplateId: flags.get('--driver-template'),
@@ -145,7 +147,73 @@ export function compileFromFiles(command) {
     __focus: command.focus ?? 'all',
     __top: command.top ?? 3,
     __show: command.show ?? 'none',
+    __explainCapabilityId: command.explainCapabilityId,
   };
+}
+
+function formatSelector(selector) {
+  if (!selector) return '(none)';
+  if (typeof selector === 'object' && 'eventType' in selector) {
+    return `event:${selector.eventType}`;
+  }
+  const endpoint = typeof selector.endpoint === 'number' ? selector.endpoint : 0;
+  const propertyKey = selector.propertyKey !== undefined ? `/${String(selector.propertyKey)}` : '';
+  return `cc=${selector.commandClass}@ep${endpoint}:${String(selector.property)}${propertyKey}`;
+}
+
+function buildCapabilityExplanationLines(result, markdown = false) {
+  const capabilityId = result.__explainCapabilityId;
+  if (!capabilityId) return [];
+  const capability = result.profile.capabilities.find((row) => row.capabilityId === capabilityId);
+  if (!capability) {
+    return markdown
+      ? [`- Explain: capability \`${capabilityId}\` not found`]
+      : [`Explain: capability "${capabilityId}" not found`];
+  }
+
+  const wrap = (value) => (markdown ? `\`${value}\`` : value);
+  const lines = markdown
+    ? [`### Explain: \`${capability.capabilityId}\``]
+    : [`Explain: ${capability.capabilityId}`];
+  const pushLine = (label, value) => {
+    lines.push(markdown ? `- ${label}: ${value}` : `  ${label}: ${value}`);
+  };
+
+  pushLine('Directionality', wrap(capability.directionality));
+  pushLine(
+    'Inbound',
+    capability.inboundMapping
+      ? `${wrap(capability.inboundMapping.kind)} -> ${wrap(formatSelector(capability.inboundMapping.selector))}`
+      : '(none)',
+  );
+  if (capability.inboundMapping?.watchers?.length) {
+    pushLine(
+      'Watchers',
+      capability.inboundMapping.watchers.map((w) => wrap(formatSelector(w))).join(', '),
+    );
+  }
+  if (!capability.outboundMapping) {
+    pushLine('Outbound', '(none)');
+  } else {
+    const target =
+      typeof capability.outboundMapping.target === 'object' &&
+      capability.outboundMapping.target !== null &&
+      'command' in capability.outboundMapping.target
+        ? `command:${capability.outboundMapping.target.command}`
+        : formatSelector(capability.outboundMapping.target);
+    pushLine('Outbound', `${wrap(capability.outboundMapping.kind)} -> ${wrap(target)}`);
+  }
+  if (capability.flags && Object.keys(capability.flags).length > 0) {
+    pushLine('Flags', wrap(JSON.stringify(capability.flags)));
+  }
+  pushLine(
+    'Provenance',
+    `${wrap(`${capability.provenance.layer}:${capability.provenance.ruleId}`)} (${wrap(capability.provenance.action)})`,
+  );
+  if (capability.provenance.reason) {
+    pushLine('Reason', markdown ? capability.provenance.reason : capability.provenance.reason);
+  }
+  return lines;
 }
 
 export function formatCompileSummary(result) {
@@ -257,6 +325,7 @@ export function formatCompileSummary(result) {
       lines.push(`  - ${reason}`);
     }
   }
+  lines.push(...buildCapabilityExplanationLines(result, false));
   return lines.join('\n');
 }
 
@@ -369,6 +438,7 @@ export function formatCompileMarkdown(result) {
       lines.push(`  - \`${reason}\``);
     }
   }
+  lines.push(...buildCapabilityExplanationLines(result, true));
   return lines.join('\n');
 }
 

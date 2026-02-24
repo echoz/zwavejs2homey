@@ -44,6 +44,10 @@ test('parseCliArgs validates required device and rule inputs', async () => {
     true,
   );
   assert.equal(
+    parseCliArgs(['--device-file', 'd.json', '--rules-file', 'r.json', '--explain', 'onoff']).ok,
+    true,
+  );
+  assert.equal(
     parseCliArgs(['--device-file', 'd.json', '--rules-file', 'r.json', '--format', 'yaml']).ok,
     false,
   );
@@ -324,4 +328,59 @@ test('formatCompileSummary/markdown support --show detail sections', async () =>
   assert.match(markdown, /- Rule detail:/);
   assert.match(markdown, /- Suppressed detail:/);
   assert.match(markdown, /- Curation reasons detail:/);
+});
+
+test('formatCompileSummary/markdown support --explain capability output', async () => {
+  const { formatCompileSummary, formatCompileOutput } = await loadLib();
+  const fixture = {
+    profile: {
+      profileId: 'p6',
+      classification: { homeyClass: 'socket', confidence: 'curated', uncurated: false },
+      capabilities: [
+        {
+          capabilityId: 'onoff',
+          directionality: 'bidirectional',
+          inboundMapping: {
+            kind: 'value',
+            selector: { commandClass: 37, endpoint: 0, property: 'currentValue' },
+            watchers: [{ eventType: 'zwjs.event.node.value-updated' }],
+          },
+          outboundMapping: {
+            kind: 'set_value',
+            target: { commandClass: 37, endpoint: 0, property: 'targetValue' },
+          },
+          flags: { assumedState: true },
+          provenance: {
+            layer: 'ha-derived',
+            ruleId: 'ha-switch-binary-current',
+            action: 'fill',
+            reason: 'mock reason',
+          },
+        },
+      ],
+      ignoredValues: [],
+    },
+    ruleSources: [],
+    report: {
+      profileOutcome: 'curated',
+      summary: { appliedActions: 1, unmatchedActions: 0, suppressedFillActions: 0 },
+      diagnosticDeviceKey: 'catalog:demo',
+      byRule: [],
+      bySuppressedSlot: [],
+      curationCandidates: { likelyNeedsReview: false, reasons: [] },
+    },
+    __explainCapabilityId: 'onoff',
+  };
+  const summary = formatCompileSummary(fixture);
+  assert.match(summary, /Explain: onoff/);
+  assert.match(summary, /Directionality: bidirectional/);
+  assert.match(summary, /Inbound: value -> cc=37@ep0:currentValue/);
+  assert.match(summary, /Outbound: set_value -> cc=37@ep0:targetValue/);
+  assert.match(summary, /Watchers: event:zwjs\.event\.node\.value-updated/);
+  assert.match(summary, /Provenance: ha-derived:ha-switch-binary-current \(fill\)/);
+
+  const markdown = formatCompileOutput(fixture, 'markdown');
+  assert.match(markdown, /### Explain: `onoff`/);
+  assert.match(markdown, /- Directionality: `bidirectional`/);
+  assert.match(markdown, /- Outbound: `set_value` -> `cc=37@ep0:targetValue`/);
 });
