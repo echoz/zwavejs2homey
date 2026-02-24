@@ -5,6 +5,7 @@ const fs = require('node:fs') as {
 };
 
 import type { MappingRule } from '../rules/types';
+import { getRuleLayerOrder } from './layer-semantics';
 
 export class RuleFileLoadError extends Error {
   constructor(
@@ -14,6 +15,32 @@ export class RuleFileLoadError extends Error {
     super(message);
     this.name = 'RuleFileLoadError';
   }
+}
+
+export class RuleSetLoadError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'RuleSetLoadError';
+  }
+}
+
+export interface RuleSetManifestEntry {
+  filePath: string;
+  layer?: MappingRule['layer'];
+}
+
+export interface LoadedRuleFile {
+  filePath: string;
+  rules: MappingRule[];
+}
+
+export interface LoadedRuleSetManifest {
+  entries: Array<
+    LoadedRuleFile & {
+      declaredLayer?: MappingRule['layer'];
+    }
+  >;
+  duplicateRuleIds: string[];
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -82,8 +109,47 @@ export function loadJsonRuleFile(filePath: string): MappingRule[] {
   return parsed as MappingRule[];
 }
 
-export function loadJsonRuleFiles(
-  filePaths: string[],
-): Array<{ filePath: string; rules: MappingRule[] }> {
+export function loadJsonRuleFiles(filePaths: string[]): LoadedRuleFile[] {
   return filePaths.map((filePath) => ({ filePath, rules: loadJsonRuleFile(filePath) }));
+}
+
+export function loadJsonRuleSetManifest(entries: RuleSetManifestEntry[]): LoadedRuleSetManifest {
+  const loaded = entries.map((entry) => ({
+    filePath: entry.filePath,
+    declaredLayer: entry.layer,
+    rules: loadJsonRuleFile(entry.filePath),
+  }));
+
+  const layerOrder = getRuleLayerOrder();
+  const ruleIdCounts = new Map<string, number>();
+
+  for (const file of loaded) {
+    for (const rule of file.rules) {
+      if (file.declaredLayer && rule.layer !== file.declaredLayer) {
+        throw new RuleSetLoadError(
+          `Rule "${rule.ruleId}" in ${file.filePath} has layer "${rule.layer}" but manifest declares "${file.declaredLayer}"`,
+        );
+      }
+      if (!layerOrder.includes(rule.layer)) {
+        throw new RuleSetLoadError(
+          `Rule "${rule.ruleId}" has unsupported layer "${String(rule.layer)}"`,
+        );
+      }
+      ruleIdCounts.set(rule.ruleId, (ruleIdCounts.get(rule.ruleId) ?? 0) + 1);
+    }
+  }
+
+  const duplicateRuleIds = [...ruleIdCounts.entries()]
+    .filter(([, count]) => count > 1)
+    .map(([ruleId]) => ruleId)
+    .sort();
+
+  if (duplicateRuleIds.length > 0) {
+    throw new RuleSetLoadError(`Duplicate ruleId(s) detected: ${duplicateRuleIds.join(', ')}`);
+  }
+
+  return {
+    entries: loaded,
+    duplicateRuleIds,
+  };
 }

@@ -1,0 +1,11 @@
+[
+  {
+    "ruleId": "ha-onoff",
+    "layer": "project-generic",
+    "actions": [
+      {
+        "type": "ignore-value"
+      }
+    ]
+  }
+]

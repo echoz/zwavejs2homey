@@ -7,12 +7,13 @@
     "co.lazylabs.zwavejs2homey"
   ],
   "scripts": {
-    "build": "npm run build -w @zwavejs2homey/core && npm run build -w co.lazylabs.zwavejs2homey",
+    "build": "npm run build -w @zwavejs2homey/compiler && npm run build -w @zwavejs2homey/core && npm run build -w co.lazylabs.zwavejs2homey",
     "build:core": "npm run build -w @zwavejs2homey/core",
     "build:homey": "npm run build -w co.lazylabs.zwavejs2homey",
-    "check": "npm run format:check && npm run lint && npm run test -w @zwavejs2homey/core && npm run build -w co.lazylabs.zwavejs2homey",
+    "check": "npm run format:check && npm run lint && npm run test -w @zwavejs2homey/compiler && npm run test -w @zwavejs2homey/core && npm run build -w co.lazylabs.zwavejs2homey",
     "lint": "npm run lint -w co.lazylabs.zwavejs2homey",
     "zwjs:inspect": "node tools/zwjs-inspect.mjs",
+    "compiler:inspect": "node tools/homey-compile-inspect.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

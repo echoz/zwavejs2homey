@@ -1,0 +1,17 @@
+[
+  {
+    "ruleId": "generic-onoff-fill",
+    "layer": "project-generic",
+    "value": { "commandClass": [37], "property": ["currentValue"] },
+    "actions": [
+      {
+        "type": "capability",
+        "capabilityId": "onoff",
+        "inboundMapping": {
+          "kind": "value",
+          "selector": { "commandClass": 37, "endpoint": 0, "property": "currentValue" }
+        }
+      }
+    ]
+  }
+]

@@ -56,8 +56,22 @@ export type {
   CompileProfilePlanFromFilesResult,
   RuleSourceMetadata,
 } from './compiler/compile-profile-plan-from-files';
-export { compileProfilePlanFromRuleFiles } from './compiler/compile-profile-plan-from-files';
-export { RuleFileLoadError, loadJsonRuleFile, loadJsonRuleFiles } from './compiler/rule-loader';
+export {
+  compileProfilePlanFromRuleFiles,
+  compileProfilePlanFromRuleSetManifest,
+} from './compiler/compile-profile-plan-from-files';
+export type {
+  LoadedRuleFile,
+  LoadedRuleSetManifest,
+  RuleSetManifestEntry,
+} from './compiler/rule-loader';
+export {
+  RuleFileLoadError,
+  RuleSetLoadError,
+  loadJsonRuleFile,
+  loadJsonRuleFiles,
+  loadJsonRuleSetManifest,
+} from './compiler/rule-loader';
 export {
   matchesDevice,
   matchesRuleCompanionConstraints,

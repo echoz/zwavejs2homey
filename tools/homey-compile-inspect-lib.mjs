@@ -1,0 +1,114 @@
+import fs from 'node:fs';
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
+const { compileProfilePlanFromRuleSetManifest } = require('../packages/compiler/dist');
+
+function parseFlagMap(argv) {
+  const flags = new Map();
+  const positionals = [];
+  for (let i = 0; i < argv.length; i += 1) {
+    const token = argv[i];
+    if (!token.startsWith('--')) {
+      positionals.push(token);
+      continue;
+    }
+    const [key, inline] = token.split('=', 2);
+    if (inline !== undefined) {
+      flags.set(key, inline);
+      continue;
+    }
+    const next = argv[i + 1];
+    if (next && !next.startsWith('--')) {
+      flags.set(key, next);
+      i += 1;
+    } else {
+      flags.set(key, 'true');
+    }
+  }
+  return { flags, positionals };
+}
+
+export function getUsageText() {
+  return [
+    'Usage:',
+    '  homey-compile-inspect --device-file <device.json> --rules-file <rules.json> [--rules-file <rules2.json> ...]',
+    '  homey-compile-inspect --device-file <device.json> --manifest <manifest.json>',
+    '                     [--format json|summary] [--homey-class <class>] [--driver-template <id>]',
+  ].join('\n');
+}
+
+export function parseCliArgs(argv) {
+  if (argv.includes('--help') || argv.includes('-h')) return { ok: false, error: getUsageText() };
+  const { flags } = parseFlagMap(argv);
+  const deviceFile = flags.get('--device-file');
+  const manifest = flags.get('--manifest');
+  const rulesFiles = [];
+  for (let i = 0; i < argv.length; i += 1) {
+    if (argv[i] === '--rules-file' && argv[i + 1]) rulesFiles.push(argv[i + 1]);
+    if (argv[i].startsWith('--rules-file=')) rulesFiles.push(argv[i].split('=', 2)[1]);
+  }
+  if (!deviceFile) return { ok: false, error: '--device-file is required' };
+  if (!manifest && rulesFiles.length === 0) {
+    return { ok: false, error: 'Provide --manifest or at least one --rules-file' };
+  }
+  if (manifest && rulesFiles.length > 0) {
+    return { ok: false, error: 'Use either --manifest or --rules-file, not both' };
+  }
+  const format = flags.get('--format') ?? 'summary';
+  if (!['json', 'summary'].includes(format))
+    return { ok: false, error: `Unsupported format: ${format}` };
+  return {
+    ok: true,
+    command: {
+      deviceFile,
+      manifest,
+      rulesFiles,
+      format,
+      homeyClass: flags.get('--homey-class'),
+      driverTemplateId: flags.get('--driver-template'),
+    },
+  };
+}
+
+function readJson(path) {
+  return JSON.parse(fs.readFileSync(path, 'utf8'));
+}
+
+function coerceManifestEntries(raw) {
+  if (!Array.isArray(raw)) throw new Error('Manifest JSON must be an array');
+  return raw;
+}
+
+export function compileFromFiles(command) {
+  const device = readJson(command.deviceFile);
+  const manifestEntries = command.manifest
+    ? coerceManifestEntries(readJson(command.manifest))
+    : command.rulesFiles.map((filePath) => ({ filePath }));
+
+  return compileProfilePlanFromRuleSetManifest(device, manifestEntries, {
+    homeyClass: command.homeyClass,
+    driverTemplateId: command.driverTemplateId,
+  });
+}
+
+export function formatCompileSummary(result) {
+  const lines = [];
+  lines.push(`Profile: ${result.profile.profileId}`);
+  lines.push(
+    `Class: ${result.profile.classification.homeyClass} (${result.profile.classification.confidence}, uncurated=${result.profile.classification.uncurated})`,
+  );
+  lines.push(
+    `Capabilities: ${result.profile.capabilities.map((c) => c.capabilityId).join(', ') || '(none)'}`,
+  );
+  lines.push(`Ignored values: ${result.profile.ignoredValues?.length ?? 0}`);
+  lines.push(
+    `Report: applied=${result.report.summary.appliedActions} unmatched=${result.report.summary.unmatchedActions} suppressedFill=${result.report.summary.suppressedFillActions}`,
+  );
+  if (result.report.curationCandidates.likelyNeedsReview) {
+    lines.push(`Curation review: yes (${result.report.curationCandidates.reasons.join(', ')})`);
+  } else {
+    lines.push('Curation review: no');
+  }
+  return lines.join('\n');
+}
