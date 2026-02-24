@@ -5,7 +5,11 @@ const fs = require('node:fs') as {
 };
 
 import type { MappingRule } from '../rules/types';
-import { getRuleLayerOrder } from './layer-semantics';
+import {
+  getRuleLayerOrder,
+  isRuleActionModeAllowedForLayer,
+  normalizeRuleActionMode,
+} from './layer-semantics';
 
 export class RuleFileLoadError extends Error {
   constructor(
@@ -47,15 +51,80 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
-function isValidRuleActionShape(value: unknown): boolean {
+function isValidValueIdShape(value: unknown): boolean {
   if (!isObject(value)) return false;
-  if (value.type === 'capability') {
-    return typeof value.capabilityId === 'string';
+  if (typeof value.commandClass !== 'number') return false;
+  if (!['string', 'number'].includes(typeof value.property)) return false;
+  if (value.endpoint !== undefined && typeof value.endpoint !== 'number') return false;
+  if (value.propertyKey !== undefined && !['string', 'number'].includes(typeof value.propertyKey)) {
+    return false;
   }
-  if (value.type === 'device-identity') {
-    return typeof value.homeyClass === 'string' || typeof value.driverTemplateId === 'string';
+  return true;
+}
+
+function validateRuleActionShape(
+  action: unknown,
+  filePath: string,
+  ruleId: string,
+  layer: MappingRule['layer'],
+  actionIndex: number,
+): void {
+  if (!isObject(action) || typeof action.type !== 'string') {
+    throw new RuleFileLoadError(
+      `Rule "${ruleId}" has invalid action at index ${actionIndex}`,
+      filePath,
+    );
   }
-  return value.type === 'ignore-value';
+
+  const mode = normalizeRuleActionMode(
+    action.mode === 'fill' || action.mode === 'augment' || action.mode === 'replace'
+      ? action.mode
+      : undefined,
+  );
+  if (!isRuleActionModeAllowedForLayer(layer, mode)) {
+    throw new RuleFileLoadError(
+      `Rule "${ruleId}" action ${actionIndex} uses mode "${mode}" not allowed in layer "${layer}"`,
+      filePath,
+    );
+  }
+
+  if (action.type === 'capability') {
+    if (typeof action.capabilityId !== 'string' || action.capabilityId.length === 0) {
+      throw new RuleFileLoadError(
+        `Rule "${ruleId}" capability action ${actionIndex} requires a non-empty capabilityId`,
+        filePath,
+      );
+    }
+    return;
+  }
+
+  if (action.type === 'device-identity') {
+    if (
+      (typeof action.homeyClass !== 'string' || action.homeyClass.length === 0) &&
+      (typeof action.driverTemplateId !== 'string' || action.driverTemplateId.length === 0)
+    ) {
+      throw new RuleFileLoadError(
+        `Rule "${ruleId}" device-identity action ${actionIndex} must define homeyClass or driverTemplateId`,
+        filePath,
+      );
+    }
+    return;
+  }
+
+  if (action.type === 'ignore-value') {
+    if (action.valueId !== undefined && !isValidValueIdShape(action.valueId)) {
+      throw new RuleFileLoadError(
+        `Rule "${ruleId}" ignore-value action ${actionIndex} has invalid valueId shape`,
+        filePath,
+      );
+    }
+    return;
+  }
+
+  throw new RuleFileLoadError(
+    `Rule "${ruleId}" has unsupported action type "${action.type}"`,
+    filePath,
+  );
 }
 
 function validateRuleShape(
@@ -86,12 +155,7 @@ function validateRuleShape(
     );
   }
   for (const [actionIndex, action] of rule.actions.entries()) {
-    if (!isValidRuleActionShape(action)) {
-      throw new RuleFileLoadError(
-        `Rule "${String(rule.ruleId)}" has invalid action at index ${actionIndex}`,
-        filePath,
-      );
-    }
+    validateRuleActionShape(action, filePath, String(rule.ruleId), rule.layer, actionIndex);
   }
 }
 

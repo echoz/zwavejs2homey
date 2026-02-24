@@ -1,0 +1,15 @@
+[
+  {
+    "ruleId": "bad-ignore-valueid",
+    "layer": "project-generic",
+    "actions": [
+      {
+        "type": "ignore-value",
+        "valueId": {
+          "commandClass": "37",
+          "property": "currentValue"
+        }
+      }
+    ]
+  }
+]

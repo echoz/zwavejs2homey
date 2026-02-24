@@ -1,0 +1,11 @@
+[
+  {
+    "ruleId": "bad-device-identity",
+    "layer": "ha-derived",
+    "actions": [
+      {
+        "type": "device-identity"
+      }
+    ]
+  }
+]

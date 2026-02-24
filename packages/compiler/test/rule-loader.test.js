@@ -22,6 +22,39 @@ test('loadJsonRuleFile rejects invalid rule shapes with file context', () => {
       error &&
       error.name === 'RuleFileLoadError' &&
       error.filePath === filePath &&
-      /invalid action/i.test(error.message),
+      /(invalid action|capability action .*capabilityId)/i.test(error.message),
+  );
+});
+
+test('loadJsonRuleFile rejects empty device-identity actions with clear error', () => {
+  const filePath = path.join(fixturesDir, 'rules-invalid-device-identity-empty.json');
+  assert.throws(
+    () => compiler.loadJsonRuleFile(filePath),
+    (error) =>
+      error &&
+      error.filePath === filePath &&
+      /device-identity action .*homeyClass or driverTemplateId/i.test(error.message),
+  );
+});
+
+test('loadJsonRuleFile rejects action mode not allowed by layer', () => {
+  const filePath = path.join(fixturesDir, 'rules-invalid-generic-replace.json');
+  assert.throws(
+    () => compiler.loadJsonRuleFile(filePath),
+    (error) =>
+      error &&
+      error.filePath === filePath &&
+      /not allowed in layer \"project-generic\"/i.test(error.message),
+  );
+});
+
+test('loadJsonRuleFile rejects invalid ignore-value valueId shapes', () => {
+  const filePath = path.join(fixturesDir, 'rules-invalid-ignore-valueid.json');
+  assert.throws(
+    () => compiler.loadJsonRuleFile(filePath),
+    (error) =>
+      error &&
+      error.filePath === filePath &&
+      /ignore-value action .*invalid valueId shape/i.test(error.message),
   );
 });

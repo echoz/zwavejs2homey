@@ -385,6 +385,59 @@ v1 requirements:
 - Compiler should be able to run from generated artifacts without re-running import/fetch tools
 - Future CI check (post-v1 acceptable): fail if generated artifacts are stale relative to source snapshots
 
+## Performance and Scaling (v1)
+
+The compiler is correctness-first in early slices, but performance must be treated as a first-class requirement before HA-import and large rule sets land.
+
+### Performance Goals (v1)
+
+- Keep single-device compilation responsive for local rule authoring/inspection workflows
+- Avoid obvious `O(values x all_rules)` bottlenecks once rule counts grow
+- Preserve deterministic output while optimizing
+- Make performance regressions measurable (not anecdotal)
+
+### Expected Hot Paths
+
+- Rule matching across many values and rules
+- Repeated layer-order sorting / per-compile setup
+- Report generation with per-action entries
+- Repeated device-identity/classification actions across multiple matching values
+
+### Planned Optimizations (Phase 1 exit / early Phase 2)
+
+1. **Rule candidate pruning**
+   - Pre-index rules by common selectors (`commandClass`, `property`, maybe `endpoint`)
+   - Only evaluate plausible rule subsets per value
+
+2. **Rule-set compile context**
+   - Precompute sorted rules and indexes once per rule set
+   - Reuse across many device compiles
+
+3. **Device-level vs value-level action split**
+   - Separate or dedupe actions that should not be re-applied for every matching value (especially `device-identity`)
+
+4. **Report mode controls (if needed)**
+   - Keep full detail for debugging
+   - Allow lighter summaries for bulk compilation runs
+
+### Measurement and Guardrails
+
+- Add a small benchmark fixture set for compiler perf smoke tests (non-CI or optional CI initially)
+- Track simple metrics during benchmark runs:
+  - rules count
+  - values count
+  - compile time
+  - report generation time (if separated)
+- Record baseline numbers in docs/plan before and after major optimization slices
+
+### Performance Review Checkpoint
+
+Before starting HA import at scale (Phase 2), run a focused compiler code review that includes:
+
+- algorithmic complexity of matching/application
+- memory/report overhead tradeoffs
+- optimization opportunities that do not compromise provenance/report fidelity
+
 ## Device Catalog / Known Device Universe (Initial Design)
 
 The user wants to pull all Z-Wave devices we know of and compile profiles from that.

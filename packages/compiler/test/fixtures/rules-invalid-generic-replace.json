@@ -1,0 +1,13 @@
+[
+  {
+    "ruleId": "bad-generic-replace",
+    "layer": "project-generic",
+    "actions": [
+      {
+        "type": "device-identity",
+        "mode": "replace",
+        "homeyClass": "light"
+      }
+    ]
+  }
+]
