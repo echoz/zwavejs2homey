@@ -203,6 +203,13 @@ test('formatCompileSummary includes classification provenance and suppressed slo
         knownCatalogDevice: true,
         matchRef: 'catalog:zwjs:0184-4447-3034',
       },
+      unknownDeviceReport: {
+        kind: 'known-catalog',
+        diagnosticDeviceKey: 'catalog:zwjs:0184-4447-3034',
+        profileOutcome: 'curated',
+        matchRef: 'catalog:zwjs:0184-4447-3034',
+        reasons: ['suppressed-fill-actions:1'],
+      },
       curationCandidates: { likelyNeedsReview: true, reasons: ['suppressed-fill-actions:1'] },
     },
   });
@@ -234,6 +241,12 @@ test('formatCompileOutput supports markdown/json/ndjson variants', async () => {
       summary: { appliedActions: 1, unmatchedActions: 0, suppressedFillActions: 0 },
       diagnosticDeviceKey: 'product-triple:1-2-3',
       catalogContext: { knownCatalogDevice: false },
+      unknownDeviceReport: {
+        kind: 'unknown-catalog',
+        diagnosticDeviceKey: 'product-triple:1-2-3',
+        profileOutcome: 'curated',
+        reasons: [],
+      },
       byRule: [{ ruleId: 'r1', layer: 'ha-derived', applied: 1, unmatched: 0, actionTypes: {} }],
       bySuppressedSlot: [],
       curationCandidates: { likelyNeedsReview: false, reasons: [] },
@@ -247,6 +260,7 @@ test('formatCompileOutput supports markdown/json/ndjson variants', async () => {
   assert.match(ndjson, /\"type\":\"ruleSource\"/);
   assert.match(ndjson, /\"type\":\"catalogLookup\"/);
   assert.match(ndjson, /\"catalogContext\"/);
+  assert.match(ndjson, /\"type\":\"unknownDeviceReport\"/);
   assert.match(ndjson, /\"diagnosticDeviceKey\":\"product-triple:1-2-3\"/);
 });
 
@@ -333,6 +347,13 @@ test('formatCompileSummary supports focus filters for unmatched/suppressed/curat
         { slot: 'capability:onoff', layer: 'project-generic', ruleId: 'r2', count: 2 },
       ],
       catalogContext: { knownCatalogDevice: true, matchRef: 'catalog:abc' },
+      unknownDeviceReport: {
+        kind: 'known-catalog',
+        diagnosticDeviceKey: 'catalog:abc',
+        profileOutcome: 'empty',
+        matchRef: 'catalog:abc',
+        reasons: ['known-device-generic-fallback'],
+      },
       curationCandidates: { likelyNeedsReview: true, reasons: ['known-device-generic-fallback'] },
     },
   };
@@ -349,6 +370,7 @@ test('formatCompileSummary supports focus filters for unmatched/suppressed/curat
   const curation = formatCompileSummary({ ...base, __focus: 'curation' });
   assert.match(curation, /Curation review:/);
   assert.match(curation, /Report catalog context:/);
+  assert.match(curation, /Unknown-device report:/);
   assert.doesNotMatch(curation, /Top unmatched rules:/);
 });
 

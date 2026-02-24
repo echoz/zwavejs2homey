@@ -82,7 +82,7 @@ Current implemented foundation in `packages/compiler`:
 - Compiler diagnostics enriched with catalog context:
   - `catalogLookup` in file-based compile results
   - `profile.catalogMatch` annotation
-  - catalog-aware curation hints and stable diagnostic device keys
+  - catalog-aware curation hints, explicit `unknownDeviceReport`, and stable diagnostic device keys
 
 Reference plan:
 

@@ -929,6 +929,7 @@ Progress:
 - Added compiled profile catalog annotation (`profile.catalogMatch`) for downstream adapter/tooling use (annotation only; no rule precedence changes)
 - Added catalog references to compiler diagnostics/provenance (`catalogId` in profile provenance reason, report `catalogContext.matchRef`)
 - Added stable report `diagnosticDeviceKey` (`catalog:<id>` or product-triple fallback) and surfaced it in `compiler:inspect` outputs
+- Added file-based `unknownDeviceReport` diagnostics (known/unknown/no-catalog) and surfaced them in `compiler:inspect` (`summary|markdown|ndjson`)
 
 - Build catalog fetch/normalize/merge/validate/diff tooling pipeline
 - Add merged catalog normalization pipeline to compiler inputs

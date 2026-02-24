@@ -410,6 +410,11 @@ export function formatCompileSummary(result) {
       }`,
     );
   }
+  if ((focus === 'all' || focus === 'curation') && result.report.unknownDeviceReport) {
+    lines.push(
+      `Unknown-device report: ${result.report.unknownDeviceReport.kind} (${result.report.unknownDeviceReport.profileOutcome})`,
+    );
+  }
   if (focus === 'all' || focus === 'curation') {
     if (result.report.curationCandidates.likelyNeedsReview) {
       lines.push(`Curation review: yes (${result.report.curationCandidates.reasons.join(', ')})`);
@@ -495,6 +500,11 @@ export function formatCompileMarkdown(result) {
       }`,
     );
   }
+  if ((focus === 'all' || focus === 'curation') && result.report.unknownDeviceReport) {
+    lines.push(
+      `- Unknown-device report: ${result.report.unknownDeviceReport.kind} (\`${result.report.unknownDeviceReport.profileOutcome}\`)`,
+    );
+  }
   if (focus === 'all' || focus === 'unmatched') {
     lines.push(`- Diagnostic device key: \`${result.report.diagnosticDeviceKey}\``);
   }
@@ -565,6 +575,7 @@ export function formatCompileNdjson(result) {
       summary: result.report.summary,
       profileOutcome: result.report.profileOutcome,
       catalogContext: result.report.catalogContext,
+      unknownDeviceReport: result.report.unknownDeviceReport,
       diagnosticDeviceKey: result.report.diagnosticDeviceKey,
     },
     ...result.report.byRule.map((row) => ({ type: 'byRule', row })),
@@ -573,6 +584,9 @@ export function formatCompileNdjson(result) {
       type: 'curationReason',
       reason,
     })),
+    ...(result.report.unknownDeviceReport
+      ? [{ type: 'unknownDeviceReport', unknownDeviceReport: result.report.unknownDeviceReport }]
+      : []),
     ...[...(result.report.byRule ?? [])]
       .filter((row) => (row.unmatched ?? 0) > 0)
       .sort(

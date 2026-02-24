@@ -44,6 +44,14 @@ export interface CompileProfilePlanFromFilesResult {
       label?: string;
       matchRef?: string;
     };
+    unknownDeviceReport?: {
+      kind: 'known-catalog' | 'unknown-catalog' | 'no-catalog';
+      diagnosticDeviceKey: string;
+      profileOutcome: 'curated' | 'ha-derived' | 'generic' | 'empty';
+      matchRef?: string;
+      label?: string;
+      reasons: string[];
+    };
     diagnosticDeviceKey: string;
   };
   ruleSources: RuleSourceMetadata[];
@@ -184,6 +192,44 @@ function deriveProfileOutcome(
   return profile.classification.confidence;
 }
 
+function deriveUnknownDeviceReport(
+  profile: ReturnType<typeof compileProfilePlan>['profile'],
+  curationCandidates: CompileProfilePlanFromFilesResult['report']['curationCandidates'],
+  diagnosticDeviceKey: string,
+  catalogLookup?: CompileProfilePlanFromFilesResult['catalogLookup'],
+): CompileProfilePlanFromFilesResult['report']['unknownDeviceReport'] | undefined {
+  if (!profile.classification.uncurated && curationCandidates.reasons.length === 0)
+    return undefined;
+
+  const profileOutcome = deriveProfileOutcome(profile);
+  if (profileOutcome !== 'generic' && profileOutcome !== 'empty') return undefined;
+
+  if (catalogLookup?.matched) {
+    return {
+      kind: 'known-catalog',
+      diagnosticDeviceKey,
+      profileOutcome,
+      matchRef: `catalog:${catalogLookup.catalogId}`,
+      label: catalogLookup.label,
+      reasons: curationCandidates.reasons,
+    };
+  }
+  if (catalogLookup) {
+    return {
+      kind: 'unknown-catalog',
+      diagnosticDeviceKey,
+      profileOutcome,
+      reasons: curationCandidates.reasons,
+    };
+  }
+  return {
+    kind: 'no-catalog',
+    diagnosticDeviceKey,
+    profileOutcome,
+    reasons: curationCandidates.reasons,
+  };
+}
+
 function deriveClassificationProvenance(
   report: ReturnType<typeof compileProfilePlan>['report'],
 ): CompileProfilePlanFromFilesResult['classificationProvenance'] {
@@ -208,15 +254,18 @@ export function compileProfilePlanFromRuleFiles(
   const loaded = loadJsonRuleFiles(ruleFilePaths);
   const rules = loaded.flatMap((entry) => entry.rules);
   const { profile, report, catalogLookup } = compileProfilePlan(device, rules, options);
+  const profileOutcome = deriveProfileOutcome(profile);
+  const curationCandidates = deriveCurationCandidates(report, profile, catalogLookup);
+  const diagnosticDeviceKey = deriveDiagnosticDeviceKey(device, catalogLookup);
 
   return {
     profile,
     report: {
       ...report,
-      profileOutcome: deriveProfileOutcome(profile),
+      profileOutcome,
       byRule: groupReportByRule(report),
       bySuppressedSlot: groupSuppressedBySlot(report),
-      curationCandidates: deriveCurationCandidates(report, profile, catalogLookup),
+      curationCandidates,
       catalogContext: catalogLookup?.matched
         ? {
             knownCatalogDevice: true,
@@ -229,7 +278,13 @@ export function compileProfilePlanFromRuleFiles(
               knownCatalogDevice: false,
             }
           : undefined,
-      diagnosticDeviceKey: deriveDiagnosticDeviceKey(device, catalogLookup),
+      unknownDeviceReport: deriveUnknownDeviceReport(
+        profile,
+        curationCandidates,
+        diagnosticDeviceKey,
+        catalogLookup,
+      ),
+      diagnosticDeviceKey,
     },
     ruleSources: loaded.map((entry) => ({
       filePath: entry.filePath,
@@ -249,15 +304,18 @@ export function compileProfilePlanFromRuleSetManifest(
   const loaded = loadJsonRuleSetManifest(manifestEntries);
   const rules = loaded.entries.flatMap((entry) => entry.rules);
   const { profile, report, catalogLookup } = compileProfilePlan(device, rules, options);
+  const profileOutcome = deriveProfileOutcome(profile);
+  const curationCandidates = deriveCurationCandidates(report, profile, catalogLookup);
+  const diagnosticDeviceKey = deriveDiagnosticDeviceKey(device, catalogLookup);
 
   return {
     profile,
     report: {
       ...report,
-      profileOutcome: deriveProfileOutcome(profile),
+      profileOutcome,
       byRule: groupReportByRule(report),
       bySuppressedSlot: groupSuppressedBySlot(report),
-      curationCandidates: deriveCurationCandidates(report, profile, catalogLookup),
+      curationCandidates,
       catalogContext: catalogLookup?.matched
         ? {
             knownCatalogDevice: true,
@@ -270,7 +328,13 @@ export function compileProfilePlanFromRuleSetManifest(
               knownCatalogDevice: false,
             }
           : undefined,
-      diagnosticDeviceKey: deriveDiagnosticDeviceKey(device, catalogLookup),
+      unknownDeviceReport: deriveUnknownDeviceReport(
+        profile,
+        curationCandidates,
+        diagnosticDeviceKey,
+        catalogLookup,
+      ),
+      diagnosticDeviceKey,
     },
     ruleSources: loaded.entries.map((entry) => ({
       filePath: entry.filePath,

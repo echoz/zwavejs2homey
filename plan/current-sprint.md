@@ -25,6 +25,7 @@ Advance the Homey translation compiler from Phase 2 (HA import foundation) into 
    - `catalogLookup` in file-based compile results
    - `profile.catalogMatch` annotation in compiled profiles
    - catalog-aware curation hints and stable `diagnosticDeviceKey`
+   - explicit file-based `unknownDeviceReport` diagnostics (known/unknown/no-catalog)
 
 ## Next Tasks
 

@@ -145,6 +145,12 @@ test('compileProfilePlanFromRuleFiles marks empty outcome and no-meaningful-mapp
   assert.equal(result.profile.capabilities.length, 0);
   assert.equal(result.report.curationCandidates.likelyNeedsReview, true);
   assert.ok(result.report.curationCandidates.reasons.includes('no-meaningful-mapping'));
+  assert.deepEqual(result.report.unknownDeviceReport, {
+    kind: 'no-catalog',
+    diagnosticDeviceKey: `product-triple:${unmappedDevice.manufacturerId}-${unmappedDevice.productType}-${unmappedDevice.productId}`,
+    profileOutcome: 'empty',
+    reasons: result.report.curationCandidates.reasons,
+  });
 });
 
 test('compileProfilePlanFromRuleFilesWithCatalog annotates known catalog generic fallback curation', () => {
@@ -165,6 +171,14 @@ test('compileProfilePlanFromRuleFilesWithCatalog annotates known catalog generic
   });
   assert.equal(result.report.diagnosticDeviceKey, 'catalog:observed:29-13313-1');
   assert.ok(result.report.curationCandidates.reasons.includes('known-device-generic-fallback'));
+  assert.deepEqual(result.report.unknownDeviceReport, {
+    kind: 'known-catalog',
+    diagnosticDeviceKey: 'catalog:observed:29-13313-1',
+    profileOutcome: 'generic',
+    matchRef: 'catalog:observed:29-13313-1',
+    label: undefined,
+    reasons: result.report.curationCandidates.reasons,
+  });
 });
 
 test('compileProfilePlanFromRuleFilesWithCatalog annotates unknown catalog generic fallback curation', () => {
@@ -179,6 +193,12 @@ test('compileProfilePlanFromRuleFilesWithCatalog annotates unknown catalog gener
   assert.deepEqual(miss.report.catalogContext, { knownCatalogDevice: false });
   assert.equal(miss.report.diagnosticDeviceKey, 'product-triple:65535-65535-65535');
   assert.ok(miss.report.curationCandidates.reasons.includes('no-meaningful-mapping'));
+  assert.deepEqual(miss.report.unknownDeviceReport, {
+    kind: 'unknown-catalog',
+    diagnosticDeviceKey: 'product-triple:65535-65535-65535',
+    profileOutcome: 'empty',
+    reasons: miss.report.curationCandidates.reasons,
+  });
 });
 
 test('compileProfilePlanFromRuleFilesWithCatalog annotates known catalog unmapped curation', () => {
