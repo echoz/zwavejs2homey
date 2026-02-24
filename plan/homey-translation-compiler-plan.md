@@ -887,6 +887,7 @@ Progress:
 - Added an initial `ha-import:report` tooling skeleton (fixture/parser-free path) to exercise extracted input -> generated `ha-derived` artifact -> translation report flow
 - Tightened extracted translator boundary validation for `companions` matchers and hardened `ha-import:report` CLI parsing so `--output-generated` requires an explicit file path
 - Phase 2 contract baseline sub-checkpoint reviewed and stabilized (generated artifact, mock translator, extracted adapter, manifests/inspect, and `ha-import:report` fixture pipeline) before real parser work
+- Added `ha-import:extract` tooling skeleton plus extracted-artifact loader/validator (`ha-extracted-discovery/v1`) so extraction and translation stages now have separate contract-checked CLI entry points
 
 - Build HA extract/translate/validate tooling pipeline
 - Generate `ha-derived` rule artifacts with provenance

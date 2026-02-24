@@ -81,11 +81,14 @@ export {
   HaGeneratedRuleArtifactError,
   loadHaDerivedGeneratedRuleArtifact,
 } from './importers/ha/generated-rule-artifact';
-export type {
-  HaExtractedDiscoveryEntryV1,
-  HaExtractedDiscoveryInputV1,
-} from './importers/ha/translate-extracted-discovery';
+export type { HaExtractedDiscoveryInputV1 } from './importers/ha/translate-extracted-discovery';
 export {
+  HaExtractedDiscoveryArtifactError,
+  loadHaExtractedDiscoveryArtifact,
+} from './importers/ha/extracted-discovery-artifact';
+export type { HaExtractedDiscoveryEntryV1 } from './importers/ha/translate-extracted-discovery';
+export {
+  assertHaExtractedDiscoveryInputV1,
   HaExtractedTranslationError,
   translateHaExtractedDiscoveryToGeneratedArtifact,
 } from './importers/ha/translate-extracted-discovery';

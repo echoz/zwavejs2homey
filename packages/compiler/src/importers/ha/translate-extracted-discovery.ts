@@ -228,6 +228,12 @@ function validateExtractedInput(input: unknown): asserts input is HaExtractedDis
   }
 }
 
+export function assertHaExtractedDiscoveryInputV1(
+  input: unknown,
+): asserts input is HaExtractedDiscoveryInputV1 {
+  validateExtractedInput(input);
+}
+
 function mapCompanionValues(values?: ExtractedCompanionMatcher[]) {
   if (!values) return undefined;
   return values.map((matcher) => ({
@@ -247,7 +253,7 @@ function mapCompanionValues(values?: ExtractedCompanionMatcher[]) {
 export function translateHaExtractedDiscoveryToGeneratedArtifact(
   input: unknown,
 ): HaMockTranslationResult {
-  validateExtractedInput(input);
+  assertHaExtractedDiscoveryInputV1(input);
   return translateHaMockDiscoveryToGeneratedArtifact({
     schemaVersion: 'ha-mock-discovery/v1',
     source: input.source,

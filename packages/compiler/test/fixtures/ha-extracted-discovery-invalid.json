@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "ha-extracted-discovery/v1",
+  "source": {
+    "generatedAt": "2026-02-24T00:00:00Z",
+    "sourceRef": "homeassistant/components/zwave_js/discovery.py"
+  },
+  "entries": [
+    {
+      "id": "bad",
+      "sourceRef": "x",
+      "valueMatch": {
+        "commandClass": "37",
+        "property": "currentValue"
+      },
+      "output": {}
+    }
+  ]
+}
