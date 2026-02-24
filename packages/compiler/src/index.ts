@@ -81,6 +81,13 @@ export {
   HaGeneratedRuleArtifactError,
   loadHaDerivedGeneratedRuleArtifact,
 } from './importers/ha/generated-rule-artifact';
+export type {
+  HaMockDiscoveryDefinitionV1,
+  HaMockDiscoveryInputV1,
+  HaMockTranslationReport,
+  HaMockTranslationResult,
+} from './importers/ha/translate-mock-discovery';
+export { translateHaMockDiscoveryToGeneratedArtifact } from './importers/ha/translate-mock-discovery';
 export {
   matchesDevice,
   matchesRuleCompanionConstraints,

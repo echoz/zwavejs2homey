@@ -875,6 +875,12 @@ Status: Completed (models, rule loading/validation, layered application semantic
 
 Status: In progress (initial generated `ha-derived` artifact contract + loader compatibility validation)
 
+Progress:
+
+- Completed generated `ha-derived` artifact contract + loader (`ha-derived-rules/v1`)
+- Added fixture-based mock HA discovery translator contract (input -> generated artifact + translation report)
+- Added mixed compile compatibility tests (`ha-derived` + project rules) without HA Python parsing yet
+
 - Build HA extract/translate/validate tooling pipeline
 - Generate `ha-derived` rule artifacts with provenance
 - Import HA-inspired schema subset needed for first Homey slice (lights/switches/sensors)

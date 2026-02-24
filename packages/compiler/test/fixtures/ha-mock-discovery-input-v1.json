@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "ha-mock-discovery/v1",
+  "source": {
+    "generatedAt": "2026-02-24T00:00:00Z",
+    "sourceRef": "homeassistant/components/zwave_js/discovery.py"
+  },
+  "definitions": [
+    {
+      "id": "switch_binary_current",
+      "sourceRef": "discovery.py#switch_binary_current",
+      "match": {
+        "commandClass": 37,
+        "endpoint": 0,
+        "property": "currentValue"
+      },
+      "output": {
+        "homeyClass": "socket",
+        "driverTemplateId": "ha-generic-socket",
+        "capabilityId": "onoff"
+      }
+    },
+    {
+      "id": "unsupported_no_output",
+      "sourceRef": "discovery.py#unsupported_no_output",
+      "match": {
+        "commandClass": 49,
+        "endpoint": 0,
+        "property": "Air temperature"
+      },
+      "output": {}
+    }
+  ]
+}
