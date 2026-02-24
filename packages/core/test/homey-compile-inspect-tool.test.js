@@ -48,6 +48,22 @@ test('parseCliArgs validates required device and rule inputs', async () => {
     true,
   );
   assert.equal(
+    parseCliArgs(['--device-file', 'd.json', '--rules-file', 'r.json', '--explain-all']).ok,
+    true,
+  );
+  assert.equal(
+    parseCliArgs([
+      '--device-file',
+      'd.json',
+      '--rules-file',
+      'r.json',
+      '--explain',
+      'onoff',
+      '--explain-all',
+    ]).ok,
+    false,
+  );
+  assert.equal(
     parseCliArgs(['--device-file', 'd.json', '--rules-file', 'r.json', '--format', 'yaml']).ok,
     false,
   );
@@ -387,4 +403,59 @@ test('formatCompileSummary/markdown support --explain capability output', async 
   assert.match(ndjson, /\"type\":\"capabilityExplain\"/);
   assert.match(ndjson, /\"requestedCapabilityId\":\"onoff\"/);
   assert.match(ndjson, /\"selector\":\"cc=37@ep0:currentValue\"/);
+});
+
+test('formatCompileSummary/markdown/ndjson support --explain-all', async () => {
+  const { formatCompileSummary, formatCompileOutput } = await loadLib();
+  const fixture = {
+    profile: {
+      profileId: 'p7',
+      classification: { homeyClass: 'socket', confidence: 'curated', uncurated: false },
+      capabilities: [
+        {
+          capabilityId: 'onoff',
+          directionality: 'bidirectional',
+          inboundMapping: {
+            kind: 'value',
+            selector: { commandClass: 37, endpoint: 0, property: 'currentValue' },
+          },
+          outboundMapping: {
+            kind: 'set_value',
+            target: { commandClass: 37, endpoint: 0, property: 'targetValue' },
+          },
+          provenance: { layer: 'ha-derived', ruleId: 'r-onoff', action: 'fill' },
+        },
+        {
+          capabilityId: 'measure_power',
+          directionality: 'inbound-only',
+          inboundMapping: {
+            kind: 'value',
+            selector: { commandClass: 50, endpoint: 0, property: 'value', propertyKey: 0 },
+          },
+          provenance: { layer: 'project-generic', ruleId: 'r-power', action: 'fill' },
+        },
+      ],
+      ignoredValues: [],
+    },
+    ruleSources: [],
+    report: {
+      profileOutcome: 'curated',
+      summary: { appliedActions: 2, unmatchedActions: 0, suppressedFillActions: 0 },
+      diagnosticDeviceKey: 'catalog:demo2',
+      byRule: [],
+      bySuppressedSlot: [],
+      curationCandidates: { likelyNeedsReview: false, reasons: [] },
+    },
+    __explainAll: true,
+  };
+  const summary = formatCompileSummary(fixture);
+  assert.match(summary, /Explain: onoff/);
+  assert.match(summary, /Explain: measure_power/);
+  const markdown = formatCompileOutput(fixture, 'markdown');
+  assert.match(markdown, /### Explain: `onoff`/);
+  assert.match(markdown, /### Explain: `measure_power`/);
+  const ndjson = formatCompileOutput(fixture, 'ndjson');
+  assert.match(ndjson, /\"type\":\"capabilityExplain\"/);
+  assert.match(ndjson, /\"explainAll\":true/);
+  assert.ok(ndjson.includes('\"capabilities\":['));
 });

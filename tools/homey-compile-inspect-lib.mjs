@@ -46,6 +46,7 @@ export function getUsageText() {
     '                     [--top <n>]',
     '                     [--show rule|suppressed|curation|all]',
     '                     [--explain <capabilityId>]',
+    '                     [--explain-all]',
     '                     [--format summary|markdown|json|json-pretty|json-compact|ndjson] [--homey-class <class>] [--driver-template <id>]',
   ].join('\n');
 }
@@ -83,6 +84,9 @@ export function parseCliArgs(argv) {
   if (!['none', 'rule', 'suppressed', 'curation', 'all'].includes(show)) {
     return { ok: false, error: `Unsupported show: ${show}` };
   }
+  if (flags.has('--explain') && flags.has('--explain-all')) {
+    return { ok: false, error: 'Use either --explain or --explain-all, not both' };
+  }
   return {
     ok: true,
     command: {
@@ -94,6 +98,7 @@ export function parseCliArgs(argv) {
       top,
       show,
       explainCapabilityId: flags.get('--explain'),
+      explainAll: flags.has('--explain-all'),
       catalogFile: flags.get('--catalog-file'),
       homeyClass: flags.get('--homey-class'),
       driverTemplateId: flags.get('--driver-template'),
@@ -148,6 +153,7 @@ export function compileFromFiles(command) {
     __top: command.top ?? 3,
     __show: command.show ?? 'none',
     __explainCapabilityId: command.explainCapabilityId,
+    __explainAll: command.explainAll === true,
   };
 }
 
@@ -161,14 +167,9 @@ function formatSelector(selector) {
   return `cc=${selector.commandClass}@ep${endpoint}:${String(selector.property)}${propertyKey}`;
 }
 
-function buildCapabilityExplanationLines(result, markdown = false) {
-  const capabilityId = result.__explainCapabilityId;
-  if (!capabilityId) return [];
-  const capability = result.profile.capabilities.find((row) => row.capabilityId === capabilityId);
+function buildCapabilityExplanationLinesForCapability(capability, markdown = false) {
   if (!capability) {
-    return markdown
-      ? [`- Explain: capability \`${capabilityId}\` not found`]
-      : [`Explain: capability "${capabilityId}" not found`];
+    return [];
   }
 
   const wrap = (value) => (markdown ? `\`${value}\`` : value);
@@ -216,7 +217,60 @@ function buildCapabilityExplanationLines(result, markdown = false) {
   return lines;
 }
 
+function buildCapabilityExplanationLines(result, markdown = false) {
+  if (result.__explainAll) {
+    if (!result.profile.capabilities.length) return [];
+    const allLines = [];
+    for (const capability of result.profile.capabilities) {
+      if (allLines.length > 0) allLines.push(markdown ? '' : '');
+      allLines.push(...buildCapabilityExplanationLinesForCapability(capability, markdown));
+    }
+    return allLines;
+  }
+
+  const capabilityId = result.__explainCapabilityId;
+  if (!capabilityId) return [];
+  const capability = result.profile.capabilities.find((row) => row.capabilityId === capabilityId);
+  if (!capability) {
+    return markdown
+      ? [`- Explain: capability \`${capabilityId}\` not found`]
+      : [`Explain: capability "${capabilityId}" not found`];
+  }
+  return buildCapabilityExplanationLinesForCapability(capability, markdown);
+}
+
 function getCapabilityExplanationRecord(result) {
+  if (result.__explainAll) {
+    return {
+      requestedCapabilityId: null,
+      explainAll: true,
+      found: true,
+      capabilities: result.profile.capabilities.map((capability) => ({
+        capabilityId: capability.capabilityId,
+        directionality: capability.directionality,
+        inbound: capability.inboundMapping
+          ? {
+              kind: capability.inboundMapping.kind,
+              selector: formatSelector(capability.inboundMapping.selector),
+              watchers: (capability.inboundMapping.watchers ?? []).map((w) => formatSelector(w)),
+            }
+          : null,
+        outbound: capability.outboundMapping
+          ? {
+              kind: capability.outboundMapping.kind,
+              target:
+                typeof capability.outboundMapping.target === 'object' &&
+                capability.outboundMapping.target !== null &&
+                'command' in capability.outboundMapping.target
+                  ? `command:${capability.outboundMapping.target.command}`
+                  : formatSelector(capability.outboundMapping.target),
+            }
+          : null,
+        flags: capability.flags ?? null,
+        provenance: capability.provenance,
+      })),
+    };
+  }
   const capabilityId = result.__explainCapabilityId;
   if (!capabilityId) return null;
   const capability = result.profile.capabilities.find((row) => row.capabilityId === capabilityId);
