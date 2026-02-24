@@ -430,6 +430,11 @@ The compiler is correctness-first in early slices, but performance must be treat
   - report generation time (if separated)
 - Record baseline numbers in docs/plan before and after major optimization slices
 
+Initial local fixture baseline (single switch+meter fixture, small ruleset):
+
+- command: `npm run compiler:bench -- --device-file packages/compiler/test/fixtures/device-switch-meter.json --rules-file packages/compiler/test/fixtures/rules-switch-meter.json --iterations 20 --warmup 5`
+- observed: ~`0.128ms` avg / `0.226ms` p95 (local machine, indicative only)
+
 ### Performance Review Checkpoint
 
 Before starting HA import at scale (Phase 2), run a focused compiler code review that includes:
