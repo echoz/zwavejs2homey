@@ -50,6 +50,8 @@ export type { AppliedRuleActionResult } from './compiler/apply-rule';
 export { applyRuleToValue } from './compiler/apply-rule';
 export type { CompileDeviceReportEntry, CompileDeviceResult } from './compiler/compile-device';
 export { compileDevice } from './compiler/compile-device';
+export type { CompileProfilePlanOptions } from './compiler/compile-profile-plan';
+export { compileProfilePlan } from './compiler/compile-profile-plan';
 export {
   matchesDevice,
   matchesRuleCompanionConstraints,

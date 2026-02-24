@@ -11,6 +11,7 @@ import {
 } from './profile-build-state';
 
 export interface CompileDeviceReportEntry extends AppliedRuleActionResult {
+  layer: MappingRule['layer'];
   valueId: NormalizedZwaveValueId;
 }
 
@@ -20,6 +21,12 @@ export interface CompileDeviceResult {
   report: {
     actions: CompileDeviceReportEntry[];
     suppressedActions: ReturnType<typeof createProfileBuildState>['suppressedActions'];
+    summary: {
+      appliedActions: number;
+      unmatchedActions: number;
+      suppressedFillActions: number;
+      ignoredValues: number;
+    };
   };
 }
 
@@ -40,6 +47,7 @@ export function compileDevice(
       for (const result of results) {
         actions.push({
           ...result,
+          layer: rule.layer,
           valueId: { ...value.valueId },
         });
       }
@@ -52,6 +60,12 @@ export function compileDevice(
     report: {
       actions,
       suppressedActions: [...state.suppressedActions],
+      summary: {
+        appliedActions: actions.filter((a) => a.applied).length,
+        unmatchedActions: actions.filter((a) => a.reason === 'rule-not-matched').length,
+        suppressedFillActions: state.suppressedActions.filter((a) => a.mode === 'fill').length,
+        ignoredValues: state.ignoredValues.size,
+      },
     },
   };
 }

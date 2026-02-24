@@ -1,0 +1,51 @@
+[
+  {
+    "ruleId": "ha-onoff",
+    "layer": "ha-derived",
+    "value": { "commandClass": [37], "property": ["currentValue"] },
+    "actions": [
+      {
+        "type": "capability",
+        "capabilityId": "onoff",
+        "inboundMapping": {
+          "kind": "value",
+          "selector": { "commandClass": 37, "endpoint": 0, "property": "currentValue" }
+        }
+      }
+    ]
+  },
+  {
+    "ruleId": "product-onoff-write",
+    "layer": "project-product",
+    "device": { "manufacturerId": [29], "productType": [13313], "productId": [1] },
+    "value": { "commandClass": [37], "property": ["targetValue"] },
+    "actions": [
+      {
+        "type": "capability",
+        "mode": "augment",
+        "capabilityId": "onoff",
+        "outboundMapping": {
+          "kind": "set_value",
+          "target": { "commandClass": 37, "endpoint": 0, "property": "targetValue" }
+        },
+        "flags": { "readable": true, "writeable": true }
+      }
+    ]
+  },
+  {
+    "ruleId": "generic-meter-power",
+    "layer": "project-generic",
+    "value": { "commandClass": [50], "property": ["value"] },
+    "actions": [
+      {
+        "type": "capability",
+        "capabilityId": "measure_power",
+        "inboundMapping": {
+          "kind": "value",
+          "selector": { "commandClass": 50, "endpoint": 0, "property": "value" }
+        }
+      },
+      { "type": "ignore-value" }
+    ]
+  }
+]

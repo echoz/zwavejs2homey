@@ -120,4 +120,6 @@ test('compileDevice sorts by layer, applies mappings, and returns report entries
       (a) => a.ruleId === 'generic-onoff-should-not-overwrite' && a.slot === 'inboundMapping',
     ),
   );
+  assert.equal(result.report.summary.appliedActions > 0, true);
+  assert.equal(result.report.summary.ignoredValues, 1);
 });
