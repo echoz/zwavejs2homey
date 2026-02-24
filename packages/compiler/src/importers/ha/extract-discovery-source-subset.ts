@@ -39,6 +39,7 @@ export interface HaSourceSubsetExtractResult {
 }
 
 const COMMAND_CLASS_NUMBERS: Record<string, number> = {
+  SENSOR_BINARY: 48,
   SWITCH_BINARY: 37,
   SWITCH_MULTILEVEL: 38,
   THERMOSTAT_MODE: 64,
@@ -82,6 +83,12 @@ const VALUE_ALIAS_DEFS: Record<string, AliasSchemaDef> = {
     property: 'currentValue',
     endpoint: 0,
     metadataType: 'boolean',
+  },
+  DOOR_LOCK_CURRENT_MODE_SCHEMA: {
+    commandClass: 98,
+    property: 'currentMode',
+    endpoint: 0,
+    metadataType: 'number',
   },
 };
 
@@ -317,7 +324,10 @@ function parseDeviceMatch(block: string): HaExtractedDiscoveryEntryV1['deviceMat
   return Object.keys(result).length > 0 ? result : undefined;
 }
 
-function mapPlatformToOutput(platform: string): ParsedOutput | null {
+function mapPlatformToOutput(
+  platform: string,
+  primaryValue: ParsedValueMatcher,
+): ParsedOutput | null {
   switch (platform) {
     case 'FAN':
       return {
@@ -336,6 +346,18 @@ function mapPlatformToOutput(platform: string): ParsedOutput | null {
         homeyClass: 'socket',
         driverTemplateId: 'ha-import-switch',
         capabilityId: 'onoff',
+      };
+    case 'LIGHT':
+      return {
+        homeyClass: 'light',
+        driverTemplateId: 'ha-import-light',
+        capabilityId: primaryValue.commandClass === 38 ? 'dim' : 'onoff',
+      };
+    case 'BINARY_SENSOR':
+      return {
+        homeyClass: 'sensor',
+        driverTemplateId: 'ha-import-binary-sensor',
+        capabilityId: 'alarm_generic',
       };
     default:
       return null;
@@ -369,17 +391,6 @@ function buildEntryFromBlock(
       };
     }
     const platform = platformMatch[1];
-    const output = mapPlatformToOutput(platform);
-    if (!output) {
-      return {
-        unsupported: {
-          sourceRef,
-          reason: 'unsupported-platform',
-          detail: platform,
-        },
-      };
-    }
-
     const primary = parseValueSchemaRef(block.body, 'primary_value');
     if ('unsupported' in primary) {
       return {
@@ -396,6 +407,16 @@ function buildEntryFromBlock(
           sourceRef,
           reason: 'missing-required-fields',
           detail: 'missing primary_value',
+        },
+      };
+    }
+    const output = mapPlatformToOutput(platform, primary.value);
+    if (!output) {
+      return {
+        unsupported: {
+          sourceRef,
+          reason: 'unsupported-platform',
+          detail: platform,
         },
       };
     }

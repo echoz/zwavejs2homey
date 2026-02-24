@@ -36,6 +36,41 @@ ZWaveDiscoverySchema(
   assert.equal(result.report.unsupportedByReason['unsupported-platform'], 1);
 });
 
+test('extractHaDiscoverySubsetFromSource supports LIGHT and BINARY_SENSOR platform mappings', () => {
+  const source = `
+ZWaveDiscoverySchema(
+    platform=Platform.LIGHT,
+    primary_value=SWITCH_MULTILEVEL_CURRENT_VALUE_SCHEMA,
+),
+ZWaveDiscoverySchema(
+    platform=Platform.LIGHT,
+    primary_value=SWITCH_BINARY_CURRENT_VALUE_SCHEMA,
+),
+ZWaveDiscoverySchema(
+    platform=Platform.BINARY_SENSOR,
+    primary_value=ZWaveValueDiscoverySchema(
+        command_class={CommandClass.SENSOR_BINARY},
+        property={CURRENT_VALUE_PROPERTY},
+        type={ValueType.BOOLEAN},
+    ),
+),
+`;
+  const result = compiler.extractHaDiscoverySubsetFromSource(source, 'discovery.py');
+  assert.equal(result.report.translated, 3);
+  assert.equal(result.report.skipped, 0);
+  assert.deepEqual(
+    result.artifact.entries.map((entry) => ({
+      homeyClass: entry.output.homeyClass,
+      capabilityId: entry.output.capabilityId,
+    })),
+    [
+      { homeyClass: 'light', capabilityId: 'dim' },
+      { homeyClass: 'light', capabilityId: 'onoff' },
+      { homeyClass: 'sensor', capabilityId: 'alarm_generic' },
+    ],
+  );
+});
+
 test('extractHaDiscoverySubsetFromFile parses real HA discovery.py probe patterns', () => {
   const discoveryPy = path.join(
     __dirname,
