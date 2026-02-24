@@ -183,7 +183,31 @@ ZWaveDiscoverySchema(
   });
 });
 
-test('extractHaDiscoverySubsetFromFile parses real HA discovery.py probe patterns', () => {
+test('extractHaDiscoverySubsetFromSource handles nested parentheses in schema bodies', () => {
+  const source = `
+ZWaveDiscoverySchema(
+    platform=Platform.SWITCH,
+    primary_value=SWITCH_BINARY_CURRENT_VALUE_SCHEMA,
+    firmware_version=FirmwareVersionRange(min_version="1.0", max_version="2.0"),
+),
+ZWaveDiscoverySchema(
+    platform=Platform.LIGHT,
+    primary_value=SWITCH_MULTILEVEL_CURRENT_VALUE_SCHEMA,
+),
+`;
+  const result = compiler.extractHaDiscoverySubsetFromSource(source, 'discovery.py');
+  assert.equal(result.report.scannedSchemas, 2);
+  assert.equal(result.report.translated, 2);
+  assert.equal(result.report.skipped, 0);
+  assert.equal(result.artifact.entries[0].output.capabilityId, 'onoff');
+  assert.deepEqual(result.artifact.entries[0].deviceMatch?.firmwareVersionRange, {
+    min: '1.0',
+    max: '2.0',
+  });
+  assert.equal(result.artifact.entries[1].output.capabilityId, 'dim');
+});
+
+test('extractHaDiscoverySubsetFromFile parses pinned HA discovery.py with full current coverage', () => {
   const discoveryPy = path.join(
     __dirname,
     '../../../docs/external/home-assistant/homeassistant/components/zwave_js/discovery.py',
