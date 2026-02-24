@@ -45,6 +45,11 @@ test('translateHaExtractedDiscoveryToGeneratedArtifact maps extracted fixture to
           kind: 'value',
           selector: { commandClass: 37, endpoint: 0, property: 'currentValue' },
         },
+        flags: {
+          allowMulti: true,
+          assumedState: true,
+          entityRegistryEnabledDefault: false,
+        },
       },
     ],
   });
@@ -102,6 +107,14 @@ test('translated extracted HA artifact rules are compiler-compatible with projec
     profile.capabilities.some((c) => c.capabilityId === 'alarm_contact'),
     false,
   );
+  const onoffCapability = profile.capabilities.find((c) => c.capabilityId === 'onoff');
+  assert.ok(onoffCapability);
+  assert.equal(onoffCapability.flags?.allowMulti, true);
+  assert.equal(onoffCapability.flags?.assumedState, true);
+  assert.equal(onoffCapability.flags?.entityRegistryEnabledDefault, false);
+  assert.equal(onoffCapability.flags?.readable, true);
+  assert.equal(onoffCapability.flags?.writeable, true);
+  assert.equal(onoffCapability.directionality, 'bidirectional');
 });
 
 test('translateHaExtractedDiscoveryToGeneratedArtifact validates extracted schema shape', () => {

@@ -894,6 +894,7 @@ Progress:
 - Added a real-source extraction probe fixture derived from Home Assistant `discovery.py` examples (including `required_values` and `absent_values`) and verified it through translation, compile behavior, and `ha-import:report`
 - Expanded the compiler-owned HA subset extractor iteratively to cover inline command-class/property-set patterns and additional platform mappings, reaching `71/71` translated `ZWaveDiscoverySchema(...)` blocks with `0` skipped on the current checked-out `discovery.py` (coverage-guided subset milestone)
 - Hardened extracted semantics capture/preservation for `allow_multi`, `assumed_state`, and `entity_registry_enabled_default`, and preserve all three into generated capability flags for downstream compiler behavior
+- V1 semantic handling policy: `assumed_state` is compiler/runtime-actionable via capability flags; `allow_multi` and `entity_registry_enabled_default` are preserved as annotations for adapter/policy decisions and future compiler semantics (no implicit behavior yet)
 
 - Build HA extract/translate/validate tooling pipeline
 - Generate `ha-derived` rule artifacts with provenance

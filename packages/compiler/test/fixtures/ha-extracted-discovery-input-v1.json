@@ -8,6 +8,11 @@
     {
       "id": "switch_binary_current_extracted",
       "sourceRef": "discovery.py#switch_binary_current_extracted",
+      "semantics": {
+        "allowMulti": true,
+        "assumedState": true,
+        "entityRegistryEnabledDefault": false
+      },
       "deviceMatch": {
         "manufacturerId": 29,
         "productType": 13313,
