@@ -12,6 +12,7 @@ const require = createRequire(import.meta.url);
 const {
   loadCatalogDevicesArtifact,
   loadCatalogArtifactFromZwjsInspectNodeDetailFile,
+  normalizeCatalogDevicesArtifactV1,
 } = require('../packages/compiler/dist');
 
 function parseFlagMap(argv) {
@@ -44,6 +45,7 @@ export function getUsageText() {
     'Usage:',
     '  catalog summary --input-file <catalog-devices.json> [--format summary|markdown|json|json-pretty|json-compact|ndjson]',
     '  catalog validate --input-file <catalog-devices.json> [--format summary|json|json-pretty|json-compact|ndjson]',
+    '  catalog normalize --input-file <catalog-devices.json> [--format summary|markdown|json|json-pretty|json-compact|ndjson]',
     '  catalog fetch --source zwjs-inspect-node-detail --input-file <node-detail.json> [--format summary|markdown|json|json-pretty|json-compact|ndjson]',
   ].join('\n');
 }
@@ -53,7 +55,7 @@ export function parseCliArgs(argv) {
   const { flags, positionals } = parseFlagMap(argv);
   const subcommand = positionals[0];
   if (!subcommand) return { ok: false, error: getUsageText() };
-  if (!['summary', 'validate', 'fetch'].includes(subcommand)) {
+  if (!['summary', 'validate', 'normalize', 'fetch'].includes(subcommand)) {
     return { ok: false, error: `Unsupported catalog subcommand: ${subcommand}` };
   }
   const format = flags.get('--format') ?? 'summary';
@@ -101,6 +103,25 @@ export function runCatalogCommand(command) {
     };
   }
   const artifact = loadCatalogDevicesArtifact(command.inputFile);
+  if (command.subcommand === 'normalize') {
+    const normalized = normalizeCatalogDevicesArtifactV1(artifact);
+    return {
+      artifact: normalized.artifact,
+      summary: {
+        deviceCount: normalized.artifact.devices.length,
+        sourceNames: [
+          ...new Set(normalized.artifact.devices.flatMap((d) => d.sources.map((s) => s.source))),
+        ].sort(),
+        identifiedDeviceCount: normalized.artifact.devices.filter(
+          (d) =>
+            d.manufacturerId !== undefined &&
+            d.productType !== undefined &&
+            d.productId !== undefined,
+        ).length,
+        normalize: normalized.report,
+      },
+    };
+  }
   return {
     artifact,
     summary: {
@@ -124,6 +145,11 @@ export function formatCatalogSummary(result) {
   lines.push(`Devices: ${result.summary.deviceCount}`);
   lines.push(`Fully identified devices: ${result.summary.identifiedDeviceCount}`);
   lines.push(`Sources: ${result.summary.sourceNames.join(', ') || '(none)'}`);
+  if (result.summary.normalize) {
+    lines.push(
+      `Normalize: input=${result.summary.normalize.inputDevices} output=${result.summary.normalize.outputDevices} merged=${result.summary.normalize.mergedDuplicates}`,
+    );
+  }
   return lines.join('\n');
 }
 
@@ -134,7 +160,12 @@ export function formatCatalogMarkdown(result) {
     `- Devices: ${result.summary.deviceCount}`,
     `- Fully identified devices: ${result.summary.identifiedDeviceCount}`,
     `- Sources: ${result.summary.sourceNames.join(', ') || '(none)'}`,
-  ].join('\n');
+    result.summary.normalize
+      ? `- Normalize: input=${result.summary.normalize.inputDevices}, output=${result.summary.normalize.outputDevices}, merged=${result.summary.normalize.mergedDuplicates}`
+      : null,
+  ]
+    .filter(Boolean)
+    .join('\n');
 }
 
 export function formatCatalogNdjson(result) {

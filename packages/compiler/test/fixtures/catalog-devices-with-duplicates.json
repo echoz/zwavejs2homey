@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "catalog-devices/v1",
+  "source": {
+    "generatedAt": "2026-02-24T00:00:00.000Z",
+    "sourceRef": "test:duplicates"
+  },
+  "devices": [
+    {
+      "catalogId": "zwjs:0184-4447-3034",
+      "manufacturerId": 388,
+      "productType": 17479,
+      "productId": 12340,
+      "label": "Smart Switch 7",
+      "sources": [
+        {
+          "source": "zwjs-inspect-node-detail",
+          "sourceId": "5",
+          "confidence": "medium"
+        }
+      ]
+    },
+    {
+      "catalogId": "zwjs:0184-4447-3034",
+      "manufacturerId": 388,
+      "productType": 17479,
+      "productId": 12340,
+      "label": "Aeotec Smart Switch 7",
+      "sources": [
+        {
+          "source": "catalog-import",
+          "sourceId": "0184-4447-3034",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "catalogId": "zwjs-node:9",
+      "label": "Unknown Sensor",
+      "sources": [
+        {
+          "source": "zwjs-inspect-node-detail",
+          "sourceId": "9",
+          "confidence": "low"
+        }
+      ]
+    }
+  ]
+}

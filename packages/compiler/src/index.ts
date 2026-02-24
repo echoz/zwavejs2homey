@@ -10,6 +10,11 @@ export type {
 } from './catalog/catalog-device-artifact';
 export type { ZwjsInspectNodeDetailCatalogSource } from './catalog/catalog-source-zwjs-inspect';
 export type {
+  NormalizeCatalogOptions,
+  NormalizeCatalogReport,
+  NormalizeCatalogResult,
+} from './catalog/catalog-normalize';
+export type {
   CompiledHomeyProfilePlan,
   HomeyCapabilityPlan,
   HomeyInboundMapping,
@@ -39,6 +44,7 @@ export {
   assertCatalogDevicesArtifactV1,
   loadCatalogDevicesArtifact,
 } from './catalog/catalog-device-artifact';
+export { normalizeCatalogDevicesArtifactV1 } from './catalog/catalog-normalize';
 export {
   ZwjsInspectCatalogSourceError,
   catalogArtifactFromZwjsInspectNodeDetail,
