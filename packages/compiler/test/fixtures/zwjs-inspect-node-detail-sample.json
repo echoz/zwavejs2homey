@@ -1,0 +1,16 @@
+{
+  "nodeId": 5,
+  "state": {
+    "name": "Kitchen Plug",
+    "manufacturerId": "0x0184",
+    "productType": "0x4447",
+    "productId": "0x3034",
+    "product": "Smart Switch 7",
+    "deviceConfig": {
+      "label": "Smart Switch 7"
+    }
+  },
+  "neighbors": [1, 7],
+  "notificationEvents": {},
+  "values": []
+}

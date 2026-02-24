@@ -915,6 +915,8 @@ Progress:
 
 - Added `catalog-devices/v1` artifact contract, loader/validator, and fixture coverage
 - Added `catalog` CLI skeleton with `summary`, `validate`, and `fetch` (stub) subcommands plus format support (`summary|markdown|json|json-pretty|json-compact|ndjson`)
+- Added first real catalog fetch source adapter: `zwjs-inspect-node-detail` -> `catalog-devices/v1`
+- Added catalog fetch conversion fixture coverage and CLI tests for `catalog fetch --source zwjs-inspect-node-detail`
 
 - Build catalog fetch/normalize/merge/validate/diff tooling pipeline
 - Add merged catalog normalization pipeline to compiler inputs

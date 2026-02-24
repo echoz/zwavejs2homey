@@ -9,7 +9,10 @@ import {
 } from './output-format-lib.mjs';
 
 const require = createRequire(import.meta.url);
-const { loadCatalogDevicesArtifact } = require('../packages/compiler/dist');
+const {
+  loadCatalogDevicesArtifact,
+  loadCatalogArtifactFromZwjsInspectNodeDetailFile,
+} = require('../packages/compiler/dist');
 
 function parseFlagMap(argv) {
   const flags = new Map();
@@ -41,7 +44,7 @@ export function getUsageText() {
     'Usage:',
     '  catalog summary --input-file <catalog-devices.json> [--format summary|markdown|json|json-pretty|json-compact|ndjson]',
     '  catalog validate --input-file <catalog-devices.json> [--format summary|json|json-pretty|json-compact|ndjson]',
-    '  catalog fetch --source <name>    # scaffold only (not implemented)',
+    '  catalog fetch --source zwjs-inspect-node-detail --input-file <node-detail.json> [--format summary|markdown|json|json-pretty|json-compact|ndjson]',
   ].join('\n');
 }
 
@@ -58,9 +61,13 @@ export function parseCliArgs(argv) {
     return { ok: false, error: `Unsupported format: ${format}` };
   }
   if (subcommand === 'fetch') {
+    const source = flags.get('--source');
+    const inputFile = flags.get('--input-file');
+    if (!source) return { ok: false, error: '--source is required for fetch' };
+    if (!inputFile) return { ok: false, error: '--input-file is required for fetch' };
     return {
       ok: true,
-      command: { subcommand, source: flags.get('--source'), format },
+      command: { subcommand, source, inputFile, format },
     };
   }
   const inputFile = flags.get('--input-file');
@@ -73,7 +80,25 @@ export function parseCliArgs(argv) {
 
 export function runCatalogCommand(command) {
   if (command.subcommand === 'fetch') {
-    throw new Error('catalog fetch is not implemented yet (Phase 3 scaffold)');
+    if (command.source !== 'zwjs-inspect-node-detail') {
+      throw new Error(`Unsupported catalog fetch source: ${command.source}`);
+    }
+    const artifact = loadCatalogArtifactFromZwjsInspectNodeDetailFile(command.inputFile);
+    return {
+      artifact,
+      summary: {
+        deviceCount: artifact.devices.length,
+        sourceNames: [
+          ...new Set(artifact.devices.flatMap((d) => d.sources.map((s) => s.source))),
+        ].sort(),
+        identifiedDeviceCount: artifact.devices.filter(
+          (d) =>
+            d.manufacturerId !== undefined &&
+            d.productType !== undefined &&
+            d.productId !== undefined,
+        ).length,
+      },
+    };
   }
   const artifact = loadCatalogDevicesArtifact(command.inputFile);
   return {

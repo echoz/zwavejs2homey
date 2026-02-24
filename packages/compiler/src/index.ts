@@ -8,6 +8,7 @@ export type {
   CatalogDeviceRecordV1,
   CatalogDevicesArtifactV1,
 } from './catalog/catalog-device-artifact';
+export type { ZwjsInspectNodeDetailCatalogSource } from './catalog/catalog-source-zwjs-inspect';
 export type {
   CompiledHomeyProfilePlan,
   HomeyCapabilityPlan,
@@ -38,6 +39,12 @@ export {
   assertCatalogDevicesArtifactV1,
   loadCatalogDevicesArtifact,
 } from './catalog/catalog-device-artifact';
+export {
+  ZwjsInspectCatalogSourceError,
+  catalogArtifactFromZwjsInspectNodeDetail,
+  catalogDeviceRecordFromZwjsInspectNodeDetail,
+  loadCatalogArtifactFromZwjsInspectNodeDetailFile,
+} from './catalog/catalog-source-zwjs-inspect';
 export {
   RULE_LAYER_ORDER,
   assertRuleActionModeAllowedForLayer,
