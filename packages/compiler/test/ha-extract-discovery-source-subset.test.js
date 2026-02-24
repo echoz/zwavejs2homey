@@ -71,6 +71,43 @@ ZWaveDiscoverySchema(
   );
 });
 
+test('extractHaDiscoverySubsetFromSource supports inline multi-cc and property-set patterns', () => {
+  const source = `
+ZWaveDiscoverySchema(
+    platform=Platform.LOCK,
+    primary_value=ZWaveValueDiscoverySchema(
+        command_class={CommandClass.LOCK},
+        property={LOCKED_PROPERTY},
+        type={ValueType.BOOLEAN},
+    ),
+),
+ZWaveDiscoverySchema(
+    platform=Platform.BINARY_SENSOR,
+    primary_value=ZWaveValueDiscoverySchema(
+        command_class={CommandClass.LOCK, CommandClass.DOOR_LOCK},
+        property={DOOR_STATUS_PROPERTY},
+        type={ValueType.ANY},
+    ),
+),
+ZWaveDiscoverySchema(
+    platform=Platform.SELECT,
+    primary_value=ZWaveValueDiscoverySchema(
+        command_class={CommandClass.PROTECTION},
+        property={LOCAL_PROPERTY, RF_PROPERTY},
+        endpoint={2},
+        type={ValueType.NUMBER},
+    ),
+),
+`;
+  const result = compiler.extractHaDiscoverySubsetFromSource(source, 'discovery.py');
+  assert.equal(result.report.translated, 3);
+  assert.equal(result.report.skipped, 0);
+  assert.deepEqual(
+    result.artifact.entries.map((entry) => entry.output.capabilityId),
+    ['locked', 'alarm_generic', 'enum_select'],
+  );
+});
+
 test('extractHaDiscoverySubsetFromFile parses real HA discovery.py probe patterns', () => {
   const discoveryPy = path.join(
     __dirname,

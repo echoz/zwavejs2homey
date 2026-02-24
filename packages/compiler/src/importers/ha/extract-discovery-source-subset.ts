@@ -39,9 +39,20 @@ export interface HaSourceSubsetExtractResult {
 }
 
 const COMMAND_CLASS_NUMBERS: Record<string, number> = {
+  BASIC: 32,
+  BATTERY: 128,
+  BARRIER_OPERATOR: 102,
+  COLOR_SWITCH: 51,
+  DOOR_LOCK: 98,
+  HUMIDITY_CONTROL_MODE: 109,
+  INDICATOR: 87,
+  LOCK: 118,
+  PROTECTION: 117,
   SENSOR_BINARY: 48,
+  SENSOR_ALARM: 156,
   SWITCH_BINARY: 37,
   SWITCH_MULTILEVEL: 38,
+  THERMOSTAT_FAN_MODE: 68,
   THERMOSTAT_MODE: 64,
   THERMOSTAT_SETPOINT: 67,
 };
@@ -90,13 +101,38 @@ const VALUE_ALIAS_DEFS: Record<string, AliasSchemaDef> = {
     endpoint: 0,
     metadataType: 'number',
   },
+  COLOR_SWITCH_CURRENT_VALUE_SCHEMA: {
+    commandClass: 51,
+    property: 'currentValue',
+    endpoint: 0,
+    metadataType: 'number',
+  },
+  WINDOW_COVERING_COVER_CURRENT_VALUE_SCHEMA: {
+    commandClass: 106,
+    property: 'currentValue',
+    endpoint: 0,
+    metadataType: 'number',
+  },
+  WINDOW_COVERING_SLAT_CURRENT_VALUE_SCHEMA: {
+    commandClass: 106,
+    property: 'currentValue',
+    endpoint: 0,
+    metadataType: 'number',
+  },
 };
 
 const PROPERTY_TOKEN_MAP: Record<string, string | number> = {
   CURRENT_VALUE_PROPERTY: 'currentValue',
+  DOOR_STATUS_PROPERTY: 'doorStatus',
+  HUMIDITY_CONTROL_MODE_PROPERTY: 'humidityMode',
+  LOCAL_PROPERTY: 'local',
+  LOCKED_PROPERTY: 'locked',
+  RF_PROPERTY: 'rf',
   TARGET_VALUE_PROPERTY: 'targetValue',
+  THERMOSTAT_FAN_MODE_PROPERTY: 'fanMode',
   THERMOSTAT_SETPOINT_PROPERTY: 'setpoint',
   THERMOSTAT_MODE_PROPERTY: 'mode',
+  VALUE_PROPERTY: 'value',
 };
 
 function countLines(text: string, index: number): number {
@@ -128,6 +164,24 @@ function parsePropertyToken(content: string): string | number | null {
   if (hex) return Number.parseInt(hex[1], 16);
   const dec = Number.parseInt(trimmed, 10);
   if (!Number.isNaN(dec) && String(dec) === trimmed) return dec;
+  return null;
+}
+
+function parseCommandClassSet(content: string): number | null {
+  const names = [...content.matchAll(/CommandClass\.([A-Z_]+)/g)].map((m) => m[1]);
+  if (names.length === 0) return null;
+  for (const name of names) {
+    const commandClass = COMMAND_CLASS_NUMBERS[name];
+    if (commandClass !== undefined) return commandClass;
+  }
+  return null;
+}
+
+function parsePropertySet(content: string): string | number | null {
+  for (const token of content.split(',')) {
+    const parsed = parsePropertyToken(token);
+    if (parsed !== null) return parsed;
+  }
   return null;
 }
 
@@ -197,12 +251,19 @@ function extractSchemaBlocks(source: string): Array<{ startIndex: number; body: 
 }
 
 function parseInlineValueSchema(fragment: string): ParsedValueMatcher | ParsedCompanion | null {
-  const ccMatch = fragment.match(/command_class=\{CommandClass\.([A-Z_]+)\}/);
+  const ccSetMatch = fragment.match(/command_class=\{([\s\S]*?)\}/);
+  if (!ccSetMatch) return null;
+  const commandClass = parseCommandClassSet(ccSetMatch[1]);
+  if (commandClass === null) return null;
   const propertyMatch = fragment.match(/property=\{([^}]+)\}/);
-  if (!ccMatch || !propertyMatch) return null;
-  const commandClass = COMMAND_CLASS_NUMBERS[ccMatch[1]];
-  const property = parsePropertyToken(propertyMatch[1]);
-  if (commandClass === undefined || property === null) return null;
+  let property = propertyMatch ? parsePropertySet(propertyMatch[1]) : null;
+  if (property === null) {
+    if (commandClass === 48 || commandClass === 87 || commandClass === 156) {
+      property = 'currentValue';
+    } else {
+      return null;
+    }
+  }
   const endpointMatch = fragment.match(/endpoint=\{([^}]+)\}/);
   const endpoint = endpointMatch ? parseHexSet(endpointMatch[1])[0] : 0;
   const propertyKeyMatch = fragment.match(/property_key=\{([^}]+)\}/);
@@ -358,6 +419,18 @@ function mapPlatformToOutput(
         homeyClass: 'sensor',
         driverTemplateId: 'ha-import-binary-sensor',
         capabilityId: 'alarm_generic',
+      };
+    case 'LOCK':
+      return {
+        homeyClass: 'lock',
+        driverTemplateId: 'ha-import-lock',
+        capabilityId: 'locked',
+      };
+    case 'SELECT':
+      return {
+        homeyClass: 'other',
+        driverTemplateId: 'ha-import-select',
+        capabilityId: 'enum_select',
       };
     default:
       return null;
