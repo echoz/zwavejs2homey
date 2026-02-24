@@ -160,6 +160,7 @@ test('compileProfilePlanFromRuleFilesWithCatalog annotates known catalog generic
     knownCatalogDevice: true,
     catalogId: 'observed:29-13313-1',
     label: undefined,
+    matchRef: 'catalog:observed:29-13313-1',
   });
   assert.ok(result.report.curationCandidates.reasons.includes('known-device-generic-fallback'));
 });
@@ -207,6 +208,7 @@ test('compileProfilePlanFromRuleFilesWithCatalog annotates known catalog unmappe
     knownCatalogDevice: true,
     catalogId: 'observed:29-13313-1',
     label: undefined,
+    matchRef: 'catalog:observed:29-13313-1',
   });
   assert.ok(result.report.curationCandidates.reasons.includes('known-device-unmapped'));
 });

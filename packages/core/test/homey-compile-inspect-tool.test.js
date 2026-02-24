@@ -106,12 +106,17 @@ test('formatCompileSummary includes classification provenance and suppressed slo
           count: 1,
         },
       ],
+      catalogContext: {
+        knownCatalogDevice: true,
+        matchRef: 'catalog:zwjs:0184-4447-3034',
+      },
       curationCandidates: { likelyNeedsReview: true, reasons: ['suppressed-fill-actions:1'] },
     },
   });
   assert.match(summary, /Class provenance: project-product:product-device-class/);
   assert.match(summary, /Catalog: matched \(product-triple\) zwjs:0184-4447-3034/);
   assert.match(summary, /Profile catalog match: product-triple zwjs:0184-4447-3034/);
+  assert.match(summary, /Report catalog context: known=true \(catalog:zwjs:0184-4447-3034\)/);
   assert.match(
     summary,
     /Suppressed slots: project-generic:generic-device-class-fill:deviceIdentity.homeyClass=1/,
@@ -133,6 +138,7 @@ test('formatCompileOutput supports markdown/json/ndjson variants', async () => {
     report: {
       profileOutcome: 'curated',
       summary: { appliedActions: 1, unmatchedActions: 0, suppressedFillActions: 0 },
+      catalogContext: { knownCatalogDevice: false },
       byRule: [{ ruleId: 'r1', layer: 'ha-derived', applied: 1, unmatched: 0, actionTypes: {} }],
       bySuppressedSlot: [],
       curationCandidates: { likelyNeedsReview: false, reasons: [] },
@@ -145,4 +151,5 @@ test('formatCompileOutput supports markdown/json/ndjson variants', async () => {
   assert.match(ndjson, /\"type\":\"profile\"/);
   assert.match(ndjson, /\"type\":\"ruleSource\"/);
   assert.match(ndjson, /\"type\":\"catalogLookup\"/);
+  assert.match(ndjson, /\"catalogContext\"/);
 });

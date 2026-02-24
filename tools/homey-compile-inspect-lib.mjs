@@ -162,6 +162,13 @@ export function formatCompileSummary(result) {
       .join(', ');
     lines.push(`Suppressed slots: ${top}`);
   }
+  if (result.report.catalogContext) {
+    lines.push(
+      `Report catalog context: known=${result.report.catalogContext.knownCatalogDevice}${
+        result.report.catalogContext.matchRef ? ` (${result.report.catalogContext.matchRef})` : ''
+      }`,
+    );
+  }
   if (result.report.curationCandidates.likelyNeedsReview) {
     lines.push(`Curation review: yes (${result.report.curationCandidates.reasons.join(', ')})`);
   } else {
@@ -209,6 +216,15 @@ export function formatCompileMarkdown(result) {
   } else {
     lines.push(`- Curation review: no`);
   }
+  if (result.report.catalogContext) {
+    lines.push(
+      `- Report catalog context: known=${result.report.catalogContext.knownCatalogDevice}${
+        result.report.catalogContext.matchRef
+          ? ` (\`${result.report.catalogContext.matchRef}\`)`
+          : ''
+      }`,
+    );
+  }
   return lines.join('\n');
 }
 
@@ -231,6 +247,7 @@ export function formatCompileNdjson(result) {
       type: 'reportSummary',
       summary: result.report.summary,
       profileOutcome: result.report.profileOutcome,
+      catalogContext: result.report.catalogContext,
     },
     ...result.report.byRule.map((row) => ({ type: 'byRule', row })),
     ...result.report.bySuppressedSlot.map((row) => ({ type: 'bySuppressedSlot', row })),

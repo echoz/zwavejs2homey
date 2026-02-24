@@ -42,6 +42,7 @@ export interface CompileProfilePlanFromFilesResult {
       knownCatalogDevice: boolean;
       catalogId?: string;
       label?: string;
+      matchRef?: string;
     };
   };
   ruleSources: RuleSourceMetadata[];
@@ -204,6 +205,7 @@ export function compileProfilePlanFromRuleFiles(
             knownCatalogDevice: true,
             catalogId: catalogLookup.catalogId,
             label: catalogLookup.label,
+            matchRef: `catalog:${catalogLookup.catalogId}`,
           }
         : catalogLookup
           ? {
@@ -243,6 +245,7 @@ export function compileProfilePlanFromRuleSetManifest(
             knownCatalogDevice: true,
             catalogId: catalogLookup.catalogId,
             label: catalogLookup.label,
+            matchRef: `catalog:${catalogLookup.catalogId}`,
           }
         : catalogLookup
           ? {

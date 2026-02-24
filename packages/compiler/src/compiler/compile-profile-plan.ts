@@ -109,7 +109,9 @@ export function compileProfilePlan(
     ruleId: options?.provenance?.ruleId ?? 'compiler:compile-profile-plan',
     action: options?.provenance?.action ?? 'fill',
     sourceRef: options?.provenance?.sourceRef ?? 'compiler',
-    reason: options?.provenance?.reason ?? `deviceKey=${device.deviceKey}`,
+    reason:
+      options?.provenance?.reason ??
+      `deviceKey=${device.deviceKey}${catalogLookup ? `,catalogId=${catalogLookup.catalogId}` : ''}`,
     supersedes: options?.provenance?.supersedes,
   };
 

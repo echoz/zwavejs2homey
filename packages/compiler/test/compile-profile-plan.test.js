@@ -160,4 +160,5 @@ test('compileProfilePlan reports catalog lookup match when catalog artifact is p
     catalogId: 'observed:29-13313-1',
     label: undefined,
   });
+  assert.match(result.profile.provenance.reason, /catalogId=observed:29-13313-1/);
 });
