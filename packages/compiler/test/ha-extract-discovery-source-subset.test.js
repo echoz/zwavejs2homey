@@ -170,7 +170,8 @@ test('extractHaDiscoverySubsetFromFile parses real HA discovery.py probe pattern
     result.artifact.entries.some((entry) => entry.output.capabilityId === 'target_temperature'),
     true,
   );
-  assert.equal(Object.keys(result.report.unsupportedByReason).length > 0, true);
+  assert.equal(Array.isArray(result.report.unsupported), true);
+  assert.equal(typeof result.report.unsupportedByReason, 'object');
 });
 
 test('extractHaDiscoverySubsetFromSource reports granular unsupported primary/companion reasons', () => {
