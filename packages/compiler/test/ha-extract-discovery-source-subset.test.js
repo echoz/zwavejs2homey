@@ -153,6 +153,36 @@ ZWaveDiscoverySchema(
   );
 });
 
+test('extractHaDiscoverySubsetFromSource extracts semantics and inline readable/writeable metadata', () => {
+  const source = `
+ZWaveDiscoverySchema(
+    platform=Platform.BINARY_SENSOR,
+    primary_value=ZWaveValueDiscoverySchema(
+        command_class={CommandClass.INDICATOR},
+        type={ValueType.BOOLEAN},
+        readable=True,
+        writeable=False,
+    ),
+    allow_multi=True,
+    assumed_state=True,
+    entity_registry_enabled_default=False,
+),
+`;
+  const result = compiler.extractHaDiscoverySubsetFromSource(source, 'discovery.py');
+  assert.equal(result.report.translated, 1);
+  const entry = result.artifact.entries[0];
+  assert.deepEqual(entry.semantics, {
+    allowMulti: true,
+    assumedState: true,
+    entityRegistryEnabledDefault: false,
+  });
+  assert.deepEqual(entry.valueMatch.metadata, {
+    type: 'boolean',
+    readable: true,
+    writeable: false,
+  });
+});
+
 test('extractHaDiscoverySubsetFromFile parses real HA discovery.py probe patterns', () => {
   const discoveryPy = path.join(
     __dirname,
@@ -168,6 +198,14 @@ test('extractHaDiscoverySubsetFromFile parses real HA discovery.py probe pattern
   );
   assert.equal(
     result.artifact.entries.some((entry) => entry.output.capabilityId === 'target_temperature'),
+    true,
+  );
+  assert.equal(
+    result.artifact.entries.some(
+      (entry) =>
+        entry.semantics?.allowMulti === true ||
+        entry.semantics?.entityRegistryEnabledDefault === false,
+    ),
     true,
   );
   assert.equal(Array.isArray(result.report.unsupported), true);

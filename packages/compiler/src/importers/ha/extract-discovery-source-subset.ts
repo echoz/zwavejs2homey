@@ -311,10 +311,29 @@ function parseInlineValueSchema(fragment: string): ParsedValueMatcher | ParsedCo
     if (propertyKey !== null) parsed.propertyKey = propertyKey;
   }
   const typeMatch = fragment.match(/type=\{ValueType\.([A-Z_]+)\}/);
-  if (typeMatch && VALUE_TYPE_MAP[typeMatch[1]]) {
-    parsed.metadata = { type: VALUE_TYPE_MAP[typeMatch[1]] };
-  }
+  const readableMatch = fragment.match(/\breadable=(True|False)\b/);
+  const writeableMatch = fragment.match(/\bwriteable=(True|False)\b/);
+  const metadata: NonNullable<ParsedValueMatcher['metadata']> = {};
+  if (typeMatch && VALUE_TYPE_MAP[typeMatch[1]]) metadata.type = VALUE_TYPE_MAP[typeMatch[1]];
+  if (readableMatch) metadata.readable = readableMatch[1] === 'True';
+  if (writeableMatch) metadata.writeable = writeableMatch[1] === 'True';
+  if (Object.keys(metadata).length > 0) parsed.metadata = metadata;
   return parsed;
+}
+
+function parseEntrySemantics(block: string): HaExtractedDiscoveryEntryV1['semantics'] | undefined {
+  const allowMultiMatch = block.match(/\ballow_multi=(True|False)\b/);
+  const assumedStateMatch = block.match(/\bassumed_state=(True|False)\b/);
+  const entityRegistryEnabledDefaultMatch = block.match(
+    /\bentity_registry_enabled_default=(True|False)\b/,
+  );
+  const semantics: NonNullable<HaExtractedDiscoveryEntryV1['semantics']> = {};
+  if (allowMultiMatch) semantics.allowMulti = allowMultiMatch[1] === 'True';
+  if (assumedStateMatch) semantics.assumedState = assumedStateMatch[1] === 'True';
+  if (entityRegistryEnabledDefaultMatch) {
+    semantics.entityRegistryEnabledDefault = entityRegistryEnabledDefaultMatch[1] === 'True';
+  }
+  return Object.keys(semantics).length > 0 ? semantics : undefined;
 }
 
 function parseValueSchemaRef(
@@ -607,10 +626,14 @@ function buildEntryFromBlock(
       ? `${platform.toLowerCase()}_${slug(hintMatch[1])}`
       : `${platform.toLowerCase()}_${line}`;
 
+    const semantics = parseEntrySemantics(block.body);
+    const deviceMatch = parseDeviceMatch(block.body);
+
     const entry: HaExtractedDiscoveryEntryV1 = {
       id: `ha_extracted_${baseId}_${line}`,
       sourceRef,
-      ...(parseDeviceMatch(block.body) ? { deviceMatch: parseDeviceMatch(block.body) } : {}),
+      ...(semantics ? { semantics } : {}),
+      ...(deviceMatch ? { deviceMatch } : {}),
       valueMatch: primary.value,
       ...(requiredValues || absentValues
         ? {

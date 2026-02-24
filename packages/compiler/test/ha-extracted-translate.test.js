@@ -143,3 +143,41 @@ test('translateHaExtractedDiscoveryToGeneratedArtifact validates companions matc
       /companions\.requiredValues\[0\]\.commandClass must be a number/i.test(error.message),
   );
 });
+
+test('translateHaExtractedDiscoveryToGeneratedArtifact preserves extracted semantics into capability flags where supported', () => {
+  const result = compiler.translateHaExtractedDiscoveryToGeneratedArtifact({
+    schemaVersion: 'ha-extracted-discovery/v1',
+    source: { generatedAt: '2026-02-24T00:00:00Z', sourceRef: 'x' },
+    entries: [
+      {
+        id: 'semantic_test',
+        sourceRef: 'x:1',
+        semantics: {
+          allowMulti: true,
+          assumedState: true,
+          entityRegistryEnabledDefault: false,
+        },
+        valueMatch: {
+          commandClass: 87,
+          endpoint: 0,
+          property: 'currentValue',
+          metadata: { type: 'boolean', readable: true, writeable: false },
+        },
+        output: { capabilityId: 'alarm_generic' },
+      },
+    ],
+  });
+
+  assert.equal(result.report.skipped, 0);
+  assert.deepEqual(result.artifact.rules[0].actions, [
+    {
+      type: 'capability',
+      capabilityId: 'alarm_generic',
+      inboundMapping: {
+        kind: 'value',
+        selector: { commandClass: 87, endpoint: 0, property: 'currentValue' },
+      },
+      flags: { assumedState: true },
+    },
+  ]);
+});

@@ -20,6 +20,11 @@ export interface HaExtractedDiscoveryInputV1 {
 export interface HaExtractedDiscoveryEntryV1 {
   id: string;
   sourceRef: string;
+  semantics?: {
+    allowMulti?: boolean;
+    assumedState?: boolean;
+    entityRegistryEnabledDefault?: boolean;
+  };
   deviceMatch?: {
     manufacturerId?: number;
     productType?: number;
@@ -110,6 +115,21 @@ function validateExtractedInput(input: unknown): asserts input is HaExtractedDis
       throw new HaExtractedTranslationError(
         `HA extracted discovery entry ${index} requires non-empty id and sourceRef`,
       );
+    }
+    if (entry.semantics !== undefined) {
+      if (!isObject(entry.semantics)) {
+        throw new HaExtractedTranslationError(
+          `HA extracted discovery entry ${entry.id} semantics must be an object`,
+        );
+      }
+      for (const key of ['allowMulti', 'assumedState', 'entityRegistryEnabledDefault'] as const) {
+        const value = entry.semantics[key];
+        if (value !== undefined && typeof value !== 'boolean') {
+          throw new HaExtractedTranslationError(
+            `HA extracted discovery entry ${entry.id} semantics.${key} must be a boolean`,
+          );
+        }
+      }
     }
     if (entry.deviceMatch !== undefined) {
       if (!isObject(entry.deviceMatch)) {
@@ -301,7 +321,18 @@ export function translateHaExtractedDiscoveryToGeneratedArtifact(
             },
           }
         : {}),
-      output: entry.output,
+      output: {
+        ...entry.output,
+        ...(entry.semantics?.allowMulti !== undefined
+          ? { allowMulti: entry.semantics.allowMulti }
+          : {}),
+        ...(entry.semantics?.assumedState !== undefined
+          ? { assumedState: entry.semantics.assumedState }
+          : {}),
+        ...(entry.semantics?.entityRegistryEnabledDefault !== undefined
+          ? { entityRegistryEnabledDefault: entry.semantics.entityRegistryEnabledDefault }
+          : {}),
+      },
     })),
   });
 }

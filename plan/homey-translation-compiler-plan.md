@@ -892,6 +892,8 @@ Progress:
 - Extended the narrow real-source probe parser to include a second fan pattern (GE/Jasco 12730 / ZW4002), extracted parser logic into a dedicated helper module, and added an end-to-end `ha-import:extract (source)` -> `ha-import:report` tool test
 - Added a compiler-owned constrained HA `discovery.py` subset extractor (`extractHaDiscoverySubsetFromFile/Source`) that scans many `ZWaveDiscoverySchema(...)` blocks, translates supported `FAN|CLIMATE|SWITCH` subset fields into `ha-extracted-discovery/v1`, and reports unsupported/skipped schema blocks for extraction coverage tracking
 - Added a real-source extraction probe fixture derived from Home Assistant `discovery.py` examples (including `required_values` and `absent_values`) and verified it through translation, compile behavior, and `ha-import:report`
+- Expanded the compiler-owned HA subset extractor iteratively to cover inline command-class/property-set patterns and additional platform mappings, reaching `71/71` translated `ZWaveDiscoverySchema(...)` blocks with `0` skipped on the current checked-out `discovery.py` (coverage-guided subset milestone)
+- Hardened extracted semantics capture/preservation for `allow_multi`, `assumed_state`, and `entity_registry_enabled_default`, and preserve `assumed_state` into generated capability flags for downstream compiler behavior
 
 - Build HA extract/translate/validate tooling pipeline
 - Generate `ha-derived` rule artifacts with provenance

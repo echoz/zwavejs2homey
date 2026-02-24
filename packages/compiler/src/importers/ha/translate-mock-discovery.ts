@@ -53,6 +53,9 @@ export interface HaMockDiscoveryDefinitionV1 {
     homeyClass?: string;
     driverTemplateId?: string;
     capabilityId?: string;
+    assumedState?: boolean;
+    allowMulti?: boolean;
+    entityRegistryEnabledDefault?: boolean;
   };
 }
 
@@ -82,7 +85,14 @@ const ALLOWED_MATCH_KEYS = new Set([
   'readable',
   'writeable',
 ]);
-const ALLOWED_OUTPUT_KEYS = new Set(['homeyClass', 'driverTemplateId', 'capabilityId']);
+const ALLOWED_OUTPUT_KEYS = new Set([
+  'homeyClass',
+  'driverTemplateId',
+  'capabilityId',
+  'assumedState',
+  'allowMulti',
+  'entityRegistryEnabledDefault',
+]);
 const ALLOWED_CONSTRAINT_KEYS = new Set(['requiredValues', 'absentValues']);
 const ALLOWED_CONSTRAINT_MATCHER_KEYS = new Set([
   'commandClass',
@@ -272,6 +282,14 @@ function validateInputShape(input: unknown): asserts input is HaMockDiscoveryInp
         `HA mock discovery definition ${definition.id} missing output object`,
       );
     }
+    for (const key of ['assumedState', 'allowMulti', 'entityRegistryEnabledDefault'] as const) {
+      const value = definition.output[key];
+      if (value !== undefined && typeof value !== 'boolean') {
+        throw new HaMockTranslationError(
+          `HA mock discovery definition ${definition.id} output.${key} must be a boolean`,
+        );
+      }
+    }
   }
 }
 
@@ -319,6 +337,9 @@ function toRule(definition: HaMockDiscoveryDefinitionV1): MappingRule | null {
             : {}),
         },
       },
+      ...(definition.output.assumedState !== undefined
+        ? { flags: { assumedState: definition.output.assumedState } }
+        : {}),
     });
   }
   if (actions.length === 0) return null;
