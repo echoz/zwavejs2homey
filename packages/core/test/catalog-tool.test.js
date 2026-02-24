@@ -49,6 +49,10 @@ test('catalog parseCliArgs validates subcommands and formats', async () => {
     true,
   );
   assert.equal(
+    parseCliArgs(['diff', '--from-file', 'a.json', '--to-file', 'b.json', '--only', 'changed']).ok,
+    true,
+  );
+  assert.equal(
     parseCliArgs([
       'normalize',
       '--input-file',
@@ -189,6 +193,26 @@ test('catalog diff reports added removed and changed devices', async () => {
   assert.equal(result.summary.diff.changed, 1);
   assert.match(formatCatalogOutput(result, 'summary'), /Diff: added=1 removed=1 changed=1/);
   assert.match(formatCatalogOutput(result, 'ndjson'), /\"type\":\"diff\"/);
+});
+
+test('catalog diff supports --only filter for diagnostic views', async () => {
+  const { runCatalogCommand, formatCatalogOutput } = await loadLib();
+  const result = runCatalogCommand({
+    subcommand: 'diff',
+    fromFile: path.join(fixturesDir, 'catalog-devices-with-duplicates.json'),
+    toFile: path.join(fixturesDir, 'catalog-devices-diff-target.json'),
+    only: 'changed',
+    format: 'summary',
+  });
+  assert.equal(result.diff.diffs.length, 1);
+  assert.equal(result.diff.diffs[0].change, 'changed');
+  assert.match(formatCatalogOutput(result, 'summary'), /Diff filter: only=changed/);
+  const ndjson = formatCatalogOutput(result, 'ndjson');
+  const diffRows = ndjson
+    .trim()
+    .split('\n')
+    .filter((line) => line.includes('"type":"diff"'));
+  assert.equal(diffRows.length, 1);
 });
 
 test('catalog fetch rejects unsupported source adapters', async () => {

@@ -922,6 +922,7 @@ Progress:
 - Added `catalog diff` summary flow for added/removed/changed devices and source/label drift diagnostics
 - Added catalog conflict precedence + `conflictMode` (`warn|error`) for normalize/merge, with conflict reporting and strict-mode failures on ID conflicts
 - Added compiler-side catalog index prep (`catalogId` + product-triple lookup maps) and surfaced index stats in catalog CLI summaries
+- Added `catalog diff --only <added|removed|changed>` filtering for focused diagnostics views
 
 - Build catalog fetch/normalize/merge/validate/diff tooling pipeline
 - Add merged catalog normalization pipeline to compiler inputs

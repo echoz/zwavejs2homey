@@ -51,6 +51,15 @@ function parseConflictMode(flags, subcommand) {
   return { ok: true, conflictMode };
 }
 
+function parseDiffOnly(flags) {
+  const only = flags.get('--only');
+  if (!only) return { ok: true, only: undefined };
+  if (!['added', 'removed', 'changed'].includes(only)) {
+    return { ok: false, error: `Unsupported --only for diff: ${only}` };
+  }
+  return { ok: true, only };
+}
+
 export function getUsageText() {
   return [
     'Usage:',
@@ -58,7 +67,7 @@ export function getUsageText() {
     '  catalog validate --input-file <catalog-devices.json> [--format summary|json|json-pretty|json-compact|ndjson]',
     '  catalog normalize --input-file <catalog-devices.json> [--conflict-mode warn|error] [--format summary|markdown|json|json-pretty|json-compact|ndjson]',
     '  catalog merge --input-file <catalog-a.json> --input-file <catalog-b.json> [--conflict-mode warn|error] [--format summary|markdown|json|json-pretty|json-compact|ndjson]',
-    '  catalog diff --from-file <catalog-old.json> --to-file <catalog-new.json> [--format summary|markdown|json|json-pretty|json-compact|ndjson]',
+    '  catalog diff --from-file <catalog-old.json> --to-file <catalog-new.json> [--only added|removed|changed] [--format summary|markdown|json|json-pretty|json-compact|ndjson]',
     '  catalog fetch --source zwjs-inspect-node-detail --input-file <node-detail.json> [--format summary|markdown|json|json-pretty|json-compact|ndjson]',
   ].join('\n');
 }
@@ -107,11 +116,13 @@ export function parseCliArgs(argv) {
     };
   }
   if (subcommand === 'diff') {
+    const diffOnly = parseDiffOnly(flags);
+    if (!diffOnly.ok) return { ok: false, error: diffOnly.error };
     const fromFile = flags.get('--from-file');
     const toFile = flags.get('--to-file');
     if (!fromFile) return { ok: false, error: '--from-file is required for diff' };
     if (!toFile) return { ok: false, error: '--to-file is required for diff' };
-    return { ok: true, command: { subcommand, fromFile, toFile, format } };
+    return { ok: true, command: { subcommand, fromFile, toFile, format, only: diffOnly.only } };
   }
   const inputFile = flags.get('--input-file');
   if (!inputFile) return { ok: false, error: '--input-file is required' };
@@ -176,7 +187,10 @@ export function runCatalogCommand(command) {
   if (command.subcommand === 'diff') {
     const fromArtifact = loadCatalogDevicesArtifact(command.fromFile);
     const toArtifact = loadCatalogDevicesArtifact(command.toFile);
-    const diff = diffCatalogDevicesArtifactsV1(fromArtifact, toArtifact);
+    const rawDiff = diffCatalogDevicesArtifactsV1(fromArtifact, toArtifact);
+    const filteredDiffs = command.only
+      ? rawDiff.diffs.filter((entry) => entry.change === command.only)
+      : rawDiff.diffs;
     return {
       artifact: toArtifact,
       summary: {
@@ -190,9 +204,13 @@ export function runCatalogCommand(command) {
             d.productType !== undefined &&
             d.productId !== undefined,
         ).length,
-        diff: diff.report,
+        diff: rawDiff.report,
+        diffFilter: command.only ?? null,
       },
-      diff,
+      diff: {
+        ...rawDiff,
+        diffs: filteredDiffs,
+      },
     };
   }
   const artifact = loadCatalogDevicesArtifact(command.inputFile);
@@ -273,6 +291,9 @@ export function formatCatalogSummary(result) {
     lines.push(
       `Diff: added=${result.summary.diff.added} removed=${result.summary.diff.removed} changed=${result.summary.diff.changed} unchanged=${result.summary.diff.unchanged}`,
     );
+    if (result.summary.diffFilter) {
+      lines.push(`Diff filter: only=${result.summary.diffFilter}`);
+    }
   }
   return lines.join('\n');
 }
@@ -302,6 +323,7 @@ export function formatCatalogMarkdown(result) {
     result.summary.diff
       ? `- Diff: added=${result.summary.diff.added}, removed=${result.summary.diff.removed}, changed=${result.summary.diff.changed}, unchanged=${result.summary.diff.unchanged}`
       : null,
+    result.summary.diffFilter ? `- Diff filter: only=${result.summary.diffFilter}` : null,
   ]
     .filter(Boolean)
     .join('\n');
