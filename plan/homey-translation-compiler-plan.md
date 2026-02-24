@@ -888,7 +888,7 @@ Progress:
 - Tightened extracted translator boundary validation for `companions` matchers and hardened `ha-import:report` CLI parsing so `--output-generated` requires an explicit file path
 - Phase 2 contract baseline sub-checkpoint reviewed and stabilized (generated artifact, mock translator, extracted adapter, manifests/inspect, and `ha-import:report` fixture pipeline) before real parser work
 - Added `ha-import:extract` tooling skeleton plus extracted-artifact loader/validator (`ha-extracted-discovery/v1`) so extraction and translation stages now have separate contract-checked CLI entry points
-- Added a real-source parser stub path for `ha-import:extract` (`--source-home-assistant`) with source checkout validation and explicit not-implemented parser errors, keeping the CLI contract stable for upcoming parser work
+- Replaced the `ha-import:extract` source parser stub with a narrow real-source probe parser for `discovery.py` (Honeywell fan + thermostat setpoint-without-mode examples), producing `ha-extracted-discovery/v1` output directly from a Home Assistant checkout path
 - Added a real-source extraction probe fixture derived from Home Assistant `discovery.py` examples (including `required_values` and `absent_values`) and verified it through translation, compile behavior, and `ha-import:report`
 
 - Build HA extract/translate/validate tooling pipeline
