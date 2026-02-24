@@ -83,6 +83,8 @@ Current implemented foundation in `packages/compiler`:
   - `catalogLookup` in file-based compile results
   - `profile.catalogMatch` annotation
   - catalog-aware curation hints, explicit `unknownDeviceReport`, and stable diagnostic device keys
+- Catalog/curation workflow decision:
+  - no curation-seed artifact for now; rule/patch authoring remains schema-first using compiler diagnostics and stable device identifiers
 
 Reference plan:
 

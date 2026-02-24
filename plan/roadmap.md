@@ -22,7 +22,9 @@
 - [x] Phase 2 HA import foundation: extractor, translators, tooling, mixed compile tests
 - [x] Phase 3 catalog tooling foundation: fetch/normalize/merge/diff/index + diagnostics
 - [x] Catalog-aware compiler diagnostics (`catalogLookup`, `catalogMatch`, curation hints, diagnostic keys)
-- [ ] Expand catalog integration into authoring guidance / compile-time diagnostics (no precedence changes yet)
+- [x] Catalog-focused compiler authoring diagnostics/ergonomics (inspection, explanation, focused views)
+- [x] Defer curation-seed artifact generation (schema-first curation/rule authoring for now)
+- [ ] Phase 4 (compiler plan): runtime curation patch schema + apply helper
 - [ ] Add second real catalog source adapter when a concrete source format is available
 
 ## Phase 4: Homey Adapter MVP (Next Major Area)

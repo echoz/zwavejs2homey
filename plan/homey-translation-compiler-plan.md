@@ -909,7 +909,7 @@ Progress:
 
 ### Phase 3 — Catalog Ingestion / Merge Tooling + Unknown Device Reporting
 
-Status: In progress (catalog tooling + compiler catalog diagnostics integrated)
+Status: Complete (current scope; catalog tooling + compiler catalog diagnostics integrated)
 
 Progress:
 
@@ -930,15 +930,18 @@ Progress:
 - Added catalog references to compiler diagnostics/provenance (`catalogId` in profile provenance reason, report `catalogContext.matchRef`)
 - Added stable report `diagnosticDeviceKey` (`catalog:<id>` or product-triple fallback) and surfaced it in `compiler:inspect` outputs
 - Added file-based `unknownDeviceReport` diagnostics (known/unknown/no-catalog) and surfaced them in `compiler:inspect` (`summary|markdown|ndjson`)
+- Explicitly deferred curation-seed generation; current decision is to keep curation/rule authoring schema-first and avoid an extra seed artifact/workflow until proven necessary
 
-- Build catalog fetch/normalize/merge/validate/diff tooling pipeline
-- Add merged catalog normalization pipeline to compiler inputs
-- Expand compiler-side catalog integration from diagnostics/annotation into authoring and compile-time guidance (without silently changing rule precedence)
-- Add generic fallback profile compilation
-- Emit unknown-device and curation-needed reports
-- Validate `uncurated` flow
+Deferred / later Phase 3 expansion (not required to start Phase 4):
+
+- Additional real catalog source adapters (beyond `zwjs-inspect-node-detail`)
+- Deeper catalog-informed compile-time guidance (still no silent precedence changes)
+- Generic fallback compilation refinements beyond current rule-driven behavior
+- Catalog-driven workflows that add new authoring artifacts (e.g. curation seeds) unless a real pain point appears
 
 ### Phase 4 — Runtime Curation Patch Schema + Patch Apply Helper
+
+Status: Next (ready to start)
 
 - Define patch schema and allowed operations
 - Implement patch validation + apply
