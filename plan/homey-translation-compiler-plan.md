@@ -895,6 +895,9 @@ Progress:
 - Expanded the compiler-owned HA subset extractor iteratively to cover inline command-class/property-set patterns and additional platform mappings, reaching `71/71` translated `ZWaveDiscoverySchema(...)` blocks with `0` skipped on the current checked-out `discovery.py` (coverage-guided subset milestone)
 - Hardened extracted semantics capture/preservation for `allow_multi`, `assumed_state`, and `entity_registry_enabled_default`, and preserve all three into generated capability flags for downstream compiler behavior
 - V1 semantic handling policy: `assumed_state` is compiler/runtime-actionable via capability flags; `allow_multi` and `entity_registry_enabled_default` are preserved as annotations for adapter/policy decisions and future compiler semantics (no implicit behavior yet)
+- Added Phase 2 drift-guard coverage:
+  - real-source extractor test now asserts full translation coverage on the checked-out `discovery.py` (`translated == scanned`, `skipped == 0`) and empty `unsupportedByReason`
+- Expanded mixed HA-derived + project-rule compiler tests so HA-derived `measure_power` can suppress generic fallback fills, with provenance/suppression reporting assertions
 
 - Build HA extract/translate/validate tooling pipeline
 - Generate `ha-derived` rule artifacts with provenance

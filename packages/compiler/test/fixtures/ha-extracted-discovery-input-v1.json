@@ -69,6 +69,27 @@
       }
     },
     {
+      "id": "meter_power_extracted",
+      "sourceRef": "discovery.py#meter_power_extracted",
+      "deviceMatch": {
+        "manufacturerId": 29,
+        "productType": 13313,
+        "productId": 1
+      },
+      "valueMatch": {
+        "commandClass": 50,
+        "endpoint": 0,
+        "property": "value",
+        "metadata": {
+          "type": "number",
+          "readable": true
+        }
+      },
+      "output": {
+        "capabilityId": "measure_power"
+      }
+    },
+    {
       "id": "unsupported_extracted_match_extra",
       "sourceRef": "discovery.py#unsupported_extracted_match_extra",
       "valueMatch": {

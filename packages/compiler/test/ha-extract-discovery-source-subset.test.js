@@ -190,8 +190,9 @@ test('extractHaDiscoverySubsetFromFile parses real HA discovery.py probe pattern
   );
   const result = compiler.extractHaDiscoverySubsetFromFile(discoveryPy);
 
-  assert.equal(result.report.scannedSchemas > 50, true);
-  assert.equal(result.report.translated >= 3, true);
+  assert.equal(result.report.scannedSchemas >= 70, true);
+  assert.equal(result.report.translated, result.report.scannedSchemas);
+  assert.equal(result.report.skipped, 0);
   assert.equal(
     result.artifact.entries.some((entry) => entry.id.includes('has_fan_value_mapping')),
     true,
@@ -209,7 +210,7 @@ test('extractHaDiscoverySubsetFromFile parses real HA discovery.py probe pattern
     true,
   );
   assert.equal(Array.isArray(result.report.unsupported), true);
-  assert.equal(typeof result.report.unsupportedByReason, 'object');
+  assert.deepEqual(result.report.unsupportedByReason, {});
 });
 
 test('extractHaDiscoverySubsetFromSource reports granular unsupported primary/companion reasons', () => {

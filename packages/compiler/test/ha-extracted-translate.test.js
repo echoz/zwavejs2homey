@@ -12,7 +12,7 @@ test('translateHaExtractedDiscoveryToGeneratedArtifact maps extracted fixture to
   const result = compiler.translateHaExtractedDiscoveryToGeneratedArtifact(extractedInput);
 
   assert.equal(result.artifact.schemaVersion, 'ha-derived-rules/v1');
-  assert.equal(result.artifact.rules.length, 2);
+  assert.equal(result.artifact.rules.length, 3);
   assert.deepEqual(result.artifact.rules[0], {
     ruleId: 'ha:switch_binary_current_extracted',
     layer: 'ha-derived',
@@ -77,6 +77,32 @@ test('translateHaExtractedDiscoveryToGeneratedArtifact maps extracted fixture to
       },
     ],
   });
+  assert.deepEqual(result.artifact.rules[2], {
+    ruleId: 'ha:meter_power_extracted',
+    layer: 'ha-derived',
+    device: {
+      manufacturerId: [29],
+      productType: [13313],
+      productId: [1],
+    },
+    value: {
+      commandClass: [50],
+      endpoint: [0],
+      property: ['value'],
+      metadataType: ['number'],
+      readable: true,
+    },
+    actions: [
+      {
+        type: 'capability',
+        capabilityId: 'measure_power',
+        inboundMapping: {
+          kind: 'value',
+          selector: { commandClass: 50, endpoint: 0, property: 'value' },
+        },
+      },
+    ],
+  });
   assert.deepEqual(result.report.unsupported, [
     { id: 'unsupported_extracted_match_extra', reason: 'unsupported-match-field' },
   ]);
@@ -89,7 +115,7 @@ test('translated extracted HA artifact rules are compiler-compatible with projec
     .loadJsonRuleFile(path.join(fixturesDir, 'rules-switch-meter.json'))
     .filter((rule) => rule.layer !== 'ha-derived');
 
-  const { profile } = compiler.compileProfilePlan(device, [
+  const { profile, report } = compiler.compileProfilePlan(device, [
     ...translated.artifact.rules,
     ...projectRules,
   ]);
@@ -108,13 +134,28 @@ test('translated extracted HA artifact rules are compiler-compatible with projec
     false,
   );
   const onoffCapability = profile.capabilities.find((c) => c.capabilityId === 'onoff');
+  const measurePowerCapability = profile.capabilities.find(
+    (c) => c.capabilityId === 'measure_power',
+  );
   assert.ok(onoffCapability);
+  assert.ok(measurePowerCapability);
   assert.equal(onoffCapability.flags?.allowMulti, true);
   assert.equal(onoffCapability.flags?.assumedState, true);
   assert.equal(onoffCapability.flags?.entityRegistryEnabledDefault, false);
   assert.equal(onoffCapability.flags?.readable, true);
   assert.equal(onoffCapability.flags?.writeable, true);
   assert.equal(onoffCapability.directionality, 'bidirectional');
+  assert.equal(measurePowerCapability.provenance.layer, 'ha-derived');
+  assert.equal(measurePowerCapability.provenance.ruleId, 'ha:meter_power_extracted');
+  assert.ok(
+    report.actions.some(
+      (a) =>
+        a.ruleId === 'generic-meter-power' &&
+        a.actionType === 'capability' &&
+        a.changed === false &&
+        a.applied === true,
+    ),
+  );
 });
 
 test('translateHaExtractedDiscoveryToGeneratedArtifact validates extracted schema shape', () => {
