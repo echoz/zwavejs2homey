@@ -624,6 +624,6 @@ This roadmap is considered complete when:
 
 ## Immediate Next Tasks (Recommended Sequence)
 
-1. P0 exit gate code review (all P0 work completed so far)
-2. P2.3 protocol wrappers for inclusion/exclusion commands (mutation-gated) to pair with existing controller inclusion/security event typing
-3. Continue event typing expansion for newly observed node/controller events as follow-up
+1. Treat roadmap phases P0/P1/P2/P3 planned subsets as complete and keep the matrix current as future wrappers/events are added
+2. Prioritize non-production live validation for zniffer and firmware workflows using `docs/zwjs-nonprod-live-validation-checklist.md`
+3. Expand protocol parity only as needed by Homey adapter slices (demand-driven wrappers/events/fixtures)
