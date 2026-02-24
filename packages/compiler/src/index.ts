@@ -24,6 +24,7 @@ export type {
   DiffCatalogReport,
   DiffCatalogResult,
 } from './catalog/catalog-diff';
+export type { CatalogDeviceLookupKey, CatalogIndexBuildResult } from './catalog/catalog-index';
 export type {
   CompiledHomeyProfilePlan,
   HomeyCapabilityPlan,
@@ -60,6 +61,12 @@ export {
 } from './catalog/catalog-normalize';
 export { mergeCatalogDevicesArtifactsV1 } from './catalog/catalog-merge';
 export { diffCatalogDevicesArtifactsV1 } from './catalog/catalog-diff';
+export {
+  buildCatalogIndexV1,
+  catalogProductTripleKey,
+  findCatalogDeviceByCatalogId,
+  findCatalogDeviceByProductTriple,
+} from './catalog/catalog-index';
 export {
   ZwjsInspectCatalogSourceError,
   catalogArtifactFromZwjsInspectNodeDetail,

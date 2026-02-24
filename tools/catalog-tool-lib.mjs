@@ -10,6 +10,7 @@ import {
 
 const require = createRequire(import.meta.url);
 const {
+  buildCatalogIndexV1,
   diffCatalogDevicesArtifactsV1,
   loadCatalogDevicesArtifact,
   loadCatalogArtifactFromZwjsInspectNodeDetailFile,
@@ -195,10 +196,12 @@ export function runCatalogCommand(command) {
     };
   }
   const artifact = loadCatalogDevicesArtifact(command.inputFile);
+  const catalogIndex = buildCatalogIndexV1(artifact);
   if (command.subcommand === 'normalize') {
     const normalized = normalizeCatalogDevicesArtifactV1(artifact, {
       conflictMode: command.conflictMode,
     });
+    const normalizedIndex = buildCatalogIndexV1(normalized.artifact);
     return {
       artifact: normalized.artifact,
       summary: {
@@ -213,6 +216,7 @@ export function runCatalogCommand(command) {
             d.productId !== undefined,
         ).length,
         normalize: normalized.report,
+        catalogIndex: normalizedIndex.report,
       },
     };
   }
@@ -229,6 +233,7 @@ export function runCatalogCommand(command) {
           d.productType !== undefined &&
           d.productId !== undefined,
       ).length,
+      catalogIndex: catalogIndex.report,
     },
   };
 }
@@ -239,6 +244,11 @@ export function formatCatalogSummary(result) {
   lines.push(`Devices: ${result.summary.deviceCount}`);
   lines.push(`Fully identified devices: ${result.summary.identifiedDeviceCount}`);
   lines.push(`Sources: ${result.summary.sourceNames.join(', ') || '(none)'}`);
+  if (result.summary.catalogIndex) {
+    lines.push(
+      `Index: productTriples=${result.summary.catalogIndex.productTripleIndexed} conflicts=${result.summary.catalogIndex.productTripleConflicts}`,
+    );
+  }
   if (result.summary.normalize) {
     lines.push(
       `Normalize: input=${result.summary.normalize.inputDevices} output=${result.summary.normalize.outputDevices} merged=${result.summary.normalize.mergedDuplicates}`,
@@ -274,6 +284,9 @@ export function formatCatalogMarkdown(result) {
     `- Devices: ${result.summary.deviceCount}`,
     `- Fully identified devices: ${result.summary.identifiedDeviceCount}`,
     `- Sources: ${result.summary.sourceNames.join(', ') || '(none)'}`,
+    result.summary.catalogIndex
+      ? `- Index: productTriples=${result.summary.catalogIndex.productTripleIndexed}, conflicts=${result.summary.catalogIndex.productTripleConflicts}`
+      : null,
     result.summary.normalize
       ? `- Normalize: input=${result.summary.normalize.inputDevices}, output=${result.summary.normalize.outputDevices}, merged=${result.summary.normalize.mergedDuplicates}`
       : null,

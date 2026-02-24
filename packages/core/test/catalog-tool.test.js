@@ -84,6 +84,7 @@ test('runCatalogCommand loads catalog artifact and outputs summary/markdown/json
   assert.equal(result.artifact.schemaVersion, 'catalog-devices/v1');
   assert.equal(result.summary.deviceCount, 2);
   assert.match(formatCatalogOutput(result, 'summary'), /Catalog artifact:/);
+  assert.match(formatCatalogOutput(result, 'summary'), /Index: productTriples=/);
   assert.match(formatCatalogOutput(result, 'markdown'), /## Catalog Summary/);
   assert.doesNotThrow(() => JSON.parse(formatCatalogOutput(result, 'json')));
   assert.doesNotThrow(() => JSON.parse(formatCatalogOutput(result, 'json-compact')));
