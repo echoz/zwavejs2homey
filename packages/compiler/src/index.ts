@@ -40,12 +40,16 @@ export type {
   ProfileBuildStateCapability,
 } from './compiler/profile-build-state';
 export {
+  addIgnoredValue,
   applyCapabilityRuleAction,
   createProfileBuildState,
   materializeCapabilityPlans,
+  materializeIgnoredValues,
 } from './compiler/profile-build-state';
 export type { AppliedRuleActionResult } from './compiler/apply-rule';
 export { applyRuleToValue } from './compiler/apply-rule';
+export type { CompileDeviceReportEntry, CompileDeviceResult } from './compiler/compile-device';
+export { compileDevice } from './compiler/compile-device';
 export {
   matchesDevice,
   matchesRuleCompanionConstraints,

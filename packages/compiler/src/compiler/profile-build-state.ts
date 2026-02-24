@@ -4,6 +4,7 @@ import type {
   HomeyOutboundMapping,
   ProvenanceRecord,
 } from '../models/homey-plan';
+import type { NormalizedZwaveValueId } from '../models/zwave-facts';
 import type { CapabilityRuleAction, RuleActionMode } from '../rules/types';
 import { assertRuleActionModeAllowedForLayer, normalizeRuleActionMode } from './layer-semantics';
 
@@ -21,6 +22,7 @@ export interface ProfileBuildStateCapability extends HomeyCapabilityPlan {
 
 export interface ProfileBuildState {
   capabilities: Map<string, ProfileBuildStateCapability>;
+  ignoredValues: Map<string, { valueId: NormalizedZwaveValueId; provenance: ProvenanceRecord[] }>;
   suppressedActions: Array<{
     capabilityId: string;
     slot: 'capability' | 'inboundMapping' | 'outboundMapping' | 'flags';
@@ -34,8 +36,35 @@ export interface ProfileBuildState {
 export function createProfileBuildState(): ProfileBuildState {
   return {
     capabilities: new Map(),
+    ignoredValues: new Map(),
     suppressedActions: [],
   };
+}
+
+function valueIdKey(valueId: NormalizedZwaveValueId): string {
+  return JSON.stringify([
+    valueId.commandClass,
+    valueId.endpoint ?? 0,
+    valueId.property,
+    valueId.propertyKey ?? null,
+  ]);
+}
+
+export function addIgnoredValue(
+  state: ProfileBuildState,
+  valueId: NormalizedZwaveValueId,
+  provenance: ProvenanceRecord,
+): void {
+  const key = valueIdKey(valueId);
+  const existing = state.ignoredValues.get(key);
+  if (existing) {
+    existing.provenance.push({ ...provenance });
+    return;
+  }
+  state.ignoredValues.set(key, {
+    valueId: { ...valueId },
+    provenance: [{ ...provenance }],
+  });
 }
 
 function cloneInboundMapping(
@@ -225,4 +254,19 @@ export function materializeCapabilityPlans(state: ProfileBuildState): HomeyCapab
       provenance: cap.provenance,
     }))
     .sort((a, b) => a.capabilityId.localeCompare(b.capabilityId));
+}
+
+export function materializeIgnoredValues(state: ProfileBuildState): NormalizedZwaveValueId[] {
+  return [...state.ignoredValues.values()]
+    .map((entry) => ({ ...entry.valueId }))
+    .sort((a, b) => {
+      if (a.commandClass !== b.commandClass) return a.commandClass - b.commandClass;
+      const aEp = a.endpoint ?? 0;
+      const bEp = b.endpoint ?? 0;
+      if (aEp !== bEp) return aEp - bEp;
+      const aProp = String(a.property);
+      const bProp = String(b.property);
+      if (aProp !== bProp) return aProp.localeCompare(bProp);
+      return String(a.propertyKey ?? '').localeCompare(String(b.propertyKey ?? ''));
+    });
 }

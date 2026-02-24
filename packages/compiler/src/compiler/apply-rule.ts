@@ -6,7 +6,11 @@ import type {
   MappingRule,
   RuleAction,
 } from '../rules/types';
-import { applyCapabilityRuleAction, type ProfileBuildState } from './profile-build-state';
+import {
+  addIgnoredValue,
+  applyCapabilityRuleAction,
+  type ProfileBuildState,
+} from './profile-build-state';
 import { matchesRuleForValue } from './rule-matcher';
 import { normalizeRuleActionMode } from './layer-semantics';
 
@@ -14,7 +18,7 @@ export interface AppliedRuleActionResult {
   ruleId: string;
   actionType: RuleAction['type'];
   applied: boolean;
-  reason?: 'rule-not-matched' | 'ignored-action-not-implemented';
+  reason?: 'rule-not-matched';
 }
 
 function toProvenance(
@@ -36,15 +40,16 @@ function toProvenance(
 }
 
 function applyIgnoreValueAction(
-  _state: ProfileBuildState,
-  _action: IgnoreValueRuleAction,
-  _provenance: ProvenanceRecord,
+  state: ProfileBuildState,
+  action: IgnoreValueRuleAction,
+  provenance: ProvenanceRecord,
+  value: NormalizedZwaveValueFacts,
 ): AppliedRuleActionResult {
+  addIgnoredValue(state, action.valueId ?? value.valueId, provenance);
   return {
-    ruleId: _provenance.ruleId,
+    ruleId: provenance.ruleId,
     actionType: 'ignore-value',
-    applied: false,
-    reason: 'ignored-action-not-implemented',
+    applied: true,
   };
 }
 
@@ -69,6 +74,6 @@ export function applyRuleToValue(
       applyCapabilityRuleAction(state, action as CapabilityRuleAction, provenance);
       return { ruleId: rule.ruleId, actionType: action.type, applied: true };
     }
-    return applyIgnoreValueAction(state, action as IgnoreValueRuleAction, provenance);
+    return applyIgnoreValueAction(state, action as IgnoreValueRuleAction, provenance, value);
   });
 }

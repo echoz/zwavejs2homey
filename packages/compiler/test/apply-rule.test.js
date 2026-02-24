@@ -79,6 +79,24 @@ test('applyRuleToValue returns rule-not-matched without mutating state', () => {
   assert.equal(compiler.materializeCapabilityPlans(state).length, 0);
 });
 
+test('applyRuleToValue applies ignore-value action and records ignored selector', () => {
+  const device = makeDevice();
+  const value = device.values[2];
+  const state = compiler.createProfileBuildState();
+  const rule = {
+    ruleId: 'ignore-meter-power',
+    layer: 'project-generic',
+    value: { commandClass: [50], property: ['value'] },
+    actions: [{ type: 'ignore-value' }],
+  };
+
+  const results = compiler.applyRuleToValue(state, device, value, rule);
+  assert.deepEqual(results, [
+    { ruleId: 'ignore-meter-power', actionType: 'ignore-value', applied: true },
+  ]);
+  assert.deepEqual(compiler.materializeIgnoredValues(state), [value.valueId]);
+});
+
 test('end-to-end hand-authored layering example preserves curated onoff and adds generic power', () => {
   const device = makeDevice();
   const state = compiler.createProfileBuildState();
