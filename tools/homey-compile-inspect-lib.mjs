@@ -143,6 +143,11 @@ export function formatCompileSummary(result) {
       lines.push('Catalog: no match');
     }
   }
+  if (result.profile.catalogMatch) {
+    lines.push(
+      `Profile catalog match: ${result.profile.catalogMatch.by} ${result.profile.catalogMatch.catalogId}${result.profile.catalogMatch.label ? ` — ${result.profile.catalogMatch.label}` : ''}`,
+    );
+  }
   lines.push(
     `Capabilities: ${result.profile.capabilities.map((c) => c.capabilityId).join(', ') || '(none)'}`,
   );
@@ -184,6 +189,11 @@ export function formatCompileMarkdown(result) {
     } else {
       lines.push(`- Catalog: no match`);
     }
+  }
+  if (result.profile.catalogMatch) {
+    lines.push(
+      `- Profile catalog match: \`${result.profile.catalogMatch.by}\` \`${result.profile.catalogMatch.catalogId}\`${result.profile.catalogMatch.label ? ` — ${result.profile.catalogMatch.label}` : ''}`,
+    );
   }
   lines.push(
     `- Capabilities: ${

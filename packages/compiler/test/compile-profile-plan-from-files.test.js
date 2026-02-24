@@ -300,4 +300,9 @@ test('compileProfilePlanFromRuleFilesWithCatalog reports catalog lookup match', 
     catalogId: 'observed:29-13313-1',
     label: undefined,
   });
+  assert.deepEqual(result.profile.catalogMatch, {
+    by: 'product-triple',
+    catalogId: 'observed:29-13313-1',
+    label: undefined,
+  });
 });

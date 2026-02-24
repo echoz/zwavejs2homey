@@ -68,6 +68,11 @@ export interface HomeyCapabilityPlan {
 export interface CompiledHomeyProfilePlan {
   profileId: string;
   match: Record<string, unknown>;
+  catalogMatch?: {
+    by: 'product-triple';
+    catalogId: string;
+    label?: string;
+  };
   classification: {
     homeyClass: string;
     driverTemplateId?: string;

@@ -117,6 +117,15 @@ export function compileProfilePlan(
     profile: {
       profileId,
       match: deriveMatch(device),
+      ...(catalogLookup
+        ? {
+            catalogMatch: {
+              by: 'product-triple' as const,
+              catalogId: catalogLookup.catalogId,
+              label: catalogLookup.label,
+            },
+          }
+        : {}),
       classification: deriveClassificationFromCompileResult(compileResult, options),
       capabilities: compileResult.capabilities,
       ignoredValues:

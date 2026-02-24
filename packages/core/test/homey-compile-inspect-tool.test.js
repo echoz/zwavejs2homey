@@ -54,6 +54,7 @@ test('compileFromFiles compiles fixture device/rules and returns profile', async
   assert.match(summary, /Capabilities: .*onoff/);
   assert.match(summary, /Report: outcome=/);
   assert.match(summary, /Catalog: matched/);
+  assert.match(summary, /Profile catalog match: product-triple/);
 });
 
 test('compileFromFiles supports manifest entries with ha-derived-generated kind', async () => {
@@ -81,6 +82,11 @@ test('formatCompileSummary includes classification provenance and suppressed slo
       classification: { homeyClass: 'light', confidence: 'curated', uncurated: false },
       capabilities: [],
       ignoredValues: [],
+      catalogMatch: {
+        by: 'product-triple',
+        catalogId: 'zwjs:0184-4447-3034',
+        label: 'Aeotec Smart Switch 7',
+      },
     },
     classificationProvenance: { layer: 'project-product', ruleId: 'product-device-class' },
     catalogLookup: {
@@ -105,6 +111,7 @@ test('formatCompileSummary includes classification provenance and suppressed slo
   });
   assert.match(summary, /Class provenance: project-product:product-device-class/);
   assert.match(summary, /Catalog: matched \(product-triple\) zwjs:0184-4447-3034/);
+  assert.match(summary, /Profile catalog match: product-triple zwjs:0184-4447-3034/);
   assert.match(
     summary,
     /Suppressed slots: project-generic:generic-device-class-fill:deviceIdentity.homeyClass=1/,
@@ -119,6 +126,7 @@ test('formatCompileOutput supports markdown/json/ndjson variants', async () => {
       classification: { homeyClass: 'light', confidence: 'curated', uncurated: false },
       capabilities: [{ capabilityId: 'onoff' }],
       ignoredValues: [],
+      catalogMatch: { by: 'product-triple', catalogId: 'cid-1' },
     },
     ruleSources: [{ filePath: 'r.json', ruleCount: 1, ruleIds: ['r1'] }],
     catalogLookup: { matched: false, by: 'none' },
