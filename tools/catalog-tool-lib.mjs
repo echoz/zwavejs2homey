@@ -42,13 +42,21 @@ function parseFlagMap(argv) {
   return { flags, positionals };
 }
 
+function parseConflictMode(flags, subcommand) {
+  const conflictMode = flags.get('--conflict-mode') ?? 'warn';
+  if (!['warn', 'error'].includes(conflictMode)) {
+    return { ok: false, error: `Unsupported --conflict-mode for ${subcommand}: ${conflictMode}` };
+  }
+  return { ok: true, conflictMode };
+}
+
 export function getUsageText() {
   return [
     'Usage:',
     '  catalog summary --input-file <catalog-devices.json> [--format summary|markdown|json|json-pretty|json-compact|ndjson]',
     '  catalog validate --input-file <catalog-devices.json> [--format summary|json|json-pretty|json-compact|ndjson]',
-    '  catalog normalize --input-file <catalog-devices.json> [--format summary|markdown|json|json-pretty|json-compact|ndjson]',
-    '  catalog merge --input-file <catalog-a.json> --input-file <catalog-b.json> [--format summary|markdown|json|json-pretty|json-compact|ndjson]',
+    '  catalog normalize --input-file <catalog-devices.json> [--conflict-mode warn|error] [--format summary|markdown|json|json-pretty|json-compact|ndjson]',
+    '  catalog merge --input-file <catalog-a.json> --input-file <catalog-b.json> [--conflict-mode warn|error] [--format summary|markdown|json|json-pretty|json-compact|ndjson]',
     '  catalog diff --from-file <catalog-old.json> --to-file <catalog-new.json> [--format summary|markdown|json|json-pretty|json-compact|ndjson]',
     '  catalog fetch --source zwjs-inspect-node-detail --input-file <node-detail.json> [--format summary|markdown|json|json-pretty|json-compact|ndjson]',
   ].join('\n');
@@ -77,6 +85,8 @@ export function parseCliArgs(argv) {
     };
   }
   if (subcommand === 'merge') {
+    const conflict = parseConflictMode(flags, subcommand);
+    if (!conflict.ok) return { ok: false, error: conflict.error };
     const inputFiles = [];
     for (let i = 0; i < argv.length; i += 1) {
       const token = argv[i];
@@ -90,7 +100,10 @@ export function parseCliArgs(argv) {
     if (inputFiles.length < 2) {
       return { ok: false, error: 'catalog merge requires at least two --input-file values' };
     }
-    return { ok: true, command: { subcommand, inputFiles, format } };
+    return {
+      ok: true,
+      command: { subcommand, inputFiles, format, conflictMode: conflict.conflictMode },
+    };
   }
   if (subcommand === 'diff') {
     const fromFile = flags.get('--from-file');
@@ -101,6 +114,14 @@ export function parseCliArgs(argv) {
   }
   const inputFile = flags.get('--input-file');
   if (!inputFile) return { ok: false, error: '--input-file is required' };
+  if (subcommand === 'normalize') {
+    const conflict = parseConflictMode(flags, subcommand);
+    if (!conflict.ok) return { ok: false, error: conflict.error };
+    return {
+      ok: true,
+      command: { subcommand, inputFile, format, conflictMode: conflict.conflictMode },
+    };
+  }
   return {
     ok: true,
     command: { subcommand, inputFile, format },
@@ -131,7 +152,9 @@ export function runCatalogCommand(command) {
   }
   if (command.subcommand === 'merge') {
     const artifacts = command.inputFiles.map((filePath) => loadCatalogDevicesArtifact(filePath));
-    const merged = mergeCatalogDevicesArtifactsV1(artifacts);
+    const merged = mergeCatalogDevicesArtifactsV1(artifacts, {
+      conflictMode: command.conflictMode,
+    });
     return {
       artifact: merged.artifact,
       summary: {
@@ -173,7 +196,9 @@ export function runCatalogCommand(command) {
   }
   const artifact = loadCatalogDevicesArtifact(command.inputFile);
   if (command.subcommand === 'normalize') {
-    const normalized = normalizeCatalogDevicesArtifactV1(artifact);
+    const normalized = normalizeCatalogDevicesArtifactV1(artifact, {
+      conflictMode: command.conflictMode,
+    });
     return {
       artifact: normalized.artifact,
       summary: {
@@ -218,11 +243,21 @@ export function formatCatalogSummary(result) {
     lines.push(
       `Normalize: input=${result.summary.normalize.inputDevices} output=${result.summary.normalize.outputDevices} merged=${result.summary.normalize.mergedDuplicates}`,
     );
+    if (result.summary.normalize.conflictsResolved) {
+      lines.push(
+        `Normalize conflicts: resolved=${result.summary.normalize.conflictsResolved} fields=${JSON.stringify(result.summary.normalize.conflictsByField)}`,
+      );
+    }
   }
   if (result.summary.merge) {
     lines.push(
       `Merge: artifacts=${result.summary.merge.inputArtifacts} input=${result.summary.merge.inputDevices} output=${result.summary.merge.outputDevices} merged=${result.summary.merge.mergedDuplicates}`,
     );
+    if (result.summary.merge.conflictsResolved) {
+      lines.push(
+        `Merge conflicts: resolved=${result.summary.merge.conflictsResolved} fields=${JSON.stringify(result.summary.merge.conflictsByField)}`,
+      );
+    }
   }
   if (result.summary.diff) {
     lines.push(
@@ -242,8 +277,14 @@ export function formatCatalogMarkdown(result) {
     result.summary.normalize
       ? `- Normalize: input=${result.summary.normalize.inputDevices}, output=${result.summary.normalize.outputDevices}, merged=${result.summary.normalize.mergedDuplicates}`
       : null,
+    result.summary.normalize?.conflictsResolved
+      ? `- Normalize conflicts: resolved=${result.summary.normalize.conflictsResolved}, fields=${JSON.stringify(result.summary.normalize.conflictsByField)}`
+      : null,
     result.summary.merge
       ? `- Merge: artifacts=${result.summary.merge.inputArtifacts}, input=${result.summary.merge.inputDevices}, output=${result.summary.merge.outputDevices}, merged=${result.summary.merge.mergedDuplicates}`
+      : null,
+    result.summary.merge?.conflictsResolved
+      ? `- Merge conflicts: resolved=${result.summary.merge.conflictsResolved}, fields=${JSON.stringify(result.summary.merge.conflictsByField)}`
       : null,
     result.summary.diff
       ? `- Diff: added=${result.summary.diff.added}, removed=${result.summary.diff.removed}, changed=${result.summary.diff.changed}, unchanged=${result.summary.diff.unchanged}`

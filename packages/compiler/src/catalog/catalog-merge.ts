@@ -38,6 +38,7 @@ export function mergeCatalogDevicesArtifactsV1(
   const normalized = normalizeCatalogDevicesArtifactV1(combined, {
     generatedAt: combined.source.generatedAt,
     sourceRef: combined.source.sourceRef,
+    conflictMode: options.conflictMode,
   });
 
   return {

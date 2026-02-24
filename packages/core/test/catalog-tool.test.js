@@ -48,6 +48,30 @@ test('catalog parseCliArgs validates subcommands and formats', async () => {
     parseCliArgs(['diff', '--from-file', 'a.json', '--to-file', 'b.json', '--format', 'ndjson']).ok,
     true,
   );
+  assert.equal(
+    parseCliArgs([
+      'normalize',
+      '--input-file',
+      'x.json',
+      '--conflict-mode',
+      'error',
+      '--format',
+      'summary',
+    ]).ok,
+    true,
+  );
+  assert.equal(
+    parseCliArgs([
+      'merge',
+      '--input-file',
+      'a.json',
+      '--input-file',
+      'b.json',
+      '--conflict-mode',
+      'warn',
+    ]).ok,
+    true,
+  );
 });
 
 test('runCatalogCommand loads catalog artifact and outputs summary/markdown/json/ndjson', async () => {
@@ -93,6 +117,29 @@ test('catalog normalize dedupes catalog artifact and reports merge summary', asy
   assert.doesNotThrow(() => JSON.parse(formatCatalogOutput(result, 'json')));
 });
 
+test('catalog normalize reports conflicts in warn mode and can fail in error mode', async () => {
+  const { runCatalogCommand, formatCatalogOutput } = await loadLib();
+  const warnResult = runCatalogCommand({
+    subcommand: 'normalize',
+    inputFile: path.join(fixturesDir, 'catalog-devices-conflict.json'),
+    conflictMode: 'warn',
+    format: 'summary',
+  });
+  assert.equal(warnResult.summary.normalize.conflictsResolved, 2);
+  assert.match(formatCatalogOutput(warnResult, 'summary'), /Normalize conflicts: resolved=2/);
+
+  assert.throws(
+    () =>
+      runCatalogCommand({
+        subcommand: 'normalize',
+        inputFile: path.join(fixturesDir, 'catalog-devices-conflict.json'),
+        conflictMode: 'error',
+        format: 'summary',
+      }),
+    /Conflicting productId/i,
+  );
+});
+
 test('catalog merge combines multiple artifacts and reports merge stats', async () => {
   const { runCatalogCommand, formatCatalogOutput } = await loadLib();
   const result = runCatalogCommand({
@@ -111,6 +158,21 @@ test('catalog merge combines multiple artifacts and reports merge stats', async 
     /Merge: artifacts=2 input=5 output=3 merged=2/,
   );
   assert.match(formatCatalogOutput(result, 'markdown'), /Merge: artifacts=2/);
+});
+
+test('catalog merge supports conflict-mode and reports conflicts', async () => {
+  const { runCatalogCommand, formatCatalogOutput } = await loadLib();
+  const result = runCatalogCommand({
+    subcommand: 'merge',
+    inputFiles: [
+      path.join(fixturesDir, 'catalog-devices-conflict.json'),
+      path.join(fixturesDir, 'catalog-devices-v1.json'),
+    ],
+    conflictMode: 'warn',
+    format: 'summary',
+  });
+  assert.equal(result.summary.merge.conflictsResolved >= 2, true);
+  assert.match(formatCatalogOutput(result, 'summary'), /Merge conflicts: resolved=/);
 });
 
 test('catalog diff reports added removed and changed devices', async () => {

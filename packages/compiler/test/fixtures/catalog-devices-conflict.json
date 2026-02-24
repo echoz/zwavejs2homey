@@ -1,0 +1,37 @@
+{
+  "schemaVersion": "catalog-devices/v1",
+  "source": {
+    "generatedAt": "2026-02-24T00:00:00.000Z",
+    "sourceRef": "test:conflict"
+  },
+  "devices": [
+    {
+      "catalogId": "zwjs:0184-4447-3034",
+      "manufacturerId": 388,
+      "productType": 17479,
+      "productId": 12340,
+      "label": "Switch Label",
+      "sources": [
+        {
+          "source": "zwjs-inspect-node-detail",
+          "sourceId": "5",
+          "confidence": "low"
+        }
+      ]
+    },
+    {
+      "catalogId": "zwjs:0184-4447-3034",
+      "manufacturerId": 388,
+      "productType": 17479,
+      "productId": 12341,
+      "label": "Official Better Label",
+      "sources": [
+        {
+          "source": "official-catalog",
+          "sourceId": "0184-4447-3034",
+          "confidence": "high"
+        }
+      ]
+    }
+  ]
+}

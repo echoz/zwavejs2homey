@@ -54,7 +54,10 @@ export {
   assertCatalogDevicesArtifactV1,
   loadCatalogDevicesArtifact,
 } from './catalog/catalog-device-artifact';
-export { normalizeCatalogDevicesArtifactV1 } from './catalog/catalog-normalize';
+export {
+  CatalogNormalizeConflictError,
+  normalizeCatalogDevicesArtifactV1,
+} from './catalog/catalog-normalize';
 export { mergeCatalogDevicesArtifactsV1 } from './catalog/catalog-merge';
 export { diffCatalogDevicesArtifactsV1 } from './catalog/catalog-diff';
 export {

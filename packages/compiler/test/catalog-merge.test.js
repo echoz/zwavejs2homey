@@ -28,3 +28,16 @@ test('mergeCatalogDevicesArtifactsV1 merges multiple artifacts and dedupes by ca
   assert.ok(switch7);
   assert.equal(switch7.sources.length, 3);
 });
+
+test('mergeCatalogDevicesArtifactsV1 supports conflictMode error for ID conflicts', () => {
+  const conflict = compiler.loadCatalogDevicesArtifact(
+    path.join(fixturesDir, 'catalog-devices-conflict.json'),
+  );
+  const second = compiler.loadCatalogDevicesArtifact(
+    path.join(fixturesDir, 'catalog-devices-v1.json'),
+  );
+  assert.throws(
+    () => compiler.mergeCatalogDevicesArtifactsV1([conflict, second], { conflictMode: 'error' }),
+    (error) => error && /CatalogNormalizeConflictError/.test(error.name),
+  );
+});
