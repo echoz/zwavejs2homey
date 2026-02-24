@@ -15,6 +15,13 @@ test('parseCliArgs validates ha-import-extract args', async () => {
   assert.equal(parseCliArgs([]).ok, false);
   assert.equal(parseCliArgs(['--input-file', 'x.json', '--format', 'yaml']).ok, false);
   assert.equal(parseCliArgs(['--input-file', 'x.json', '--output-extracted']).ok, false);
+  assert.equal(
+    parseCliArgs(['--input-file', 'x.json', '--source-home-assistant', '/tmp/ha']).ok,
+    false,
+  );
+  const sourceParsed = parseCliArgs(['--source-home-assistant', '/tmp/ha', '--timing']);
+  assert.equal(sourceParsed.ok, true);
+  assert.equal(sourceParsed.command.sourceHomeAssistant, '/tmp/ha');
   const parsed = parseCliArgs(['--input-file', 'x.json', '--timing']);
   assert.equal(parsed.ok, true);
   assert.equal(parsed.command.timing, true);
@@ -44,4 +51,24 @@ test('runHaImportExtract validates and can write extracted artifact', async () =
   assert.match(summary, /Extracted artifact: ha-extracted-discovery\/v1/);
   assert.match(summary, /Entries: /);
   assert.match(summary, /Timing: /);
+});
+
+test('runHaImportExtract validates source-home-assistant path before parser stub error', async () => {
+  const { runHaImportExtract } = await loadLib();
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ha-source-stub-'));
+  const discoveryDir = path.join(tempDir, 'homeassistant/components/zwave_js');
+  fs.mkdirSync(discoveryDir, { recursive: true });
+  fs.writeFileSync(path.join(discoveryDir, 'discovery.py'), '# stub\n', 'utf8');
+
+  assert.throws(
+    () =>
+      runHaImportExtract({
+        sourceHomeAssistant: tempDir,
+        inputFile: undefined,
+        format: 'summary',
+        outputExtracted: undefined,
+        timing: false,
+      }),
+    /not implemented yet/i,
+  );
 });

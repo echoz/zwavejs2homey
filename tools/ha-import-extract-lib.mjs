@@ -31,6 +31,7 @@ export function getUsageText() {
   return [
     'Usage:',
     '  ha-import-extract --input-file <ha-extracted.json> [--format summary|json]',
+    '  ha-import-extract --source-home-assistant <checkout-path> [--format summary|json]',
     '                 [--output-extracted <validated-extracted.json>] [--timing]',
   ].join('\n');
 }
@@ -39,7 +40,13 @@ export function parseCliArgs(argv) {
   if (argv.includes('--help') || argv.includes('-h')) return { ok: false, error: getUsageText() };
   const flags = parseFlagMap(argv);
   const inputFile = flags.get('--input-file');
-  if (!inputFile) return { ok: false, error: '--input-file is required' };
+  const sourceHomeAssistant = flags.get('--source-home-assistant');
+  if (!inputFile && !sourceHomeAssistant) {
+    return { ok: false, error: 'Provide --input-file or --source-home-assistant' };
+  }
+  if (inputFile && sourceHomeAssistant) {
+    return { ok: false, error: 'Use either --input-file or --source-home-assistant, not both' };
+  }
   const format = flags.get('--format') ?? 'summary';
   if (!['summary', 'json'].includes(format)) {
     return { ok: false, error: `Unsupported format: ${format}` };
@@ -52,6 +59,7 @@ export function parseCliArgs(argv) {
     ok: true,
     command: {
       inputFile,
+      sourceHomeAssistant,
       format,
       outputExtracted,
       timing: flags.get('--timing') === 'true',
@@ -59,8 +67,36 @@ export function parseCliArgs(argv) {
   };
 }
 
+function runSourceExtractStub(command) {
+  const sourceRoot = path.isAbsolute(command.sourceHomeAssistant)
+    ? command.sourceHomeAssistant
+    : path.resolve(process.cwd(), command.sourceHomeAssistant);
+  const discoveryPy = path.join(
+    sourceRoot,
+    'homeassistant',
+    'components',
+    'zwave_js',
+    'discovery.py',
+  );
+  if (!fs.existsSync(sourceRoot)) {
+    throw new Error(`Home Assistant source path not found: ${sourceRoot}`);
+  }
+  if (!fs.statSync(sourceRoot).isDirectory()) {
+    throw new Error(`Home Assistant source path must be a directory: ${sourceRoot}`);
+  }
+  if (!fs.existsSync(discoveryPy)) {
+    throw new Error(`Home Assistant discovery source not found: ${discoveryPy}`);
+  }
+  throw new Error(
+    `HA source extraction parser is not implemented yet (validated source path: ${sourceRoot})`,
+  );
+}
+
 export function runHaImportExtract(command) {
   const started = command.timing ? performance.now() : 0;
+  if (command.sourceHomeAssistant) {
+    return runSourceExtractStub(command);
+  }
   const artifact = loadHaExtractedDiscoveryArtifact(command.inputFile);
 
   if (command.outputExtracted) {
