@@ -85,11 +85,15 @@ Current implemented foundation in `packages/compiler`:
   - catalog-aware curation hints, explicit `unknownDeviceReport`, and stable diagnostic device keys
 - Added live compile inspection tooling:
   - `compiler:inspect-live` connects to a ZWJS instance, fetches node details, converts them to compiler device facts, and renders compiled profile results (including list view)
+  - current tool compiles on the fly; planned next step is a compiled-artifact apply path for runtime-style validation
 - Catalog/curation workflow decision:
   - no curation-seed artifact for now; rule/patch authoring remains schema-first using compiler diagnostics and stable device identifiers
 - Runtime curation boundary decision:
   - compiler does not own curation patch schema/apply semantics
   - Homey adapter owns runtime curation behavior and may define patch semantics to fit adapter needs
+- Sequencing decision:
+  - complete the compiler runtime-validation pipeline first (real HA-derived + project rulesets, compiled profiles export, live ZWJS validation using compiled artifacts)
+  - defer Homey adapter implementation until compiled profiles can be validated end-to-end outside Homey
 
 Reference plan:
 

@@ -908,7 +908,7 @@ Progress:
 
 ### Phase 3 — Catalog Ingestion / Merge Tooling + Unknown Device Reporting
 
-Status: Complete (current scope; catalog tooling + compiler catalog diagnostics integrated)
+Status: In progress (extended scope: compiler runtime-validation readiness before Homey adapter implementation)
 
 Progress:
 
@@ -932,11 +932,23 @@ Progress:
 - Explicitly deferred curation-seed generation; current decision is to keep curation/rule authoring schema-first and avoid an extra seed artifact/workflow until proven necessary
 - Added `compiler:inspect-live` tooling to compile profiles directly from a live ZWJS instance (`--all-nodes`/`--node`) with a list overview and diagnostic output formats
 
-Deferred / later Phase 3 expansion (not required to start Phase 4):
+Phase 3 compiler-complete-before-adapter additions (required before Homey adapter implementation):
+
+- Add a compiler build/export command that compiles all layers into a reusable compiled profiles artifact (no on-the-fly compile)
+- Establish real rule directories and pipeline outputs:
+  - `rules/ha-derived/` generated from HA extraction/translation
+  - `rules/project/generic/` curated generic inference rules
+  - `rules/project/product/` curated product overrides
+- Generate HA-derived rules to cover the full set of HA `zwave_js` discovery rules supported by the current extractor/translator path
+- Build and iterate a real project-generic rule set that infers Homey device profiles/capabilities from Z-Wave configuration/metadata (not just test fixtures)
+- Add a compiled-artifact inspection/apply path for live ZWJS data (so live validation uses compiled profiles, not compile-on-the-fly)
+- Use live ZWJS validation to tighten generic/profile inference before adapter implementation
+
+Deferred / later Phase 3 expansion (not required for compiler runtime-validation readiness):
 
 - Additional real catalog source adapters (beyond `zwjs-inspect-node-detail`)
 - Deeper catalog-informed compile-time guidance (still no silent precedence changes)
-- Generic fallback compilation refinements beyond current rule-driven behavior
+- Generic fallback compilation refinements beyond the initial real project-generic ruleset
 - Catalog-driven workflows that add new authoring artifacts (e.g. curation seeds) unless a real pain point appears
 
 ### Phase 4 — Runtime Curation Patch Schema + Patch Apply Helper

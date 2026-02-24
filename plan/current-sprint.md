@@ -2,11 +2,12 @@
 
 ## Goal
 
-Close out Phase 3 catalog integration (current scope) and lock the compiler/Homey-adapter boundary before starting adapter-side runtime curation work.
+Reach compiler runtime-validation readiness before Homey adapter implementation:
+build the real layered rules pipeline (HA-derived + project generic/product rules), export compiled profiles, and validate them against live ZWJS data without on-the-fly compilation.
 
 ## In Progress
 
-- Compiler/Homey adapter boundary cleanup after deciding runtime curation patch schema is adapter-owned
+- Compiler-first completion push: real rules pipeline + compiled artifact workflow + live ZWJS validation
 
 ## Recently Completed
 
@@ -33,13 +34,16 @@ Close out Phase 3 catalog integration (current scope) and lock the compiler/Home
 5. Clarified runtime curation ownership:
    - runtime curation patch schema/apply behavior belongs to the Homey adapter
    - compiler remains focused on compiled profiles + provenance/diagnostics
+6. Added live compile inspection tooling (`compiler:inspect-live`) for rapid validation, with a follow-up decision to prefer compiled-artifact application for runtime-style inspection
 
 ## Next Tasks
 
-1. Finish compiler boundary cleanup (remove compiler-side curation patch prototype)
-2. Keep `plan/homey-translation-compiler-plan.md`, `plan/roadmap.md`, and `docs/architecture.md` aligned with the boundary decision
-3. Start Homey adapter planning/slices for runtime curation behavior (adapter-owned)
-4. Continue compiler Phase 3 expansions only when directly useful (e.g., additional catalog sources)
+1. Add compiler build/export command for compiled profiles artifact (all layers)
+2. Create real rule directories and pipeline outputs (`rules/ha-derived`, `rules/project/generic`, `rules/project/product`)
+3. Generate/commit HA-derived rules covering the currently supported HA discovery extraction set
+4. Build initial project-generic ruleset for device-profile inference from Z-Wave configuration/metadata
+5. Add live inspection path that applies compiled profiles artifact to ZWJS node data (no on-the-fly compile)
+6. Defer Homey adapter implementation until compiler runtime-validation readiness milestone is reached
 
 ## Risks / Unknowns
 
@@ -47,6 +51,7 @@ Close out Phase 3 catalog integration (current scope) and lock the compiler/Home
 - Compiler performance may degrade as HA-derived + project rules + catalog-aware diagnostics scale up
 - Risk of overloading compiler behavior with catalog heuristics before precedence policy is explicitly designed
 - Risk of boundary drift if runtime curation semantics are reintroduced into compiler package
+- Risk of delaying adapter work if generic ruleset scope is not bounded for the first “compiler complete enough” milestone
 
 ## Notes
 
