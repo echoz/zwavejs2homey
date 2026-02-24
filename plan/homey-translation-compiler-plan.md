@@ -14,7 +14,7 @@ The compiler will use layered rule sources, in order:
 
 The runtime Homey adapter will apply:
 
-6. User curation patches (constrained runtime overrides with provenance)
+6. Homey adapter runtime curation (constrained runtime overrides with provenance; adapter-owned)
 
 Key design principles:
 
@@ -66,7 +66,7 @@ Key design principles:
    - conflicts / suppressed rule applications
 6. Homey runtime adapter loads compiled plan
    - selects compiled profile
-   - applies runtime user curation patch (allowed slots only)
+   - applies runtime user curation patch (adapter-owned behavior; compiler does not apply patches)
    - executes mappings
 
 ## Important Public Interfaces / Types (New)
@@ -811,18 +811,18 @@ The v1 compiler/rules-engine effort is complete when:
    - generic fallback profile application if possible
    - `uncurated` marking
    - curation-needed reporting
-6. Runtime curation patch schema is defined and validated (even if Homey UI/editor is implemented later)
+6. Compiler output preserves stable identifiers/provenance/diagnostics sufficient for adapter-owned runtime curation
 7. Tests cover:
    - parsing/validation
    - HA import normalization
    - layering semantics
    - compiled output snapshots
-   - curation patch application
+   - unknown-device / curation-needed reporting
 8. Documentation exists for:
    - rule layer semantics
    - compiler outputs
    - provenance model
-   - runtime curation constraints
+   - compiler/Homey adapter curation boundary
 
 ## Proposed Repository Structure (for Implementation)
 
@@ -838,7 +838,6 @@ Suggested folders:
 - `src/catalog/` (catalog normalization/merge)
 - `src/compiler/` (layer application pipeline)
 - `src/emit/` (compiled plan + reports)
-- `src/curation/` (runtime patch schema/validation + patch apply helper)
 - `test/fixtures/` (device facts, rulesets, expected compiled outputs)
 - `test/`
 
@@ -941,20 +940,13 @@ Deferred / later Phase 3 expansion (not required to start Phase 4):
 
 ### Phase 4 — Runtime Curation Patch Schema + Patch Apply Helper
 
-Status: Next (ready to start)
+Status: Moved out of compiler scope (Homey adapter-owned)
 
-Progress:
+Decision:
 
-- Added Phase 4 curation patch schema foundation in `packages/compiler`:
-  - `runtime-curation-patches/v1` types
-  - allowed patch targets and operations (`replace|add|remove|disable`)
-  - runtime validation with clear errors
-  - unit test coverage for valid/invalid patch sets
-
-- Define patch schema and allowed operations
-- Implement patch validation + apply
-- Add provenance/supersedes chain behavior
-- Contract tests for adapter consumption
+- Runtime curation schema and patch-apply semantics belong to the Homey adapter, not the compiler.
+- Compiler responsibility is limited to compiled profile outputs plus provenance/diagnostics that adapter-side curation can use.
+- Compiler-side curation patch prototype was removed to preserve the boundary.
 
 ### Phase 5 — Adapter Integration Planning/Execution (separate plan)
 

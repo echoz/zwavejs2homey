@@ -24,7 +24,7 @@
 - [x] Catalog-aware compiler diagnostics (`catalogLookup`, `catalogMatch`, curation hints, diagnostic keys)
 - [x] Catalog-focused compiler authoring diagnostics/ergonomics (inspection, explanation, focused views)
 - [x] Defer curation-seed artifact generation (schema-first curation/rule authoring for now)
-- [ ] Phase 4 (compiler plan): runtime curation patch schema + apply helper
+- [x] Compiler/Homey boundary decision: runtime curation patch schema/apply is adapter-owned (not compiler-owned)
 - [ ] Add second real catalog source adapter when a concrete source format is available
 
 ## Phase 4: Homey Adapter MVP (Next Major Area)

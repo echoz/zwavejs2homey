@@ -85,6 +85,9 @@ Current implemented foundation in `packages/compiler`:
   - catalog-aware curation hints, explicit `unknownDeviceReport`, and stable diagnostic device keys
 - Catalog/curation workflow decision:
   - no curation-seed artifact for now; rule/patch authoring remains schema-first using compiler diagnostics and stable device identifiers
+- Runtime curation boundary decision:
+  - compiler does not own curation patch schema/apply semantics
+  - Homey adapter owns runtime curation behavior and may define patch semantics to fit adapter needs
 
 Reference plan:
 
