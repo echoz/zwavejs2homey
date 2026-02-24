@@ -43,12 +43,16 @@ export function parseCliArgs(argv) {
   if (!['summary', 'json'].includes(format)) {
     return { ok: false, error: `Unsupported format: ${format}` };
   }
+  const outputGenerated = flags.get('--output-generated');
+  if (outputGenerated === 'true') {
+    return { ok: false, error: '--output-generated requires a file path' };
+  }
   return {
     ok: true,
     command: {
       inputFile,
       format,
-      outputGenerated: flags.get('--output-generated'),
+      outputGenerated,
     },
   };
 }

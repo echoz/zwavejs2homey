@@ -85,3 +85,28 @@ test('translateHaExtractedDiscoveryToGeneratedArtifact validates extracted schem
       /valueMatch\.commandClass must be a number/i.test(error.message),
   );
 });
+
+test('translateHaExtractedDiscoveryToGeneratedArtifact validates companions matcher shape at extracted layer', () => {
+  assert.throws(
+    () =>
+      compiler.translateHaExtractedDiscoveryToGeneratedArtifact({
+        schemaVersion: 'ha-extracted-discovery/v1',
+        source: { generatedAt: '2026-02-24T00:00:00Z', sourceRef: 'x' },
+        entries: [
+          {
+            id: 'x',
+            sourceRef: 'x',
+            valueMatch: { commandClass: 37, property: 'currentValue' },
+            companions: {
+              requiredValues: [{ commandClass: '50', property: 'value' }],
+            },
+            output: { capabilityId: 'onoff' },
+          },
+        ],
+      }),
+    (error) =>
+      error &&
+      error.name === 'HaExtractedTranslationError' &&
+      /companions\.requiredValues\[0\]\.commandClass must be a number/i.test(error.message),
+  );
+});

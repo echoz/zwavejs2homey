@@ -14,6 +14,7 @@ test('parseCliArgs validates required args and format', async () => {
   const { parseCliArgs } = await loadLib();
   assert.equal(parseCliArgs([]).ok, false);
   assert.equal(parseCliArgs(['--input-file', 'x.json', '--format', 'yaml']).ok, false);
+  assert.equal(parseCliArgs(['--input-file', 'x.json', '--output-generated']).ok, false);
   const parsed = parseCliArgs(['--input-file', 'x.json', '--format', 'json']);
   assert.equal(parsed.ok, true);
   assert.equal(parsed.command.inputFile, 'x.json');

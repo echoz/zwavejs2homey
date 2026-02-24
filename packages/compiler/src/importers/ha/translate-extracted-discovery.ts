@@ -141,6 +141,57 @@ function validateExtractedInput(input: unknown): asserts input is HaExtractedDis
         `HA extracted discovery entry ${entry.id} valueMatch.metadata must be an object`,
       );
     }
+    if (entry.companions !== undefined) {
+      if (!isObject(entry.companions)) {
+        throw new HaExtractedTranslationError(
+          `HA extracted discovery entry ${entry.id} companions must be an object`,
+        );
+      }
+      for (const [companionKey, values] of Object.entries(entry.companions)) {
+        if (!['requiredValues', 'absentValues'].includes(companionKey)) {
+          continue;
+        }
+        if (values === undefined) continue;
+        if (!Array.isArray(values)) {
+          throw new HaExtractedTranslationError(
+            `HA extracted discovery entry ${entry.id} companions.${companionKey} must be an array`,
+          );
+        }
+        for (const [matcherIndex, matcher] of values.entries()) {
+          if (!isObject(matcher)) {
+            throw new HaExtractedTranslationError(
+              `HA extracted discovery entry ${entry.id} companions.${companionKey}[${matcherIndex}] must be an object`,
+            );
+          }
+          if (typeof matcher.commandClass !== 'number') {
+            throw new HaExtractedTranslationError(
+              `HA extracted discovery entry ${entry.id} companions.${companionKey}[${matcherIndex}].commandClass must be a number`,
+            );
+          }
+          if (matcher.endpoint !== undefined && typeof matcher.endpoint !== 'number') {
+            throw new HaExtractedTranslationError(
+              `HA extracted discovery entry ${entry.id} companions.${companionKey}[${matcherIndex}].endpoint must be a number`,
+            );
+          }
+          if (
+            !['string', 'number'].includes(typeof matcher.property) ||
+            (matcher.property !== 0 && !matcher.property)
+          ) {
+            throw new HaExtractedTranslationError(
+              `HA extracted discovery entry ${entry.id} companions.${companionKey}[${matcherIndex}].property must be string or number`,
+            );
+          }
+          if (
+            matcher.propertyKey !== undefined &&
+            !['string', 'number'].includes(typeof matcher.propertyKey)
+          ) {
+            throw new HaExtractedTranslationError(
+              `HA extracted discovery entry ${entry.id} companions.${companionKey}[${matcherIndex}].propertyKey must be string or number`,
+            );
+          }
+        }
+      }
+    }
     if (!isObject(entry.output)) {
       throw new HaExtractedTranslationError(
         `HA extracted discovery entry ${entry.id} output must be an object`,
