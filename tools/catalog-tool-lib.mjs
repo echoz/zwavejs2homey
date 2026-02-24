@@ -10,6 +10,7 @@ import {
 
 const require = createRequire(import.meta.url);
 const {
+  diffCatalogDevicesArtifactsV1,
   loadCatalogDevicesArtifact,
   loadCatalogArtifactFromZwjsInspectNodeDetailFile,
   mergeCatalogDevicesArtifactsV1,
@@ -48,6 +49,7 @@ export function getUsageText() {
     '  catalog validate --input-file <catalog-devices.json> [--format summary|json|json-pretty|json-compact|ndjson]',
     '  catalog normalize --input-file <catalog-devices.json> [--format summary|markdown|json|json-pretty|json-compact|ndjson]',
     '  catalog merge --input-file <catalog-a.json> --input-file <catalog-b.json> [--format summary|markdown|json|json-pretty|json-compact|ndjson]',
+    '  catalog diff --from-file <catalog-old.json> --to-file <catalog-new.json> [--format summary|markdown|json|json-pretty|json-compact|ndjson]',
     '  catalog fetch --source zwjs-inspect-node-detail --input-file <node-detail.json> [--format summary|markdown|json|json-pretty|json-compact|ndjson]',
   ].join('\n');
 }
@@ -57,7 +59,7 @@ export function parseCliArgs(argv) {
   const { flags, positionals } = parseFlagMap(argv);
   const subcommand = positionals[0];
   if (!subcommand) return { ok: false, error: getUsageText() };
-  if (!['summary', 'validate', 'normalize', 'merge', 'fetch'].includes(subcommand)) {
+  if (!['summary', 'validate', 'normalize', 'merge', 'diff', 'fetch'].includes(subcommand)) {
     return { ok: false, error: `Unsupported catalog subcommand: ${subcommand}` };
   }
   const format = flags.get('--format') ?? 'summary';
@@ -89,6 +91,13 @@ export function parseCliArgs(argv) {
       return { ok: false, error: 'catalog merge requires at least two --input-file values' };
     }
     return { ok: true, command: { subcommand, inputFiles, format } };
+  }
+  if (subcommand === 'diff') {
+    const fromFile = flags.get('--from-file');
+    const toFile = flags.get('--to-file');
+    if (!fromFile) return { ok: false, error: '--from-file is required for diff' };
+    if (!toFile) return { ok: false, error: '--to-file is required for diff' };
+    return { ok: true, command: { subcommand, fromFile, toFile, format } };
   }
   const inputFile = flags.get('--input-file');
   if (!inputFile) return { ok: false, error: '--input-file is required' };
@@ -138,6 +147,28 @@ export function runCatalogCommand(command) {
         ).length,
         merge: merged.report,
       },
+    };
+  }
+  if (command.subcommand === 'diff') {
+    const fromArtifact = loadCatalogDevicesArtifact(command.fromFile);
+    const toArtifact = loadCatalogDevicesArtifact(command.toFile);
+    const diff = diffCatalogDevicesArtifactsV1(fromArtifact, toArtifact);
+    return {
+      artifact: toArtifact,
+      summary: {
+        deviceCount: toArtifact.devices.length,
+        sourceNames: [
+          ...new Set(toArtifact.devices.flatMap((d) => d.sources.map((s) => s.source))),
+        ].sort(),
+        identifiedDeviceCount: toArtifact.devices.filter(
+          (d) =>
+            d.manufacturerId !== undefined &&
+            d.productType !== undefined &&
+            d.productId !== undefined,
+        ).length,
+        diff: diff.report,
+      },
+      diff,
     };
   }
   const artifact = loadCatalogDevicesArtifact(command.inputFile);
@@ -193,6 +224,11 @@ export function formatCatalogSummary(result) {
       `Merge: artifacts=${result.summary.merge.inputArtifacts} input=${result.summary.merge.inputDevices} output=${result.summary.merge.outputDevices} merged=${result.summary.merge.mergedDuplicates}`,
     );
   }
+  if (result.summary.diff) {
+    lines.push(
+      `Diff: added=${result.summary.diff.added} removed=${result.summary.diff.removed} changed=${result.summary.diff.changed} unchanged=${result.summary.diff.unchanged}`,
+    );
+  }
   return lines.join('\n');
 }
 
@@ -209,6 +245,9 @@ export function formatCatalogMarkdown(result) {
     result.summary.merge
       ? `- Merge: artifacts=${result.summary.merge.inputArtifacts}, input=${result.summary.merge.inputDevices}, output=${result.summary.merge.outputDevices}, merged=${result.summary.merge.mergedDuplicates}`
       : null,
+    result.summary.diff
+      ? `- Diff: added=${result.summary.diff.added}, removed=${result.summary.diff.removed}, changed=${result.summary.diff.changed}, unchanged=${result.summary.diff.unchanged}`
+      : null,
   ]
     .filter(Boolean)
     .join('\n');
@@ -217,6 +256,7 @@ export function formatCatalogMarkdown(result) {
 export function formatCatalogNdjson(result) {
   return formatNdjson([
     { type: 'summary', summary: result.summary },
+    ...(result.diff ? result.diff.diffs.map((diff) => ({ type: 'diff', diff })) : []),
     ...result.artifact.devices.map((device) => ({ type: 'device', device })),
   ]);
 }

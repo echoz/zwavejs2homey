@@ -919,6 +919,7 @@ Progress:
 - Added catalog fetch conversion fixture coverage and CLI tests for `catalog fetch --source zwjs-inspect-node-detail`
 - Added `catalog normalize` dedupe/canonicalization flow for `catalog-devices/v1` with merge reporting and CLI coverage
 - Added `catalog merge` for combining multiple `catalog-devices/v1` artifacts with dedupe + merge stats reporting
+- Added `catalog diff` summary flow for added/removed/changed devices and source/label drift diagnostics
 
 - Build catalog fetch/normalize/merge/validate/diff tooling pipeline
 - Add merged catalog normalization pipeline to compiler inputs

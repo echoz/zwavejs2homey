@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "catalog-devices/v1",
+  "source": {
+    "generatedAt": "2026-02-24T00:00:00.000Z",
+    "sourceRef": "test:diff-target"
+  },
+  "devices": [
+    {
+      "catalogId": "zwjs:0184-4447-3034",
+      "manufacturerId": 388,
+      "productType": 17479,
+      "productId": 12340,
+      "label": "Aeotec Smart Switch 7 Gen2",
+      "sources": [
+        {
+          "source": "zwjs-inspect-node-detail",
+          "sourceId": "5",
+          "confidence": "medium"
+        },
+        {
+          "source": "official-catalog",
+          "sourceId": "0184-4447-3034",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "catalogId": "zwjs:0001-0002-0003",
+      "manufacturerId": 1,
+      "productType": 2,
+      "productId": 3,
+      "label": "Example Device",
+      "sources": [
+        {
+          "source": "official-catalog",
+          "sourceId": "0001-0002-0003",
+          "confidence": "medium"
+        }
+      ]
+    }
+  ]
+}

@@ -44,6 +44,10 @@ test('catalog parseCliArgs validates subcommands and formats', async () => {
     ]).ok,
     true,
   );
+  assert.equal(
+    parseCliArgs(['diff', '--from-file', 'a.json', '--to-file', 'b.json', '--format', 'ndjson']).ok,
+    true,
+  );
 });
 
 test('runCatalogCommand loads catalog artifact and outputs summary/markdown/json/ndjson', async () => {
@@ -107,6 +111,21 @@ test('catalog merge combines multiple artifacts and reports merge stats', async 
     /Merge: artifacts=2 input=5 output=3 merged=2/,
   );
   assert.match(formatCatalogOutput(result, 'markdown'), /Merge: artifacts=2/);
+});
+
+test('catalog diff reports added removed and changed devices', async () => {
+  const { runCatalogCommand, formatCatalogOutput } = await loadLib();
+  const result = runCatalogCommand({
+    subcommand: 'diff',
+    fromFile: path.join(fixturesDir, 'catalog-devices-with-duplicates.json'),
+    toFile: path.join(fixturesDir, 'catalog-devices-diff-target.json'),
+    format: 'summary',
+  });
+  assert.equal(result.summary.diff.added, 1);
+  assert.equal(result.summary.diff.removed, 1);
+  assert.equal(result.summary.diff.changed, 1);
+  assert.match(formatCatalogOutput(result, 'summary'), /Diff: added=1 removed=1 changed=1/);
+  assert.match(formatCatalogOutput(result, 'ndjson'), /\"type\":\"diff\"/);
 });
 
 test('catalog fetch rejects unsupported source adapters', async () => {

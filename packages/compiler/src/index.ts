@@ -20,6 +20,11 @@ export type {
   MergeCatalogResult,
 } from './catalog/catalog-merge';
 export type {
+  CatalogDeviceDiff,
+  DiffCatalogReport,
+  DiffCatalogResult,
+} from './catalog/catalog-diff';
+export type {
   CompiledHomeyProfilePlan,
   HomeyCapabilityPlan,
   HomeyInboundMapping,
@@ -51,6 +56,7 @@ export {
 } from './catalog/catalog-device-artifact';
 export { normalizeCatalogDevicesArtifactV1 } from './catalog/catalog-normalize';
 export { mergeCatalogDevicesArtifactsV1 } from './catalog/catalog-merge';
+export { diffCatalogDevicesArtifactsV1 } from './catalog/catalog-diff';
 export {
   ZwjsInspectCatalogSourceError,
   catalogArtifactFromZwjsInspectNodeDetail,
