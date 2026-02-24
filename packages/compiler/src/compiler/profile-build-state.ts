@@ -24,6 +24,8 @@ export interface ProfileBuildStateCapability extends HomeyCapabilityPlan {
   provenanceHistory: ProvenanceRecord[];
 }
 
+export type RuleActionApplyOutcome = 'created' | 'updated' | 'replaced' | 'noop';
+
 export interface ProfileBuildState {
   appliedDeviceIdentityActions: Set<string>;
   deviceIdentity?: {
@@ -64,7 +66,7 @@ export function applyDeviceIdentityRuleAction(
   state: ProfileBuildState,
   action: DeviceIdentityRuleAction,
   provenance: ProvenanceRecord,
-): void {
+): RuleActionApplyOutcome {
   const mode = normalizeRuleActionMode(action.mode);
   assertRuleActionModeAllowedForLayer(
     provenance.layer as Exclude<ProvenanceRecord['layer'], 'user-curation'>,
@@ -79,7 +81,7 @@ export function applyDeviceIdentityRuleAction(
       provenance: { ...provenance, action: mode },
       provenanceHistory: [{ ...provenance, action: mode }],
     };
-    return;
+    return 'created';
   }
 
   if (mode === 'fill') {
@@ -108,8 +110,11 @@ export function applyDeviceIdentityRuleAction(
         ruleId: provenance.ruleId,
       });
     }
-    if (changed) existing.provenanceHistory.push({ ...provenance, action: mode });
-    return;
+    if (changed) {
+      existing.provenanceHistory.push({ ...provenance, action: mode });
+      return 'updated';
+    }
+    return 'noop';
   }
 
   if (mode === 'augment') {
@@ -117,7 +122,7 @@ export function applyDeviceIdentityRuleAction(
     if (existing.driverTemplateId === undefined)
       existing.driverTemplateId = action.driverTemplateId;
     existing.provenanceHistory.push({ ...provenance, action: mode });
-    return;
+    return 'updated';
   }
 
   const superseded = existing.provenanceHistory.map((p) => `${p.layer}:${p.ruleId}`);
@@ -125,6 +130,7 @@ export function applyDeviceIdentityRuleAction(
   existing.driverTemplateId = action.driverTemplateId;
   existing.provenance = { ...provenance, action: mode, supersedes: superseded };
   existing.provenanceHistory.push({ ...provenance, action: mode, supersedes: superseded });
+  return 'replaced';
 }
 
 function valueIdKey(valueId: NormalizedZwaveValueId): string {
@@ -223,7 +229,7 @@ export function applyCapabilityRuleAction(
   state: ProfileBuildState,
   action: CapabilityRuleAction,
   provenance: ProvenanceRecord,
-): void {
+): RuleActionApplyOutcome {
   const mode = normalizeRuleActionMode(action.mode);
   assertRuleActionModeAllowedForLayer(
     provenance.layer as Exclude<ProvenanceRecord['layer'], 'user-curation'>,
@@ -245,7 +251,7 @@ export function applyCapabilityRuleAction(
       provenance: { ...provenance, action: mode },
       provenanceHistory: [{ ...provenance, action: mode }],
     });
-    return;
+    return 'created';
   }
 
   if (mode === 'fill') {
@@ -287,8 +293,9 @@ export function applyCapabilityRuleAction(
             ? 'outbound-only'
             : 'inbound-only';
       existing.provenanceHistory.push({ ...provenance, action: mode });
+      return 'updated';
     }
-    return;
+    return 'noop';
   }
 
   if (mode === 'augment') {
@@ -316,7 +323,7 @@ export function applyCapabilityRuleAction(
           ? 'outbound-only'
           : 'inbound-only';
     existing.provenanceHistory.push({ ...provenance, action: mode });
-    return;
+    return 'updated';
   }
 
   // replace
@@ -327,6 +334,7 @@ export function applyCapabilityRuleAction(
   existing.directionality = deriveDirectionality(action);
   existing.provenance = { ...provenance, action: mode, supersedes: superseded };
   existing.provenanceHistory.push({ ...provenance, action: mode, supersedes: superseded });
+  return 'replaced';
 }
 
 export function materializeCapabilityPlans(state: ProfileBuildState): HomeyCapabilityPlan[] {

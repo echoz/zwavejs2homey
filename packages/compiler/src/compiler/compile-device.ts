@@ -68,7 +68,7 @@ export function compileDevice(
       actions,
       suppressedActions: [...state.suppressedActions],
       summary: {
-        appliedActions: actions.filter((a) => a.applied).length,
+        appliedActions: actions.filter((a) => a.applied && a.changed !== false).length,
         unmatchedActions: actions.filter((a) => a.reason === 'rule-not-matched').length,
         suppressedFillActions: state.suppressedActions.filter((a) => a.mode === 'fill').length,
         ignoredValues: state.ignoredValues.size,

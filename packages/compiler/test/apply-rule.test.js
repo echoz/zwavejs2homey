@@ -49,7 +49,7 @@ test('applyRuleToValue applies matching capability action and emits provenance-b
 
   const results = compiler.applyRuleToValue(state, device, value, rule);
   assert.deepEqual(results, [
-    { ruleId: 'ha-switch-binary', actionType: 'capability', applied: true },
+    { ruleId: 'ha-switch-binary', actionType: 'capability', applied: true, changed: true },
   ]);
   const [cap] = compiler.materializeCapabilityPlans(state);
   assert.equal(cap.capabilityId, 'onoff');
@@ -92,7 +92,7 @@ test('applyRuleToValue applies ignore-value action and records ignored selector'
 
   const results = compiler.applyRuleToValue(state, device, value, rule);
   assert.deepEqual(results, [
-    { ruleId: 'ignore-meter-power', actionType: 'ignore-value', applied: true },
+    { ruleId: 'ignore-meter-power', actionType: 'ignore-value', applied: true, changed: true },
   ]);
   assert.deepEqual(compiler.materializeIgnoredValues(state), [value.valueId]);
 });
@@ -110,7 +110,7 @@ test('applyRuleToValue applies device-identity actions from matching values', ()
 
   const results = compiler.applyRuleToValue(state, device, value, rule);
   assert.deepEqual(results, [
-    { ruleId: 'ha-device-class', actionType: 'device-identity', applied: true },
+    { ruleId: 'ha-device-class', actionType: 'device-identity', applied: true, changed: true },
   ]);
   const identity = compiler.materializeDeviceIdentity(state);
   assert.equal(identity.homeyClass, 'socket');
@@ -137,6 +137,7 @@ test('applyRuleToValue deduplicates device-identity actions after first applicat
       ruleId: 'ha-device-class',
       actionType: 'device-identity',
       applied: false,
+      changed: false,
       reason: 'device-identity-already-applied',
     },
   ]);

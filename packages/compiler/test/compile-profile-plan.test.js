@@ -105,7 +105,39 @@ test('compileProfilePlan derives classification from compiled device-identity ac
   );
   assert.ok(
     report.actions.some(
-      (a) => a.ruleId === 'product-device-class' && a.actionType === 'device-identity' && a.applied,
+      (a) =>
+        a.ruleId === 'product-device-class' &&
+        a.actionType === 'device-identity' &&
+        a.applied &&
+        a.changed,
+    ),
+  );
+});
+
+test('compileProfilePlan does not mark profile curated from product no-op fills only', () => {
+  const noOpProductRules = [
+    ...identityRules,
+    {
+      ruleId: 'product-device-noop-fill',
+      layer: 'project-product',
+      value: { commandClass: [37], property: ['targetValue'] },
+      actions: [
+        {
+          type: 'device-identity',
+          mode: 'fill',
+          homeyClass: 'socket',
+          driverTemplateId: 'noop-template',
+        },
+      ],
+    },
+  ];
+  const { profile, report } = compiler.compileProfilePlan(device, noOpProductRules, {
+    confidence: undefined,
+  });
+  assert.equal(profile.classification.confidence, 'curated');
+  assert.ok(
+    report.actions.some(
+      (a) => a.ruleId === 'product-device-noop-fill' && a.applied === true && a.changed === false,
     ),
   );
 });

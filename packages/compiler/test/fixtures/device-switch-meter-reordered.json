@@ -1,0 +1,21 @@
+{
+  "deviceKey": "fixture-switch-meter-1-reordered",
+  "manufacturerId": 29,
+  "productType": 13313,
+  "productId": 1,
+  "firmwareVersion": "1.23",
+  "values": [
+    {
+      "valueId": { "commandClass": 50, "endpoint": 0, "property": "value", "propertyKey": 0 },
+      "metadata": { "type": "number", "readable": true, "writeable": false }
+    },
+    {
+      "valueId": { "commandClass": 37, "endpoint": 0, "property": "targetValue" },
+      "metadata": { "type": "boolean", "readable": true, "writeable": true }
+    },
+    {
+      "valueId": { "commandClass": 37, "endpoint": 0, "property": "currentValue" },
+      "metadata": { "type": "boolean", "readable": true, "writeable": false }
+    }
+  ]
+}

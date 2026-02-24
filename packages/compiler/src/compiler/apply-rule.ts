@@ -20,6 +20,7 @@ export interface AppliedRuleActionResult {
   ruleId: string;
   actionType: RuleAction['type'];
   applied: boolean;
+  changed?: boolean;
   reason?: 'rule-not-matched' | 'device-identity-already-applied';
 }
 
@@ -73,23 +74,44 @@ export function applyRuleToValue(
   return rule.actions.map((action, actionIndex) => {
     const provenance = toProvenance(rule, action, value);
     if (action.type === 'capability') {
-      applyCapabilityRuleAction(state, action as CapabilityRuleAction, provenance);
-      return { ruleId: rule.ruleId, actionType: action.type, applied: true };
+      const outcome = applyCapabilityRuleAction(state, action as CapabilityRuleAction, provenance);
+      return {
+        ruleId: rule.ruleId,
+        actionType: action.type,
+        applied: true,
+        changed: outcome !== 'noop',
+      };
     }
     if (action.type === 'device-identity') {
-      const dedupeKey = `${rule.ruleId}:${actionIndex}`;
+      const dedupeKey = `${rule.ruleId}:${actionIndex}:${value.valueId.commandClass}:${value.valueId.endpoint ?? 0}:${String(value.valueId.property)}:${String(value.valueId.propertyKey ?? '')}`;
       if (state.appliedDeviceIdentityActions.has(dedupeKey)) {
         return {
           ruleId: rule.ruleId,
           actionType: action.type,
           applied: false,
+          changed: false,
           reason: 'device-identity-already-applied',
         };
       }
-      applyDeviceIdentityRuleAction(state, action as DeviceIdentityRuleAction, provenance);
+      const outcome = applyDeviceIdentityRuleAction(
+        state,
+        action as DeviceIdentityRuleAction,
+        provenance,
+      );
       state.appliedDeviceIdentityActions.add(dedupeKey);
-      return { ruleId: rule.ruleId, actionType: action.type, applied: true };
+      return {
+        ruleId: rule.ruleId,
+        actionType: action.type,
+        applied: true,
+        changed: outcome !== 'noop',
+      };
     }
-    return applyIgnoreValueAction(state, action as IgnoreValueRuleAction, provenance, value);
+    const ignoreResult = applyIgnoreValueAction(
+      state,
+      action as IgnoreValueRuleAction,
+      provenance,
+      value,
+    );
+    return { ...ignoreResult, changed: true };
   });
 }

@@ -33,7 +33,7 @@ function deriveConfidence(
 ): CompiledHomeyProfilePlan['classification']['confidence'] {
   if (
     compileResult.report.actions.some(
-      (action) => action.applied && action.layer === 'project-product',
+      (action) => action.applied && action.changed !== false && action.layer === 'project-product',
     )
   ) {
     return 'curated';

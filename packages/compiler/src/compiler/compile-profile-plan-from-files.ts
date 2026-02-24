@@ -72,7 +72,7 @@ function groupReportByRule(
     if (!grouped.has(key)) grouped.set(key, { ...existing });
     const entry = grouped.get(key);
     if (!entry) continue;
-    if (action.applied) entry.applied += 1;
+    if (action.applied && action.changed !== false) entry.applied += 1;
     if (action.reason === 'rule-not-matched') entry.unmatched += 1;
     entry.actionTypes[action.actionType] = (entry.actionTypes[action.actionType] ?? 0) + 1;
   }
@@ -145,7 +145,8 @@ function deriveClassificationProvenance(
   report: ReturnType<typeof compileProfilePlan>['report'],
 ): CompileProfilePlanFromFilesResult['classificationProvenance'] {
   const appliedDeviceIdentityActions = report.actions.filter(
-    (action) => action.applied && action.actionType === 'device-identity',
+    (action) =>
+      action.applied && action.changed !== false && action.actionType === 'device-identity',
   );
   const last = appliedDeviceIdentityActions[appliedDeviceIdentityActions.length - 1];
   if (!last) return undefined;

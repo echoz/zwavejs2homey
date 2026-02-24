@@ -5,6 +5,7 @@ const path = require('node:path');
 const compiler = require('../dist');
 const device = require('./fixtures/device-switch-meter.json');
 const unmappedDevice = require('./fixtures/device-unmapped.json');
+const reorderedDevice = require('./fixtures/device-switch-meter-reordered.json');
 
 const fixturesDir = path.join(__dirname, 'fixtures');
 
@@ -96,8 +97,18 @@ test('compileProfilePlanFromRuleSetManifest groups suppressed fills and flags cu
   const genericOnoff = result.report.byRule.find(
     (row) => row.ruleId === 'generic-device-class-fill',
   );
-  assert.equal(genericOnoff.applied, 1);
+  assert.equal(genericOnoff.applied, 0);
   assert.equal(genericOnoff.unmatched, 2);
+  assert.equal(
+    result.report.actions.some(
+      (a) =>
+        a.ruleId === 'generic-device-class-fill' &&
+        a.actionType === 'device-identity' &&
+        a.applied === true &&
+        a.changed === false,
+    ),
+    true,
+  );
   assert.equal(
     result.report.actions.some(
       (a) =>
@@ -131,4 +142,15 @@ test('compileProfilePlanFromRuleFiles marks empty outcome and no-meaningful-mapp
   assert.equal(result.profile.capabilities.length, 0);
   assert.equal(result.report.curationCandidates.likelyNeedsReview, true);
   assert.ok(result.report.curationCandidates.reasons.includes('no-meaningful-mapping'));
+});
+
+test('compileProfilePlanFromRuleSetManifest is stable across value ordering for device-identity classification', () => {
+  const rulesFile = path.join(fixturesDir, 'rules-switch-meter-device-identity.json');
+  const a = compiler.compileProfilePlanFromRuleSetManifest(device, [{ filePath: rulesFile }]);
+  const b = compiler.compileProfilePlanFromRuleSetManifest(reorderedDevice, [
+    { filePath: rulesFile },
+  ]);
+
+  assert.deepEqual(a.profile.classification, b.profile.classification);
+  assert.deepEqual(a.classificationProvenance, b.classificationProvenance);
 });
