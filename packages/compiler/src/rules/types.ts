@@ -46,13 +46,20 @@ export interface CapabilityRuleAction {
   ignore?: boolean;
 }
 
+export interface DeviceIdentityRuleAction {
+  type: 'device-identity';
+  mode?: RuleActionMode;
+  homeyClass?: string;
+  driverTemplateId?: string;
+}
+
 export interface IgnoreValueRuleAction {
   type: 'ignore-value';
   mode?: RuleActionMode;
   valueId?: NormalizedZwaveValueId;
 }
 
-export type RuleAction = CapabilityRuleAction | IgnoreValueRuleAction;
+export type RuleAction = CapabilityRuleAction | DeviceIdentityRuleAction | IgnoreValueRuleAction;
 
 export interface MappingRule {
   ruleId: string;

@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const compiler = require('../dist');
 const device = require('./fixtures/device-switch-meter.json');
 const rules = require('./fixtures/rules-switch-meter.json');
+const identityRules = require('./fixtures/rules-switch-meter-device-identity.json');
 
 test('compileProfilePlan emits a Homey-targeted compiled profile skeleton and report summary', () => {
   const { profile, report } = compiler.compileProfilePlan(device, rules, {
@@ -88,4 +89,23 @@ test('compileProfilePlan emits a Homey-targeted compiled profile skeleton and re
     suppressedFillActions: 0,
     ignoredValues: 1,
   });
+});
+
+test('compileProfilePlan derives classification from compiled device-identity actions', () => {
+  const { profile, report } = compiler.compileProfilePlan(device, identityRules);
+  assert.deepEqual(profile.classification, {
+    homeyClass: 'light',
+    driverTemplateId: 'product-dimmer',
+    confidence: 'curated',
+    uncurated: false,
+  });
+  assert.equal(
+    profile.capabilities.some((c) => c.capabilityId === 'onoff'),
+    true,
+  );
+  assert.ok(
+    report.actions.some(
+      (a) => a.ruleId === 'product-device-class' && a.actionType === 'device-identity' && a.applied,
+    ),
+  );
 });

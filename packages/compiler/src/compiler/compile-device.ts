@@ -7,6 +7,7 @@ import { getRuleLayerOrder } from './layer-semantics';
 import {
   createProfileBuildState,
   materializeCapabilityPlans,
+  materializeDeviceIdentity,
   materializeIgnoredValues,
 } from './profile-build-state';
 
@@ -16,6 +17,11 @@ export interface CompileDeviceReportEntry extends AppliedRuleActionResult {
 }
 
 export interface CompileDeviceResult {
+  deviceIdentity?: {
+    homeyClass?: string;
+    driverTemplateId?: string;
+    provenance?: import('../models/homey-plan').ProvenanceRecord;
+  };
   capabilities: HomeyCapabilityPlan[];
   ignoredValues: NormalizedZwaveValueId[];
   report: {
@@ -55,6 +61,7 @@ export function compileDevice(
   }
 
   return {
+    deviceIdentity: materializeDeviceIdentity(state),
     capabilities: materializeCapabilityPlans(state),
     ignoredValues: materializeIgnoredValues(state),
     report: {

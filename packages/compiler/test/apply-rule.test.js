@@ -97,6 +97,26 @@ test('applyRuleToValue applies ignore-value action and records ignored selector'
   assert.deepEqual(compiler.materializeIgnoredValues(state), [value.valueId]);
 });
 
+test('applyRuleToValue applies device-identity actions from matching values', () => {
+  const device = makeDevice();
+  const value = device.values[0];
+  const state = compiler.createProfileBuildState();
+  const rule = {
+    ruleId: 'ha-device-class',
+    layer: 'ha-derived',
+    value: { commandClass: [37], property: ['currentValue'] },
+    actions: [{ type: 'device-identity', homeyClass: 'socket', driverTemplateId: 'ha-socket' }],
+  };
+
+  const results = compiler.applyRuleToValue(state, device, value, rule);
+  assert.deepEqual(results, [
+    { ruleId: 'ha-device-class', actionType: 'device-identity', applied: true },
+  ]);
+  const identity = compiler.materializeDeviceIdentity(state);
+  assert.equal(identity.homeyClass, 'socket');
+  assert.equal(identity.driverTemplateId, 'ha-socket');
+});
+
 test('end-to-end hand-authored layering example preserves curated onoff and adds generic power', () => {
   const device = makeDevice();
   const state = compiler.createProfileBuildState();

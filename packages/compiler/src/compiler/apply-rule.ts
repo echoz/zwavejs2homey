@@ -2,6 +2,7 @@ import type { ProvenanceRecord } from '../models/homey-plan';
 import type { NormalizedZwaveDeviceFacts, NormalizedZwaveValueFacts } from '../models/zwave-facts';
 import type {
   CapabilityRuleAction,
+  DeviceIdentityRuleAction,
   IgnoreValueRuleAction,
   MappingRule,
   RuleAction,
@@ -9,6 +10,7 @@ import type {
 import {
   addIgnoredValue,
   applyCapabilityRuleAction,
+  applyDeviceIdentityRuleAction,
   type ProfileBuildState,
 } from './profile-build-state';
 import { matchesRuleForValue } from './rule-matcher';
@@ -72,6 +74,10 @@ export function applyRuleToValue(
     const provenance = toProvenance(rule, action, value);
     if (action.type === 'capability') {
       applyCapabilityRuleAction(state, action as CapabilityRuleAction, provenance);
+      return { ruleId: rule.ruleId, actionType: action.type, applied: true };
+    }
+    if (action.type === 'device-identity') {
+      applyDeviceIdentityRuleAction(state, action as DeviceIdentityRuleAction, provenance);
       return { ruleId: rule.ruleId, actionType: action.type, applied: true };
     }
     return applyIgnoreValueAction(state, action as IgnoreValueRuleAction, provenance, value);

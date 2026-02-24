@@ -1,0 +1,43 @@
+[
+  {
+    "ruleId": "ha-device-class",
+    "layer": "ha-derived",
+    "value": { "commandClass": [37], "property": ["currentValue"] },
+    "actions": [
+      {
+        "type": "device-identity",
+        "homeyClass": "socket",
+        "driverTemplateId": "ha-generic-socket"
+      }
+    ]
+  },
+  {
+    "ruleId": "product-device-class",
+    "layer": "project-product",
+    "device": { "manufacturerId": [29], "productType": [13313], "productId": [1] },
+    "value": { "commandClass": [37], "property": ["targetValue"] },
+    "actions": [
+      {
+        "type": "device-identity",
+        "mode": "replace",
+        "homeyClass": "light",
+        "driverTemplateId": "product-dimmer"
+      }
+    ]
+  },
+  {
+    "ruleId": "ha-onoff",
+    "layer": "ha-derived",
+    "value": { "commandClass": [37], "property": ["currentValue"] },
+    "actions": [
+      {
+        "type": "capability",
+        "capabilityId": "onoff",
+        "inboundMapping": {
+          "kind": "value",
+          "selector": { "commandClass": 37, "endpoint": 0, "property": "currentValue" }
+        }
+      }
+    ]
+  }
+]

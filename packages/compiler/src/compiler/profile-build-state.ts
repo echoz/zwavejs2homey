@@ -5,7 +5,11 @@ import type {
   ProvenanceRecord,
 } from '../models/homey-plan';
 import type { NormalizedZwaveValueId } from '../models/zwave-facts';
-import type { CapabilityRuleAction, RuleActionMode } from '../rules/types';
+import type {
+  CapabilityRuleAction,
+  DeviceIdentityRuleAction,
+  RuleActionMode,
+} from '../rules/types';
 import { assertRuleActionModeAllowedForLayer, normalizeRuleActionMode } from './layer-semantics';
 
 type CapabilityFlags = NonNullable<HomeyCapabilityPlan['flags']>;
@@ -21,11 +25,23 @@ export interface ProfileBuildStateCapability extends HomeyCapabilityPlan {
 }
 
 export interface ProfileBuildState {
+  deviceIdentity?: {
+    homeyClass?: string;
+    driverTemplateId?: string;
+    provenance: ProvenanceRecord;
+    provenanceHistory: ProvenanceRecord[];
+  };
   capabilities: Map<string, ProfileBuildStateCapability>;
   ignoredValues: Map<string, { valueId: NormalizedZwaveValueId; provenance: ProvenanceRecord[] }>;
   suppressedActions: Array<{
-    capabilityId: string;
-    slot: 'capability' | 'inboundMapping' | 'outboundMapping' | 'flags';
+    capabilityId?: string;
+    slot:
+      | 'deviceIdentity.homeyClass'
+      | 'deviceIdentity.driverTemplateId'
+      | 'capability'
+      | 'inboundMapping'
+      | 'outboundMapping'
+      | 'flags';
     reason: 'occupied';
     mode: RuleActionMode;
     layer: ProvenanceRecord['layer'];
@@ -35,10 +51,78 @@ export interface ProfileBuildState {
 
 export function createProfileBuildState(): ProfileBuildState {
   return {
+    deviceIdentity: undefined,
     capabilities: new Map(),
     ignoredValues: new Map(),
     suppressedActions: [],
   };
+}
+
+export function applyDeviceIdentityRuleAction(
+  state: ProfileBuildState,
+  action: DeviceIdentityRuleAction,
+  provenance: ProvenanceRecord,
+): void {
+  const mode = normalizeRuleActionMode(action.mode);
+  assertRuleActionModeAllowedForLayer(
+    provenance.layer as Exclude<ProvenanceRecord['layer'], 'user-curation'>,
+    mode,
+  );
+
+  const existing = state.deviceIdentity;
+  if (!existing) {
+    state.deviceIdentity = {
+      homeyClass: action.homeyClass,
+      driverTemplateId: action.driverTemplateId,
+      provenance: { ...provenance, action: mode },
+      provenanceHistory: [{ ...provenance, action: mode }],
+    };
+    return;
+  }
+
+  if (mode === 'fill') {
+    let changed = false;
+    if (existing.homeyClass === undefined && action.homeyClass !== undefined) {
+      existing.homeyClass = action.homeyClass;
+      changed = true;
+    } else if (existing.homeyClass !== undefined && action.homeyClass !== undefined) {
+      state.suppressedActions.push({
+        slot: 'deviceIdentity.homeyClass',
+        reason: 'occupied',
+        mode,
+        layer: provenance.layer,
+        ruleId: provenance.ruleId,
+      });
+    }
+    if (existing.driverTemplateId === undefined && action.driverTemplateId !== undefined) {
+      existing.driverTemplateId = action.driverTemplateId;
+      changed = true;
+    } else if (existing.driverTemplateId !== undefined && action.driverTemplateId !== undefined) {
+      state.suppressedActions.push({
+        slot: 'deviceIdentity.driverTemplateId',
+        reason: 'occupied',
+        mode,
+        layer: provenance.layer,
+        ruleId: provenance.ruleId,
+      });
+    }
+    if (changed) existing.provenanceHistory.push({ ...provenance, action: mode });
+    return;
+  }
+
+  if (mode === 'augment') {
+    if (existing.homeyClass === undefined) existing.homeyClass = action.homeyClass;
+    if (existing.driverTemplateId === undefined)
+      existing.driverTemplateId = action.driverTemplateId;
+    existing.provenanceHistory.push({ ...provenance, action: mode });
+    return;
+  }
+
+  const superseded = existing.provenanceHistory.map((p) => `${p.layer}:${p.ruleId}`);
+  existing.homeyClass = action.homeyClass;
+  existing.driverTemplateId = action.driverTemplateId;
+  existing.provenance = { ...provenance, action: mode, supersedes: superseded };
+  existing.provenanceHistory.push({ ...provenance, action: mode, supersedes: superseded });
 }
 
 function valueIdKey(valueId: NormalizedZwaveValueId): string {
@@ -269,4 +353,19 @@ export function materializeIgnoredValues(state: ProfileBuildState): NormalizedZw
       if (aProp !== bProp) return aProp.localeCompare(bProp);
       return String(a.propertyKey ?? '').localeCompare(String(b.propertyKey ?? ''));
     });
+}
+
+export function materializeDeviceIdentity(state: ProfileBuildState):
+  | {
+      homeyClass?: string;
+      driverTemplateId?: string;
+      provenance?: ProvenanceRecord;
+    }
+  | undefined {
+  if (!state.deviceIdentity) return undefined;
+  return {
+    homeyClass: state.deviceIdentity.homeyClass,
+    driverTemplateId: state.deviceIdentity.driverTemplateId,
+    provenance: state.deviceIdentity.provenance,
+  };
 }

@@ -154,3 +154,49 @@ test('generic replace is rejected by layer semantics helper during apply', () =>
     /not allowed/,
   );
 });
+
+test('device identity actions support fill and product replace with supersedes tracking', () => {
+  const state = compiler.createProfileBuildState();
+
+  compiler.applyDeviceIdentityRuleAction(
+    state,
+    {
+      type: 'device-identity',
+      homeyClass: 'socket',
+      driverTemplateId: 'ha-generic-socket',
+    },
+    prov('ha-derived', 'ha-device'),
+  );
+
+  compiler.applyDeviceIdentityRuleAction(
+    state,
+    {
+      type: 'device-identity',
+      mode: 'fill',
+      homeyClass: 'light',
+      driverTemplateId: 'fallback-light',
+    },
+    prov('project-generic', 'generic-device'),
+  );
+
+  compiler.applyDeviceIdentityRuleAction(
+    state,
+    {
+      type: 'device-identity',
+      mode: 'replace',
+      homeyClass: 'light',
+      driverTemplateId: 'product-dimmer',
+    },
+    prov('project-product', 'product-device'),
+  );
+
+  const identity = compiler.materializeDeviceIdentity(state);
+  assert.equal(identity.homeyClass, 'light');
+  assert.equal(identity.driverTemplateId, 'product-dimmer');
+  assert.deepEqual(identity.provenance.supersedes, ['ha-derived:ha-device']);
+  assert.ok(
+    state.suppressedActions.some(
+      (a) => a.ruleId === 'generic-device' && a.slot === 'deviceIdentity.homeyClass',
+    ),
+  );
+});

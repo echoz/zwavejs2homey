@@ -33,8 +33,7 @@ function deriveConfidence(
 ): CompiledHomeyProfilePlan['classification']['confidence'] {
   if (
     compileResult.report.actions.some(
-      (action) =>
-        action.applied && action.layer === 'project-product' && action.actionType === 'capability',
+      (action) => action.applied && action.layer === 'project-product',
     )
   ) {
     return 'curated';
@@ -45,15 +44,27 @@ function deriveConfidence(
   return 'generic';
 }
 
+function deriveClassificationFromCompileResult(
+  compileResult: CompileDeviceResult,
+  options: CompileProfilePlanOptions | undefined,
+): CompiledHomeyProfilePlan['classification'] {
+  const confidence = options?.confidence ?? deriveConfidence(compileResult);
+  const uncurated = options?.uncurated ?? confidence !== 'curated';
+  const identity = compileResult.deviceIdentity;
+  return {
+    homeyClass: options?.homeyClass ?? identity?.homeyClass ?? 'other',
+    driverTemplateId: options?.driverTemplateId ?? identity?.driverTemplateId,
+    confidence,
+    uncurated,
+  };
+}
+
 export function compileProfilePlan(
   device: NormalizedZwaveDeviceFacts,
   rules: MappingRule[],
   options?: CompileProfilePlanOptions,
 ): { profile: CompiledHomeyProfilePlan; report: CompileDeviceResult['report'] } {
   const compileResult = compileDevice(device, rules);
-  const confidence = options?.confidence ?? deriveConfidence(compileResult);
-  const uncurated = options?.uncurated ?? confidence !== 'curated';
-  const homeyClass = options?.homeyClass ?? 'other';
   const profileId = options?.profileId ?? deriveProfileId(device);
 
   const provenance: ProvenanceRecord = {
@@ -69,12 +80,7 @@ export function compileProfilePlan(
     profile: {
       profileId,
       match: deriveMatch(device),
-      classification: {
-        homeyClass,
-        driverTemplateId: options?.driverTemplateId,
-        confidence,
-        uncurated,
-      },
+      classification: deriveClassificationFromCompileResult(compileResult, options),
       capabilities: compileResult.capabilities,
       ignoredValues:
         compileResult.ignoredValues.length > 0 ? compileResult.ignoredValues : undefined,

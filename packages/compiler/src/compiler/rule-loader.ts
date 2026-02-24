@@ -52,6 +52,9 @@ function isValidRuleActionShape(value: unknown): boolean {
   if (value.type === 'capability') {
     return typeof value.capabilityId === 'string';
   }
+  if (value.type === 'device-identity') {
+    return typeof value.homeyClass === 'string' || typeof value.driverTemplateId === 'string';
+  }
   return value.type === 'ignore-value';
 }
 

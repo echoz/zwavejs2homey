@@ -18,6 +18,7 @@ export type {
 } from './models/homey-plan';
 export type {
   CapabilityRuleAction,
+  DeviceIdentityRuleAction,
   IgnoreValueRuleAction,
   MappingRule,
   RuleAction,
@@ -42,8 +43,10 @@ export type {
 export {
   addIgnoredValue,
   applyCapabilityRuleAction,
+  applyDeviceIdentityRuleAction,
   createProfileBuildState,
   materializeCapabilityPlans,
+  materializeDeviceIdentity,
   materializeIgnoredValues,
 } from './compiler/profile-build-state';
 export type { AppliedRuleActionResult } from './compiler/apply-rule';
