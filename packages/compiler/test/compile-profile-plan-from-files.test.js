@@ -1,5 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 
 const compiler = require('../dist');
@@ -176,6 +178,44 @@ test('compileProfilePlanFromRuleSetManifest supports ha-derived generated artifa
   assert.ok(
     result.report.byRule.some(
       (row) => row.layer === 'ha-derived' && row.ruleId === 'ha-switch-binary-current',
+    ),
+  );
+});
+
+test('compileProfilePlanFromRuleSetManifest supports larger mixed HA-derived source extract with project rules', () => {
+  const discoveryPy = path.join(
+    __dirname,
+    '../../../docs/external/home-assistant/homeassistant/components/zwave_js/discovery.py',
+  );
+  const extractResult = compiler.extractHaDiscoverySubsetFromFile(discoveryPy);
+  const translated = compiler.translateHaExtractedDiscoveryToGeneratedArtifact(
+    extractResult.artifact,
+  );
+
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zwjs2homey-ha-derived-'));
+  const haGeneratedFile = path.join(tmpDir, 'ha-derived-generated.json');
+  fs.writeFileSync(haGeneratedFile, JSON.stringify(translated.artifact, null, 2));
+
+  const projectRules = path.join(fixturesDir, 'rules-switch-meter.json');
+  const result = compiler.compileProfilePlanFromRuleSetManifest(device, [
+    { filePath: haGeneratedFile, kind: 'ha-derived-generated', layer: 'ha-derived' },
+    { filePath: projectRules },
+  ]);
+
+  assert.equal(extractResult.report.translated > 50, true);
+  assert.equal(translated.artifact.rules.length > 50, true);
+  assert.equal(result.profile.classification.homeyClass, 'socket');
+  assert.equal(result.report.profileOutcome, 'curated');
+  assert.equal(result.report.byRule.length > 20, true);
+  assert.ok(
+    result.report.byRule.some(
+      (row) => row.layer === 'ha-derived' && row.ruleId.startsWith('ha:ha_extracted_'),
+    ),
+  );
+  assert.equal(result.report.curationCandidates.likelyNeedsReview, true);
+  assert.ok(
+    result.report.curationCandidates.reasons.some((reason) =>
+      reason.startsWith('high-unmatched-ratio:'),
     ),
   );
 });
