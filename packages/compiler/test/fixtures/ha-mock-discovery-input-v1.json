@@ -61,6 +61,32 @@
       }
     },
     {
+      "id": "unsupported_match_extra_field",
+      "sourceRef": "discovery.py#unsupported_match_extra_field",
+      "match": {
+        "commandClass": 49,
+        "endpoint": 0,
+        "property": "value",
+        "entityPlatform": "sensor"
+      },
+      "output": {
+        "capabilityId": "measure_temperature"
+      }
+    },
+    {
+      "id": "unsupported_output_shape",
+      "sourceRef": "discovery.py#unsupported_output_shape",
+      "match": {
+        "commandClass": 112,
+        "endpoint": 0,
+        "property": "currentValue"
+      },
+      "output": {
+        "capabilityId": "dim",
+        "capabilityIds": ["dim", "onoff"]
+      }
+    },
+    {
       "id": "unsupported_no_output",
       "sourceRef": "discovery.py#unsupported_no_output",
       "match": {

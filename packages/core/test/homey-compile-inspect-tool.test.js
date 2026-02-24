@@ -34,6 +34,22 @@ test('compileFromFiles compiles fixture device/rules and returns profile', async
   assert.match(summary, /Report: outcome=/);
 });
 
+test('compileFromFiles supports manifest entries with ha-derived-generated kind', async () => {
+  const { compileFromFiles, formatCompileSummary } = await loadLib();
+  const result = compileFromFiles({
+    deviceFile: path.join(fixturesDir, 'device-switch-meter.json'),
+    manifest: path.join(fixturesDir, 'rule-manifest-with-ha-generated.json'),
+    rulesFiles: [],
+    format: 'summary',
+    homeyClass: undefined,
+    driverTemplateId: undefined,
+  });
+  assert.equal(result.profile.profileId, 'fixture-switch-meter-1');
+  assert.equal(result.profile.classification.homeyClass, 'socket');
+  const summary = formatCompileSummary(result);
+  assert.match(summary, /Class provenance: ha-derived:ha-switch-binary-current/);
+});
+
 test('formatCompileSummary includes classification provenance and suppressed slot summary when present', async () => {
   const { formatCompileSummary } = await loadLib();
   const summary = formatCompileSummary({

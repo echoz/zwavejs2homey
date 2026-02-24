@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import path from 'node:path';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
@@ -75,15 +76,29 @@ function readJson(path) {
   return JSON.parse(fs.readFileSync(path, 'utf8'));
 }
 
-function coerceManifestEntries(raw) {
+function coerceManifestEntries(raw, manifestPath) {
   if (!Array.isArray(raw)) throw new Error('Manifest JSON must be an array');
-  return raw;
+  const manifestDir = path.dirname(manifestPath);
+  return raw.map((entry, index) => {
+    if (!entry || typeof entry !== 'object') {
+      throw new Error(`Manifest entry ${index} must be an object`);
+    }
+    if (typeof entry.filePath !== 'string' || entry.filePath.length === 0) {
+      throw new Error(`Manifest entry ${index} requires a non-empty filePath`);
+    }
+    return {
+      ...entry,
+      filePath: path.isAbsolute(entry.filePath)
+        ? entry.filePath
+        : path.resolve(manifestDir, entry.filePath),
+    };
+  });
 }
 
 export function compileFromFiles(command) {
   const device = readJson(command.deviceFile);
   const manifestEntries = command.manifest
-    ? coerceManifestEntries(readJson(command.manifest))
+    ? coerceManifestEntries(readJson(command.manifest), command.manifest)
     : command.rulesFiles.map((filePath) => ({ filePath }));
 
   return compileProfilePlanFromRuleSetManifest(device, manifestEntries, {

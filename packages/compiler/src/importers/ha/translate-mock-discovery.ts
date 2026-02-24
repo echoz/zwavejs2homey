@@ -67,6 +67,17 @@ export type HaMockUnsupportedReason =
   | 'unsupported-match-field'
   | 'no-supported-output';
 
+const ALLOWED_MATCH_KEYS = new Set([
+  'commandClass',
+  'endpoint',
+  'property',
+  'propertyKey',
+  'metadataType',
+  'readable',
+  'writeable',
+]);
+const ALLOWED_OUTPUT_KEYS = new Set(['homeyClass', 'driverTemplateId', 'capabilityId']);
+
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
@@ -289,6 +300,18 @@ function toRule(definition: HaMockDiscoveryDefinitionV1): MappingRule | null {
   };
 }
 
+function detectUnsupportedReason(
+  definition: HaMockDiscoveryDefinitionV1,
+): HaMockUnsupportedReason | null {
+  for (const key of Object.keys(definition.match)) {
+    if (!ALLOWED_MATCH_KEYS.has(key)) return 'unsupported-match-field';
+  }
+  for (const key of Object.keys(definition.output)) {
+    if (!ALLOWED_OUTPUT_KEYS.has(key)) return 'unsupported-output-shape';
+  }
+  return null;
+}
+
 export function translateHaMockDiscoveryToGeneratedArtifact(
   input: unknown,
 ): HaMockTranslationResult {
@@ -297,6 +320,11 @@ export function translateHaMockDiscoveryToGeneratedArtifact(
   const rules: MappingRule[] = [];
 
   for (const definition of input.definitions) {
+    const unsupportedReason = detectUnsupportedReason(definition);
+    if (unsupportedReason) {
+      unsupported.push({ id: definition.id, reason: unsupportedReason });
+      continue;
+    }
     const rule = toRule(definition);
     if (!rule) {
       unsupported.push({ id: definition.id, reason: 'no-supported-output' });

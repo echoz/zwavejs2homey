@@ -1,0 +1,10 @@
+[
+  {
+    "filePath": "ha-derived-rules-v1.json",
+    "kind": "ha-derived-generated",
+    "layer": "ha-derived"
+  },
+  {
+    "filePath": "rules-switch-meter.json"
+  }
+]

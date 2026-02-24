@@ -88,11 +88,17 @@ test('translateHaMockDiscoveryToGeneratedArtifact emits deterministic ha-derived
   assert.deepEqual(result.report, {
     translated: 2,
     skipped: 0,
-    unsupported: [{ id: 'unsupported_no_output', reason: 'no-supported-output' }],
+    unsupported: [
+      { id: 'unsupported_match_extra_field', reason: 'unsupported-match-field' },
+      { id: 'unsupported_output_shape', reason: 'unsupported-output-shape' },
+      { id: 'unsupported_no_output', reason: 'no-supported-output' },
+    ],
     sourceRefs: [
       'discovery.py#contact_like_binary_without_target',
       'discovery.py#switch_binary_current',
+      'discovery.py#unsupported_match_extra_field',
       'discovery.py#unsupported_no_output',
+      'discovery.py#unsupported_output_shape',
     ],
   });
 });
