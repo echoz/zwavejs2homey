@@ -944,6 +944,12 @@ Phase 3 compiler-complete-before-adapter additions (required before Homey adapte
 - Add a compiled-artifact inspection/apply path for live ZWJS data (so live validation uses compiled profiles, not compile-on-the-fly)
 - Use live ZWJS validation to tighten generic/profile inference before adapter implementation
 
+Progress on the extended scope:
+
+- Added `compiler:build` (`homey-compile-build`) to compile one or more device facts files into a reusable `compiled-homey-profiles/v1` artifact
+- Added `compiled-homey-profiles/v1` artifact contract + validation in `packages/compiler`
+- Added `rules/` directory skeleton (`ha-derived`, `project/generic`, `project/product`) to formalize the real rule pipeline layout
+
 Deferred / later Phase 3 expansion (not required for compiler runtime-validation readiness):
 
 - Additional real catalog source adapters (beyond `zwjs-inspect-node-detail`)

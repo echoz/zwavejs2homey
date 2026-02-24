@@ -35,15 +35,18 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
    - runtime curation patch schema/apply behavior belongs to the Homey adapter
    - compiler remains focused on compiled profiles + provenance/diagnostics
 6. Added live compile inspection tooling (`compiler:inspect-live`) for rapid validation, with a follow-up decision to prefer compiled-artifact application for runtime-style inspection
+7. Added compiler artifact build foundation:
+   - `compiler:build` for `compiled-homey-profiles/v1`
+   - compiler artifact contract/validation
+   - `rules/` directory skeleton for real HA-derived + project rulesets
 
 ## Next Tasks
 
-1. Add compiler build/export command for compiled profiles artifact (all layers)
-2. Create real rule directories and pipeline outputs (`rules/ha-derived`, `rules/project/generic`, `rules/project/product`)
-3. Generate/commit HA-derived rules covering the currently supported HA discovery extraction set
-4. Build initial project-generic ruleset for device-profile inference from Z-Wave configuration/metadata
-5. Add live inspection path that applies compiled profiles artifact to ZWJS node data (no on-the-fly compile)
-6. Defer Homey adapter implementation until compiler runtime-validation readiness milestone is reached
+1. Generate/commit HA-derived rules covering the currently supported HA discovery extraction set
+2. Build initial project-generic ruleset for device-profile inference from Z-Wave configuration/metadata
+3. Add live inspection path that applies compiled profiles artifact to ZWJS node data (no on-the-fly compile)
+4. Tighten `compiler:build` into the canonical layered build pipeline (HA-derived + project rules + catalog)
+5. Defer Homey adapter implementation until compiler runtime-validation readiness milestone is reached
 
 ## Risks / Unknowns
 

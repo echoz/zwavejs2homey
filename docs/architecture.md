@@ -86,6 +86,9 @@ Current implemented foundation in `packages/compiler`:
 - Added live compile inspection tooling:
   - `compiler:inspect-live` connects to a ZWJS instance, fetches node details, converts them to compiler device facts, and renders compiled profile results (including list view)
   - current tool compiles on the fly; planned next step is a compiled-artifact apply path for runtime-style validation
+- Added compiler artifact build foundation:
+  - `compiler:build` emits `compiled-homey-profiles/v1` from compiler device facts files + layered rules inputs
+  - `rules/` directory skeleton established for real `ha-derived`, `project/generic`, and `project/product` rulesets
 - Catalog/curation workflow decision:
   - no curation-seed artifact for now; rule/patch authoring remains schema-first using compiler diagnostics and stable device identifiers
 - Runtime curation boundary decision:

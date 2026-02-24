@@ -15,6 +15,7 @@
     "zwjs:inspect": "node tools/zwjs-inspect.mjs",
     "compiler:inspect": "node tools/homey-compile-inspect.mjs",
     "compiler:inspect-live": "node tools/homey-compile-inspect-live.mjs",
+    "compiler:build": "node tools/homey-compile-build.mjs",
     "compiler:bench": "node tools/homey-compile-bench.mjs",
     "ha-import:extract": "node tools/ha-import-extract.mjs",
     "ha-import:report": "node tools/ha-import-report.mjs",

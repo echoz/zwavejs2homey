@@ -38,6 +38,10 @@ export type {
   ProvenanceRecord,
 } from './models/homey-plan';
 export type {
+  CompiledHomeyProfilesArtifactEntryV1,
+  CompiledHomeyProfilesArtifactV1,
+} from './emit/compiled-profiles-artifact';
+export type {
   CapabilityRuleAction,
   DeviceIdentityRuleAction,
   IgnoreValueRuleAction,
@@ -50,6 +54,12 @@ export type {
   RuleValueMatcher,
 } from './rules/types';
 
+export {
+  COMPILED_HOMEY_PROFILES_ARTIFACT_V1,
+  CompiledHomeyProfilesArtifactError,
+  assertCompiledHomeyProfilesArtifactV1,
+  createCompiledHomeyProfilesArtifactV1,
+} from './emit/compiled-profiles-artifact';
 export {
   CatalogDeviceArtifactError,
   assertCatalogDevicesArtifactV1,
