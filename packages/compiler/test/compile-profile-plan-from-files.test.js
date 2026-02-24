@@ -146,6 +146,71 @@ test('compileProfilePlanFromRuleFiles marks empty outcome and no-meaningful-mapp
   assert.ok(result.report.curationCandidates.reasons.includes('no-meaningful-mapping'));
 });
 
+test('compileProfilePlanFromRuleFilesWithCatalog annotates known catalog generic fallback curation', () => {
+  const rulesFile = path.join(fixturesDir, 'rules-switch-meter-generic-onoff-fill.json');
+  const catalogFile = path.join(fixturesDir, 'catalog-devices-v1.json');
+  const result = compiler.compileProfilePlanFromRuleFilesWithCatalog(
+    device,
+    [rulesFile],
+    catalogFile,
+  );
+
+  assert.equal(result.report.profileOutcome, 'generic');
+  assert.deepEqual(result.report.catalogContext, {
+    knownCatalogDevice: true,
+    catalogId: 'observed:29-13313-1',
+    label: undefined,
+  });
+  assert.ok(result.report.curationCandidates.reasons.includes('known-device-generic-fallback'));
+});
+
+test('compileProfilePlanFromRuleFilesWithCatalog annotates unknown catalog generic fallback curation', () => {
+  const rulesFile = path.join(fixturesDir, 'rules-switch-meter-generic-onoff-fill.json');
+  const catalogFile = path.join(fixturesDir, 'catalog-devices-v1.json');
+  const miss = compiler.compileProfilePlanFromRuleFilesWithCatalog(
+    unmappedDevice,
+    [rulesFile],
+    catalogFile,
+  );
+  assert.equal(miss.report.profileOutcome, 'empty');
+  assert.deepEqual(miss.report.catalogContext, { knownCatalogDevice: false });
+  assert.ok(miss.report.curationCandidates.reasons.includes('no-meaningful-mapping'));
+});
+
+test('compileProfilePlanFromRuleFilesWithCatalog annotates known catalog unmapped curation', () => {
+  const catalogFile = path.join(fixturesDir, 'catalog-devices-v1.json');
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zwjs2homey-unmapped-rules-'));
+  const noMatchRulesFile = path.join(tmpDir, 'rules-no-match.json');
+  fs.writeFileSync(
+    noMatchRulesFile,
+    JSON.stringify(
+      [
+        {
+          ruleId: 'no-match',
+          layer: 'project-generic',
+          value: { commandClass: [999], property: ['never'] },
+          actions: [{ type: 'capability', capabilityId: 'measure_power' }],
+        },
+      ],
+      null,
+      2,
+    ),
+  );
+
+  const result = compiler.compileProfilePlanFromRuleFilesWithCatalog(
+    device,
+    [noMatchRulesFile],
+    catalogFile,
+  );
+  assert.equal(result.report.profileOutcome, 'empty');
+  assert.deepEqual(result.report.catalogContext, {
+    knownCatalogDevice: true,
+    catalogId: 'observed:29-13313-1',
+    label: undefined,
+  });
+  assert.ok(result.report.curationCandidates.reasons.includes('known-device-unmapped'));
+});
+
 test('compileProfilePlanFromRuleSetManifest is stable across value ordering for device-identity classification', () => {
   const rulesFile = path.join(fixturesDir, 'rules-switch-meter-device-identity.json');
   const a = compiler.compileProfilePlanFromRuleSetManifest(device, [{ filePath: rulesFile }]);

@@ -38,6 +38,11 @@ export interface CompileProfilePlanFromFilesResult {
       likelyNeedsReview: boolean;
       reasons: string[];
     };
+    catalogContext?: {
+      knownCatalogDevice: boolean;
+      catalogId?: string;
+      label?: string;
+    };
   };
   ruleSources: RuleSourceMetadata[];
   classificationProvenance?: {
@@ -118,6 +123,7 @@ function groupSuppressedBySlot(
 function deriveCurationCandidates(
   report: ReturnType<typeof compileProfilePlan>['report'],
   profile: ReturnType<typeof compileProfilePlan>['profile'],
+  catalogLookup?: CompileProfilePlanFromFilesResult['catalogLookup'],
 ): CompileProfilePlanFromFilesResult['report']['curationCandidates'] {
   const reasons: string[] = [];
   if (report.summary.suppressedFillActions > 0) {
@@ -135,6 +141,15 @@ function deriveCurationCandidates(
     reasons.push('no-meaningful-mapping');
   } else if (profile.classification.uncurated) {
     reasons.push(`uncurated-profile:${profile.classification.confidence}`);
+  }
+  if (catalogLookup?.matched) {
+    if ((profile.capabilities?.length ?? 0) === 0 && !profile.classification.driverTemplateId) {
+      reasons.push('known-device-unmapped');
+    } else if (profile.classification.confidence === 'generic') {
+      reasons.push('known-device-generic-fallback');
+    }
+  } else if (catalogLookup && profile.classification.confidence === 'generic') {
+    reasons.push('unknown-device-generic-fallback');
   }
   return {
     likelyNeedsReview: reasons.length > 0,
@@ -183,7 +198,18 @@ export function compileProfilePlanFromRuleFiles(
       profileOutcome: deriveProfileOutcome(profile),
       byRule: groupReportByRule(report),
       bySuppressedSlot: groupSuppressedBySlot(report),
-      curationCandidates: deriveCurationCandidates(report, profile),
+      curationCandidates: deriveCurationCandidates(report, profile, catalogLookup),
+      catalogContext: catalogLookup?.matched
+        ? {
+            knownCatalogDevice: true,
+            catalogId: catalogLookup.catalogId,
+            label: catalogLookup.label,
+          }
+        : catalogLookup
+          ? {
+              knownCatalogDevice: false,
+            }
+          : undefined,
     },
     ruleSources: loaded.map((entry) => ({
       filePath: entry.filePath,
@@ -211,7 +237,18 @@ export function compileProfilePlanFromRuleSetManifest(
       profileOutcome: deriveProfileOutcome(profile),
       byRule: groupReportByRule(report),
       bySuppressedSlot: groupSuppressedBySlot(report),
-      curationCandidates: deriveCurationCandidates(report, profile),
+      curationCandidates: deriveCurationCandidates(report, profile, catalogLookup),
+      catalogContext: catalogLookup?.matched
+        ? {
+            knownCatalogDevice: true,
+            catalogId: catalogLookup.catalogId,
+            label: catalogLookup.label,
+          }
+        : catalogLookup
+          ? {
+              knownCatalogDevice: false,
+            }
+          : undefined,
     },
     ruleSources: loaded.entries.map((entry) => ({
       filePath: entry.filePath,
