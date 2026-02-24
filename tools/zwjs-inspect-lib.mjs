@@ -30,6 +30,9 @@ function parseFlagMap(argv) {
 }
 
 export function parseCliArgs(argv) {
+  if (argv.includes('--help') || argv.includes('-h')) {
+    return { ok: false, error: getUsageText() };
+  }
   const { flags, positionals } = parseFlagMap(argv);
   const [group, action, nodeIdRaw] = positionals;
 
@@ -113,6 +116,23 @@ export function parseCliArgs(argv) {
   };
 }
 
+export function getUsageText() {
+  return [
+    'Usage:',
+    '  zwjs-inspect nodes list --url ws://host:port [--format table|json] [--schema-version 0]',
+    '  zwjs-inspect nodes show <nodeId> --url ws://host:port [--format table|json]',
+    '                 [--include-values none|summary|full] [--max-values N] [--schema-version 0]',
+    '',
+    'Flags:',
+    '  --url             Z-Wave JS server websocket URL (required)',
+    '  --token           Bearer token (optional)',
+    '  --format          table (default) or json',
+    '  --schema-version  API schema version for initialize() (default: 0)',
+    '  --include-values  none | summary | full (default: full; show only)',
+    '  --max-values      Limit values fetched for show (default: 200)',
+  ].join('\n');
+}
+
 function summarizeNode(node) {
   return {
     nodeId: node.nodeId,
@@ -125,6 +145,17 @@ function summarizeNode(node) {
     interviewStage: node.interviewStage ?? null,
     isFailed: node.isFailed ?? null,
   };
+}
+
+function unwrapNodeStateResult(result) {
+  if (!result || typeof result !== 'object') return result;
+  return result.state && typeof result.state === 'object' ? result.state : result;
+}
+
+function unwrapNeighborsResult(result) {
+  if (Array.isArray(result)) return result;
+  if (result && Array.isArray(result.neighbors)) return result.neighbors;
+  return result;
 }
 
 function formatCell(value) {
@@ -162,12 +193,23 @@ export function formatNodeListTable(nodes) {
 
 export function formatNodeDetailTable(detail) {
   const lines = [];
+  const manufacturer =
+    detail.state?.manufacturer ??
+    detail.state?.deviceConfig?.manufacturer ??
+    detail.state?.manufacturerId ??
+    '';
+  const product =
+    detail.state?.product ??
+    detail.state?.deviceConfig?.label ??
+    (detail.state?.productType != null && detail.state?.productId != null
+      ? `${detail.state.productType}/${detail.state.productId}`
+      : '');
   lines.push(`Node ${detail.nodeId}`);
   lines.push(`Name: ${detail.state?.name ?? ''}`);
   lines.push(`Ready: ${detail.state?.ready ?? ''}`);
   lines.push(`Status: ${detail.state?.status ?? ''}`);
-  lines.push(`Manufacturer: ${detail.state?.manufacturer ?? ''}`);
-  lines.push(`Product: ${detail.state?.product ?? ''}`);
+  lines.push(`Manufacturer: ${manufacturer}`);
+  lines.push(`Product: ${product}`);
   if (detail.neighbors) {
     lines.push(`Neighbors: ${JSON.stringify(detail.neighbors)}`);
   }
@@ -177,10 +219,16 @@ export function formatNodeDetailTable(detail) {
   if (detail.values) {
     lines.push(`Values (${detail.values.length}):`);
     for (const value of detail.values) {
+      const preview =
+        value.value !== undefined
+          ? value.value
+          : value.metadata?.type
+            ? { type: value.metadata.type }
+            : undefined;
       lines.push(
         `- CC ${value.valueId.commandClass} ep ${value.valueId.endpoint ?? 0} prop ${String(
           value.valueId.property,
-        )}${value.valueId.propertyKey != null ? ` key ${String(value.valueId.propertyKey)}` : ''}: ${JSON.stringify(value.value)}`,
+        )}${value.valueId.propertyKey != null ? ` key ${String(value.valueId.propertyKey)}` : ''}: ${JSON.stringify(preview)}`,
       );
     }
   }
@@ -208,10 +256,17 @@ export async function connectAndInitialize(config) {
 
 export async function fetchNodesList(client) {
   const result = await client.getNodeList();
-  if (!result.success) {
-    throw new Error(`getNodeList failed: ${JSON.stringify(result.error)}`);
+  const nodeList = Array.isArray(result?.nodes)
+    ? result
+    : result && result.success
+      ? result.result
+      : null;
+  if (!nodeList) {
+    const error =
+      result && Object.prototype.hasOwnProperty.call(result, 'error') ? result.error : result;
+    throw new Error(`getNodeList failed: ${JSON.stringify(error)}`);
   }
-  return [...result.result.nodes].map(summarizeNode).sort((a, b) => a.nodeId - b.nodeId);
+  return [...nodeList.nodes].map(summarizeNode).sort((a, b) => a.nodeId - b.nodeId);
 }
 
 function stableValueIdKey(valueId) {
@@ -240,8 +295,10 @@ export async function fetchNodeDetails(client, nodeId, options = {}) {
 
   const detail = {
     nodeId,
-    state: stateRes.result,
-    neighbors: neighborsRes.success ? neighborsRes.result : { _error: neighborsRes.error },
+    state: unwrapNodeStateResult(stateRes.result),
+    neighbors: neighborsRes.success
+      ? unwrapNeighborsResult(neighborsRes.result)
+      : { _error: neighborsRes.error },
     notificationEvents: notifRes.success ? notifRes.result : { _error: notifRes.error },
     values: undefined,
   };
@@ -256,27 +313,32 @@ export async function fetchNodeDetails(client, nodeId, options = {}) {
   }
 
   const valueIds = extractZwjsDefinedValueIds(definedRes.result).slice(0, maxValues);
-  const fetchMetadata = includeValues !== 'summary' ? true : true;
-
   detail.values = [];
   for (const valueId of [...valueIds].sort((a, b) =>
     stableValueIdKey(a).localeCompare(stableValueIdKey(b)),
   )) {
-    const [metadataRes, valueRes, tsRes] = await Promise.all([
-      fetchMetadata ? client.getNodeValueMetadata(nodeId, valueId) : Promise.resolve(null),
-      client.getNodeValue(nodeId, valueId),
-      client.getNodeValueTimestamp(nodeId, valueId),
-    ]);
+    const [metadataRes, valueRes, tsRes] =
+      includeValues === 'summary'
+        ? await Promise.all([
+            client.getNodeValueMetadata(nodeId, valueId),
+            Promise.resolve(null),
+            Promise.resolve(null),
+          ])
+        : await Promise.all([
+            client.getNodeValueMetadata(nodeId, valueId),
+            client.getNodeValue(nodeId, valueId),
+            client.getNodeValueTimestamp(nodeId, valueId),
+          ]);
 
     detail.values.push({
       valueId,
       metadata: metadataRes && metadataRes.success ? metadataRes.result : undefined,
       metadataError: metadataRes && !metadataRes.success ? metadataRes.error : undefined,
-      value: valueRes.success ? extractZwjsNodeValue(valueRes.result) : undefined,
-      valueEnvelope: valueRes.success ? valueRes.result : undefined,
-      valueError: valueRes.success ? undefined : valueRes.error,
-      timestamp: tsRes.success ? tsRes.result : undefined,
-      timestampError: tsRes.success ? undefined : tsRes.error,
+      value: valueRes && valueRes.success ? extractZwjsNodeValue(valueRes.result) : undefined,
+      valueEnvelope: valueRes && valueRes.success ? valueRes.result : undefined,
+      valueError: valueRes && !valueRes.success ? valueRes.error : undefined,
+      timestamp: tsRes && tsRes.success ? tsRes.result : undefined,
+      timestampError: tsRes && !tsRes.success ? tsRes.error : undefined,
     });
   }
 
