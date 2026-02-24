@@ -17,6 +17,8 @@ const CAPABILITY_FLAG_KEYS: Array<keyof CapabilityFlags> = [
   'readable',
   'writeable',
   'assumedState',
+  'allowMulti',
+  'entityRegistryEnabledDefault',
   'debounceMs',
 ];
 

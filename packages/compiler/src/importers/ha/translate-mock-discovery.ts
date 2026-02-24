@@ -323,6 +323,19 @@ function toRule(definition: HaMockDiscoveryDefinitionV1): MappingRule | null {
     });
   }
   if (definition.output.capabilityId) {
+    const flags = {
+      ...(definition.output.assumedState !== undefined
+        ? { assumedState: definition.output.assumedState }
+        : {}),
+      ...(definition.output.allowMulti !== undefined
+        ? { allowMulti: definition.output.allowMulti }
+        : {}),
+      ...(definition.output.entityRegistryEnabledDefault !== undefined
+        ? {
+            entityRegistryEnabledDefault: definition.output.entityRegistryEnabledDefault,
+          }
+        : {}),
+    };
     actions.push({
       type: 'capability',
       capabilityId: definition.output.capabilityId,
@@ -337,9 +350,7 @@ function toRule(definition: HaMockDiscoveryDefinitionV1): MappingRule | null {
             : {}),
         },
       },
-      ...(definition.output.assumedState !== undefined
-        ? { flags: { assumedState: definition.output.assumedState } }
-        : {}),
+      ...(Object.keys(flags).length > 0 ? { flags } : {}),
     });
   }
   if (actions.length === 0) return null;

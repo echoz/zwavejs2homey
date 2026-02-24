@@ -177,7 +177,31 @@ test('translateHaExtractedDiscoveryToGeneratedArtifact preserves extracted seman
         kind: 'value',
         selector: { commandClass: 87, endpoint: 0, property: 'currentValue' },
       },
-      flags: { assumedState: true },
+      flags: {
+        assumedState: true,
+        allowMulti: true,
+        entityRegistryEnabledDefault: false,
+      },
     },
   ]);
+
+  const { profile } = compiler.compileProfilePlan(
+    {
+      deviceKey: 'semantics-fixture',
+      values: [
+        {
+          valueId: { commandClass: 87, endpoint: 0, property: 'currentValue' },
+          metadata: { type: 'boolean', readable: true, writeable: false },
+        },
+      ],
+    },
+    result.artifact.rules,
+  );
+  const capability = profile.capabilities.find((c) => c.capabilityId === 'alarm_generic');
+  assert.ok(capability);
+  assert.deepEqual(capability.flags, {
+    assumedState: true,
+    allowMulti: true,
+    entityRegistryEnabledDefault: false,
+  });
 });

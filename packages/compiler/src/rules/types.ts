@@ -41,6 +41,8 @@ export interface CapabilityRuleAction {
     readable?: boolean;
     writeable?: boolean;
     assumedState?: boolean;
+    allowMulti?: boolean;
+    entityRegistryEnabledDefault?: boolean;
     debounceMs?: number;
   };
   ignore?: boolean;

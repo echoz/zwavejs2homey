@@ -58,6 +58,8 @@ export interface HomeyCapabilityPlan {
     readable?: boolean;
     writeable?: boolean;
     assumedState?: boolean;
+    allowMulti?: boolean;
+    entityRegistryEnabledDefault?: boolean;
     debounceMs?: number;
   };
   provenance: ProvenanceRecord;
