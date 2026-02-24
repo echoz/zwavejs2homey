@@ -86,6 +86,13 @@ function coerceManifestEntries(raw, manifestPath) {
     if (typeof entry.filePath !== 'string' || entry.filePath.length === 0) {
       throw new Error(`Manifest entry ${index} requires a non-empty filePath`);
     }
+    if (
+      entry.kind !== undefined &&
+      entry.kind !== 'rules-json' &&
+      entry.kind !== 'ha-derived-generated'
+    ) {
+      throw new Error(`Manifest entry ${index} has unsupported kind "${String(entry.kind)}"`);
+    }
     return {
       ...entry,
       filePath: path.isAbsolute(entry.filePath)

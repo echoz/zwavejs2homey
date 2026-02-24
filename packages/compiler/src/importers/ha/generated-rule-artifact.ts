@@ -5,7 +5,7 @@ const fs = require('node:fs') as {
 };
 
 import type { MappingRule } from '../../rules/types';
-import { RuleFileLoadError, validateJsonRuleArray } from '../../compiler/rule-loader';
+import { RuleFileLoadError, validateJsonRuleArray } from '../../compiler/rule-validation';
 
 export interface HaDerivedGeneratedRuleArtifactV1 {
   schemaVersion: 'ha-derived-rules/v1';

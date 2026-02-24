@@ -61,6 +61,28 @@
       }
     },
     {
+      "id": "unsupported_constraint_matcher_field",
+      "sourceRef": "discovery.py#unsupported_constraint_matcher_field",
+      "match": {
+        "commandClass": 37,
+        "endpoint": 0,
+        "property": "currentValue"
+      },
+      "constraints": {
+        "requiredValues": [
+          {
+            "commandClass": 50,
+            "endpoint": 0,
+            "property": "value",
+            "metadataType": "number"
+          }
+        ]
+      },
+      "output": {
+        "capabilityId": "measure_power"
+      }
+    },
+    {
       "id": "unsupported_match_extra_field",
       "sourceRef": "discovery.py#unsupported_match_extra_field",
       "match": {

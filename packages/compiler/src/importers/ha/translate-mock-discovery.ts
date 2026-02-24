@@ -77,6 +77,13 @@ const ALLOWED_MATCH_KEYS = new Set([
   'writeable',
 ]);
 const ALLOWED_OUTPUT_KEYS = new Set(['homeyClass', 'driverTemplateId', 'capabilityId']);
+const ALLOWED_CONSTRAINT_KEYS = new Set(['requiredValues', 'absentValues']);
+const ALLOWED_CONSTRAINT_MATCHER_KEYS = new Set([
+  'commandClass',
+  'endpoint',
+  'property',
+  'propertyKey',
+]);
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -306,6 +313,22 @@ function detectUnsupportedReason(
   for (const key of Object.keys(definition.match)) {
     if (!ALLOWED_MATCH_KEYS.has(key)) return 'unsupported-match-field';
   }
+  if (definition.constraints) {
+    for (const key of Object.keys(definition.constraints)) {
+      if (!ALLOWED_CONSTRAINT_KEYS.has(key)) return 'unsupported-match-field';
+    }
+    for (const list of [
+      definition.constraints.requiredValues,
+      definition.constraints.absentValues,
+    ]) {
+      if (!list) continue;
+      for (const matcher of list) {
+        for (const key of Object.keys(matcher)) {
+          if (!ALLOWED_CONSTRAINT_MATCHER_KEYS.has(key)) return 'unsupported-match-field';
+        }
+      }
+    }
+  }
   for (const key of Object.keys(definition.output)) {
     if (!ALLOWED_OUTPUT_KEYS.has(key)) return 'unsupported-output-shape';
   }
@@ -346,7 +369,7 @@ export function translateHaMockDiscoveryToGeneratedArtifact(
     },
     report: {
       translated: rules.length,
-      skipped: 0,
+      skipped: unsupported.length,
       unsupported,
       sourceRefs: [...new Set(input.definitions.map((d) => d.sourceRef))].sort(),
     },

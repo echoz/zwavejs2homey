@@ -30,3 +30,11 @@ test('loadJsonRuleSetManifest rejects layer mismatch when declared in manifest',
     /manifest declares/,
   );
 });
+
+test('loadJsonRuleSetManifest rejects unsupported manifest kind values', () => {
+  const rulesFile = path.join(fixturesDir, 'rules-switch-meter.json');
+  assert.throws(
+    () => compiler.loadJsonRuleSetManifest([{ filePath: rulesFile, kind: 'ha-derived-genrated' }]),
+    /unsupported kind/i,
+  );
+});
