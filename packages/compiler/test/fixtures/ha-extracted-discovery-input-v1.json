@@ -8,6 +8,11 @@
     {
       "id": "switch_binary_current_extracted",
       "sourceRef": "discovery.py#switch_binary_current_extracted",
+      "deviceMatch": {
+        "manufacturerId": 29,
+        "productType": 13313,
+        "productId": 1
+      },
       "valueMatch": {
         "commandClass": 37,
         "endpoint": 0,
@@ -37,6 +42,25 @@
         "homeyClass": "socket",
         "driverTemplateId": "ha-generic-socket",
         "capabilityId": "onoff"
+      }
+    },
+    {
+      "id": "switch_binary_wrong_device_extracted",
+      "sourceRef": "discovery.py#switch_binary_wrong_device_extracted",
+      "deviceMatch": {
+        "manufacturerId": 9999
+      },
+      "valueMatch": {
+        "commandClass": 37,
+        "endpoint": 0,
+        "property": "currentValue",
+        "metadata": {
+          "type": "boolean",
+          "readable": true
+        }
+      },
+      "output": {
+        "capabilityId": "alarm_contact"
       }
     },
     {

@@ -20,6 +20,12 @@ export interface HaMockDiscoveryInputV1 {
 export interface HaMockDiscoveryDefinitionV1 {
   id: string;
   sourceRef: string;
+  device?: {
+    manufacturerId?: number;
+    productType?: number;
+    productId?: number;
+    firmwareVersionRange?: { min?: string; max?: string };
+  };
   match: {
     commandClass: number;
     endpoint?: number;
@@ -121,6 +127,44 @@ function validateInputShape(input: unknown): asserts input is HaMockDiscoveryInp
       throw new HaMockTranslationError(
         `HA mock discovery definition ${index} requires non-empty id and sourceRef`,
       );
+    }
+    if (definition.device !== undefined) {
+      if (!isObject(definition.device)) {
+        throw new HaMockTranslationError(
+          `HA mock discovery definition ${definition.id} device must be an object`,
+        );
+      }
+      for (const key of ['manufacturerId', 'productType', 'productId']) {
+        const value = definition.device[key as keyof typeof definition.device];
+        if (value !== undefined && typeof value !== 'number') {
+          throw new HaMockTranslationError(
+            `HA mock discovery definition ${definition.id} device.${key} must be a number`,
+          );
+        }
+      }
+      if (definition.device.firmwareVersionRange !== undefined) {
+        if (!isObject(definition.device.firmwareVersionRange)) {
+          throw new HaMockTranslationError(
+            `HA mock discovery definition ${definition.id} device.firmwareVersionRange must be an object`,
+          );
+        }
+        if (
+          definition.device.firmwareVersionRange.min !== undefined &&
+          typeof definition.device.firmwareVersionRange.min !== 'string'
+        ) {
+          throw new HaMockTranslationError(
+            `HA mock discovery definition ${definition.id} device.firmwareVersionRange.min must be a string`,
+          );
+        }
+        if (
+          definition.device.firmwareVersionRange.max !== undefined &&
+          typeof definition.device.firmwareVersionRange.max !== 'string'
+        ) {
+          throw new HaMockTranslationError(
+            `HA mock discovery definition ${definition.id} device.firmwareVersionRange.max must be a string`,
+          );
+        }
+      }
     }
     if (!isObject(definition.match)) {
       throw new HaMockTranslationError(
@@ -282,6 +326,24 @@ function toRule(definition: HaMockDiscoveryDefinitionV1): MappingRule | null {
   return {
     ruleId: `ha:${definition.id}`,
     layer: 'ha-derived',
+    ...(definition.device
+      ? {
+          device: {
+            ...(definition.device.manufacturerId !== undefined
+              ? { manufacturerId: [definition.device.manufacturerId] }
+              : {}),
+            ...(definition.device.productType !== undefined
+              ? { productType: [definition.device.productType] }
+              : {}),
+            ...(definition.device.productId !== undefined
+              ? { productId: [definition.device.productId] }
+              : {}),
+            ...(definition.device.firmwareVersionRange !== undefined
+              ? { firmwareVersionRange: definition.device.firmwareVersionRange }
+              : {}),
+          },
+        }
+      : {}),
     value: toValueMatcher(definition.match),
     ...(definition.constraints
       ? {

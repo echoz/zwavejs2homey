@@ -20,6 +20,12 @@ export interface HaExtractedDiscoveryInputV1 {
 export interface HaExtractedDiscoveryEntryV1 {
   id: string;
   sourceRef: string;
+  deviceMatch?: {
+    manufacturerId?: number;
+    productType?: number;
+    productId?: number;
+    firmwareVersionRange?: { min?: string; max?: string };
+  };
   valueMatch: {
     commandClass: number;
     endpoint?: number;
@@ -104,6 +110,28 @@ function validateExtractedInput(input: unknown): asserts input is HaExtractedDis
       throw new HaExtractedTranslationError(
         `HA extracted discovery entry ${index} requires non-empty id and sourceRef`,
       );
+    }
+    if (entry.deviceMatch !== undefined) {
+      if (!isObject(entry.deviceMatch)) {
+        throw new HaExtractedTranslationError(
+          `HA extracted discovery entry ${entry.id} deviceMatch must be an object`,
+        );
+      }
+      for (const key of ['manufacturerId', 'productType', 'productId']) {
+        const value = entry.deviceMatch[key as keyof typeof entry.deviceMatch];
+        if (value !== undefined && typeof value !== 'number') {
+          throw new HaExtractedTranslationError(
+            `HA extracted discovery entry ${entry.id} deviceMatch.${key} must be a number`,
+          );
+        }
+      }
+      if (entry.deviceMatch.firmwareVersionRange !== undefined) {
+        if (!isObject(entry.deviceMatch.firmwareVersionRange)) {
+          throw new HaExtractedTranslationError(
+            `HA extracted discovery entry ${entry.id} deviceMatch.firmwareVersionRange must be an object`,
+          );
+        }
+      }
     }
     if (!isObject(entry.valueMatch)) {
       throw new HaExtractedTranslationError(
@@ -226,6 +254,7 @@ export function translateHaExtractedDiscoveryToGeneratedArtifact(
     definitions: input.entries.map((entry) => ({
       id: entry.id,
       sourceRef: entry.sourceRef,
+      ...(entry.deviceMatch ? { device: entry.deviceMatch } : {}),
       match: {
         commandClass: entry.valueMatch.commandClass,
         endpoint: entry.valueMatch.endpoint,

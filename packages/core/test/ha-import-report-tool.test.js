@@ -15,10 +15,11 @@ test('parseCliArgs validates required args and format', async () => {
   assert.equal(parseCliArgs([]).ok, false);
   assert.equal(parseCliArgs(['--input-file', 'x.json', '--format', 'yaml']).ok, false);
   assert.equal(parseCliArgs(['--input-file', 'x.json', '--output-generated']).ok, false);
-  const parsed = parseCliArgs(['--input-file', 'x.json', '--format', 'json']);
+  const parsed = parseCliArgs(['--input-file', 'x.json', '--format', 'json', '--timing']);
   assert.equal(parsed.ok, true);
   assert.equal(parsed.command.inputFile, 'x.json');
   assert.equal(parsed.command.format, 'json');
+  assert.equal(parsed.command.timing, true);
 });
 
 test('runHaImportReport translates extracted fixture and can write generated artifact', async () => {
@@ -30,6 +31,7 @@ test('runHaImportReport translates extracted fixture and can write generated art
     inputFile: path.join(fixturesDir, 'ha-extracted-discovery-input-v1.json'),
     format: 'summary',
     outputGenerated,
+    timing: true,
   });
 
   assert.equal(result.artifact.schemaVersion, 'ha-derived-rules/v1');
@@ -38,9 +40,11 @@ test('runHaImportReport translates extracted fixture and can write generated art
 
   const written = JSON.parse(fs.readFileSync(outputGenerated, 'utf8'));
   assert.equal(written.schemaVersion, 'ha-derived-rules/v1');
+  assert.equal(typeof result.meta.elapsedMs, 'number');
 
   const summary = formatHaImportSummary(result);
   assert.match(summary, /Generated artifact: ha-derived-rules\/v1/);
   assert.match(summary, /Rules translated:/);
   assert.match(summary, /Unsupported:/);
+  assert.match(summary, /Timing: /);
 });

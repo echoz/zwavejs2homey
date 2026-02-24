@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { performance } from 'node:perf_hooks';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
@@ -30,7 +31,7 @@ export function getUsageText() {
   return [
     'Usage:',
     '  ha-import-report --input-file <ha-extracted.json> [--format summary|json]',
-    '                 [--output-generated <ha-derived-rules.json>]',
+    '                 [--output-generated <ha-derived-rules.json>] [--timing]',
   ].join('\n');
 }
 
@@ -53,6 +54,7 @@ export function parseCliArgs(argv) {
       inputFile,
       format,
       outputGenerated,
+      timing: flags.get('--timing') === 'true',
     },
   };
 }
@@ -62,6 +64,7 @@ function readJson(filePath) {
 }
 
 export function runHaImportReport(command) {
+  const started = command.timing ? performance.now() : 0;
   const input = readJson(command.inputFile);
   const result = translateHaExtractedDiscoveryToGeneratedArtifact(input);
 
@@ -70,6 +73,15 @@ export function runHaImportReport(command) {
       ? command.outputGenerated
       : path.resolve(process.cwd(), command.outputGenerated);
     fs.writeFileSync(outPath, `${JSON.stringify(result.artifact, null, 2)}\n`, 'utf8');
+  }
+
+  if (command.timing) {
+    return {
+      ...result,
+      meta: {
+        elapsedMs: Math.max(0, performance.now() - started),
+      },
+    };
   }
 
   return result;
@@ -89,5 +101,8 @@ export function formatHaImportSummary(result) {
     lines.push(`Unsupported details: ${top}`);
   }
   lines.push(`Source refs: ${result.report.sourceRefs.length}`);
+  if (result.meta && typeof result.meta.elapsedMs === 'number') {
+    lines.push(`Timing: ${result.meta.elapsedMs.toFixed(3)}ms`);
+  }
   return lines.join('\n');
 }

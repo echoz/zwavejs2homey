@@ -12,10 +12,15 @@ test('translateHaExtractedDiscoveryToGeneratedArtifact maps extracted fixture to
   const result = compiler.translateHaExtractedDiscoveryToGeneratedArtifact(extractedInput);
 
   assert.equal(result.artifact.schemaVersion, 'ha-derived-rules/v1');
-  assert.equal(result.artifact.rules.length, 1);
+  assert.equal(result.artifact.rules.length, 2);
   assert.deepEqual(result.artifact.rules[0], {
     ruleId: 'ha:switch_binary_current_extracted',
     layer: 'ha-derived',
+    device: {
+      manufacturerId: [29],
+      productType: [13313],
+      productId: [1],
+    },
     value: {
       commandClass: [37],
       endpoint: [0],
@@ -36,6 +41,30 @@ test('translateHaExtractedDiscoveryToGeneratedArtifact maps extracted fixture to
       {
         type: 'capability',
         capabilityId: 'onoff',
+        inboundMapping: {
+          kind: 'value',
+          selector: { commandClass: 37, endpoint: 0, property: 'currentValue' },
+        },
+      },
+    ],
+  });
+  assert.deepEqual(result.artifact.rules[1], {
+    ruleId: 'ha:switch_binary_wrong_device_extracted',
+    layer: 'ha-derived',
+    device: {
+      manufacturerId: [9999],
+    },
+    value: {
+      commandClass: [37],
+      endpoint: [0],
+      property: ['currentValue'],
+      metadataType: ['boolean'],
+      readable: true,
+    },
+    actions: [
+      {
+        type: 'capability',
+        capabilityId: 'alarm_contact',
         inboundMapping: {
           kind: 'value',
           selector: { commandClass: 37, endpoint: 0, property: 'currentValue' },
@@ -68,6 +97,10 @@ test('translated extracted HA artifact rules are compiler-compatible with projec
   assert.equal(
     profile.capabilities.some((c) => c.capabilityId === 'measure_power'),
     true,
+  );
+  assert.equal(
+    profile.capabilities.some((c) => c.capabilityId === 'alarm_contact'),
+    false,
   );
 });
 
