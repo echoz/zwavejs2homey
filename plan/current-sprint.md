@@ -2,29 +2,48 @@
 
 ## Goal
 
-Build the parity planning baseline for `ZwjsClient`: a 3-way capability matrix (`zwave-js-server` protocol, `zwave-js-ui` backend/UI, and our client) plus a phased implementation roadmap.
+Advance the Homey translation compiler from Phase 2 (HA import foundation) into Phase 3 catalog integration, with diagnostics-first compiler/catalog tooling that improves rule authoring and curation workflows.
 
 ## In Progress
 
-- Capability comparison and parity roadmap documentation
+- Phase 3 catalog tooling and compiler-side catalog diagnostics integration
+
+## Recently Completed
+
+1. Completed Phase 2 HA import foundation:
+   - `discovery.py` subset extractor in `packages/compiler`
+   - extracted and generated HA artifact contracts
+   - translation pipeline + tooling (`ha-import:extract`, `ha-import:report`)
+   - semantic propagation (`assumed_state`, `allow_multi`, `entity_registry_enabled_default`)
+   - pinned-source drift guard with current full coverage on local HA checkout
+2. Built Phase 3 catalog tooling baseline:
+   - `catalog-devices/v1` artifact contract + loader
+   - `catalog` CLI (`fetch`, `normalize`, `merge`, `diff`, `validate`, `summary`)
+   - conflict precedence (`warn|error`) and diagnostics formats
+   - catalog index lookups (`catalogId`, product triple)
+3. Integrated catalog context into compiler diagnostics:
+   - `catalogLookup` in file-based compile results
+   - `profile.catalogMatch` annotation in compiled profiles
+   - catalog-aware curation hints and stable `diagnosticDeviceKey`
 
 ## Next Tasks
 
-1. Use `docs/zwjs-capability-matrix.md` to select the first P0 parity slice (`getNodeValue*` live validation + typing tightening)
-2. Execute P0.2 read-only validation for `node.get_value`, `node.get_value_metadata`, `node.get_value_timestamp`
-3. Implement P0.1 value/metadata typing tightening from observed payloads
-4. Implement P0.3 node event typing expansion from observed traffic
-5. Keep the matrix and `plan/zwjs-parity-roadmap.md` updated as slices land
+1. Continue compiler/catalog integration as diagnostics and authoring aids first (no rule precedence changes)
+2. Use catalog context to improve rule curation workflows and report ergonomics
+3. Decide when to start a second real catalog source adapter (only with a concrete source format/API)
+4. Keep `plan/homey-translation-compiler-plan.md` and `docs/architecture.md` aligned with slice progress
 
 ## Risks / Unknowns
 
-- Device-specific support for some protocol commands (e.g. notification event support queries)
-- Schema/version differences across `zwave-js-server` versions
-- Risk of conflating UI Socket.IO events with protocol events when planning parity
+- Catalog source conflicts will grow as new real sources are added (official catalog, `zwave-js` config exports, observed captures)
+- Compiler performance may degrade as HA-derived + project rules + catalog-aware diagnostics scale up
+- Risk of overloading compiler behavior with catalog heuristics before precedence policy is explicitly designed
 
 ## Notes
 
-- Durable comparison and parity tracking now live in:
-  - `docs/zwjs-capability-matrix.md`
-  - `plan/zwjs-parity-roadmap.md`
-- Update this file as the active sprint focus only.
+- Homey compiler architecture and phase progress:
+  - `plan/homey-translation-compiler-plan.md`
+- Current system architecture overview:
+  - `docs/architecture.md`
+- Diagnostic CLIs support:
+  - `summary`, `markdown`, `json`, `json-pretty`, `json-compact`, `ndjson`

@@ -909,7 +909,7 @@ Progress:
 
 ### Phase 3 — Catalog Ingestion / Merge Tooling + Unknown Device Reporting
 
-Status: In progress (catalog artifact contract + loader + CLI skeleton)
+Status: In progress (catalog tooling + compiler catalog diagnostics integrated)
 
 Progress:
 
@@ -923,9 +923,16 @@ Progress:
 - Added catalog conflict precedence + `conflictMode` (`warn|error`) for normalize/merge, with conflict reporting and strict-mode failures on ID conflicts
 - Added compiler-side catalog index prep (`catalogId` + product-triple lookup maps) and surfaced index stats in catalog CLI summaries
 - Added `catalog diff --only <added|removed|changed>` filtering for focused diagnostics views
+- Integrated catalog lookup into compiler profile compilation (product-triple match) with optional `catalogArtifact` / `catalogIndex` inputs
+- Added file/manifest compile result `catalogLookup` reporting and `compileProfilePlanFromRuleFilesWithCatalog(...)`
+- Added catalog-aware curation diagnostics in file-based compiler reports (`catalogContext`, known/unknown catalog fallback/unmapped reasons)
+- Added compiled profile catalog annotation (`profile.catalogMatch`) for downstream adapter/tooling use (annotation only; no rule precedence changes)
+- Added catalog references to compiler diagnostics/provenance (`catalogId` in profile provenance reason, report `catalogContext.matchRef`)
+- Added stable report `diagnosticDeviceKey` (`catalog:<id>` or product-triple fallback) and surfaced it in `compiler:inspect` outputs
 
 - Build catalog fetch/normalize/merge/validate/diff tooling pipeline
 - Add merged catalog normalization pipeline to compiler inputs
+- Expand compiler-side catalog integration from diagnostics/annotation into authoring and compile-time guidance (without silently changing rule precedence)
 - Add generic fallback profile compilation
 - Emit unknown-device and curation-needed reports
 - Validate `uncurated` flow

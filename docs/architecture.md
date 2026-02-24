@@ -64,6 +64,30 @@ Future likely additions:
 - `docs/zwjs-nonprod-live-validation-checklist.md`: repeatable non-production validation procedure for zniffer and firmware workflows
 - `plan/zwjs-parity-roadmap.md`: execution roadmap for closing prioritized parity gaps
 
+## Homey Compiler (In Progress)
+
+Current implemented foundation in `packages/compiler`:
+
+- Homey-targeted rules compiler (layered rule semantics, matching, slot-level build state, compiled profile output)
+- HA `zwave_js` discovery import pipeline:
+  - source extractor subset from `discovery.py`
+  - extracted artifact contract
+  - translation to generated `ha-derived` rules
+  - tooling (`ha-import:extract`, `ha-import:report`)
+- Catalog tooling and artifacts:
+  - `catalog-devices/v1` artifact contract
+  - `catalog` CLI (`fetch`, `normalize`, `merge`, `diff`, `validate`, `summary`)
+  - conflict precedence and strict conflict mode
+  - catalog indexing by `catalogId` and product triple
+- Compiler diagnostics enriched with catalog context:
+  - `catalogLookup` in file-based compile results
+  - `profile.catalogMatch` annotation
+  - catalog-aware curation hints and stable diagnostic device keys
+
+Reference plan:
+
+- `plan/homey-translation-compiler-plan.md`
+
 ## Runtime Flow (Target)
 
 1. Homey app starts
