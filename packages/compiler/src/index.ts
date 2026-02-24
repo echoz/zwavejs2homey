@@ -35,3 +35,12 @@ export {
   isRuleActionModeAllowedForLayer,
   normalizeRuleActionMode,
 } from './compiler/layer-semantics';
+export type {
+  ProfileBuildState,
+  ProfileBuildStateCapability,
+} from './compiler/profile-build-state';
+export {
+  applyCapabilityRuleAction,
+  createProfileBuildState,
+  materializeCapabilityPlans,
+} from './compiler/profile-build-state';
