@@ -91,6 +91,12 @@ export function parseCliArgs(argv) {
   if (flags.has('--explain-only') && !flags.has('--explain') && !flags.has('--explain-all')) {
     return { ok: false, error: '--explain-only requires --explain or --explain-all' };
   }
+  if (flags.has('--explain-only') && !['json', 'json-pretty', 'json-compact'].includes(format)) {
+    return {
+      ok: false,
+      error: '--explain-only is only supported with json, json-pretty, or json-compact formats',
+    };
+  }
   return {
     ok: true,
     command: {
@@ -228,7 +234,7 @@ function buildCapabilityExplanationLines(result, markdown = false) {
     if (!result.profile.capabilities.length) return [];
     const allLines = [];
     for (const capability of result.profile.capabilities) {
-      if (allLines.length > 0) allLines.push(markdown ? '' : '');
+      if (allLines.length > 0) allLines.push('');
       allLines.push(...buildCapabilityExplanationLinesForCapability(capability, markdown));
     }
     return allLines;
@@ -584,7 +590,6 @@ export function formatCompileNdjson(result) {
 
 export function formatCompileOutput(result, format) {
   const output = result;
-  const capabilityExplain = getCapabilityExplanationRecord(result);
   switch (format) {
     case 'summary':
       return formatCompileSummary(output);
@@ -592,9 +597,17 @@ export function formatCompileOutput(result, format) {
       return formatCompileMarkdown(output);
     case 'json':
     case 'json-pretty':
-      return formatJsonPretty(result.__explainOnly ? { capabilityExplain } : result);
+      return formatJsonPretty(
+        result.__explainOnly
+          ? { capabilityExplain: getCapabilityExplanationRecord(result) }
+          : result,
+      );
     case 'json-compact':
-      return formatJsonCompact(result.__explainOnly ? { capabilityExplain } : result);
+      return formatJsonCompact(
+        result.__explainOnly
+          ? { capabilityExplain: getCapabilityExplanationRecord(result) }
+          : result,
+      );
     case 'ndjson':
       return formatCompileNdjson(result);
     default:

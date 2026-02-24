@@ -60,8 +60,24 @@ test('parseCliArgs validates required device and rule inputs', async () => {
       '--explain',
       'onoff',
       '--explain-only',
+      '--format',
+      'json',
     ]).ok,
     true,
+  );
+  assert.equal(
+    parseCliArgs([
+      '--device-file',
+      'd.json',
+      '--rules-file',
+      'r.json',
+      '--explain',
+      'onoff',
+      '--explain-only',
+      '--format',
+      'summary',
+    ]).ok,
+    false,
   );
   assert.equal(
     parseCliArgs([
@@ -77,6 +93,19 @@ test('parseCliArgs validates required device and rule inputs', async () => {
   );
   assert.equal(
     parseCliArgs(['--device-file', 'd.json', '--rules-file', 'r.json', '--explain-only']).ok,
+    false,
+  );
+  assert.equal(
+    parseCliArgs([
+      '--device-file',
+      'd.json',
+      '--rules-file',
+      'r.json',
+      '--explain-all',
+      '--explain-only',
+      '--format',
+      'ndjson',
+    ]).ok,
     false,
   );
   assert.equal(
