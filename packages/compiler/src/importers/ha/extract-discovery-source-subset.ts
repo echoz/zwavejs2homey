@@ -42,19 +42,26 @@ const COMMAND_CLASS_NUMBERS: Record<string, number> = {
   BASIC: 32,
   BATTERY: 128,
   BARRIER_OPERATOR: 102,
+  ENERGY_PRODUCTION: 144,
   COLOR_SWITCH: 51,
   DOOR_LOCK: 98,
   HUMIDITY_CONTROL_MODE: 109,
   INDICATOR: 87,
   LOCK: 118,
+  MANUFACTURER_PROPRIETARY: 145,
+  METER: 50,
+  NOTIFICATION: 113,
   PROTECTION: 117,
   SENSOR_BINARY: 48,
+  SENSOR_MULTILEVEL: 49,
   SENSOR_ALARM: 156,
+  SOUND_SWITCH: 121,
   SWITCH_BINARY: 37,
   SWITCH_MULTILEVEL: 38,
   THERMOSTAT_FAN_MODE: 68,
   THERMOSTAT_MODE: 64,
   THERMOSTAT_SETPOINT: 67,
+  WINDOW_COVERING: 106,
 };
 
 const VALUE_TYPE_MAP: Record<string, string> = {
@@ -107,6 +114,12 @@ const VALUE_ALIAS_DEFS: Record<string, AliasSchemaDef> = {
     endpoint: 0,
     metadataType: 'number',
   },
+  SIREN_TONE_SCHEMA: {
+    commandClass: 121,
+    property: 'toneId',
+    endpoint: 0,
+    metadataType: 'number',
+  },
   WINDOW_COVERING_COVER_CURRENT_VALUE_SCHEMA: {
     commandClass: 106,
     property: 'currentValue',
@@ -122,16 +135,24 @@ const VALUE_ALIAS_DEFS: Record<string, AliasSchemaDef> = {
 };
 
 const PROPERTY_TOKEN_MAP: Record<string, string | number> = {
+  CURRENT_MODE_PROPERTY: 'currentMode',
+  CURRENT_STATE_PROPERTY: 'currentState',
   CURRENT_VALUE_PROPERTY: 'currentValue',
+  DEFAULT_TONE_ID_PROPERTY: 'defaultToneId',
+  DEFAULT_VOLUME_PROPERTY: 'defaultVolume',
   DOOR_STATUS_PROPERTY: 'doorStatus',
   HUMIDITY_CONTROL_MODE_PROPERTY: 'humidityMode',
   LOCAL_PROPERTY: 'local',
   LOCKED_PROPERTY: 'locked',
+  RESET_METER_PROPERTY: 'reset',
   RF_PROPERTY: 'rf',
+  SIGNALING_STATE_PROPERTY: 'signalingState',
+  TARGET_STATE_PROPERTY: 'targetState',
   TARGET_VALUE_PROPERTY: 'targetValue',
   THERMOSTAT_FAN_MODE_PROPERTY: 'fanMode',
   THERMOSTAT_SETPOINT_PROPERTY: 'setpoint',
   THERMOSTAT_MODE_PROPERTY: 'mode',
+  TONE_ID_PROPERTY: 'toneId',
   VALUE_PROPERTY: 'value',
 };
 
@@ -146,7 +167,7 @@ function countLines(text: string, index: number): number {
 function parseHexSet(content: string): number[] {
   return content
     .split(',')
-    .map((part) => part.trim())
+    .map((part) => part.split('#', 1)[0].trim())
     .filter(Boolean)
     .map((part) => {
       const hexMatch = part.match(/^0x([0-9A-Fa-f]+)$/);
@@ -160,6 +181,8 @@ function parseHexSet(content: string): number[] {
 function parsePropertyToken(content: string): string | number | null {
   const trimmed = content.trim();
   if (PROPERTY_TOKEN_MAP[trimmed] !== undefined) return PROPERTY_TOKEN_MAP[trimmed];
+  const quoted = trimmed.match(/^"([^"]+)"$|^'([^']+)'$/);
+  if (quoted) return quoted[1] ?? quoted[2];
   const hex = trimmed.match(/^0x([0-9A-Fa-f]+)$/);
   if (hex) return Number.parseInt(hex[1], 16);
   const dec = Number.parseInt(trimmed, 10);
@@ -258,7 +281,17 @@ function parseInlineValueSchema(fragment: string): ParsedValueMatcher | ParsedCo
   const propertyMatch = fragment.match(/property=\{([^}]+)\}/);
   let property = propertyMatch ? parsePropertySet(propertyMatch[1]) : null;
   if (property === null) {
-    if (commandClass === 48 || commandClass === 87 || commandClass === 156) {
+    if (
+      commandClass === 32 ||
+      commandClass === 48 ||
+      commandClass === 49 ||
+      commandClass === 50 ||
+      commandClass === 87 ||
+      commandClass === 113 ||
+      commandClass === 128 ||
+      commandClass === 144 ||
+      commandClass === 156
+    ) {
       property = 'currentValue';
     } else {
       return null;
