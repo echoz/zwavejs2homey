@@ -1,0 +1,62 @@
+{
+  "schemaVersion": "ha-extracted-discovery/v1",
+  "source": {
+    "generatedAt": "2026-02-24T00:00:00Z",
+    "sourceRef": "docs/external/home-assistant/homeassistant/components/zwave_js/discovery.py"
+  },
+  "entries": [
+    {
+      "id": "ha_probe_honeywell_fan_39358",
+      "sourceRef": "docs/external/home-assistant/homeassistant/components/zwave_js/discovery.py:183",
+      "deviceMatch": {
+        "manufacturerId": 57,
+        "productId": 12593,
+        "productType": 18756
+      },
+      "valueMatch": {
+        "commandClass": 38,
+        "property": "currentValue",
+        "metadata": {
+          "type": "number"
+        }
+      },
+      "companions": {
+        "requiredValues": [
+          {
+            "commandClass": 38,
+            "property": "targetValue"
+          }
+        ]
+      },
+      "output": {
+        "homeyClass": "fan",
+        "driverTemplateId": "ha-probe-fan",
+        "capabilityId": "dim"
+      }
+    },
+    {
+      "id": "ha_probe_thermostat_setpoint_without_mode",
+      "sourceRef": "docs/external/home-assistant/homeassistant/components/zwave_js/discovery.py:779",
+      "valueMatch": {
+        "commandClass": 67,
+        "property": "setpoint",
+        "metadata": {
+          "type": "number"
+        }
+      },
+      "companions": {
+        "absentValues": [
+          {
+            "commandClass": 64,
+            "property": "mode"
+          }
+        ]
+      },
+      "output": {
+        "homeyClass": "thermostat",
+        "driverTemplateId": "ha-probe-thermostat",
+        "capabilityId": "target_temperature"
+      }
+    }
+  ]
+}

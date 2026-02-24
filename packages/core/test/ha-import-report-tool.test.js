@@ -48,3 +48,19 @@ test('runHaImportReport translates extracted fixture and can write generated art
   assert.match(summary, /Unsupported:/);
   assert.match(summary, /Timing: /);
 });
+
+test('runHaImportReport handles real-source probe extracted fixture', async () => {
+  const { runHaImportReport, formatHaImportSummary } = await loadLib();
+  const result = runHaImportReport({
+    inputFile: path.join(fixturesDir, 'ha-extracted-discovery-real-probe-v1.json'),
+    format: 'summary',
+    outputGenerated: undefined,
+    timing: false,
+  });
+
+  assert.equal(result.artifact.rules.length, 2);
+  assert.equal(result.report.unsupported.length, 0);
+  const summary = formatHaImportSummary(result);
+  assert.match(summary, /Rules translated: 2/);
+  assert.match(summary, /Skipped: 0/);
+});
