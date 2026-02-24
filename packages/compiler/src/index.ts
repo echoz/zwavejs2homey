@@ -44,3 +44,12 @@ export {
   createProfileBuildState,
   materializeCapabilityPlans,
 } from './compiler/profile-build-state';
+export type { AppliedRuleActionResult } from './compiler/apply-rule';
+export { applyRuleToValue } from './compiler/apply-rule';
+export {
+  matchesDevice,
+  matchesRuleCompanionConstraints,
+  matchesRuleForValue,
+  matchesValue,
+  valueMatcherMatchesAny,
+} from './compiler/rule-matcher';
