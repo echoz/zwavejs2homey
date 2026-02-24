@@ -8,6 +8,10 @@ async function loadLib() {
   return import('../../../tools/ha-import-extract-lib.mjs');
 }
 
+async function loadReportLib() {
+  return import('../../../tools/ha-import-report-lib.mjs');
+}
+
 const fixturesDir = path.join(__dirname, '../../compiler/test/fixtures');
 
 test('parseCliArgs validates ha-import-extract args', async () => {
@@ -71,6 +75,14 @@ ZWaveDiscoverySchema(
     required_values=[SWITCH_MULTILEVEL_TARGET_VALUE_SCHEMA],
 ),
 # GE/Jasco - In-Wall Smart Fan Control - 12730 / ZW4002
+ZWaveDiscoverySchema(
+    platform=Platform.FAN,
+    manufacturer_id={0x0063},
+    product_id={0x3034},
+    product_type={0x4944},
+    primary_value=SWITCH_MULTILEVEL_CURRENT_VALUE_SCHEMA,
+),
+# GE/Jasco - In-Wall Smart Fan Controls
 
 # thermostats supporting setpoint only (and thus not mode)
 ZWaveDiscoverySchema(
@@ -101,8 +113,80 @@ ZWaveDiscoverySchema(
     timing: true,
   });
   assert.equal(result.artifact.schemaVersion, 'ha-extracted-discovery/v1');
-  assert.equal(result.artifact.entries.length, 2);
+  assert.equal(result.artifact.entries.length, 3);
   assert.equal(result.artifact.entries[0].id, 'ha_probe_honeywell_fan_39358');
-  assert.equal(result.artifact.entries[1].id, 'ha_probe_thermostat_setpoint_without_mode');
+  assert.equal(result.artifact.entries[1].id, 'ha_probe_ge_jasco_fan_12730');
+  assert.equal(result.artifact.entries[2].id, 'ha_probe_thermostat_setpoint_without_mode');
   assert.equal(typeof result.meta.elapsedMs, 'number');
+});
+
+test('source extract output feeds ha-import report end-to-end', async () => {
+  const { runHaImportExtract } = await loadLib();
+  const { runHaImportReport } = await loadReportLib();
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ha-source-e2e-'));
+  const discoveryDir = path.join(tempDir, 'homeassistant/components/zwave_js');
+  fs.mkdirSync(discoveryDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(discoveryDir, 'discovery.py'),
+    `
+# Honeywell 39358 In-Wall Fan Control using switch multilevel CC
+ZWaveDiscoverySchema(
+    platform=Platform.FAN,
+    manufacturer_id={0x0039},
+    product_id={0x3131},
+    product_type={0x4944},
+    primary_value=SWITCH_MULTILEVEL_CURRENT_VALUE_SCHEMA,
+    required_values=[SWITCH_MULTILEVEL_TARGET_VALUE_SCHEMA],
+),
+# GE/Jasco - In-Wall Smart Fan Control - 12730 / ZW4002
+ZWaveDiscoverySchema(
+    platform=Platform.FAN,
+    manufacturer_id={0x0063},
+    product_id={0x3034},
+    product_type={0x4944},
+    primary_value=SWITCH_MULTILEVEL_CURRENT_VALUE_SCHEMA,
+),
+# GE/Jasco - In-Wall Smart Fan Controls
+
+# thermostats supporting setpoint only (and thus not mode)
+ZWaveDiscoverySchema(
+    platform=Platform.CLIMATE,
+    primary_value=ZWaveValueDiscoverySchema(
+        command_class={CommandClass.THERMOSTAT_SETPOINT},
+        property={THERMOSTAT_SETPOINT_PROPERTY},
+        type={ValueType.NUMBER},
+    ),
+    absent_values=[
+        ZWaveValueDiscoverySchema(
+            command_class={CommandClass.THERMOSTAT_MODE},
+            property={THERMOSTAT_MODE_PROPERTY},
+            type={ValueType.NUMBER},
+        ),
+    ],
+),
+# binary sensors
+`,
+    'utf8',
+  );
+  const extractedPath = path.join(tempDir, 'ha-extracted.json');
+
+  const extractResult = runHaImportExtract({
+    sourceHomeAssistant: tempDir,
+    inputFile: undefined,
+    format: 'summary',
+    outputExtracted: extractedPath,
+    timing: false,
+  });
+  assert.equal(extractResult.artifact.entries.length, 3);
+  assert.equal(fs.existsSync(extractedPath), true);
+
+  const reportResult = runHaImportReport({
+    inputFile: extractedPath,
+    format: 'summary',
+    outputGenerated: undefined,
+    timing: false,
+  });
+  assert.equal(reportResult.artifact.schemaVersion, 'ha-derived-rules/v1');
+  assert.equal(reportResult.report.translated, 3);
+  assert.equal(reportResult.report.unsupported.length, 0);
 });
