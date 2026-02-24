@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import {
-  formatHaExtractSummary,
+  formatHaExtractOutput,
   getUsageText,
   parseCliArgs,
   runHaImportExtract,
@@ -14,11 +14,7 @@ if (!parsed.ok) {
 
 try {
   const result = runHaImportExtract(parsed.command);
-  if (parsed.command.format === 'json') {
-    console.log(JSON.stringify(result, null, 2));
-  } else {
-    console.log(formatHaExtractSummary(result));
-  }
+  console.log(formatHaExtractOutput(result, parsed.command.format));
 } catch (error) {
   const message = error instanceof Error ? error.message : String(error);
   console.error(`Failed to run HA import extract: ${message}`);

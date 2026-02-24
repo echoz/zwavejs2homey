@@ -14,6 +14,10 @@ test('parseCliArgs validates required args and format', async () => {
   const { parseCliArgs } = await loadLib();
   assert.equal(parseCliArgs([]).ok, false);
   assert.equal(parseCliArgs(['--input-file', 'x.json', '--format', 'yaml']).ok, false);
+  assert.equal(parseCliArgs(['--input-file', 'x.json', '--format', 'markdown']).ok, true);
+  assert.equal(parseCliArgs(['--input-file', 'x.json', '--format', 'json-pretty']).ok, true);
+  assert.equal(parseCliArgs(['--input-file', 'x.json', '--format', 'json-compact']).ok, true);
+  assert.equal(parseCliArgs(['--input-file', 'x.json', '--format', 'ndjson']).ok, true);
   assert.equal(parseCliArgs(['--input-file', 'x.json', '--output-generated']).ok, false);
   const parsed = parseCliArgs(['--input-file', 'x.json', '--format', 'json', '--timing']);
   assert.equal(parsed.ok, true);
@@ -23,7 +27,7 @@ test('parseCliArgs validates required args and format', async () => {
 });
 
 test('runHaImportReport translates extracted fixture and can write generated artifact', async () => {
-  const { runHaImportReport, formatHaImportSummary } = await loadLib();
+  const { runHaImportReport, formatHaImportOutput, formatHaImportSummary } = await loadLib();
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ha-import-report-'));
   const outputGenerated = path.join(tempDir, 'ha-derived-generated.json');
 
@@ -47,6 +51,10 @@ test('runHaImportReport translates extracted fixture and can write generated art
   assert.match(summary, /Rules translated:/);
   assert.match(summary, /Unsupported:/);
   assert.match(summary, /Timing: /);
+  assert.match(formatHaImportOutput(result, 'markdown'), /## HA Import Report/);
+  assert.doesNotThrow(() => JSON.parse(formatHaImportOutput(result, 'json-pretty')));
+  assert.doesNotThrow(() => JSON.parse(formatHaImportOutput(result, 'json-compact')));
+  assert.match(formatHaImportOutput(result, 'ndjson'), /\"type\":\"rule\"/);
 });
 
 test('runHaImportReport handles real-source probe extracted fixture', async () => {

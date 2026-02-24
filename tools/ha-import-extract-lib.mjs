@@ -2,6 +2,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { createRequire } from 'node:module';
+import {
+  formatJsonCompact,
+  formatJsonPretty,
+  formatNdjson,
+  isSupportedDiagnosticFormat,
+} from './output-format-lib.mjs';
 
 const require = createRequire(import.meta.url);
 const {
@@ -33,8 +39,8 @@ function parseFlagMap(argv) {
 export function getUsageText() {
   return [
     'Usage:',
-    '  ha-import-extract --input-file <ha-extracted.json> [--format summary|json]',
-    '  ha-import-extract --source-home-assistant <checkout-path> [--format summary|json]',
+    '  ha-import-extract --input-file <ha-extracted.json> [--format summary|markdown|json|json-pretty|json-compact|ndjson]',
+    '  ha-import-extract --source-home-assistant <checkout-path> [--format summary|markdown|json|json-pretty|json-compact|ndjson]',
     '                 [--output-extracted <validated-extracted.json>] [--timing]',
   ].join('\n');
 }
@@ -51,7 +57,7 @@ export function parseCliArgs(argv) {
     return { ok: false, error: 'Use either --input-file or --source-home-assistant, not both' };
   }
   const format = flags.get('--format') ?? 'summary';
-  if (!['summary', 'json'].includes(format)) {
+  if (!isSupportedDiagnosticFormat(format)) {
     return { ok: false, error: `Unsupported format: ${format}` };
   }
   const outputExtracted = flags.get('--output-extracted');
@@ -179,4 +185,55 @@ export function formatHaExtractSummary(result) {
     lines.push(`Timing: ${result.meta.elapsedMs.toFixed(3)}ms`);
   }
   return lines.join('\n');
+}
+
+export function formatHaExtractMarkdown(result) {
+  const lines = [];
+  lines.push(`## HA Extracted Discovery`);
+  lines.push(`- Artifact: \`${result.artifact.schemaVersion}\``);
+  lines.push(`- Entries: ${result.summary.entries}`);
+  lines.push(`- Source refs: ${result.summary.sourceRefCount}`);
+  if (result.sourceReport) {
+    lines.push(
+      `- Source parse: scanned=${result.sourceReport.scannedSchemas}, translated=${result.sourceReport.translated}, skipped=${result.sourceReport.skipped}`,
+    );
+    const topReasons = Object.entries(result.sourceReport.unsupportedByReason ?? {})
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+    if (topReasons.length > 0) {
+      lines.push(`- Skipped reasons: ${topReasons.map(([r, c]) => `${r}=${c}`).join(', ')}`);
+    }
+  }
+  if (result.meta && typeof result.meta.elapsedMs === 'number') {
+    lines.push(`- Timing: ${result.meta.elapsedMs.toFixed(3)}ms`);
+  }
+  return lines.join('\n');
+}
+
+export function formatHaExtractNdjson(result) {
+  const records = [
+    { type: 'summary', summary: result.summary },
+    ...(result.sourceReport ? [{ type: 'sourceReport', sourceReport: result.sourceReport }] : []),
+    ...result.artifact.entries.map((entry) => ({ type: 'entry', entry })),
+    ...(result.meta ? [{ type: 'meta', meta: result.meta }] : []),
+  ];
+  return formatNdjson(records);
+}
+
+export function formatHaExtractOutput(result, format) {
+  switch (format) {
+    case 'summary':
+      return formatHaExtractSummary(result);
+    case 'markdown':
+      return formatHaExtractMarkdown(result);
+    case 'json':
+    case 'json-pretty':
+      return formatJsonPretty(result);
+    case 'json-compact':
+      return formatJsonCompact(result);
+    case 'ndjson':
+      return formatHaExtractNdjson(result);
+    default:
+      throw new Error(`Unsupported format: ${format}`);
+  }
 }

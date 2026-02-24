@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import {
   compileFromFiles,
-  formatCompileSummary,
+  formatCompileOutput,
   parseCliArgs,
 } from './homey-compile-inspect-lib.mjs';
 
@@ -13,11 +13,7 @@ if (!parsed.ok) {
 
 try {
   const result = compileFromFiles(parsed.command);
-  if (parsed.command.format === 'json') {
-    console.log(JSON.stringify(result, null, 2));
-  } else {
-    console.log(formatCompileSummary(result));
-  }
+  console.log(formatCompileOutput(result, parsed.command.format));
 } catch (error) {
   const message = error instanceof Error ? error.message : String(error);
   console.error(`Failed to compile profile: ${message}`);

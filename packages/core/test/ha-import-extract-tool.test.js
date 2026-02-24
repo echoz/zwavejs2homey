@@ -18,6 +18,10 @@ test('parseCliArgs validates ha-import-extract args', async () => {
   const { parseCliArgs } = await loadLib();
   assert.equal(parseCliArgs([]).ok, false);
   assert.equal(parseCliArgs(['--input-file', 'x.json', '--format', 'yaml']).ok, false);
+  assert.equal(parseCliArgs(['--input-file', 'x.json', '--format', 'markdown']).ok, true);
+  assert.equal(parseCliArgs(['--input-file', 'x.json', '--format', 'json-pretty']).ok, true);
+  assert.equal(parseCliArgs(['--input-file', 'x.json', '--format', 'json-compact']).ok, true);
+  assert.equal(parseCliArgs(['--input-file', 'x.json', '--format', 'ndjson']).ok, true);
   assert.equal(parseCliArgs(['--input-file', 'x.json', '--output-extracted']).ok, false);
   assert.equal(
     parseCliArgs(['--input-file', 'x.json', '--source-home-assistant', '/tmp/ha']).ok,
@@ -32,7 +36,7 @@ test('parseCliArgs validates ha-import-extract args', async () => {
 });
 
 test('runHaImportExtract validates and can write extracted artifact', async () => {
-  const { runHaImportExtract, formatHaExtractSummary } = await loadLib();
+  const { runHaImportExtract, formatHaExtractOutput, formatHaExtractSummary } = await loadLib();
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ha-import-extract-'));
   const outputExtracted = path.join(tempDir, 'ha-extracted.json');
 
@@ -55,6 +59,10 @@ test('runHaImportExtract validates and can write extracted artifact', async () =
   assert.match(summary, /Extracted artifact: ha-extracted-discovery\/v1/);
   assert.match(summary, /Entries: /);
   assert.match(summary, /Timing: /);
+  assert.match(formatHaExtractOutput(result, 'markdown'), /## HA Extracted Discovery/);
+  assert.doesNotThrow(() => JSON.parse(formatHaExtractOutput(result, 'json-pretty')));
+  assert.doesNotThrow(() => JSON.parse(formatHaExtractOutput(result, 'json-compact')));
+  assert.match(formatHaExtractOutput(result, 'ndjson'), /\"type\":\"entry\"/);
 });
 
 test('runHaImportExtract extracts probe entries from source-home-assistant discovery.py', async () => {

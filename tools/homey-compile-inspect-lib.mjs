@@ -1,6 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
+import {
+  formatJsonCompact,
+  formatJsonPretty,
+  formatNdjson,
+  isSupportedDiagnosticFormat,
+} from './output-format-lib.mjs';
 
 const require = createRequire(import.meta.url);
 const { compileProfilePlanFromRuleSetManifest } = require('../packages/compiler/dist');
@@ -35,7 +41,7 @@ export function getUsageText() {
     'Usage:',
     '  homey-compile-inspect --device-file <device.json> --rules-file <rules.json> [--rules-file <rules2.json> ...]',
     '  homey-compile-inspect --device-file <device.json> --manifest <manifest.json>',
-    '                     [--format json|summary] [--homey-class <class>] [--driver-template <id>]',
+    '                     [--format summary|markdown|json|json-pretty|json-compact|ndjson] [--homey-class <class>] [--driver-template <id>]',
   ].join('\n');
 }
 
@@ -57,7 +63,7 @@ export function parseCliArgs(argv) {
     return { ok: false, error: 'Use either --manifest or --rules-file, not both' };
   }
   const format = flags.get('--format') ?? 'summary';
-  if (!['json', 'summary'].includes(format))
+  if (!isSupportedDiagnosticFormat(format))
     return { ok: false, error: `Unsupported format: ${format}` };
   return {
     ok: true,
@@ -145,4 +151,77 @@ export function formatCompileSummary(result) {
     lines.push('Curation review: no');
   }
   return lines.join('\n');
+}
+
+export function formatCompileMarkdown(result) {
+  const lines = [];
+  lines.push(`## Compiled Profile: \`${result.profile.profileId}\``);
+  lines.push(
+    `- Class: \`${result.profile.classification.homeyClass}\` (${result.profile.classification.confidence}, uncurated=${result.profile.classification.uncurated})`,
+  );
+  if (result.classificationProvenance) {
+    lines.push(
+      `- Class provenance: \`${result.classificationProvenance.layer}:${result.classificationProvenance.ruleId}\``,
+    );
+  }
+  lines.push(
+    `- Capabilities: ${
+      result.profile.capabilities.map((c) => `\`${c.capabilityId}\``).join(', ') || '(none)'
+    }`,
+  );
+  lines.push(`- Ignored values: ${result.profile.ignoredValues?.length ?? 0}`);
+  lines.push(
+    `- Report: outcome=\`${result.report.profileOutcome}\`, applied=${result.report.summary.appliedActions}, unmatched=${result.report.summary.unmatchedActions}, suppressedFill=${result.report.summary.suppressedFillActions}`,
+  );
+  if (result.report.curationCandidates.likelyNeedsReview) {
+    lines.push(`- Curation review: yes (${result.report.curationCandidates.reasons.join(', ')})`);
+  } else {
+    lines.push(`- Curation review: no`);
+  }
+  return lines.join('\n');
+}
+
+export function formatCompileNdjson(result) {
+  const records = [
+    { type: 'profile', profile: result.profile },
+    ...(result.classificationProvenance
+      ? [
+          {
+            type: 'classificationProvenance',
+            classificationProvenance: result.classificationProvenance,
+          },
+        ]
+      : []),
+    ...result.ruleSources.map((ruleSource) => ({ type: 'ruleSource', ruleSource })),
+    {
+      type: 'reportSummary',
+      summary: result.report.summary,
+      profileOutcome: result.report.profileOutcome,
+    },
+    ...result.report.byRule.map((row) => ({ type: 'byRule', row })),
+    ...result.report.bySuppressedSlot.map((row) => ({ type: 'bySuppressedSlot', row })),
+    ...result.report.curationCandidates.reasons.map((reason) => ({
+      type: 'curationReason',
+      reason,
+    })),
+  ];
+  return formatNdjson(records);
+}
+
+export function formatCompileOutput(result, format) {
+  switch (format) {
+    case 'summary':
+      return formatCompileSummary(result);
+    case 'markdown':
+      return formatCompileMarkdown(result);
+    case 'json':
+    case 'json-pretty':
+      return formatJsonPretty(result);
+    case 'json-compact':
+      return formatJsonCompact(result);
+    case 'ndjson':
+      return formatCompileNdjson(result);
+    default:
+      throw new Error(`Unsupported format: ${format}`);
+  }
 }

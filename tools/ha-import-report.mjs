@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import {
-  formatHaImportSummary,
+  formatHaImportOutput,
   getUsageText,
   parseCliArgs,
   runHaImportReport,
@@ -14,11 +14,7 @@ if (!parsed.ok) {
 
 try {
   const result = runHaImportReport(parsed.command);
-  if (parsed.command.format === 'json') {
-    console.log(JSON.stringify(result, null, 2));
-  } else {
-    console.log(formatHaImportSummary(result));
-  }
+  console.log(formatHaImportOutput(result, parsed.command.format));
 } catch (error) {
   const message = error instanceof Error ? error.message : String(error);
   console.error(`Failed to run HA import report: ${message}`);

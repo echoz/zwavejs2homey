@@ -15,6 +15,15 @@ test('parseCliArgs validates required device and rule inputs', async () => {
   const parsed = parseCliArgs(['--device-file', 'd.json', '--rules-file', 'r.json']);
   assert.equal(parsed.ok, true);
   assert.deepEqual(parsed.command.rulesFiles, ['r.json']);
+  assert.equal(
+    parseCliArgs(['--device-file', 'd.json', '--rules-file', 'r.json', '--format', 'json-pretty'])
+      .ok,
+    true,
+  );
+  assert.equal(
+    parseCliArgs(['--device-file', 'd.json', '--rules-file', 'r.json', '--format', 'yaml']).ok,
+    false,
+  );
 });
 
 test('compileFromFiles compiles fixture device/rules and returns profile', async () => {
@@ -79,4 +88,30 @@ test('formatCompileSummary includes classification provenance and suppressed slo
     summary,
     /Suppressed slots: project-generic:generic-device-class-fill:deviceIdentity.homeyClass=1/,
   );
+});
+
+test('formatCompileOutput supports markdown/json/ndjson variants', async () => {
+  const { formatCompileOutput } = await loadLib();
+  const fixture = {
+    profile: {
+      profileId: 'p1',
+      classification: { homeyClass: 'light', confidence: 'curated', uncurated: false },
+      capabilities: [{ capabilityId: 'onoff' }],
+      ignoredValues: [],
+    },
+    ruleSources: [{ filePath: 'r.json', ruleCount: 1, ruleIds: ['r1'] }],
+    report: {
+      profileOutcome: 'curated',
+      summary: { appliedActions: 1, unmatchedActions: 0, suppressedFillActions: 0 },
+      byRule: [{ ruleId: 'r1', layer: 'ha-derived', applied: 1, unmatched: 0, actionTypes: {} }],
+      bySuppressedSlot: [],
+      curationCandidates: { likelyNeedsReview: false, reasons: [] },
+    },
+  };
+  assert.match(formatCompileOutput(fixture, 'markdown'), /## Compiled Profile/);
+  assert.doesNotThrow(() => JSON.parse(formatCompileOutput(fixture, 'json-pretty')));
+  assert.doesNotThrow(() => JSON.parse(formatCompileOutput(fixture, 'json-compact')));
+  const ndjson = formatCompileOutput(fixture, 'ndjson');
+  assert.match(ndjson, /\"type\":\"profile\"/);
+  assert.match(ndjson, /\"type\":\"ruleSource\"/);
 });
