@@ -29,6 +29,7 @@ Close out Phase 3 catalog integration (current scope) and lock the compiler/Home
 4. Closed Phase 3 scope decisions:
    - catalog/diagnostics foundation accepted for now
    - curation-seed generation explicitly deferred as unnecessary abstraction at this stage
+   - added `compiler:inspect-live` to inspect compiled profiles directly from a live ZWJS instance
 5. Clarified runtime curation ownership:
    - runtime curation patch schema/apply behavior belongs to the Homey adapter
    - compiler remains focused on compiled profiles + provenance/diagnostics

@@ -930,6 +930,7 @@ Progress:
 - Added stable report `diagnosticDeviceKey` (`catalog:<id>` or product-triple fallback) and surfaced it in `compiler:inspect` outputs
 - Added file-based `unknownDeviceReport` diagnostics (known/unknown/no-catalog) and surfaced them in `compiler:inspect` (`summary|markdown|ndjson`)
 - Explicitly deferred curation-seed generation; current decision is to keep curation/rule authoring schema-first and avoid an extra seed artifact/workflow until proven necessary
+- Added `compiler:inspect-live` tooling to compile profiles directly from a live ZWJS instance (`--all-nodes`/`--node`) with a list overview and diagnostic output formats
 
 Deferred / later Phase 3 expansion (not required to start Phase 4):
 

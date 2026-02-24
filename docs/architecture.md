@@ -83,6 +83,8 @@ Current implemented foundation in `packages/compiler`:
   - `catalogLookup` in file-based compile results
   - `profile.catalogMatch` annotation
   - catalog-aware curation hints, explicit `unknownDeviceReport`, and stable diagnostic device keys
+- Added live compile inspection tooling:
+  - `compiler:inspect-live` connects to a ZWJS instance, fetches node details, converts them to compiler device facts, and renders compiled profile results (including list view)
 - Catalog/curation workflow decision:
   - no curation-seed artifact for now; rule/patch authoring remains schema-first using compiler diagnostics and stable device identifiers
 - Runtime curation boundary decision:
