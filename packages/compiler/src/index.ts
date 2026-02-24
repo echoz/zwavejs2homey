@@ -98,6 +98,7 @@ export { applyRuleToValue } from './compiler/apply-rule';
 export type { CompileDeviceReportEntry, CompileDeviceResult } from './compiler/compile-device';
 export { compileDevice } from './compiler/compile-device';
 export type { CompileProfilePlanOptions } from './compiler/compile-profile-plan';
+export type { CompileProfilePlanCatalogLookup } from './compiler/compile-profile-plan';
 export { compileProfilePlan } from './compiler/compile-profile-plan';
 export type {
   CompileProfilePlanFromFilesResult,
@@ -105,6 +106,7 @@ export type {
 } from './compiler/compile-profile-plan-from-files';
 export {
   compileProfilePlanFromRuleFiles,
+  compileProfilePlanFromRuleFilesWithCatalog,
   compileProfilePlanFromRuleSetManifest,
 } from './compiler/compile-profile-plan-from-files';
 export type {

@@ -141,3 +141,18 @@ test('compileProfilePlan does not mark profile curated from product no-op fills 
     ),
   );
 });
+
+test('compileProfilePlan reports catalog lookup match when catalog artifact is provided', () => {
+  const catalogArtifact = compiler.loadCatalogDevicesArtifact(
+    require('node:path').join(__dirname, 'fixtures', 'catalog-devices-v1.json'),
+  );
+  const result = compiler.compileProfilePlan(device, rules, {
+    catalogArtifact,
+  });
+  assert.deepEqual(result.catalogLookup, {
+    matched: true,
+    by: 'product-triple',
+    catalogId: 'observed:29-13313-1',
+    label: undefined,
+  });
+});

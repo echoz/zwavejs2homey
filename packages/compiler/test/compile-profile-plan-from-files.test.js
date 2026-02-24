@@ -219,3 +219,20 @@ test('compileProfilePlanFromRuleSetManifest supports larger mixed HA-derived sou
     ),
   );
 });
+
+test('compileProfilePlanFromRuleFilesWithCatalog reports catalog lookup match', () => {
+  const rulesFile = path.join(fixturesDir, 'rules-switch-meter.json');
+  const catalogFile = path.join(fixturesDir, 'catalog-devices-v1.json');
+  const result = compiler.compileProfilePlanFromRuleFilesWithCatalog(
+    device,
+    [rulesFile],
+    catalogFile,
+  );
+
+  assert.deepEqual(result.catalogLookup, {
+    matched: true,
+    by: 'product-triple',
+    catalogId: 'observed:29-13313-1',
+    label: undefined,
+  });
+});

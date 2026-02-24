@@ -15,6 +15,17 @@ test('parseCliArgs validates required device and rule inputs', async () => {
   const parsed = parseCliArgs(['--device-file', 'd.json', '--rules-file', 'r.json']);
   assert.equal(parsed.ok, true);
   assert.deepEqual(parsed.command.rulesFiles, ['r.json']);
+  assert.equal(parsed.command.catalogFile, undefined);
+  const withCatalog = parseCliArgs([
+    '--device-file',
+    'd.json',
+    '--rules-file',
+    'r.json',
+    '--catalog-file',
+    'c.json',
+  ]);
+  assert.equal(withCatalog.ok, true);
+  assert.equal(withCatalog.command.catalogFile, 'c.json');
   assert.equal(
     parseCliArgs(['--device-file', 'd.json', '--rules-file', 'r.json', '--format', 'json-pretty'])
       .ok,
@@ -33,6 +44,7 @@ test('compileFromFiles compiles fixture device/rules and returns profile', async
     manifest: undefined,
     rulesFiles: [path.join(fixturesDir, 'rules-switch-meter.json')],
     format: 'summary',
+    catalogFile: path.join(fixturesDir, 'catalog-devices-v1.json'),
     homeyClass: 'socket',
     driverTemplateId: 'generic-socket',
   });
@@ -41,6 +53,7 @@ test('compileFromFiles compiles fixture device/rules and returns profile', async
   const summary = formatCompileSummary(result);
   assert.match(summary, /Capabilities: .*onoff/);
   assert.match(summary, /Report: outcome=/);
+  assert.match(summary, /Catalog: matched/);
 });
 
 test('compileFromFiles supports manifest entries with ha-derived-generated kind', async () => {
@@ -50,6 +63,7 @@ test('compileFromFiles supports manifest entries with ha-derived-generated kind'
     manifest: path.join(fixturesDir, 'rule-manifest-with-ha-generated.json'),
     rulesFiles: [],
     format: 'summary',
+    catalogFile: undefined,
     homeyClass: undefined,
     driverTemplateId: undefined,
   });
@@ -69,6 +83,12 @@ test('formatCompileSummary includes classification provenance and suppressed slo
       ignoredValues: [],
     },
     classificationProvenance: { layer: 'project-product', ruleId: 'product-device-class' },
+    catalogLookup: {
+      matched: true,
+      by: 'product-triple',
+      catalogId: 'zwjs:0184-4447-3034',
+      label: 'Aeotec Smart Switch 7',
+    },
     report: {
       profileOutcome: 'curated',
       summary: { appliedActions: 2, unmatchedActions: 1, suppressedFillActions: 1 },
@@ -84,6 +104,7 @@ test('formatCompileSummary includes classification provenance and suppressed slo
     },
   });
   assert.match(summary, /Class provenance: project-product:product-device-class/);
+  assert.match(summary, /Catalog: matched \(product-triple\) zwjs:0184-4447-3034/);
   assert.match(
     summary,
     /Suppressed slots: project-generic:generic-device-class-fill:deviceIdentity.homeyClass=1/,
@@ -100,6 +121,7 @@ test('formatCompileOutput supports markdown/json/ndjson variants', async () => {
       ignoredValues: [],
     },
     ruleSources: [{ filePath: 'r.json', ruleCount: 1, ruleIds: ['r1'] }],
+    catalogLookup: { matched: false, by: 'none' },
     report: {
       profileOutcome: 'curated',
       summary: { appliedActions: 1, unmatchedActions: 0, suppressedFillActions: 0 },
@@ -114,4 +136,5 @@ test('formatCompileOutput supports markdown/json/ndjson variants', async () => {
   const ndjson = formatCompileOutput(fixture, 'ndjson');
   assert.match(ndjson, /\"type\":\"profile\"/);
   assert.match(ndjson, /\"type\":\"ruleSource\"/);
+  assert.match(ndjson, /\"type\":\"catalogLookup\"/);
 });

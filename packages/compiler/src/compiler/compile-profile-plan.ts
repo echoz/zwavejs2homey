@@ -1,3 +1,9 @@
+import type { CatalogDeviceRecordV1 } from '../catalog/catalog-device-artifact';
+import {
+  buildCatalogIndexV1,
+  findCatalogDeviceByProductTriple,
+  type CatalogIndexBuildResult,
+} from '../catalog/catalog-index';
 import type { CompiledHomeyProfilePlan, ProvenanceRecord } from '../models/homey-plan';
 import type { NormalizedZwaveDeviceFacts } from '../models/zwave-facts';
 import type { MappingRule } from '../rules/types';
@@ -10,6 +16,19 @@ export interface CompileProfilePlanOptions {
   confidence?: CompiledHomeyProfilePlan['classification']['confidence'];
   uncurated?: boolean;
   provenance?: Partial<ProvenanceRecord>;
+  catalogArtifact?: {
+    schemaVersion: 'catalog-devices/v1';
+    source: { generatedAt: string; sourceRef: string };
+    devices: CatalogDeviceRecordV1[];
+  };
+  catalogIndex?: CatalogIndexBuildResult;
+}
+
+export interface CompileProfilePlanCatalogLookup {
+  matched: boolean;
+  by: 'product-triple' | 'none';
+  catalogId?: string;
+  label?: string;
 }
 
 function deriveMatch(device: NormalizedZwaveDeviceFacts): Record<string, unknown> {
@@ -63,9 +82,27 @@ export function compileProfilePlan(
   device: NormalizedZwaveDeviceFacts,
   rules: MappingRule[],
   options?: CompileProfilePlanOptions,
-): { profile: CompiledHomeyProfilePlan; report: CompileDeviceResult['report'] } {
+): {
+  profile: CompiledHomeyProfilePlan;
+  report: CompileDeviceResult['report'];
+  catalogLookup?: CompileProfilePlanCatalogLookup;
+} {
   const compileResult = compileDevice(device, rules);
   const profileId = options?.profileId ?? deriveProfileId(device);
+  const catalogIndex =
+    options?.catalogIndex ??
+    (options?.catalogArtifact ? buildCatalogIndexV1(options.catalogArtifact) : undefined);
+  const catalogLookup =
+    catalogIndex &&
+    device.manufacturerId !== undefined &&
+    device.productType !== undefined &&
+    device.productId !== undefined
+      ? findCatalogDeviceByProductTriple(catalogIndex, {
+          manufacturerId: device.manufacturerId,
+          productType: device.productType,
+          productId: device.productId,
+        })
+      : undefined;
 
   const provenance: ProvenanceRecord = {
     layer: (options?.provenance?.layer as ProvenanceRecord['layer']) ?? 'project-generic',
@@ -87,5 +124,18 @@ export function compileProfilePlan(
       provenance,
     },
     report: compileResult.report,
+    catalogLookup: catalogLookup
+      ? {
+          matched: true,
+          by: 'product-triple',
+          catalogId: catalogLookup.catalogId,
+          label: catalogLookup.label,
+        }
+      : options?.catalogArtifact || options?.catalogIndex
+        ? {
+            matched: false,
+            by: 'none',
+          }
+        : undefined,
   };
 }

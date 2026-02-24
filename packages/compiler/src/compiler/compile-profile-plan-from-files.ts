@@ -1,3 +1,7 @@
+import {
+  loadCatalogDevicesArtifact,
+  type CatalogDevicesArtifactV1,
+} from '../catalog/catalog-device-artifact';
 import type { NormalizedZwaveDeviceFacts } from '../models/zwave-facts';
 import type { CompileProfilePlanOptions } from './compile-profile-plan';
 import { compileProfilePlan } from './compile-profile-plan';
@@ -41,6 +45,12 @@ export interface CompileProfilePlanFromFilesResult {
     ruleId?: string;
     action?: string;
     reason?: string;
+  };
+  catalogLookup?: {
+    matched: boolean;
+    by: 'product-triple' | 'none';
+    catalogId?: string;
+    label?: string;
   };
 }
 
@@ -164,7 +174,7 @@ export function compileProfilePlanFromRuleFiles(
 ): CompileProfilePlanFromFilesResult {
   const loaded = loadJsonRuleFiles(ruleFilePaths);
   const rules = loaded.flatMap((entry) => entry.rules);
-  const { profile, report } = compileProfilePlan(device, rules, options);
+  const { profile, report, catalogLookup } = compileProfilePlan(device, rules, options);
 
   return {
     profile,
@@ -181,6 +191,7 @@ export function compileProfilePlanFromRuleFiles(
       ruleIds: entry.rules.map((rule) => rule.ruleId),
     })),
     classificationProvenance: deriveClassificationProvenance(report),
+    catalogLookup,
   };
 }
 
@@ -191,7 +202,7 @@ export function compileProfilePlanFromRuleSetManifest(
 ): CompileProfilePlanFromFilesResult {
   const loaded = loadJsonRuleSetManifest(manifestEntries);
   const rules = loaded.entries.flatMap((entry) => entry.rules);
-  const { profile, report } = compileProfilePlan(device, rules, options);
+  const { profile, report, catalogLookup } = compileProfilePlan(device, rules, options);
 
   return {
     profile,
@@ -208,5 +219,19 @@ export function compileProfilePlanFromRuleSetManifest(
       ruleIds: entry.rules.map((rule) => rule.ruleId),
     })),
     classificationProvenance: deriveClassificationProvenance(report),
+    catalogLookup,
   };
+}
+
+export function compileProfilePlanFromRuleFilesWithCatalog(
+  device: NormalizedZwaveDeviceFacts,
+  ruleFilePaths: string[],
+  catalogFilePath: string,
+  options?: Omit<CompileProfilePlanOptions, 'catalogArtifact'>,
+): CompileProfilePlanFromFilesResult {
+  const catalogArtifact = loadCatalogDevicesArtifact(catalogFilePath) as CatalogDevicesArtifactV1;
+  return compileProfilePlanFromRuleFiles(device, ruleFilePaths, {
+    ...options,
+    catalogArtifact,
+  });
 }

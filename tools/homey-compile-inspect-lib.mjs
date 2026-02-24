@@ -41,6 +41,7 @@ export function getUsageText() {
     'Usage:',
     '  homey-compile-inspect --device-file <device.json> --rules-file <rules.json> [--rules-file <rules2.json> ...]',
     '  homey-compile-inspect --device-file <device.json> --manifest <manifest.json>',
+    '                     [--catalog-file <catalog.json>]',
     '                     [--format summary|markdown|json|json-pretty|json-compact|ndjson] [--homey-class <class>] [--driver-template <id>]',
   ].join('\n');
 }
@@ -72,6 +73,7 @@ export function parseCliArgs(argv) {
       manifest,
       rulesFiles,
       format,
+      catalogFile: flags.get('--catalog-file'),
       homeyClass: flags.get('--homey-class'),
       driverTemplateId: flags.get('--driver-template'),
     },
@@ -115,6 +117,7 @@ export function compileFromFiles(command) {
     : command.rulesFiles.map((filePath) => ({ filePath }));
 
   return compileProfilePlanFromRuleSetManifest(device, manifestEntries, {
+    catalogArtifact: command.catalogFile ? readJson(command.catalogFile) : undefined,
     homeyClass: command.homeyClass,
     driverTemplateId: command.driverTemplateId,
   });
@@ -130,6 +133,15 @@ export function formatCompileSummary(result) {
     lines.push(
       `Class provenance: ${result.classificationProvenance.layer}:${result.classificationProvenance.ruleId}`,
     );
+  }
+  if (result.catalogLookup) {
+    if (result.catalogLookup.matched) {
+      lines.push(
+        `Catalog: matched (${result.catalogLookup.by}) ${result.catalogLookup.catalogId}${result.catalogLookup.label ? ` — ${result.catalogLookup.label}` : ''}`,
+      );
+    } else {
+      lines.push('Catalog: no match');
+    }
   }
   lines.push(
     `Capabilities: ${result.profile.capabilities.map((c) => c.capabilityId).join(', ') || '(none)'}`,
@@ -164,6 +176,15 @@ export function formatCompileMarkdown(result) {
       `- Class provenance: \`${result.classificationProvenance.layer}:${result.classificationProvenance.ruleId}\``,
     );
   }
+  if (result.catalogLookup) {
+    if (result.catalogLookup.matched) {
+      lines.push(
+        `- Catalog: matched (\`${result.catalogLookup.by}\`) \`${result.catalogLookup.catalogId}\`${result.catalogLookup.label ? ` — ${result.catalogLookup.label}` : ''}`,
+      );
+    } else {
+      lines.push(`- Catalog: no match`);
+    }
+  }
   lines.push(
     `- Capabilities: ${
       result.profile.capabilities.map((c) => `\`${c.capabilityId}\``).join(', ') || '(none)'
@@ -191,6 +212,9 @@ export function formatCompileNdjson(result) {
             classificationProvenance: result.classificationProvenance,
           },
         ]
+      : []),
+    ...(result.catalogLookup
+      ? [{ type: 'catalogLookup', catalogLookup: result.catalogLookup }]
       : []),
     ...result.ruleSources.map((ruleSource) => ({ type: 'ruleSource', ruleSource })),
     {
