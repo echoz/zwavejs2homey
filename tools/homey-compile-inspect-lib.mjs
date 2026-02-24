@@ -216,6 +216,41 @@ function buildCapabilityExplanationLines(result, markdown = false) {
   return lines;
 }
 
+function getCapabilityExplanationRecord(result) {
+  const capabilityId = result.__explainCapabilityId;
+  if (!capabilityId) return null;
+  const capability = result.profile.capabilities.find((row) => row.capabilityId === capabilityId);
+  if (!capability) {
+    return { requestedCapabilityId: capabilityId, found: false };
+  }
+  return {
+    requestedCapabilityId: capabilityId,
+    found: true,
+    capabilityId: capability.capabilityId,
+    directionality: capability.directionality,
+    inbound: capability.inboundMapping
+      ? {
+          kind: capability.inboundMapping.kind,
+          selector: formatSelector(capability.inboundMapping.selector),
+          watchers: (capability.inboundMapping.watchers ?? []).map((w) => formatSelector(w)),
+        }
+      : null,
+    outbound: capability.outboundMapping
+      ? {
+          kind: capability.outboundMapping.kind,
+          target:
+            typeof capability.outboundMapping.target === 'object' &&
+            capability.outboundMapping.target !== null &&
+            'command' in capability.outboundMapping.target
+              ? `command:${capability.outboundMapping.target.command}`
+              : formatSelector(capability.outboundMapping.target),
+        }
+      : null,
+    flags: capability.flags ?? null,
+    provenance: capability.provenance,
+  };
+}
+
 export function formatCompileSummary(result) {
   const topLimit = Number.isInteger(result.__top) && result.__top > 0 ? result.__top : 3;
   const focus = result.__focus ?? 'all';
@@ -444,6 +479,7 @@ export function formatCompileMarkdown(result) {
 
 export function formatCompileNdjson(result) {
   const topLimit = Number.isInteger(result.__top) && result.__top > 0 ? result.__top : 3;
+  const capabilityExplain = getCapabilityExplanationRecord(result);
   const records = [
     { type: 'profile', profile: result.profile },
     ...(result.classificationProvenance
@@ -481,6 +517,7 @@ export function formatCompileNdjson(result) {
       )
       .slice(0, topLimit)
       .map((row) => ({ type: 'topUnmatchedRule', row })),
+    ...(capabilityExplain ? [{ type: 'capabilityExplain', explain: capabilityExplain }] : []),
   ];
   return formatNdjson(records);
 }

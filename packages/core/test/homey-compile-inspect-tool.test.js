@@ -383,4 +383,8 @@ test('formatCompileSummary/markdown support --explain capability output', async 
   assert.match(markdown, /### Explain: `onoff`/);
   assert.match(markdown, /- Directionality: `bidirectional`/);
   assert.match(markdown, /- Outbound: `set_value` -> `cc=37@ep0:targetValue`/);
+  const ndjson = formatCompileOutput(fixture, 'ndjson');
+  assert.match(ndjson, /\"type\":\"capabilityExplain\"/);
+  assert.match(ndjson, /\"requestedCapabilityId\":\"onoff\"/);
+  assert.match(ndjson, /\"selector\":\"cc=37@ep0:currentValue\"/);
 });
