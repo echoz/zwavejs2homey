@@ -12,6 +12,7 @@ const require = createRequire(import.meta.url);
 const {
   loadCatalogDevicesArtifact,
   loadCatalogArtifactFromZwjsInspectNodeDetailFile,
+  mergeCatalogDevicesArtifactsV1,
   normalizeCatalogDevicesArtifactV1,
 } = require('../packages/compiler/dist');
 
@@ -46,6 +47,7 @@ export function getUsageText() {
     '  catalog summary --input-file <catalog-devices.json> [--format summary|markdown|json|json-pretty|json-compact|ndjson]',
     '  catalog validate --input-file <catalog-devices.json> [--format summary|json|json-pretty|json-compact|ndjson]',
     '  catalog normalize --input-file <catalog-devices.json> [--format summary|markdown|json|json-pretty|json-compact|ndjson]',
+    '  catalog merge --input-file <catalog-a.json> --input-file <catalog-b.json> [--format summary|markdown|json|json-pretty|json-compact|ndjson]',
     '  catalog fetch --source zwjs-inspect-node-detail --input-file <node-detail.json> [--format summary|markdown|json|json-pretty|json-compact|ndjson]',
   ].join('\n');
 }
@@ -55,7 +57,7 @@ export function parseCliArgs(argv) {
   const { flags, positionals } = parseFlagMap(argv);
   const subcommand = positionals[0];
   if (!subcommand) return { ok: false, error: getUsageText() };
-  if (!['summary', 'validate', 'normalize', 'fetch'].includes(subcommand)) {
+  if (!['summary', 'validate', 'normalize', 'merge', 'fetch'].includes(subcommand)) {
     return { ok: false, error: `Unsupported catalog subcommand: ${subcommand}` };
   }
   const format = flags.get('--format') ?? 'summary';
@@ -71,6 +73,22 @@ export function parseCliArgs(argv) {
       ok: true,
       command: { subcommand, source, inputFile, format },
     };
+  }
+  if (subcommand === 'merge') {
+    const inputFiles = [];
+    for (let i = 0; i < argv.length; i += 1) {
+      const token = argv[i];
+      if (token === '--input-file') {
+        const value = argv[i + 1];
+        if (value && !value.startsWith('--')) inputFiles.push(value);
+      } else if (token.startsWith('--input-file=')) {
+        inputFiles.push(token.slice('--input-file='.length));
+      }
+    }
+    if (inputFiles.length < 2) {
+      return { ok: false, error: 'catalog merge requires at least two --input-file values' };
+    }
+    return { ok: true, command: { subcommand, inputFiles, format } };
   }
   const inputFile = flags.get('--input-file');
   if (!inputFile) return { ok: false, error: '--input-file is required' };
@@ -99,6 +117,26 @@ export function runCatalogCommand(command) {
             d.productType !== undefined &&
             d.productId !== undefined,
         ).length,
+      },
+    };
+  }
+  if (command.subcommand === 'merge') {
+    const artifacts = command.inputFiles.map((filePath) => loadCatalogDevicesArtifact(filePath));
+    const merged = mergeCatalogDevicesArtifactsV1(artifacts);
+    return {
+      artifact: merged.artifact,
+      summary: {
+        deviceCount: merged.artifact.devices.length,
+        sourceNames: [
+          ...new Set(merged.artifact.devices.flatMap((d) => d.sources.map((s) => s.source))),
+        ].sort(),
+        identifiedDeviceCount: merged.artifact.devices.filter(
+          (d) =>
+            d.manufacturerId !== undefined &&
+            d.productType !== undefined &&
+            d.productId !== undefined,
+        ).length,
+        merge: merged.report,
       },
     };
   }
@@ -150,6 +188,11 @@ export function formatCatalogSummary(result) {
       `Normalize: input=${result.summary.normalize.inputDevices} output=${result.summary.normalize.outputDevices} merged=${result.summary.normalize.mergedDuplicates}`,
     );
   }
+  if (result.summary.merge) {
+    lines.push(
+      `Merge: artifacts=${result.summary.merge.inputArtifacts} input=${result.summary.merge.inputDevices} output=${result.summary.merge.outputDevices} merged=${result.summary.merge.mergedDuplicates}`,
+    );
+  }
   return lines.join('\n');
 }
 
@@ -162,6 +205,9 @@ export function formatCatalogMarkdown(result) {
     `- Sources: ${result.summary.sourceNames.join(', ') || '(none)'}`,
     result.summary.normalize
       ? `- Normalize: input=${result.summary.normalize.inputDevices}, output=${result.summary.normalize.outputDevices}, merged=${result.summary.normalize.mergedDuplicates}`
+      : null,
+    result.summary.merge
+      ? `- Merge: artifacts=${result.summary.merge.inputArtifacts}, input=${result.summary.merge.inputDevices}, output=${result.summary.merge.outputDevices}, merged=${result.summary.merge.mergedDuplicates}`
       : null,
   ]
     .filter(Boolean)

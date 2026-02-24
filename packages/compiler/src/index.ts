@@ -15,6 +15,11 @@ export type {
   NormalizeCatalogResult,
 } from './catalog/catalog-normalize';
 export type {
+  MergeCatalogOptions,
+  MergeCatalogReport,
+  MergeCatalogResult,
+} from './catalog/catalog-merge';
+export type {
   CompiledHomeyProfilePlan,
   HomeyCapabilityPlan,
   HomeyInboundMapping,
@@ -45,6 +50,7 @@ export {
   loadCatalogDevicesArtifact,
 } from './catalog/catalog-device-artifact';
 export { normalizeCatalogDevicesArtifactV1 } from './catalog/catalog-normalize';
+export { mergeCatalogDevicesArtifactsV1 } from './catalog/catalog-merge';
 export {
   ZwjsInspectCatalogSourceError,
   catalogArtifactFromZwjsInspectNodeDetail,

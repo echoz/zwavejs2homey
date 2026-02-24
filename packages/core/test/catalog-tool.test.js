@@ -24,6 +24,18 @@ test('catalog parseCliArgs validates subcommands and formats', async () => {
   );
   assert.equal(
     parseCliArgs([
+      'merge',
+      '--input-file',
+      'a.json',
+      '--input-file',
+      'b.json',
+      '--format',
+      'markdown',
+    ]).ok,
+    true,
+  );
+  assert.equal(
+    parseCliArgs([
       'fetch',
       '--source',
       'zwjs-inspect-node-detail',
@@ -75,6 +87,26 @@ test('catalog normalize dedupes catalog artifact and reports merge summary', asy
   assert.equal(result.summary.normalize.mergedDuplicates, 1);
   assert.match(formatCatalogOutput(result, 'summary'), /Normalize: input=3 output=2 merged=1/);
   assert.doesNotThrow(() => JSON.parse(formatCatalogOutput(result, 'json')));
+});
+
+test('catalog merge combines multiple artifacts and reports merge stats', async () => {
+  const { runCatalogCommand, formatCatalogOutput } = await loadLib();
+  const result = runCatalogCommand({
+    subcommand: 'merge',
+    inputFiles: [
+      path.join(fixturesDir, 'catalog-devices-with-duplicates.json'),
+      path.join(fixturesDir, 'catalog-devices-extra.json'),
+    ],
+    format: 'summary',
+  });
+  assert.equal(result.summary.deviceCount, 3);
+  assert.equal(result.summary.merge.inputArtifacts, 2);
+  assert.equal(result.summary.merge.mergedDuplicates, 2);
+  assert.match(
+    formatCatalogOutput(result, 'summary'),
+    /Merge: artifacts=2 input=5 output=3 merged=2/,
+  );
+  assert.match(formatCatalogOutput(result, 'markdown'), /Merge: artifacts=2/);
 });
 
 test('catalog fetch rejects unsupported source adapters', async () => {
