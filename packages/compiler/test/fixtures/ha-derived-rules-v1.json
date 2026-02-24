@@ -1,0 +1,31 @@
+{
+  "schemaVersion": "ha-derived-rules/v1",
+  "source": {
+    "upstream": "home-assistant",
+    "component": "zwave_js",
+    "generatedAt": "2026-02-24T00:00:00Z",
+    "sourceRef": "homeassistant/components/zwave_js/discovery.py"
+  },
+  "rules": [
+    {
+      "ruleId": "ha-switch-binary-current",
+      "layer": "ha-derived",
+      "value": { "commandClass": [37], "property": ["currentValue"] },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "socket",
+          "driverTemplateId": "ha-generic-socket"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "onoff",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": { "commandClass": 37, "endpoint": 0, "property": "currentValue" }
+          }
+        }
+      ]
+    }
+  ]
+}

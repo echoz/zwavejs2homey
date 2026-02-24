@@ -168,16 +168,20 @@ export function loadJsonRuleFile(filePath: string): MappingRule[] {
     throw new RuleFileLoadError(`Failed to read or parse JSON rule file: ${message}`, filePath);
   }
 
-  if (!Array.isArray(parsed)) {
-    throw new RuleFileLoadError('Rule file must contain a JSON array of rules', filePath);
-  }
-
-  parsed.forEach((rule, index) => validateRuleShape(rule, filePath, index));
-  return parsed as MappingRule[];
+  return validateJsonRuleArray(parsed, filePath);
 }
 
 export function loadJsonRuleFiles(filePaths: string[]): LoadedRuleFile[] {
   return filePaths.map((filePath) => ({ filePath, rules: loadJsonRuleFile(filePath) }));
+}
+
+export function validateJsonRuleArray(value: unknown, filePath: string): MappingRule[] {
+  if (!Array.isArray(value)) {
+    throw new RuleFileLoadError('Rule file must contain a JSON array of rules', filePath);
+  }
+
+  value.forEach((rule, index) => validateRuleShape(rule, filePath, index));
+  return value as MappingRule[];
 }
 
 export function loadJsonRuleSetManifest(entries: RuleSetManifestEntry[]): LoadedRuleSetManifest {

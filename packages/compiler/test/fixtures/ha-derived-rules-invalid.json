@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "ha-derived-rules/v1",
+  "source": {
+    "upstream": "home-assistant",
+    "component": "zwave_js",
+    "generatedAt": "2026-02-24T00:00:00Z"
+  },
+  "rules": [
+    {
+      "ruleId": "not-ha-layer",
+      "layer": "project-generic",
+      "actions": [{ "type": "ignore-value" }]
+    }
+  ]
+}

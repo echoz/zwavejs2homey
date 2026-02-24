@@ -862,6 +862,8 @@ Recommended (workspace-level for easy curation):
 
 ### Phase 1 — Normalized Models + Rule DSL + Layer Semantics (no HA import yet)
 
+Status: Completed (models, rule loading/validation, layered application semantics, reporting, local inspect/bench tooling, Phase 1 review fixes)
+
 - Define normalized input/output models and internal build-state types
 - Define rule DSL schema + parser/validator
 - Implement slot-based `fill/augment/replace`
@@ -870,6 +872,8 @@ Recommended (workspace-level for easy curation):
 - Output compiled runtime plan + reports
 
 ### Phase 2 — HA Rule Import Tooling + Representative Import Layer
+
+Status: In progress (initial generated `ha-derived` artifact contract + loader compatibility validation)
 
 - Build HA extract/translate/validate tooling pipeline
 - Generate `ha-derived` rule artifacts with provenance

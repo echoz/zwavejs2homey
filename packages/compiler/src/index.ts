@@ -74,7 +74,13 @@ export {
   loadJsonRuleFile,
   loadJsonRuleFiles,
   loadJsonRuleSetManifest,
+  validateJsonRuleArray,
 } from './compiler/rule-loader';
+export type { HaDerivedGeneratedRuleArtifactV1 } from './importers/ha/generated-rule-artifact';
+export {
+  HaGeneratedRuleArtifactError,
+  loadHaDerivedGeneratedRuleArtifact,
+} from './importers/ha/generated-rule-artifact';
 export {
   matchesDevice,
   matchesRuleCompanionConstraints,
