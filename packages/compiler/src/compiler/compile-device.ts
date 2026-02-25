@@ -41,15 +41,34 @@ export interface CompileDeviceResult {
   };
 }
 
+interface SortedRulesCacheEntry {
+  sourceLength: number;
+  sortedRules: MappingRule[];
+}
+
+const ruleLayerOrder = getRuleLayerOrder();
+const ruleLayerRank = new Map(ruleLayerOrder.map((layer, index) => [layer, index]));
+const sortedRulesCache = new WeakMap<readonly MappingRule[], SortedRulesCacheEntry>();
+
+function resolveSortedRules(rules: MappingRule[]): MappingRule[] {
+  const cached = sortedRulesCache.get(rules);
+  if (cached && cached.sourceLength === rules.length) return cached.sortedRules;
+
+  const sortedRules = [...rules].sort((a, b) => {
+    const aRank = ruleLayerRank.get(a.layer) ?? Number.MAX_SAFE_INTEGER;
+    const bRank = ruleLayerRank.get(b.layer) ?? Number.MAX_SAFE_INTEGER;
+    return aRank - bRank;
+  });
+  sortedRulesCache.set(rules, { sourceLength: rules.length, sortedRules });
+  return sortedRules;
+}
+
 export function compileDevice(
   device: NormalizedZwaveDeviceFacts,
   rules: MappingRule[],
 ): CompileDeviceResult {
   const state = createProfileBuildState();
-  const layerOrder = getRuleLayerOrder();
-  const sortedRules = [...rules].sort(
-    (a, b) => layerOrder.indexOf(a.layer) - layerOrder.indexOf(b.layer),
-  );
+  const sortedRules = resolveSortedRules(rules);
   const actions: CompileDeviceReportEntry[] = [];
 
   for (const value of device.values) {

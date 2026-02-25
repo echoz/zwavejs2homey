@@ -10,11 +10,21 @@ import {
   loadJsonRuleSetManifest,
   type RuleSetManifestEntry,
 } from './rule-loader';
+import type { MappingRule } from '../rules/types';
 
 const TECHNICAL_CURATION_REASON_PREFIXES = ['suppressed-fill-actions:', 'high-unmatched-ratio:'];
+const loadedManifestRulesCache = new WeakMap<LoadedRuleSetManifest, MappingRule[]>();
 
 function isTechnicalCurationReason(reason: string): boolean {
   return TECHNICAL_CURATION_REASON_PREFIXES.some((prefix) => reason.startsWith(prefix));
+}
+
+function resolveRulesForLoadedManifest(loaded: LoadedRuleSetManifest): MappingRule[] {
+  const cached = loadedManifestRulesCache.get(loaded);
+  if (cached) return cached;
+  const resolved = loaded.entries.flatMap((entry) => entry.rules);
+  loadedManifestRulesCache.set(loaded, resolved);
+  return resolved;
 }
 
 export interface RuleSourceMetadata {
@@ -267,7 +277,7 @@ export function compileProfilePlanFromLoadedRuleSetManifest(
   loaded: LoadedRuleSetManifest,
   options?: CompileProfilePlanOptions,
 ): CompileProfilePlanFromFilesResult {
-  const rules = loaded.entries.flatMap((entry) => entry.rules);
+  const rules = resolveRulesForLoadedManifest(loaded);
   const { profile, report, catalogLookup } = compileProfilePlan(device, rules, options);
   const profileOutcome = deriveProfileOutcome(profile);
   const curationCandidates = deriveCurationCandidates(report, profile, catalogLookup);

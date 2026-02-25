@@ -89,6 +89,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - `compiler:inspect-live` now preloads rule manifests once and reuses loaded rulesets across nodes (instead of reloading/parsing per node)
     - `compiler:bench` now preloads manifests once and reports one-time setup timing separately from steady-state compile timing
     - added core-tool regression coverage for loaded-ruleset reuse path
+21. Completed second performance slice in compiler core runtime:
+    - `compileProfilePlanFromLoadedRuleSetManifest` now caches flattened rule arrays per loaded manifest object
+    - `compileDevice` now caches layer-sorted execution order per rules array instance
+    - `compileProfilePlan` now caches catalog index builds per catalog artifact instance
+    - added compiler regression tests for loaded-manifest flatten caching and catalog-index reuse
 
 ## Next Tasks
 

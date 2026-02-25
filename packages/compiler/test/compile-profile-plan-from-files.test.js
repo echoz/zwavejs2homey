@@ -91,6 +91,27 @@ test('compileProfilePlanFromLoadedRuleSetManifest reuses preloaded manifest data
   assert.equal(result.ruleSources[0].filePath, rulesFile);
 });
 
+test('compileProfilePlanFromLoadedRuleSetManifest flattens rules once per loaded manifest', () => {
+  const rulesFile = path.join(fixturesDir, 'rules-switch-meter.json');
+  const loaded = compiler.loadJsonRuleSetManifest([{ filePath: rulesFile }]);
+  const originalFlatMap = loaded.entries.flatMap.bind(loaded.entries);
+  let flatMapCalls = 0;
+  loaded.entries.flatMap = (...args) => {
+    flatMapCalls += 1;
+    return originalFlatMap(...args);
+  };
+
+  const a = compiler.compileProfilePlanFromLoadedRuleSetManifest(device, loaded, {
+    homeyClass: 'socket',
+  });
+  const b = compiler.compileProfilePlanFromLoadedRuleSetManifest(device, loaded, {
+    homeyClass: 'socket',
+  });
+
+  assert.equal(flatMapCalls, 1);
+  assert.deepEqual(a.profile.classification, b.profile.classification);
+});
+
 test('compileProfilePlanFromRuleSetManifest groups suppressed fills and flags curation review', () => {
   const baseRules = path.join(fixturesDir, 'rules-switch-meter-device-identity.json');
   const extraGeneric = path.join(

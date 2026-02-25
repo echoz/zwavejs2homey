@@ -31,6 +31,9 @@ export interface CompileProfilePlanCatalogLookup {
   label?: string;
 }
 
+type CatalogArtifactInput = NonNullable<CompileProfilePlanOptions['catalogArtifact']>;
+const catalogIndexCache = new WeakMap<CatalogArtifactInput, CatalogIndexBuildResult>();
+
 function deriveMatch(device: NormalizedZwaveDeviceFacts): Record<string, unknown> {
   return {
     manufacturerId: device.manufacturerId,
@@ -78,6 +81,20 @@ function deriveClassificationFromCompileResult(
   };
 }
 
+function resolveCatalogIndex(
+  options: CompileProfilePlanOptions | undefined,
+): CatalogIndexBuildResult | undefined {
+  if (options?.catalogIndex) return options.catalogIndex;
+  if (!options?.catalogArtifact) return undefined;
+
+  const cached = catalogIndexCache.get(options.catalogArtifact);
+  if (cached) return cached;
+
+  const built = buildCatalogIndexV1(options.catalogArtifact);
+  catalogIndexCache.set(options.catalogArtifact, built);
+  return built;
+}
+
 export function compileProfilePlan(
   device: NormalizedZwaveDeviceFacts,
   rules: MappingRule[],
@@ -89,9 +106,7 @@ export function compileProfilePlan(
 } {
   const compileResult = compileDevice(device, rules);
   const profileId = options?.profileId ?? deriveProfileId(device);
-  const catalogIndex =
-    options?.catalogIndex ??
-    (options?.catalogArtifact ? buildCatalogIndexV1(options.catalogArtifact) : undefined);
+  const catalogIndex = resolveCatalogIndex(options);
   const catalogLookup =
     catalogIndex &&
     device.manufacturerId !== undefined &&

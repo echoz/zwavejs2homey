@@ -163,6 +163,25 @@ test('compileProfilePlan reports catalog lookup match when catalog artifact is p
   assert.match(result.profile.provenance.reason, /catalogId=observed:29-13313-1/);
 });
 
+test('compileProfilePlan caches catalog indexes per catalog artifact instance', () => {
+  const catalogArtifact = compiler.loadCatalogDevicesArtifact(
+    require('node:path').join(__dirname, 'fixtures', 'catalog-devices-v1.json'),
+  );
+  let iteratorCalls = 0;
+  const originalIterator = catalogArtifact.devices[Symbol.iterator].bind(catalogArtifact.devices);
+  catalogArtifact.devices[Symbol.iterator] = function* iteratorWrapper() {
+    iteratorCalls += 1;
+    yield* originalIterator();
+  };
+
+  const first = compiler.compileProfilePlan(device, rules, { catalogArtifact });
+  const second = compiler.compileProfilePlan(device, rules, { catalogArtifact });
+
+  assert.equal(iteratorCalls, 1);
+  assert.deepEqual(first.catalogLookup, second.catalogLookup);
+  assert.deepEqual(first.profile.catalogMatch, second.profile.catalogMatch);
+});
+
 test('compileProfilePlan resolves same-selector conflicts using capability conflict metadata', () => {
   const coverDevice = {
     deviceKey: 'fixture-cover-1',
