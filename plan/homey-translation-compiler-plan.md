@@ -940,9 +940,9 @@ Phase 3 compiler-complete-before-adapter additions (required before Homey adapte
   - `rules/project/generic/` curated generic inference rules
   - `rules/project/product/` curated product overrides
 - Generate HA-derived rules to cover the full set of HA `zwave_js` discovery rules supported by the current extractor/translator path
-- Build and iterate a real project-generic rule set that infers Homey device profiles/capabilities from Z-Wave configuration/metadata (not just test fixtures)
+- Build and iterate a minimal project-generic rule set only where static compiler-side mappings are clearly beneficial (avoid growing Homey-specific fallback inference policy in compiler scope)
 - Add a compiled-artifact inspection/apply path for live ZWJS data (so live validation uses compiled profiles, not compile-on-the-fly)
-- Use live ZWJS validation to tighten generic/profile inference before adapter implementation
+- Use live ZWJS validation to tighten HA-derived overlap behavior and identify where product overrides (or later adapter-owned fallback inference) are needed before adapter implementation
 
 Progress on the extended scope:
 
@@ -959,7 +959,7 @@ Deferred / later Phase 3 expansion (not required for compiler runtime-validation
 
 - Additional real catalog source adapters (beyond `zwjs-inspect-node-detail`)
 - Deeper catalog-informed compile-time guidance (still no silent precedence changes)
-- Generic fallback compilation refinements beyond the initial real project-generic ruleset
+- Generic fallback compilation refinements beyond the initial project-generic baseline (subject to final compiler vs adapter ownership decision)
 - Catalog-driven workflows that add new authoring artifacts (e.g. curation seeds) unless a real pain point appears
 
 ### Phase 4 — Runtime Curation Patch Schema + Patch Apply Helper
@@ -980,15 +980,15 @@ Decision:
 ## Explicit Assumptions and Defaults Chosen
 
 - Static-first design is the primary constraint.
-- Generic fallback rules are part of the compile process, not runtime inference.
+- Generic fallback rules are currently available in the compiler as a provisional/starter layer; Homey-specific fallback inference policy may move to the adapter runtime.
 - Rule layers use slot-based fill semantics; later layers only fill gaps unless explicit `replace` is allowed.
 - “Our rules” are split into:
   - `project-product` (curated targeted rules)
-  - `project-generic` (fallback fill-only rules)
+  - `project-generic` (provisional/minimal fallback fill-only rules)
 - HA `zwave_js` discovery logic is used as compile inspiration/input, not a runtime dependency.
 - Compiler primary output is a compiled runtime plan artifact (JSON), not codegen-first.
 - Runtime curation is allowed, but constrained to a patch model with provenance.
-- Unknown devices may still get generic fallback-inferred Homey mappings and are marked `uncurated`.
+- Unknown devices are marked `uncurated`; final fallback behavior ownership is trending toward the Homey adapter runtime.
 - Provenance is required at least at:
   - profile level
   - capability level

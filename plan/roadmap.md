@@ -29,9 +29,10 @@
 - [x] `compiler:build` can compile directly from live ZWJS nodes (not just fixture device facts)
 - [x] Real rule pipeline directory skeleton in repo (`rules/ha-derived`, `rules/project/generic`, `rules/project/product`)
 - [x] Generate HA-derived ruleset from HA import pipeline for supported discovery coverage
-- [x] Initial project-generic ruleset for device-profile inference from Z-Wave configuration/metadata (starter set)
+- [x] Initial project-generic ruleset (starter/provisional; may be reduced as adapter-owned inference policy is defined)
 - [x] Live ZWJS validation path can apply compiled profiles artifact (not on-the-fly compile)
 - [x] Live compiler build/inspect defaults skip controller-like nodes to focus device-profile validation
+- [ ] Decide and document final ownership of generic fallback inference policy (currently leaning Homey adapter-owned)
 - [ ] Add second real catalog source adapter when a concrete source format is available
 
 ## Phase 4: Homey Adapter MVP (Next Major Area)

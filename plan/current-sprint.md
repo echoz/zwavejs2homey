@@ -47,10 +47,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 ## Next Tasks
 
 1. Tighten `compiler:build` into the canonical layered build pipeline (HA-derived + project rules + catalog) with real non-fixture node facts sources
-2. Expand project-generic ruleset for device-profile inference from Z-Wave configuration/metadata
+2. Improve HA-derived overlap/selection behavior (current highest-impact issue on live network)
 3. Add first project-product override rules from real device validation
 4. Use `compiler:inspect-live --compiled-file ...` to validate compiled artifacts on real ZWJS data
-5. Defer Homey adapter implementation until compiler runtime-validation readiness milestone is reached
+5. Keep project-generic rules minimal/provisional; likely move generic fallback inference policy into the Homey adapter
+6. Defer Homey adapter implementation until compiler runtime-validation readiness milestone is reached
 
 ## Risks / Unknowns
 
@@ -58,7 +59,7 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 - Compiler performance may degrade as HA-derived + project rules + catalog-aware diagnostics scale up
 - Risk of overloading compiler behavior with catalog heuristics before precedence policy is explicitly designed
 - Risk of boundary drift if runtime curation semantics are reintroduced into compiler package
-- Risk of delaying adapter work if generic ruleset scope is not bounded for the first “compiler complete enough” milestone
+- Risk of delaying adapter work if generic fallback inference policy remains split between compiler and adapter
 
 ## Notes
 
