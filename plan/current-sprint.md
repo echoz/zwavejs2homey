@@ -111,6 +111,10 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - `compileDevice` execution plan now precomputes unmatched action templates per rule/action
     - unmatched fast paths now reuse templates and only append the dynamic `valueId` payload per action
     - added regression coverage for multi-action unmatched emission shape and layer/action typing parity
+26. Completed seventh performance slice for per-value candidate allocation removal:
+    - replaced per-value candidate mask allocations with reusable stamp-based candidate scratch buffers in `compileDevice`
+    - candidate gating still intersects command-class/property/endpoint dimensions but now avoids per-value `Uint8Array` allocations
+    - added regression coverage to ensure candidate marks do not leak across values
 
 ## Next Tasks
 

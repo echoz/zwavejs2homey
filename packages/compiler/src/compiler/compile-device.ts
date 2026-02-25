@@ -1,6 +1,6 @@
 import type { HomeyCapabilityPlan } from '../models/homey-plan';
 import type { NormalizedZwaveDeviceFacts, NormalizedZwaveValueId } from '../models/zwave-facts';
-import type { MappingRule, RuleAction } from '../rules/types';
+import type { MappingRule } from '../rules/types';
 import type { AppliedRuleActionResult } from './apply-rule';
 import { applyRuleToValue } from './apply-rule';
 import { getRuleLayerOrder } from './layer-semantics';
@@ -60,6 +60,13 @@ interface CompileRuleExecutionPlan {
   byProperty: Map<string, number[]>;
   endpointWildcardIndices: number[];
   byEndpoint: Map<number, number[]>;
+}
+
+interface CandidateScratch {
+  commandClassMarks: Uint32Array;
+  propertyMarks: Uint32Array;
+  endpointMarks: Uint32Array;
+  stamp: number;
 }
 
 const ruleLayerOrder = getRuleLayerOrder();
@@ -152,41 +159,64 @@ function resolveRuleExecutionPlan(rules: MappingRule[]): CompileRuleExecutionPla
   return plan;
 }
 
-function buildCandidateMaskForValue(
+function createCandidateScratch(length: number): CandidateScratch {
+  return {
+    commandClassMarks: new Uint32Array(length),
+    propertyMarks: new Uint32Array(length),
+    endpointMarks: new Uint32Array(length),
+    stamp: 0,
+  };
+}
+
+function nextScratchStamp(scratch: CandidateScratch): number {
+  if (scratch.stamp >= 0xffffffff) {
+    scratch.commandClassMarks.fill(0);
+    scratch.propertyMarks.fill(0);
+    scratch.endpointMarks.fill(0);
+    scratch.stamp = 1;
+    return scratch.stamp;
+  }
+  scratch.stamp += 1;
+  return scratch.stamp;
+}
+
+function markIndices(marks: Uint32Array, indices: number[], stamp: number): void {
+  for (const index of indices) {
+    marks[index] = stamp;
+  }
+}
+
+function markCandidatesForValue(
   plan: CompileRuleExecutionPlan,
+  scratch: CandidateScratch,
   valueId: NormalizedZwaveValueId,
-): Uint8Array {
-  const commandClassMask = new Uint8Array(plan.entries.length);
-  for (const index of plan.commandClassWildcardIndices) {
-    commandClassMask[index] = 1;
-  }
-  for (const index of plan.byCommandClass.get(valueId.commandClass) ?? []) {
-    commandClassMask[index] = 1;
-  }
+): number {
+  const stamp = nextScratchStamp(scratch);
 
-  const propertyMask = new Uint8Array(plan.entries.length);
-  for (const index of plan.propertyWildcardIndices) {
-    propertyMask[index] = 1;
-  }
-  for (const index of plan.byProperty.get(propertyTokenKey(valueId.property)) ?? []) {
-    propertyMask[index] = 1;
-  }
+  markIndices(scratch.commandClassMarks, plan.commandClassWildcardIndices, stamp);
+  markIndices(
+    scratch.commandClassMarks,
+    plan.byCommandClass.get(valueId.commandClass) ?? [],
+    stamp,
+  );
+  markIndices(scratch.propertyMarks, plan.propertyWildcardIndices, stamp);
+  markIndices(
+    scratch.propertyMarks,
+    plan.byProperty.get(propertyTokenKey(valueId.property)) ?? [],
+    stamp,
+  );
+  markIndices(scratch.endpointMarks, plan.endpointWildcardIndices, stamp);
+  markIndices(scratch.endpointMarks, plan.byEndpoint.get(valueId.endpoint ?? 0) ?? [], stamp);
 
-  const endpointMask = new Uint8Array(plan.entries.length);
-  for (const index of plan.endpointWildcardIndices) {
-    endpointMask[index] = 1;
-  }
-  for (const index of plan.byEndpoint.get(valueId.endpoint ?? 0) ?? []) {
-    endpointMask[index] = 1;
-  }
+  return stamp;
+}
 
-  for (let index = 0; index < commandClassMask.length; index += 1) {
-    if (commandClassMask[index] === 0 || propertyMask[index] === 0 || endpointMask[index] === 0) {
-      commandClassMask[index] = 0;
-    }
-  }
-
-  return commandClassMask;
+function isRuleCandidate(scratch: CandidateScratch, index: number, stamp: number): boolean {
+  return (
+    scratch.commandClassMarks[index] === stamp &&
+    scratch.propertyMarks[index] === stamp &&
+    scratch.endpointMarks[index] === stamp
+  );
 }
 
 function pushUnmatchedActions(
@@ -239,12 +269,16 @@ export function compileDevice(
   const state = createProfileBuildState();
   const executionPlan = resolveRuleExecutionPlan(rules);
   const deviceEligibleMask = buildDeviceEligibleMask(device, executionPlan);
+  const candidateScratch = createCandidateScratch(executionPlan.entries.length);
   const actions: CompileDeviceReportEntry[] = [];
 
   for (const value of device.values) {
-    const candidateMask = buildCandidateMaskForValue(executionPlan, value.valueId);
+    const candidateStamp = markCandidatesForValue(executionPlan, candidateScratch, value.valueId);
     for (const [index, entry] of executionPlan.entries.entries()) {
-      if (deviceEligibleMask[index] === 0 || candidateMask[index] === 0) {
+      if (
+        deviceEligibleMask[index] === 0 ||
+        !isRuleCandidate(candidateScratch, index, candidateStamp)
+      ) {
         pushUnmatchedActions(actions, entry, value.valueId);
         continue;
       }

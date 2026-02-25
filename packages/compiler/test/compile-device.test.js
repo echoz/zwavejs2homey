@@ -306,3 +306,59 @@ test('compileDevice unmatched reporting emits one entry per action for ineligibl
     ],
   );
 });
+
+test('compileDevice candidate scratch does not leak matches across multiple values', () => {
+  const device = {
+    deviceKey: 'dev-candidate-scratch-1',
+    values: [
+      {
+        valueId: { commandClass: 37, endpoint: 0, property: 'currentValue' },
+        metadata: { type: 'boolean', readable: true, writeable: false },
+      },
+      {
+        valueId: { commandClass: 50, endpoint: 0, property: 'value' },
+        metadata: { type: 'number', readable: true, writeable: false },
+      },
+    ],
+  };
+  const rules = [
+    {
+      ruleId: 'rule-current',
+      layer: 'ha-derived',
+      value: { commandClass: [37], endpoint: [0], property: ['currentValue'] },
+      actions: [{ type: 'capability', capabilityId: 'onoff' }],
+    },
+    {
+      ruleId: 'rule-meter',
+      layer: 'ha-derived',
+      value: { commandClass: [50], endpoint: [0], property: ['value'] },
+      actions: [{ type: 'capability', capabilityId: 'measure_power' }],
+    },
+    {
+      ruleId: 'rule-never',
+      layer: 'project-product',
+      value: { commandClass: [37], endpoint: [0], property: ['targetValue'] },
+      actions: [{ type: 'capability', capabilityId: 'alarm_generic' }],
+    },
+  ];
+
+  const result = compiler.compileDevice(device, rules);
+
+  assert.deepEqual(
+    result.capabilities.map((capability) => capability.capabilityId),
+    ['measure_power', 'onoff'],
+  );
+
+  const byRule = result.report.actions.reduce((acc, action) => {
+    acc[action.ruleId] ??= { applied: 0, unmatched: 0 };
+    if (action.applied) acc[action.ruleId].applied += 1;
+    if (action.reason === 'rule-not-matched') acc[action.ruleId].unmatched += 1;
+    return acc;
+  }, {});
+
+  assert.deepEqual(byRule, {
+    'rule-current': { applied: 1, unmatched: 1 },
+    'rule-meter': { applied: 1, unmatched: 1 },
+    'rule-never': { applied: 0, unmatched: 2 },
+  });
+});
