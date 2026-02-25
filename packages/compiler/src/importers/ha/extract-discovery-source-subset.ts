@@ -76,13 +76,45 @@ type ParsedCompanion = NonNullable<
   NonNullable<HaExtractedDiscoveryEntryV1['companions']>['requiredValues']
 >[number];
 type ParsedOutput = HaExtractedDiscoveryEntryV1['output'];
+type ParsedPropertyKey = string | number | null;
 
 interface AliasSchemaDef {
   commandClass: number;
   property: string | number;
   endpoint?: number;
   metadataType?: string;
+  propertyKey?: ParsedPropertyKey | ParsedPropertyKey[];
 }
+
+const WINDOW_COVERING_POSITION_PROPERTY_KEYS: ParsedPropertyKey[] = [
+  'inboundBottom',
+  'inboundBottomNoPosition',
+  'inboundLeft',
+  'inboundLeftNoPosition',
+  'inboundLeftRight',
+  'inboundLeftRightNoPosition',
+  'inboundRight',
+  'inboundRightNoPosition',
+  'inboundTop',
+  'inboundTopNoPosition',
+  'inboundTopBottom',
+  'inboundTopBottomNoPosition',
+  'outboundBottom',
+  'outboundBottomNoPosition',
+  'outboundLeft',
+  'outboundLeftNoPosition',
+  'outboundRight',
+  'outboundRightNoPosition',
+  'outboundTop',
+  'outboundTopNoPosition',
+];
+
+const WINDOW_COVERING_TILT_PROPERTY_KEYS: ParsedPropertyKey[] = [
+  'horizontalSlatsAngle',
+  'horizontalSlatsAngleNoPosition',
+  'verticalSlatsAngle',
+  'verticalSlatsAngleNoPosition',
+];
 
 const VALUE_ALIAS_DEFS: Record<string, AliasSchemaDef> = {
   SWITCH_MULTILEVEL_CURRENT_VALUE_SCHEMA: {
@@ -114,6 +146,7 @@ const VALUE_ALIAS_DEFS: Record<string, AliasSchemaDef> = {
     property: 'currentValue',
     endpoint: 0,
     metadataType: 'number',
+    propertyKey: null,
   },
   SIREN_TONE_SCHEMA: {
     commandClass: 121,
@@ -126,12 +159,14 @@ const VALUE_ALIAS_DEFS: Record<string, AliasSchemaDef> = {
     property: 'currentValue',
     endpoint: 0,
     metadataType: 'number',
+    propertyKey: WINDOW_COVERING_POSITION_PROPERTY_KEYS,
   },
   WINDOW_COVERING_SLAT_CURRENT_VALUE_SCHEMA: {
     commandClass: 106,
     property: 'currentValue',
     endpoint: 0,
     metadataType: 'number',
+    propertyKey: WINDOW_COVERING_TILT_PROPERTY_KEYS,
   },
 };
 
@@ -185,8 +220,9 @@ function parseStringSet(content: string): string[] {
     .filter((value) => value.length > 0);
 }
 
-function parsePropertyToken(content: string): string | number | null {
+function parsePropertyToken(content: string): string | number | null | undefined {
   const trimmed = content.trim();
+  if (trimmed === 'None') return null;
   if (PROPERTY_TOKEN_MAP[trimmed] !== undefined) return PROPERTY_TOKEN_MAP[trimmed];
   const quoted = trimmed.match(/^"([^"]+)"$|^'([^']+)'$/);
   if (quoted) return quoted[1] ?? quoted[2];
@@ -194,7 +230,7 @@ function parsePropertyToken(content: string): string | number | null {
   if (hex) return Number.parseInt(hex[1], 16);
   const dec = Number.parseInt(trimmed, 10);
   if (!Number.isNaN(dec) && String(dec) === trimmed) return dec;
-  return null;
+  return undefined;
 }
 
 function parseCommandClassSet(content: string): number | null {
@@ -210,9 +246,20 @@ function parseCommandClassSet(content: string): number | null {
 function parsePropertySet(content: string): string | number | null {
   for (const token of content.split(',')) {
     const parsed = parsePropertyToken(token);
-    if (parsed !== null) return parsed;
+    if (parsed !== undefined && parsed !== null) return parsed;
   }
   return null;
+}
+
+function parsePropertyKeySet(content: string): ParsedPropertyKey[] | null {
+  const parsed: ParsedPropertyKey[] = [];
+  for (const token of content.split(',')) {
+    const value = parsePropertyToken(token);
+    if (value === undefined) return null;
+    parsed.push(value);
+  }
+  if (parsed.length === 0) return [];
+  return [...new Set(parsed)];
 }
 
 function extractSchemaBlocks(source: string): Array<{ startIndex: number; body: string }> {
@@ -313,8 +360,13 @@ function parseInlineValueSchema(fragment: string): ParsedValueMatcher | ParsedCo
     property,
   };
   if (propertyKeyMatch) {
-    const propertyKey = parsePropertyToken(propertyKeyMatch[1]);
-    if (propertyKey !== null) parsed.propertyKey = propertyKey;
+    const propertyKey = parsePropertyKeySet(propertyKeyMatch[1]);
+    if (!propertyKey) return null;
+    if (propertyKey.length === 1) {
+      parsed.propertyKey = propertyKey[0];
+    } else if (propertyKey.length > 1) {
+      parsed.propertyKey = propertyKey;
+    }
   }
   const typeMatch = fragment.match(/type=\{ValueType\.([A-Z_]+)\}/);
   const readableMatch = fragment.match(/\breadable=(True|False)\b/);
@@ -360,6 +412,7 @@ function parseValueSchemaRef(
         commandClass: alias.commandClass,
         endpoint: alias.endpoint ?? 0,
         property: alias.property,
+        ...(alias.propertyKey !== undefined ? { propertyKey: alias.propertyKey } : {}),
         ...(alias.metadataType ? { metadata: { type: alias.metadataType } } : {}),
       };
       return { value };
@@ -397,6 +450,7 @@ function parseValueSchemaRef(
         commandClass: alias.commandClass,
         endpoint: alias.endpoint ?? 0,
         property: alias.property,
+        ...(alias.propertyKey !== undefined ? { propertyKey: alias.propertyKey } : {}),
       };
     });
     return { values: mapped };

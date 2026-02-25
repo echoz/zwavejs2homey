@@ -81,6 +81,10 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - list output now suppresses technical-only review codes (`suppressed-fill-actions`, `high-unmatched-ratio`) to keep `Review` focused on actionable signals
     - summary/markdown output now expands technical diagnostics with plain-language explanations and top suppressed-slot examples
     - added tool-level regression tests for technical-reason rendering behavior
+19. Closed the latest compiler code-review fix bundle before perf work:
+    - hardened rule matcher validation at load time (`device`, `value`, `constraints`) to prevent runtime matcher-shape crashes
+    - aligned `curationCandidates.likelyNeedsReview` with actionable reasons only (technical reasons still retained in diagnostics)
+    - preserved HA alias `property_key` semantics (including cover position vs tilt groups), regenerated HA-derived rules, and added extractor/translator regressions
 
 ## Next Tasks
 

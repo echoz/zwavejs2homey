@@ -325,3 +325,61 @@ test('translateHaExtractedDiscoveryToGeneratedArtifact preserves device class ma
   );
   assert.equal(nonMatching.profile.classification.homeyClass, 'other');
 });
+
+test('translateHaExtractedDiscoveryToGeneratedArtifact preserves propertyKey arrays from extracted aliases', () => {
+  const positionKeys = ['inboundTop', 'inboundBottom'];
+  const tiltKeys = ['horizontalSlatsAngle', 'verticalSlatsAngle'];
+  const result = compiler.translateHaExtractedDiscoveryToGeneratedArtifact({
+    schemaVersion: 'ha-extracted-discovery/v1',
+    source: { generatedAt: '2026-02-25T00:00:00Z', sourceRef: 'x' },
+    entries: [
+      {
+        id: 'cover_position',
+        sourceRef: 'x:10',
+        valueMatch: {
+          commandClass: 106,
+          endpoint: 0,
+          property: 'currentValue',
+          propertyKey: positionKeys,
+          metadata: { type: 'number' },
+        },
+        output: {
+          homeyClass: 'curtain',
+          driverTemplateId: 'ha-import-cover',
+          capabilityId: 'windowcoverings_set',
+        },
+      },
+      {
+        id: 'cover_tilt',
+        sourceRef: 'x:11',
+        valueMatch: {
+          commandClass: 106,
+          endpoint: 0,
+          property: 'currentValue',
+          propertyKey: tiltKeys,
+          metadata: { type: 'number' },
+        },
+        companions: {
+          absentValues: [
+            {
+              commandClass: 106,
+              endpoint: 0,
+              property: 'currentValue',
+              propertyKey: positionKeys,
+            },
+          ],
+        },
+        output: {
+          homeyClass: 'curtain',
+          driverTemplateId: 'ha-import-cover',
+          capabilityId: 'windowcoverings_set',
+        },
+      },
+    ],
+  });
+
+  assert.equal(result.report.skipped, 0);
+  assert.deepEqual(result.artifact.rules[0].value.propertyKey, positionKeys);
+  assert.deepEqual(result.artifact.rules[1].value.propertyKey, tiltKeys);
+  assert.deepEqual(result.artifact.rules[1].constraints.absentValues[0].propertyKey, positionKeys);
+});

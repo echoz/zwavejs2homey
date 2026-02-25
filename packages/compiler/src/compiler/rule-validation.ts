@@ -15,6 +15,40 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0;
+}
+
+function isArrayOfNumbers(value: unknown): value is number[] {
+  return (
+    Array.isArray(value) && value.length > 0 && value.every((item) => typeof item === 'number')
+  );
+}
+
+function isArrayOfNonEmptyStrings(value: unknown): value is string[] {
+  return (
+    Array.isArray(value) &&
+    value.length > 0 &&
+    value.every((item) => typeof item === 'string' && item.length > 0)
+  );
+}
+
+function isArrayOfStringOrNumber(value: unknown): value is Array<string | number> {
+  return (
+    Array.isArray(value) &&
+    value.length > 0 &&
+    value.every((item) => typeof item === 'string' || typeof item === 'number')
+  );
+}
+
+function isArrayOfStringNumberOrNull(value: unknown): value is Array<string | number | null> {
+  return (
+    Array.isArray(value) &&
+    value.length > 0 &&
+    value.every((item) => item === null || typeof item === 'string' || typeof item === 'number')
+  );
+}
+
 function isValidValueIdShape(value: unknown): boolean {
   if (!isObject(value)) return false;
   if (typeof value.commandClass !== 'number') return false;
@@ -24,6 +58,194 @@ function isValidValueIdShape(value: unknown): boolean {
     return false;
   }
   return true;
+}
+
+function validateDeviceMatcherShape(
+  rule: Record<string, unknown>,
+  filePath: string,
+  ruleId: string,
+): void {
+  const device = rule.device;
+  if (device === undefined) return;
+  if (!isObject(device)) {
+    throw new RuleFileLoadError(`Rule "${ruleId}" device matcher must be an object`, filePath);
+  }
+
+  const allowedKeys = new Set([
+    'manufacturerId',
+    'productType',
+    'productId',
+    'firmwareVersionRange',
+    'deviceClassGeneric',
+    'deviceClassSpecific',
+  ]);
+  for (const key of Object.keys(device)) {
+    if (!allowedKeys.has(key)) {
+      throw new RuleFileLoadError(
+        `Rule "${ruleId}" device matcher has unsupported field "${key}"`,
+        filePath,
+      );
+    }
+  }
+
+  for (const key of ['manufacturerId', 'productType', 'productId'] as const) {
+    const value = device[key];
+    if (value !== undefined && !isArrayOfNumbers(value)) {
+      throw new RuleFileLoadError(
+        `Rule "${ruleId}" device.${key} must be a non-empty number array`,
+        filePath,
+      );
+    }
+  }
+
+  if (device.firmwareVersionRange !== undefined) {
+    const range = device.firmwareVersionRange;
+    if (!isObject(range)) {
+      throw new RuleFileLoadError(
+        `Rule "${ruleId}" device.firmwareVersionRange must be an object`,
+        filePath,
+      );
+    }
+    for (const key of Object.keys(range)) {
+      if (!['min', 'max'].includes(key)) {
+        throw new RuleFileLoadError(
+          `Rule "${ruleId}" device.firmwareVersionRange has unsupported field "${key}"`,
+          filePath,
+        );
+      }
+    }
+    if (range.min !== undefined && !isNonEmptyString(range.min)) {
+      throw new RuleFileLoadError(
+        `Rule "${ruleId}" device.firmwareVersionRange.min must be a non-empty string`,
+        filePath,
+      );
+    }
+    if (range.max !== undefined && !isNonEmptyString(range.max)) {
+      throw new RuleFileLoadError(
+        `Rule "${ruleId}" device.firmwareVersionRange.max must be a non-empty string`,
+        filePath,
+      );
+    }
+  }
+
+  for (const key of ['deviceClassGeneric', 'deviceClassSpecific'] as const) {
+    const value = device[key];
+    if (value !== undefined && !isArrayOfNonEmptyStrings(value)) {
+      throw new RuleFileLoadError(
+        `Rule "${ruleId}" device.${key} must be a non-empty string array`,
+        filePath,
+      );
+    }
+  }
+}
+
+function validateValueMatcherShape(
+  matcher: unknown,
+  filePath: string,
+  ruleId: string,
+  label: string,
+): void {
+  if (!isObject(matcher)) {
+    throw new RuleFileLoadError(`Rule "${ruleId}" ${label} must be an object`, filePath);
+  }
+
+  const allowedKeys = new Set([
+    'commandClass',
+    'endpoint',
+    'property',
+    'propertyKey',
+    'notPropertyKey',
+    'metadataType',
+    'readable',
+    'writeable',
+  ]);
+  for (const key of Object.keys(matcher)) {
+    if (!allowedKeys.has(key)) {
+      throw new RuleFileLoadError(
+        `Rule "${ruleId}" ${label} has unsupported field "${key}"`,
+        filePath,
+      );
+    }
+  }
+
+  if (matcher.commandClass !== undefined && !isArrayOfNumbers(matcher.commandClass)) {
+    throw new RuleFileLoadError(
+      `Rule "${ruleId}" ${label}.commandClass must be a non-empty number array`,
+      filePath,
+    );
+  }
+  if (matcher.endpoint !== undefined && !isArrayOfNumbers(matcher.endpoint)) {
+    throw new RuleFileLoadError(
+      `Rule "${ruleId}" ${label}.endpoint must be a non-empty number array`,
+      filePath,
+    );
+  }
+  if (matcher.property !== undefined && !isArrayOfStringOrNumber(matcher.property)) {
+    throw new RuleFileLoadError(
+      `Rule "${ruleId}" ${label}.property must be a non-empty string/number array`,
+      filePath,
+    );
+  }
+  if (matcher.propertyKey !== undefined && !isArrayOfStringNumberOrNull(matcher.propertyKey)) {
+    throw new RuleFileLoadError(
+      `Rule "${ruleId}" ${label}.propertyKey must be a non-empty string/number/null array`,
+      filePath,
+    );
+  }
+  if (
+    matcher.notPropertyKey !== undefined &&
+    !isArrayOfStringNumberOrNull(matcher.notPropertyKey)
+  ) {
+    throw new RuleFileLoadError(
+      `Rule "${ruleId}" ${label}.notPropertyKey must be a non-empty string/number/null array`,
+      filePath,
+    );
+  }
+  if (matcher.metadataType !== undefined && !isArrayOfNonEmptyStrings(matcher.metadataType)) {
+    throw new RuleFileLoadError(
+      `Rule "${ruleId}" ${label}.metadataType must be a non-empty string array`,
+      filePath,
+    );
+  }
+  if (matcher.readable !== undefined && typeof matcher.readable !== 'boolean') {
+    throw new RuleFileLoadError(`Rule "${ruleId}" ${label}.readable must be a boolean`, filePath);
+  }
+  if (matcher.writeable !== undefined && typeof matcher.writeable !== 'boolean') {
+    throw new RuleFileLoadError(`Rule "${ruleId}" ${label}.writeable must be a boolean`, filePath);
+  }
+}
+
+function validateRuleConstraintsShape(
+  rule: Record<string, unknown>,
+  filePath: string,
+  ruleId: string,
+): void {
+  const constraints = rule.constraints;
+  if (constraints === undefined) return;
+  if (!isObject(constraints)) {
+    throw new RuleFileLoadError(`Rule "${ruleId}" constraints must be an object`, filePath);
+  }
+
+  const allowedConstraintKeys = new Set(['requiredValues', 'absentValues']);
+  for (const key of Object.keys(constraints)) {
+    if (!allowedConstraintKeys.has(key)) {
+      throw new RuleFileLoadError(
+        `Rule "${ruleId}" constraints has unsupported field "${key}"`,
+        filePath,
+      );
+    }
+  }
+
+  for (const key of ['requiredValues', 'absentValues'] as const) {
+    const list = constraints[key];
+    if (list === undefined) continue;
+    if (!Array.isArray(list)) {
+      throw new RuleFileLoadError(`Rule "${ruleId}" constraints.${key} must be an array`, filePath);
+    }
+    for (const [index, matcher] of list.entries()) {
+      validateValueMatcherShape(matcher, filePath, ruleId, `constraints.${key}[${index}]`);
+    }
+  }
 }
 
 function validateRuleActionShape(
@@ -177,6 +399,11 @@ function validateRuleShape(
       filePath,
     );
   }
+  validateDeviceMatcherShape(rule, filePath, String(rule.ruleId));
+  if (rule.value !== undefined) {
+    validateValueMatcherShape(rule.value, filePath, String(rule.ruleId), 'value');
+  }
+  validateRuleConstraintsShape(rule, filePath, String(rule.ruleId));
   for (const [actionIndex, action] of rule.actions.entries()) {
     validateRuleActionShape(action, filePath, String(rule.ruleId), rule.layer, actionIndex);
   }

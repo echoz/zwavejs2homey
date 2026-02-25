@@ -1,0 +1,27 @@
+[
+  {
+    "ruleId": "invalid-matcher-shape",
+    "layer": "project-product",
+    "device": {
+      "deviceClassGeneric": "Multilevel Switch"
+    },
+    "value": {
+      "commandClass": 38,
+      "property": ["currentValue"]
+    },
+    "constraints": {
+      "requiredValues": [
+        {
+          "commandClass": [38],
+          "property": "targetValue"
+        }
+      ]
+    },
+    "actions": [
+      {
+        "type": "capability",
+        "capabilityId": "dim"
+      }
+    ]
+  }
+]

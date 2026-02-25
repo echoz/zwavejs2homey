@@ -111,7 +111,7 @@ test('compileProfilePlanFromRuleSetManifest groups suppressed fills and flags cu
         row.count >= 1,
     ),
   );
-  assert.equal(result.report.curationCandidates.likelyNeedsReview, true);
+  assert.equal(result.report.curationCandidates.likelyNeedsReview, false);
   assert.ok(
     result.report.curationCandidates.reasons.some((reason) =>
       reason.startsWith('suppressed-fill-actions:'),
@@ -323,7 +323,7 @@ test('compileProfilePlanFromRuleSetManifest supports larger mixed HA-derived sou
       (row) => row.layer === 'ha-derived' && row.ruleId.startsWith('ha:ha_extracted_'),
     ),
   );
-  assert.equal(result.report.curationCandidates.likelyNeedsReview, true);
+  assert.equal(result.report.curationCandidates.likelyNeedsReview, false);
   assert.ok(
     result.report.curationCandidates.reasons.some((reason) =>
       reason.startsWith('high-unmatched-ratio:'),

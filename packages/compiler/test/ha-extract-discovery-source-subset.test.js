@@ -226,6 +226,35 @@ ZWaveDiscoverySchema(
   });
 });
 
+test('extractHaDiscoverySubsetFromSource preserves alias property_key sets for cover schemas', () => {
+  const source = `
+ZWaveDiscoverySchema(
+    platform=Platform.COVER,
+    hint="cover_window_covering",
+    primary_value=WINDOW_COVERING_COVER_CURRENT_VALUE_SCHEMA,
+),
+ZWaveDiscoverySchema(
+    platform=Platform.COVER,
+    hint="cover_tilt_window_covering",
+    primary_value=WINDOW_COVERING_SLAT_CURRENT_VALUE_SCHEMA,
+    absent_values=[WINDOW_COVERING_COVER_CURRENT_VALUE_SCHEMA],
+),
+`;
+  const result = compiler.extractHaDiscoverySubsetFromSource(source, 'discovery.py');
+  assert.equal(result.report.translated, 2);
+  assert.equal(result.report.skipped, 0);
+
+  const [cover, tilt] = result.artifact.entries;
+  assert.equal(Array.isArray(cover.valueMatch.propertyKey), true);
+  assert.equal(cover.valueMatch.propertyKey.length > 10, true);
+  assert.equal(cover.valueMatch.propertyKey.includes('inboundTop'), true);
+  assert.equal(Array.isArray(tilt.valueMatch.propertyKey), true);
+  assert.equal(tilt.valueMatch.propertyKey.includes('horizontalSlatsAngle'), true);
+  assert.equal(Array.isArray(tilt.companions?.absentValues?.[0]?.propertyKey), true);
+  assert.equal(tilt.companions?.absentValues?.[0]?.propertyKey.includes('inboundTop'), true);
+  assert.notDeepEqual(tilt.valueMatch.propertyKey, tilt.companions?.absentValues?.[0]?.propertyKey);
+});
+
 test('extractHaDiscoverySubsetFromFile parses pinned HA discovery.py with full current coverage', () => {
   const discoveryPy = path.join(
     __dirname,

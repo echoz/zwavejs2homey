@@ -32,7 +32,7 @@ export interface HaMockDiscoveryDefinitionV1 {
     commandClass: number;
     endpoint?: number;
     property: string | number;
-    propertyKey?: string | number;
+    propertyKey?: string | number | null | Array<string | number | null>;
     metadataType?: string;
     readable?: boolean;
     writeable?: boolean;
@@ -42,13 +42,13 @@ export interface HaMockDiscoveryDefinitionV1 {
       commandClass: number;
       endpoint?: number;
       property: string | number;
-      propertyKey?: string | number;
+      propertyKey?: string | number | null | Array<string | number | null>;
     }>;
     absentValues?: Array<{
       commandClass: number;
       endpoint?: number;
       property: string | number;
-      propertyKey?: string | number;
+      propertyKey?: string | number | null | Array<string | number | null>;
     }>;
   };
   output: {
@@ -109,6 +109,40 @@ function isObject(value: unknown): value is Record<string, unknown> {
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0;
+}
+
+function isPropertyKeyToken(value: unknown): value is string | number | null {
+  return value === null || typeof value === 'string' || typeof value === 'number';
+}
+
+function isPropertyKeySelector(
+  value: unknown,
+): value is string | number | null | Array<string | number | null> {
+  return (
+    isPropertyKeyToken(value) ||
+    (Array.isArray(value) && value.length > 0 && value.every((item) => isPropertyKeyToken(item)))
+  );
+}
+
+function toPropertyKeyArray(
+  propertyKey: string | number | null | Array<string | number | null> | undefined,
+): Array<string | number | null> | undefined {
+  if (propertyKey === undefined) return undefined;
+  const list = Array.isArray(propertyKey) ? propertyKey : [propertyKey];
+  if (list.length === 0) return undefined;
+  return [...new Set(list)];
+}
+
+function toSelectorPropertyKey(
+  propertyKey: string | number | null | Array<string | number | null> | undefined,
+): string | number | undefined {
+  if (propertyKey === undefined || propertyKey === null) return undefined;
+  if (Array.isArray(propertyKey)) {
+    if (propertyKey.length !== 1) return undefined;
+    const single = propertyKey[0];
+    return single === null ? undefined : single;
+  }
+  return propertyKey;
 }
 
 function validateInputShape(input: unknown): asserts input is HaMockDiscoveryInputV1 {
@@ -215,10 +249,10 @@ function validateInputShape(input: unknown): asserts input is HaMockDiscoveryInp
     }
     if (
       definition.match.propertyKey !== undefined &&
-      !['string', 'number'].includes(typeof definition.match.propertyKey)
+      !isPropertyKeySelector(definition.match.propertyKey)
     ) {
       throw new HaMockTranslationError(
-        `HA mock discovery definition ${definition.id} match.propertyKey must be string or number`,
+        `HA mock discovery definition ${definition.id} match.propertyKey must be string/number/null or array`,
       );
     }
     if (
@@ -280,12 +314,9 @@ function validateInputShape(input: unknown): asserts input is HaMockDiscoveryInp
               `HA mock discovery definition ${definition.id} constraints.${key}[${matcherIndex}].property must be string or number`,
             );
           }
-          if (
-            matcher.propertyKey !== undefined &&
-            !['string', 'number'].includes(typeof matcher.propertyKey)
-          ) {
+          if (matcher.propertyKey !== undefined && !isPropertyKeySelector(matcher.propertyKey)) {
             throw new HaMockTranslationError(
-              `HA mock discovery definition ${definition.id} constraints.${key}[${matcherIndex}].propertyKey must be string or number`,
+              `HA mock discovery definition ${definition.id} constraints.${key}[${matcherIndex}].propertyKey must be string/number/null or array`,
             );
           }
         }
@@ -311,16 +342,17 @@ function toValueMatcher(match: {
   commandClass: number;
   endpoint?: number;
   property: string | number;
-  propertyKey?: string | number;
+  propertyKey?: string | number | null | Array<string | number | null>;
   metadataType?: string;
   readable?: boolean;
   writeable?: boolean;
 }) {
+  const propertyKeys = toPropertyKeyArray(match.propertyKey);
   return {
     commandClass: [match.commandClass],
     endpoint: [match.endpoint ?? 0],
     property: [match.property],
-    ...(match.propertyKey !== undefined ? { propertyKey: [match.propertyKey] } : {}),
+    ...(propertyKeys !== undefined ? { propertyKey: propertyKeys } : {}),
     ...(match.metadataType !== undefined ? { metadataType: [match.metadataType] } : {}),
     ...(match.readable !== undefined ? { readable: match.readable } : {}),
     ...(match.writeable !== undefined ? { writeable: match.writeable } : {}),
@@ -375,8 +407,8 @@ function toRule(definition: HaMockDiscoveryDefinitionV1): MappingRule | null {
           commandClass: definition.match.commandClass,
           endpoint: definition.match.endpoint ?? 0,
           property: definition.match.property,
-          ...(definition.match.propertyKey !== undefined
-            ? { propertyKey: definition.match.propertyKey }
+          ...(toSelectorPropertyKey(definition.match.propertyKey) !== undefined
+            ? { propertyKey: toSelectorPropertyKey(definition.match.propertyKey) }
             : {}),
         },
       },

@@ -11,6 +11,12 @@ import {
   type RuleSetManifestEntry,
 } from './rule-loader';
 
+const TECHNICAL_CURATION_REASON_PREFIXES = ['suppressed-fill-actions:', 'high-unmatched-ratio:'];
+
+function isTechnicalCurationReason(reason: string): boolean {
+  return TECHNICAL_CURATION_REASON_PREFIXES.some((prefix) => reason.startsWith(prefix));
+}
+
 export interface RuleSourceMetadata {
   filePath: string;
   ruleCount: number;
@@ -177,8 +183,9 @@ function deriveCurationCandidates(
   } else if (catalogLookup && profile.classification.confidence === 'generic') {
     reasons.push('unknown-device-generic-fallback');
   }
+  const actionableReasons = reasons.filter((reason) => !isTechnicalCurationReason(reason));
   return {
-    likelyNeedsReview: reasons.length > 0,
+    likelyNeedsReview: actionableReasons.length > 0,
     reasons,
   };
 }

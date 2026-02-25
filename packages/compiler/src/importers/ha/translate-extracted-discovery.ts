@@ -37,7 +37,7 @@ export interface HaExtractedDiscoveryEntryV1 {
     commandClass: number;
     endpoint?: number;
     property: string | number;
-    propertyKey?: string | number;
+    propertyKey?: string | number | null | Array<string | number | null>;
     metadata?: {
       type?: string;
       readable?: boolean;
@@ -51,14 +51,14 @@ export interface HaExtractedDiscoveryEntryV1 {
       commandClass: number;
       endpoint?: number;
       property: string | number;
-      propertyKey?: string | number;
+      propertyKey?: string | number | null | Array<string | number | null>;
       [key: string]: unknown;
     }>;
     absentValues?: Array<{
       commandClass: number;
       endpoint?: number;
       property: string | number;
-      propertyKey?: string | number;
+      propertyKey?: string | number | null | Array<string | number | null>;
       [key: string]: unknown;
     }>;
     [key: string]: unknown;
@@ -75,7 +75,7 @@ type ExtractedCompanionMatcher = {
   commandClass: number;
   endpoint?: number;
   property: string | number;
-  propertyKey?: string | number;
+  propertyKey?: string | number | null | Array<string | number | null>;
   [key: string]: unknown;
 };
 
@@ -85,6 +85,19 @@ function isObject(value: unknown): value is Record<string, unknown> {
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0;
+}
+
+function isPropertyKeyToken(value: unknown): value is string | number | null {
+  return value === null || typeof value === 'string' || typeof value === 'number';
+}
+
+function isPropertyKeySelector(
+  value: unknown,
+): value is string | number | null | Array<string | number | null> {
+  return (
+    isPropertyKeyToken(value) ||
+    (Array.isArray(value) && value.length > 0 && value.every((item) => isPropertyKeyToken(item)))
+  );
 }
 
 function validateExtractedInput(input: unknown): asserts input is HaExtractedDiscoveryInputV1 {
@@ -192,10 +205,10 @@ function validateExtractedInput(input: unknown): asserts input is HaExtractedDis
     }
     if (
       entry.valueMatch.propertyKey !== undefined &&
-      !['string', 'number'].includes(typeof entry.valueMatch.propertyKey)
+      !isPropertyKeySelector(entry.valueMatch.propertyKey)
     ) {
       throw new HaExtractedTranslationError(
-        `HA extracted discovery entry ${entry.id} valueMatch.propertyKey must be string or number`,
+        `HA extracted discovery entry ${entry.id} valueMatch.propertyKey must be string/number/null or array`,
       );
     }
     if (entry.valueMatch.metadata !== undefined && !isObject(entry.valueMatch.metadata)) {
@@ -243,12 +256,9 @@ function validateExtractedInput(input: unknown): asserts input is HaExtractedDis
               `HA extracted discovery entry ${entry.id} companions.${companionKey}[${matcherIndex}].property must be string or number`,
             );
           }
-          if (
-            matcher.propertyKey !== undefined &&
-            !['string', 'number'].includes(typeof matcher.propertyKey)
-          ) {
+          if (matcher.propertyKey !== undefined && !isPropertyKeySelector(matcher.propertyKey)) {
             throw new HaExtractedTranslationError(
-              `HA extracted discovery entry ${entry.id} companions.${companionKey}[${matcherIndex}].propertyKey must be string or number`,
+              `HA extracted discovery entry ${entry.id} companions.${companionKey}[${matcherIndex}].propertyKey must be string/number/null or array`,
             );
           }
         }

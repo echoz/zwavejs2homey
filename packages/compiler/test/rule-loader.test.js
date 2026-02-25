@@ -78,3 +78,16 @@ test('loadJsonRuleFile rejects invalid remove-capability action mode', () => {
       /remove-capability action .*mode \"replace\"/i.test(error.message),
   );
 });
+
+test('loadJsonRuleFile rejects invalid matcher shapes before compile-time', () => {
+  const filePath = path.join(fixturesDir, 'rules-invalid-matcher-shape.json');
+  assert.throws(
+    () => compiler.loadJsonRuleFile(filePath),
+    (error) =>
+      error &&
+      error.filePath === filePath &&
+      /(device\.deviceClassGeneric|value\.commandClass|constraints\.requiredValues\[0\]\.property)/i.test(
+        error.message,
+      ),
+  );
+});
