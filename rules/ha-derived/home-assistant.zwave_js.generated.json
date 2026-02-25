@@ -3,7 +3,7 @@
   "source": {
     "upstream": "home-assistant",
     "component": "zwave_js",
-    "generatedAt": "2026-02-24T23:59:04.546Z",
+    "generatedAt": "2026-02-25T08:04:24.364Z",
     "sourceRef": "docs/external/home-assistant/homeassistant/components/zwave_js/discovery.py"
   },
   "rules": [
@@ -39,6 +39,11 @@
         {
           "type": "capability",
           "capabilityId": "dim",
+          "conflict": {
+            "key": "cover.position_control",
+            "mode": "exclusive",
+            "priority": 40
+          },
           "inboundMapping": {
             "kind": "value",
             "selector": {
@@ -73,6 +78,11 @@
         {
           "type": "capability",
           "capabilityId": "dim",
+          "conflict": {
+            "key": "cover.position_control",
+            "mode": "exclusive",
+            "priority": 40
+          },
           "inboundMapping": {
             "kind": "value",
             "selector": {
@@ -107,6 +117,11 @@
         {
           "type": "capability",
           "capabilityId": "dim",
+          "conflict": {
+            "key": "cover.position_control",
+            "mode": "exclusive",
+            "priority": 40
+          },
           "inboundMapping": {
             "kind": "value",
             "selector": {
@@ -141,6 +156,11 @@
         {
           "type": "capability",
           "capabilityId": "dim",
+          "conflict": {
+            "key": "cover.position_control",
+            "mode": "exclusive",
+            "priority": 40
+          },
           "inboundMapping": {
             "kind": "value",
             "selector": {
@@ -175,6 +195,11 @@
         {
           "type": "capability",
           "capabilityId": "dim",
+          "conflict": {
+            "key": "cover.position_control",
+            "mode": "exclusive",
+            "priority": 40
+          },
           "inboundMapping": {
             "kind": "value",
             "selector": {
@@ -209,6 +234,11 @@
         {
           "type": "capability",
           "capabilityId": "dim",
+          "conflict": {
+            "key": "cover.position_control",
+            "mode": "exclusive",
+            "priority": 40
+          },
           "inboundMapping": {
             "kind": "value",
             "selector": {
@@ -253,6 +283,11 @@
         {
           "type": "capability",
           "capabilityId": "windowcoverings_set",
+          "conflict": {
+            "key": "cover.position_control",
+            "mode": "exclusive",
+            "priority": 90
+          },
           "inboundMapping": {
             "kind": "value",
             "selector": {
@@ -296,6 +331,11 @@
         {
           "type": "capability",
           "capabilityId": "windowcoverings_set",
+          "conflict": {
+            "key": "cover.position_control",
+            "mode": "exclusive",
+            "priority": 90
+          },
           "inboundMapping": {
             "kind": "value",
             "selector": {
@@ -330,6 +370,11 @@
         {
           "type": "capability",
           "capabilityId": "windowcoverings_set",
+          "conflict": {
+            "key": "cover.position_control",
+            "mode": "exclusive",
+            "priority": 90
+          },
           "inboundMapping": {
             "kind": "value",
             "selector": {
@@ -376,6 +421,11 @@
         {
           "type": "capability",
           "capabilityId": "windowcoverings_set",
+          "conflict": {
+            "key": "cover.position_control",
+            "mode": "exclusive",
+            "priority": 90
+          },
           "inboundMapping": {
             "kind": "value",
             "selector": {
@@ -419,6 +469,11 @@
         {
           "type": "capability",
           "capabilityId": "windowcoverings_set",
+          "conflict": {
+            "key": "cover.position_control",
+            "mode": "exclusive",
+            "priority": 90
+          },
           "inboundMapping": {
             "kind": "value",
             "selector": {
@@ -453,6 +508,11 @@
         {
           "type": "capability",
           "capabilityId": "windowcoverings_set",
+          "conflict": {
+            "key": "cover.position_control",
+            "mode": "exclusive",
+            "priority": 90
+          },
           "inboundMapping": {
             "kind": "value",
             "selector": {
@@ -490,6 +550,11 @@
         {
           "type": "capability",
           "capabilityId": "windowcoverings_set",
+          "conflict": {
+            "key": "cover.position_control",
+            "mode": "exclusive",
+            "priority": 90
+          },
           "inboundMapping": {
             "kind": "value",
             "selector": {
@@ -524,6 +589,11 @@
         {
           "type": "capability",
           "capabilityId": "windowcoverings_set",
+          "conflict": {
+            "key": "cover.position_control",
+            "mode": "exclusive",
+            "priority": 90
+          },
           "inboundMapping": {
             "kind": "value",
             "selector": {
@@ -558,6 +628,11 @@
         {
           "type": "capability",
           "capabilityId": "windowcoverings_set",
+          "conflict": {
+            "key": "cover.position_control",
+            "mode": "exclusive",
+            "priority": 90
+          },
           "inboundMapping": {
             "kind": "value",
             "selector": {
@@ -592,6 +667,11 @@
         {
           "type": "capability",
           "capabilityId": "windowcoverings_set",
+          "conflict": {
+            "key": "cover.position_control",
+            "mode": "exclusive",
+            "priority": 90
+          },
           "inboundMapping": {
             "kind": "value",
             "selector": {
@@ -629,6 +709,11 @@
         {
           "type": "capability",
           "capabilityId": "windowcoverings_set",
+          "conflict": {
+            "key": "cover.position_control",
+            "mode": "exclusive",
+            "priority": 90
+          },
           "inboundMapping": {
             "kind": "value",
             "selector": {
@@ -704,6 +789,11 @@
         {
           "type": "capability",
           "capabilityId": "windowcoverings_set",
+          "conflict": {
+            "key": "cover.position_control",
+            "mode": "exclusive",
+            "priority": 90
+          },
           "inboundMapping": {
             "kind": "value",
             "selector": {
@@ -1798,6 +1888,11 @@
         {
           "type": "capability",
           "capabilityId": "windowcoverings_set",
+          "conflict": {
+            "key": "cover.position_control",
+            "mode": "exclusive",
+            "priority": 90
+          },
           "inboundMapping": {
             "kind": "value",
             "selector": {
@@ -1874,6 +1969,11 @@
         {
           "type": "capability",
           "capabilityId": "dim",
+          "conflict": {
+            "key": "cover.position_control",
+            "mode": "exclusive",
+            "priority": 40
+          },
           "inboundMapping": {
             "kind": "value",
             "selector": {
@@ -1903,6 +2003,11 @@
         {
           "type": "capability",
           "capabilityId": "number_value",
+          "conflict": {
+            "key": "cover.position_control",
+            "mode": "exclusive",
+            "priority": 10
+          },
           "inboundMapping": {
             "kind": "value",
             "selector": {
@@ -1932,6 +2037,11 @@
         {
           "type": "capability",
           "capabilityId": "dim",
+          "conflict": {
+            "key": "cover.position_control",
+            "mode": "exclusive",
+            "priority": 40
+          },
           "inboundMapping": {
             "kind": "value",
             "selector": {

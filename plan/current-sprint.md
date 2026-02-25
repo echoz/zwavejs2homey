@@ -55,12 +55,16 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - `compiler:build` now defaults to `rules/manifest.json` when no rules source flags are provided
     - rule/manifest inputs are validated for readability and duplicate file entries before compile
     - build artifacts now embed rule-source metadata and a deterministic pipeline fingerprint for reproducibility
+13. Added first live-validated project-product overrides:
+    - new `rules/project/product/live-network-overrides.json` for Shelly Wave Plug US (`1120:2:136`) and Springs CSZ1 shade (`622:17235:23089`)
+    - regenerated canonical HA-derived rules so conflict metadata is present in checked-in generated rules
+    - live validation moved 8 nodes to `curated` outcome (`compiler:inspect-live` with compiled artifact)
 
 ## Next Tasks
 
 1. Run canonical `compiler:build` pipeline against larger live node sets and review profile outcomes + curation diagnostics
 2. Continue widening HA-derived rules coverage and selector semantics against live nodes
-3. Add first project-product override rules from real device validation
+3. Tune remaining high-suppression/high-unmatched curated profiles (e.g. keep useful capabilities and suppress noisy ones where policy is clear)
 4. Use `compiler:inspect-live --compiled-file ...` to validate compiled artifacts on real ZWJS data
 5. Keep project-generic rules minimal/provisional; likely move generic fallback inference policy into the Homey adapter
 6. Defer Homey adapter implementation until compiler runtime-validation readiness milestone is reached

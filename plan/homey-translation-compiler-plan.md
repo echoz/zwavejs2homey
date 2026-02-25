@@ -953,8 +953,11 @@ Progress on the extended scope:
 - Added `rules/` directory skeleton (`ha-derived`, `project/generic`, `project/product`) to formalize the real rule pipeline layout
 - Generated and checked in canonical HA-derived rules (`rules/ha-derived/home-assistant.zwave_js.generated.json`) for the currently supported HA extraction set
 - Added canonical layered rule manifest (`rules/manifest.json`) and initial project generic rules (`rules/project/generic/base-generic.json`)
+- Hardened canonical build pipeline defaults/metadata (`compiler:build` defaults to `rules/manifest.json`, validates manifest inputs, emits rule source metadata + pipeline fingerprint)
 - Added compiled-artifact apply mode to `compiler:inspect-live` (`--compiled-file`) for runtime-style live validation without on-the-fly compilation
 - Replaced hardcoded HA overlap suppression with rule-owned capability conflict metadata (`conflict.key/mode/priority`) and deterministic conflict reporting
+- Regenerated checked-in HA-derived rules after conflict-metadata support so generated artifacts include overlap-conflict annotations
+- Added first live-validated project product overrides (`rules/project/product/live-network-overrides.json`) for `1120:2:136` (Shelly Wave Plug US) and `622:17235:23089` (Springs CSZ1 shade)
 
 Deferred / later Phase 3 expansion (not required for compiler runtime-validation readiness):
 
