@@ -11,7 +11,10 @@ import { connectAndInitialize, fetchNodeDetails, fetchNodesList } from './zwjs-i
 import { formatCompileOutput } from './homey-compile-inspect-lib.mjs';
 
 const require = createRequire(import.meta.url);
-const { compileProfilePlanFromRuleSetManifest } = require('../packages/compiler/dist');
+const {
+  assertCompiledHomeyProfilesArtifactV1,
+  compileProfilePlanFromRuleSetManifest,
+} = require('../packages/compiler/dist');
 
 function parseFlagMap(argv) {
   const flags = new Map();
@@ -116,7 +119,7 @@ export function getUsageText() {
   return [
     'Usage:',
     '  homey-compile-inspect-live --url ws://host:port (--all-nodes | --node <id>)',
-    '                           (--manifest-file <manifest.json> | --rules-file <rules.json> [--rules-file ...])',
+    '                           (--compiled-file <compiled-profiles.json> | --manifest-file <manifest.json> | --rules-file <rules.json> [--rules-file ...])',
     '                           [--catalog-file <catalog.json>]',
     '                           [--format list|summary|markdown|json|json-pretty|json-compact|ndjson]',
     '                           [--schema-version 0] [--token ...]',
@@ -140,17 +143,26 @@ export function parseCliArgs(argv) {
     return { ok: false, error: `Invalid --node: ${nodeRaw}` };
   }
 
+  const compiledFile = flags.get('--compiled-file');
   const manifestFile = flags.get('--manifest-file');
   const rulesFiles = [];
   for (let i = 0; i < argv.length; i += 1) {
     if (argv[i] === '--rules-file' && argv[i + 1]) rulesFiles.push(argv[i + 1]);
     if (argv[i].startsWith('--rules-file=')) rulesFiles.push(argv[i].split('=', 2)[1]);
   }
-  if (!manifestFile && rulesFiles.length === 0) {
-    return { ok: false, error: 'Provide --manifest-file or at least one --rules-file' };
+  const sourceModeCount =
+    (compiledFile ? 1 : 0) + (manifestFile ? 1 : 0) + (rulesFiles.length > 0 ? 1 : 0);
+  if (sourceModeCount === 0) {
+    return {
+      ok: false,
+      error: 'Provide --compiled-file, --manifest-file, or at least one --rules-file',
+    };
   }
-  if (manifestFile && rulesFiles.length > 0) {
-    return { ok: false, error: 'Use either --manifest-file or --rules-file, not both' };
+  if (sourceModeCount > 1) {
+    return {
+      ok: false,
+      error: 'Use only one of --compiled-file, --manifest-file, or --rules-file',
+    };
   }
 
   const format = flags.get('--format') ?? 'list';
@@ -208,6 +220,7 @@ export function parseCliArgs(argv) {
       schemaVersion,
       allNodes,
       nodeId,
+      compiledFile,
       manifestFile,
       rulesFiles,
       catalogFile: flags.get('--catalog-file'),
@@ -224,6 +237,98 @@ export function parseCliArgs(argv) {
       driverTemplateId: flags.get('--driver-template'),
     },
   };
+}
+
+function productTripleKey(device) {
+  if (
+    device?.manufacturerId === undefined ||
+    device?.productType === undefined ||
+    device?.productId === undefined
+  ) {
+    return null;
+  }
+  return `${device.manufacturerId}:${device.productType}:${device.productId}`;
+}
+
+function buildCompiledArtifactIndex(artifact) {
+  const byTriple = new Map();
+  const byNodeId = new Map();
+  for (const entry of artifact.entries) {
+    const triple = productTripleKey(entry.device);
+    if (triple && !byTriple.has(triple)) byTriple.set(triple, entry);
+    if (typeof entry.device.nodeId === 'number' && !byNodeId.has(entry.device.nodeId)) {
+      byNodeId.set(entry.device.nodeId, entry);
+    }
+  }
+  return { byTriple, byNodeId };
+}
+
+function cloneCompiledForInspect(compiled, command) {
+  return {
+    ...compiled,
+    __focus: command.focus,
+    __top: command.top,
+    __show: command.show,
+    __explainCapabilityId: command.explainCapabilityId,
+    __explainAll: command.explainAll === true,
+    __explainOnly: command.explainOnly === true,
+  };
+}
+
+function buildNoCompiledProfileResult(deviceFacts) {
+  return {
+    profile: {
+      profileId: `unmatched:${deviceFacts.deviceKey}`,
+      match: {},
+      classification: {
+        homeyClass: 'other',
+        confidence: 'generic',
+        uncurated: true,
+      },
+      capabilities: [],
+      ignoredValues: [],
+      provenance: {
+        layer: 'project-generic',
+        ruleId: 'no-compiled-profile-match',
+        action: 'fill',
+        reason: 'No compiled profile matched live device facts',
+      },
+    },
+    report: {
+      profileOutcome: 'empty',
+      summary: {
+        appliedActions: 0,
+        unmatchedActions: 0,
+        suppressedFillActions: 0,
+        ignoredValues: 0,
+      },
+      byRule: [],
+      bySuppressedSlot: [],
+      curationCandidates: {
+        likelyNeedsReview: true,
+        reasons: ['no-compiled-profile-match'],
+      },
+      diagnosticDeviceKey: deviceFacts.deviceKey,
+      unknownDeviceReport: {
+        kind: 'no-catalog',
+        diagnosticDeviceKey: deviceFacts.deviceKey,
+        profileOutcome: 'empty',
+        reasons: ['no-compiled-profile-match'],
+      },
+    },
+    ruleSources: [],
+  };
+}
+
+function selectCompiledEntryForDevice(deviceFacts, artifactIndex) {
+  const triple = productTripleKey(deviceFacts);
+  if (triple && artifactIndex.byTriple.has(triple)) {
+    return artifactIndex.byTriple.get(triple);
+  }
+  if (typeof deviceFacts.nodeId === 'number' && artifactIndex.byNodeId.has(deviceFacts.nodeId)) {
+    return artifactIndex.byNodeId.get(deviceFacts.nodeId);
+  }
+  return null;
 }
 
 function formatBool(value) {
@@ -300,10 +405,19 @@ export async function runLiveInspectCommand(command, io = console, deps = {}) {
   const compileImpl =
     deps.compileProfilePlanFromRuleSetManifestImpl ?? compileProfilePlanFromRuleSetManifest;
 
-  const manifestEntries = command.manifestFile
-    ? coerceManifestEntries(readJson(command.manifestFile), command.manifestFile)
-    : command.rulesFiles.map((filePath) => ({ filePath }));
+  const manifestEntries = command.compiledFile
+    ? null
+    : command.manifestFile
+      ? coerceManifestEntries(readJson(command.manifestFile), command.manifestFile)
+      : command.rulesFiles.map((filePath) => ({ filePath }));
   const catalogArtifact = command.catalogFile ? readJson(command.catalogFile) : undefined;
+  const compiledArtifact = command.compiledFile ? readJson(command.compiledFile) : null;
+  if (compiledArtifact) {
+    assertCompiledHomeyProfilesArtifactV1(compiledArtifact);
+  }
+  const compiledArtifactIndex = compiledArtifact
+    ? buildCompiledArtifactIndex(compiledArtifact)
+    : null;
 
   const client = await connect({
     url: command.url,
@@ -322,24 +436,19 @@ export async function runLiveInspectCommand(command, io = console, deps = {}) {
         maxValues: command.maxValues,
       });
       const deviceFacts = normalizeCompilerDeviceFactsFromZwjsDetail(detail);
-      const compiled = compileImpl(deviceFacts, manifestEntries, {
-        catalogArtifact,
-        homeyClass: command.homeyClass,
-        driverTemplateId: command.driverTemplateId,
-      });
+      const compiledBase = compiledArtifactIndex
+        ? (selectCompiledEntryForDevice(deviceFacts, compiledArtifactIndex)?.compiled ??
+          buildNoCompiledProfileResult(deviceFacts))
+        : compileImpl(deviceFacts, manifestEntries, {
+            catalogArtifact,
+            homeyClass: command.homeyClass,
+            driverTemplateId: command.driverTemplateId,
+          });
       results.push({
         node: { ...node, name: detail?.state?.name ?? node.name ?? null },
         detail,
         deviceFacts,
-        compiled: {
-          ...compiled,
-          __focus: command.focus,
-          __top: command.top,
-          __show: command.show,
-          __explainCapabilityId: command.explainCapabilityId,
-          __explainAll: command.explainAll === true,
-          __explainOnly: command.explainOnly === true,
-        },
+        compiled: cloneCompiledForInspect(compiledBase, command),
       });
     }
 

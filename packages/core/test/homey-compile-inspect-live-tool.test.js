@@ -19,6 +19,22 @@ test('parseCliArgs validates live inspect required inputs and formats', async ()
     false,
   );
   assert.equal(
+    parseCliArgs(['--url', 'ws://x', '--all-nodes', '--compiled-file', 'compiled.json']).ok,
+    true,
+  );
+  assert.equal(
+    parseCliArgs([
+      '--url',
+      'ws://x',
+      '--all-nodes',
+      '--compiled-file',
+      'compiled.json',
+      '--manifest-file',
+      'm.json',
+    ]).ok,
+    false,
+  );
+  assert.equal(
     parseCliArgs([
       '--url',
       'ws://x',
@@ -155,4 +171,107 @@ test('runLiveInspectCommand compiles all nodes and renders list output with mock
   assert.match(logs[0], /Kitchen Plug/);
   assert.match(logs[0], /generic/);
   assert.match(logs[0], /known-device-generic-fallback/);
+});
+
+test('runLiveInspectCommand applies precompiled artifact when --compiled-file is used', async () => {
+  const { runLiveInspectCommand } = await loadLib();
+  const fs = require('node:fs');
+  const os = require('node:os');
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zwjs2homey-live-compiled-'));
+  const compiledFile = path.join(tmpDir, 'compiled.json');
+  fs.writeFileSync(
+    compiledFile,
+    JSON.stringify({
+      schemaVersion: 'compiled-homey-profiles/v1',
+      generatedAt: '2026-02-25T00:00:00.000Z',
+      source: {},
+      entries: [
+        {
+          device: {
+            deviceKey: 'x',
+            nodeId: 5,
+            manufacturerId: 0x0184,
+            productType: 0x4447,
+            productId: 0x3034,
+          },
+          compiled: {
+            profile: {
+              profileId: 'compiled-p1',
+              match: {},
+              classification: { homeyClass: 'socket', confidence: 'curated', uncurated: false },
+              capabilities: [],
+              ignoredValues: [],
+              provenance: { layer: 'project-product', ruleId: 'r', action: 'replace' },
+              catalogMatch: { by: 'product-triple', catalogId: 'cid-1' },
+            },
+            report: {
+              profileOutcome: 'curated',
+              summary: {
+                appliedActions: 1,
+                unmatchedActions: 0,
+                suppressedFillActions: 0,
+                ignoredValues: 0,
+              },
+              byRule: [],
+              bySuppressedSlot: [],
+              curationCandidates: { likelyNeedsReview: false, reasons: [] },
+              diagnosticDeviceKey: 'catalog:cid-1',
+              catalogContext: { knownCatalogDevice: true, matchRef: 'catalog:cid-1' },
+            },
+            ruleSources: [],
+          },
+        },
+      ],
+    }),
+    'utf8',
+  );
+
+  const logs = [];
+  let compileCalled = false;
+  await runLiveInspectCommand(
+    {
+      url: 'ws://x',
+      allNodes: false,
+      nodeId: 5,
+      compiledFile,
+      manifestFile: undefined,
+      rulesFiles: [],
+      catalogFile: undefined,
+      format: 'list',
+      schemaVersion: 0,
+      includeValues: 'summary',
+      maxValues: 10,
+      focus: 'all',
+      top: 3,
+      show: 'none',
+      explainAll: false,
+      explainOnly: false,
+      homeyClass: undefined,
+      driverTemplateId: undefined,
+    },
+    { log: (line) => logs.push(line) },
+    {
+      connectAndInitializeImpl: async () => ({ stop: async () => {} }),
+      fetchNodesListImpl: async () => [],
+      fetchNodeDetailsImpl: async () => ({
+        nodeId: 5,
+        state: {
+          name: 'Kitchen Plug',
+          manufacturerId: '0x0184',
+          productType: '0x4447',
+          productId: '0x3034',
+        },
+        values: [],
+      }),
+      compileProfilePlanFromRuleSetManifestImpl: () => {
+        compileCalled = true;
+        throw new Error('should not compile');
+      },
+    },
+  );
+
+  assert.equal(compileCalled, false);
+  assert.equal(logs.length, 1);
+  assert.match(logs[0], /Kitchen Plug/);
+  assert.match(logs[0], /curated/);
 });

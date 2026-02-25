@@ -29,7 +29,7 @@
 - [x] Real rule pipeline directory skeleton in repo (`rules/ha-derived`, `rules/project/generic`, `rules/project/product`)
 - [x] Generate HA-derived ruleset from HA import pipeline for supported discovery coverage
 - [x] Initial project-generic ruleset for device-profile inference from Z-Wave configuration/metadata (starter set)
-- [ ] Live ZWJS validation path that applies compiled profiles artifact (not on-the-fly compile)
+- [x] Live ZWJS validation path can apply compiled profiles artifact (not on-the-fly compile)
 - [ ] Add second real catalog source adapter when a concrete source format is available
 
 ## Phase 4: Homey Adapter MVP (Next Major Area)
