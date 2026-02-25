@@ -42,10 +42,10 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 ## Next Tasks
 
-1. Generate/commit HA-derived rules covering the currently supported HA discovery extraction set
-2. Build initial project-generic ruleset for device-profile inference from Z-Wave configuration/metadata
-3. Add live inspection path that applies compiled profiles artifact to ZWJS node data (no on-the-fly compile)
-4. Tighten `compiler:build` into the canonical layered build pipeline (HA-derived + project rules + catalog)
+1. Add live inspection path that applies compiled profiles artifact to ZWJS node data (no on-the-fly compile)
+2. Tighten `compiler:build` into the canonical layered build pipeline (HA-derived + project rules + catalog)
+3. Expand project-generic ruleset for device-profile inference from Z-Wave configuration/metadata
+4. Add first project-product override rules from real device validation
 5. Defer Homey adapter implementation until compiler runtime-validation readiness milestone is reached
 
 ## Risks / Unknowns

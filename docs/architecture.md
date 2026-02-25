@@ -89,6 +89,8 @@ Current implemented foundation in `packages/compiler`:
 - Added compiler artifact build foundation:
   - `compiler:build` emits `compiled-homey-profiles/v1` from compiler device facts files + layered rules inputs
   - `rules/` directory skeleton established for real `ha-derived`, `project/generic`, and `project/product` rulesets
+  - canonical layered manifest now lives at `rules/manifest.json`
+  - HA-derived generated rules and an initial project-generic ruleset are now checked in
 - Catalog/curation workflow decision:
   - no curation-seed artifact for now; rule/patch authoring remains schema-first using compiler diagnostics and stable device identifiers
 - Runtime curation boundary decision:

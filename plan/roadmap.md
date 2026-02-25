@@ -27,8 +27,8 @@
 - [x] Compiler/Homey boundary decision: runtime curation patch schema/apply is adapter-owned (not compiler-owned)
 - [x] Compiler build/export command foundation for compiled profiles artifact (`compiler:build`)
 - [x] Real rule pipeline directory skeleton in repo (`rules/ha-derived`, `rules/project/generic`, `rules/project/product`)
-- [ ] Generate HA-derived ruleset from HA import pipeline for supported discovery coverage
-- [ ] Initial project-generic ruleset for device-profile inference from Z-Wave configuration/metadata
+- [x] Generate HA-derived ruleset from HA import pipeline for supported discovery coverage
+- [x] Initial project-generic ruleset for device-profile inference from Z-Wave configuration/metadata (starter set)
 - [ ] Live ZWJS validation path that applies compiled profiles artifact (not on-the-fly compile)
 - [ ] Add second real catalog source adapter when a concrete source format is available
 

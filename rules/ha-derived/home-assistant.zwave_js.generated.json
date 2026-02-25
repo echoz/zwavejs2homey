@@ -1,0 +1,2474 @@
+{
+  "schemaVersion": "ha-derived-rules/v1",
+  "source": {
+    "upstream": "home-assistant",
+    "component": "zwave_js",
+    "generatedAt": "2026-02-24T23:59:04.546Z",
+    "sourceRef": "docs/external/home-assistant/homeassistant/components/zwave_js/discovery.py"
+  },
+  "rules": [
+    {
+      "ruleId": "ha:ha_extracted_fan_has_fan_value_mapping_184",
+      "layer": "ha-derived",
+      "device": {
+        "manufacturerId": [57],
+        "productType": [18756],
+        "productId": [12593]
+      },
+      "value": {
+        "commandClass": [38],
+        "endpoint": [0],
+        "property": ["currentValue"],
+        "metadataType": ["number"]
+      },
+      "constraints": {
+        "requiredValues": [
+          {
+            "commandClass": [38],
+            "endpoint": [0],
+            "property": ["targetValue"]
+          }
+        ]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "fan",
+          "driverTemplateId": "ha-import-fan"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "dim",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 38,
+              "endpoint": 0,
+              "property": "currentValue"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_fan_has_fan_value_mapping_197",
+      "layer": "ha-derived",
+      "device": {
+        "manufacturerId": [99],
+        "productType": [18756],
+        "productId": [12340]
+      },
+      "value": {
+        "commandClass": [38],
+        "endpoint": [0],
+        "property": ["currentValue"],
+        "metadataType": ["number"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "fan",
+          "driverTemplateId": "ha-import-fan"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "dim",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 38,
+              "endpoint": 0,
+              "property": "currentValue"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_fan_has_fan_value_mapping_209",
+      "layer": "ha-derived",
+      "device": {
+        "manufacturerId": [99],
+        "productType": [18756],
+        "productId": [12593]
+      },
+      "value": {
+        "commandClass": [38],
+        "endpoint": [0],
+        "property": ["currentValue"],
+        "metadataType": ["number"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "fan",
+          "driverTemplateId": "ha-import-fan"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "dim",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 38,
+              "endpoint": 0,
+              "property": "currentValue"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_fan_has_fan_value_mapping_226",
+      "layer": "ha-derived",
+      "device": {
+        "manufacturerId": [29],
+        "productType": [56],
+        "productId": [2]
+      },
+      "value": {
+        "commandClass": [38],
+        "endpoint": [0],
+        "property": ["currentValue"],
+        "metadataType": ["number"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "fan",
+          "driverTemplateId": "ha-import-fan"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "dim",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 38,
+              "endpoint": 0,
+              "property": "currentValue"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_fan_has_fan_value_mapping_239",
+      "layer": "ha-derived",
+      "device": {
+        "manufacturerId": [798],
+        "productType": [14],
+        "productId": [1]
+      },
+      "value": {
+        "commandClass": [38],
+        "endpoint": [2],
+        "property": ["currentValue"],
+        "metadataType": ["number"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "fan",
+          "driverTemplateId": "ha-import-fan"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "dim",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 38,
+              "endpoint": 2,
+              "property": "currentValue"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_fan_has_fan_value_mapping_258",
+      "layer": "ha-derived",
+      "device": {
+        "manufacturerId": [12],
+        "productType": [515],
+        "productId": [1]
+      },
+      "value": {
+        "commandClass": [38],
+        "endpoint": [0],
+        "property": ["currentValue"],
+        "metadataType": ["number"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "fan",
+          "driverTemplateId": "ha-import-fan"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "dim",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 38,
+              "endpoint": 0,
+              "property": "currentValue"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_cover_shutter_tilt_276",
+      "layer": "ha-derived",
+      "device": {
+        "manufacturerId": [271],
+        "productType": [769],
+        "productId": [4096]
+      },
+      "value": {
+        "commandClass": [38],
+        "endpoint": [0],
+        "property": ["currentValue"],
+        "metadataType": ["number"]
+      },
+      "constraints": {
+        "requiredValues": [
+          {
+            "commandClass": [145],
+            "endpoint": [0],
+            "property": ["fibaro"],
+            "propertyKey": ["venetianBlindsTilt"]
+          }
+        ]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "curtain",
+          "driverTemplateId": "ha-import-cover"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "windowcoverings_set",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 38,
+              "endpoint": 0,
+              "property": "currentValue"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_cover_shutter_tilt_308",
+      "layer": "ha-derived",
+      "device": {
+        "manufacturerId": [271],
+        "productType": [771],
+        "productId": [4096]
+      },
+      "value": {
+        "commandClass": [38],
+        "endpoint": [1],
+        "property": ["currentValue"],
+        "metadataType": ["number"]
+      },
+      "constraints": {
+        "requiredValues": [
+          {
+            "commandClass": [112],
+            "endpoint": [0],
+            "property": [151]
+          }
+        ]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "curtain",
+          "driverTemplateId": "ha-import-cover"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "windowcoverings_set",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 38,
+              "endpoint": 1,
+              "property": "currentValue"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_cover_shutter_346",
+      "layer": "ha-derived",
+      "device": {
+        "manufacturerId": [271],
+        "productType": [771],
+        "productId": [4096]
+      },
+      "value": {
+        "commandClass": [38],
+        "endpoint": [2],
+        "property": ["currentValue"],
+        "metadataType": ["number"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "curtain",
+          "driverTemplateId": "ha-import-cover"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "windowcoverings_set",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 38,
+              "endpoint": 2,
+              "property": "currentValue"
+            }
+          },
+          "flags": {
+            "entityRegistryEnabledDefault": false
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_cover_gate_361",
+      "layer": "ha-derived",
+      "device": {
+        "manufacturerId": [1089],
+        "productType": [9216],
+        "productId": [4096]
+      },
+      "value": {
+        "commandClass": [38],
+        "endpoint": [0],
+        "property": ["currentValue"],
+        "metadataType": ["number"]
+      },
+      "constraints": {
+        "requiredValues": [
+          {
+            "commandClass": [38],
+            "endpoint": [0],
+            "property": ["targetValue"]
+          }
+        ]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "curtain",
+          "driverTemplateId": "ha-import-cover"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "windowcoverings_set",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 38,
+              "endpoint": 0,
+              "property": "currentValue"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_cover_shutter_tilt_373",
+      "layer": "ha-derived",
+      "device": {
+        "manufacturerId": [1120],
+        "productType": [3],
+        "productId": [130]
+      },
+      "value": {
+        "commandClass": [38],
+        "endpoint": [1],
+        "property": ["currentValue"],
+        "metadataType": ["number"]
+      },
+      "constraints": {
+        "requiredValues": [
+          {
+            "commandClass": [112],
+            "endpoint": [0],
+            "property": [71]
+          }
+        ]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "curtain",
+          "driverTemplateId": "ha-import-cover"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "windowcoverings_set",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 38,
+              "endpoint": 1,
+              "property": "currentValue"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_cover_shutter_411",
+      "layer": "ha-derived",
+      "device": {
+        "manufacturerId": [1120],
+        "productType": [3],
+        "productId": [130]
+      },
+      "value": {
+        "commandClass": [38],
+        "endpoint": [2],
+        "property": ["currentValue"],
+        "metadataType": ["number"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "curtain",
+          "driverTemplateId": "ha-import-cover"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "windowcoverings_set",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 38,
+              "endpoint": 2,
+              "property": "currentValue"
+            }
+          },
+          "flags": {
+            "entityRegistryEnabledDefault": false
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_cover_shutter_426",
+      "layer": "ha-derived",
+      "device": {
+        "manufacturerId": [345],
+        "productType": [3],
+        "productId": [82]
+      },
+      "value": {
+        "commandClass": [38],
+        "endpoint": [0],
+        "property": ["currentValue"],
+        "metadataType": ["number"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "curtain",
+          "driverTemplateId": "ha-import-cover"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "windowcoverings_set",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 38,
+              "endpoint": 0,
+              "property": "currentValue"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_cover_blind_435",
+      "layer": "ha-derived",
+      "device": {
+        "manufacturerId": [622],
+        "productType": [17235],
+        "productId": [23089]
+      },
+      "value": {
+        "commandClass": [38],
+        "endpoint": [0],
+        "property": ["currentValue"],
+        "metadataType": ["number"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "curtain",
+          "driverTemplateId": "ha-import-cover"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "windowcoverings_set",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 38,
+              "endpoint": 0,
+              "property": "currentValue"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_cover_blind_444",
+      "layer": "ha-derived",
+      "device": {
+        "manufacturerId": [647],
+        "productType": [3],
+        "productId": [13]
+      },
+      "value": {
+        "commandClass": [38],
+        "endpoint": [0],
+        "property": ["currentValue"],
+        "metadataType": ["number"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "curtain",
+          "driverTemplateId": "ha-import-cover"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "windowcoverings_set",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 38,
+              "endpoint": 0,
+              "property": "currentValue"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_cover_shutter_453",
+      "layer": "ha-derived",
+      "device": {
+        "manufacturerId": [122],
+        "productType": [32771],
+        "productId": [1]
+      },
+      "value": {
+        "commandClass": [38],
+        "endpoint": [0],
+        "property": ["currentValue"],
+        "metadataType": ["number"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "curtain",
+          "driverTemplateId": "ha-import-cover"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "windowcoverings_set",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 38,
+              "endpoint": 0,
+              "property": "currentValue"
+            }
+          },
+          "flags": {
+            "assumedState": true
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_cover_shutter_469",
+      "layer": "ha-derived",
+      "device": {
+        "manufacturerId": [122],
+        "productType": [32771],
+        "productId": [1]
+      },
+      "value": {
+        "commandClass": [38],
+        "endpoint": [2],
+        "property": ["currentValue"],
+        "metadataType": ["number"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "curtain",
+          "driverTemplateId": "ha-import-cover"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "windowcoverings_set",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 38,
+              "endpoint": 2,
+              "property": "currentValue"
+            }
+          },
+          "flags": {
+            "assumedState": true,
+            "entityRegistryEnabledDefault": false
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_select_486_486",
+      "layer": "ha-derived",
+      "device": {
+        "manufacturerId": [122],
+        "productType": [32771],
+        "productId": [1]
+      },
+      "value": {
+        "commandClass": [117],
+        "endpoint": [2],
+        "property": ["local"],
+        "metadataType": ["number"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "other",
+          "driverTemplateId": "ha-import-select"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "enum_select",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 117,
+              "endpoint": 2,
+              "property": "local"
+            }
+          },
+          "flags": {
+            "entityRegistryEnabledDefault": false
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_cover_shade_500",
+      "layer": "ha-derived",
+      "device": {
+        "manufacturerId": [1114],
+        "productType": [2308],
+        "productId": [1287]
+      },
+      "value": {
+        "commandClass": [38],
+        "endpoint": [0],
+        "property": ["currentValue"],
+        "metadataType": ["number"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "curtain",
+          "driverTemplateId": "ha-import-cover"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "windowcoverings_set",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 38,
+              "endpoint": 0,
+              "property": "currentValue"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_switch_509_509",
+      "layer": "ha-derived",
+      "device": {
+        "manufacturerId": [265],
+        "productType": [8215],
+        "productId": [5905]
+      },
+      "value": {
+        "commandClass": [37],
+        "endpoint": [0],
+        "property": ["currentValue"],
+        "metadataType": ["boolean"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "socket",
+          "driverTemplateId": "ha-import-switch"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "onoff",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 37,
+              "endpoint": 0,
+              "property": "currentValue"
+            }
+          },
+          "flags": {
+            "assumedState": true
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_climate_dynamic_current_temp_518",
+      "layer": "ha-derived",
+      "device": {
+        "manufacturerId": [411],
+        "productType": [48],
+        "productId": [12289]
+      },
+      "value": {
+        "commandClass": [64],
+        "endpoint": [0],
+        "property": ["mode"],
+        "metadataType": ["number"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "thermostat",
+          "driverTemplateId": "ha-import-thermostat"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "target_temperature",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 64,
+              "endpoint": 0,
+              "property": "mode"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_climate_dynamic_current_temp_580",
+      "layer": "ha-derived",
+      "device": {
+        "manufacturerId": [411],
+        "productType": [3],
+        "productId": [515]
+      },
+      "value": {
+        "commandClass": [64],
+        "endpoint": [0],
+        "property": ["mode"],
+        "metadataType": ["number"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "thermostat",
+          "driverTemplateId": "ha-import-thermostat"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "target_temperature",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 64,
+              "endpoint": 0,
+              "property": "mode"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_climate_dynamic_current_temp_628",
+      "layer": "ha-derived",
+      "device": {
+        "manufacturerId": [411],
+        "productType": [3],
+        "productId": [514]
+      },
+      "value": {
+        "commandClass": [64],
+        "endpoint": [0],
+        "property": ["mode"],
+        "metadataType": ["number"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "thermostat",
+          "driverTemplateId": "ha-import-thermostat"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "target_temperature",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 64,
+              "endpoint": 0,
+              "property": "mode"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_select_multilevel_switch_666",
+      "layer": "ha-derived",
+      "device": {
+        "manufacturerId": [132],
+        "productType": [785],
+        "productId": [263]
+      },
+      "value": {
+        "commandClass": [38],
+        "endpoint": [0],
+        "property": ["currentValue"],
+        "metadataType": ["number"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "other",
+          "driverTemplateId": "ha-import-select"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "enum_select",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 38,
+              "endpoint": 0,
+              "property": "currentValue"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_light_zwa2_led_color_684",
+      "layer": "ha-derived",
+      "device": {
+        "manufacturerId": [1126],
+        "productType": [1],
+        "productId": [1]
+      },
+      "value": {
+        "commandClass": [51],
+        "endpoint": [0],
+        "property": ["currentValue"],
+        "metadataType": ["number"]
+      },
+      "constraints": {
+        "absentValues": [
+          {
+            "commandClass": [37],
+            "endpoint": [0],
+            "property": ["currentValue"]
+          },
+          {
+            "commandClass": [38],
+            "endpoint": [0],
+            "property": ["currentValue"]
+          }
+        ]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "light",
+          "driverTemplateId": "ha-import-light"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "onoff",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 51,
+              "endpoint": 0,
+              "property": "currentValue"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_light_zwa2_led_onoff_698",
+      "layer": "ha-derived",
+      "device": {
+        "manufacturerId": [1126],
+        "productType": [1],
+        "productId": [1]
+      },
+      "value": {
+        "commandClass": [37],
+        "endpoint": [0],
+        "property": ["currentValue"],
+        "metadataType": ["boolean"]
+      },
+      "constraints": {
+        "absentValues": [
+          {
+            "commandClass": [51],
+            "endpoint": [0],
+            "property": ["currentValue"]
+          },
+          {
+            "commandClass": [38],
+            "endpoint": [0],
+            "property": ["currentValue"]
+          }
+        ]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "light",
+          "driverTemplateId": "ha-import-light"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "onoff",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 37,
+              "endpoint": 0,
+              "property": "currentValue"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_lock_714_714",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [98],
+        "endpoint": [0],
+        "property": ["currentMode"],
+        "metadataType": ["number"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "lock",
+          "driverTemplateId": "ha-import-lock"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "locked",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 98,
+              "endpoint": 0,
+              "property": "currentMode"
+            }
+          },
+          "flags": {
+            "allowMulti": true
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_select_door_lock_719",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [98],
+        "endpoint": [0],
+        "property": ["currentMode"],
+        "metadataType": ["number"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "other",
+          "driverTemplateId": "ha-import-select"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "enum_select",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 98,
+              "endpoint": 0,
+              "property": "currentMode"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_lock_725_725",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [118],
+        "endpoint": [0],
+        "property": ["locked"],
+        "metadataType": ["boolean"]
+      },
+      "constraints": {
+        "absentValues": [
+          {
+            "commandClass": [98],
+            "endpoint": [0],
+            "property": ["currentMode"]
+          }
+        ]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "lock",
+          "driverTemplateId": "ha-import-lock"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "locked",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 118,
+              "endpoint": 0,
+              "property": "locked"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_binary_sensor_property_735",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [118],
+        "endpoint": [0],
+        "property": ["doorStatus"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "sensor",
+          "driverTemplateId": "ha-import-binary-sensor"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "alarm_generic",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 118,
+              "endpoint": 0,
+              "property": "doorStatus"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_fan_thermostat_fan_748",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [68],
+        "endpoint": [0],
+        "property": ["fanMode"],
+        "metadataType": ["number"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "fan",
+          "driverTemplateId": "ha-import-fan"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "dim",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 68,
+              "endpoint": 0,
+              "property": "fanMode"
+            }
+          },
+          "flags": {
+            "entityRegistryEnabledDefault": false
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_humidifier_760_760",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [109],
+        "endpoint": [0],
+        "property": ["humidityMode"],
+        "metadataType": ["number"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "humidifier",
+          "driverTemplateId": "ha-import-humidifier"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "dim",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 109,
+              "endpoint": 0,
+              "property": "humidityMode"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_climate_770_770",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [64],
+        "endpoint": [0],
+        "property": ["mode"],
+        "metadataType": ["number"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "thermostat",
+          "driverTemplateId": "ha-import-thermostat"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "target_temperature",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 64,
+              "endpoint": 0,
+              "property": "mode"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_climate_779_779",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [67],
+        "endpoint": [0],
+        "property": ["setpoint"],
+        "metadataType": ["number"]
+      },
+      "constraints": {
+        "absentValues": [
+          {
+            "commandClass": [64],
+            "endpoint": [0],
+            "property": ["mode"]
+          }
+        ]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "thermostat",
+          "driverTemplateId": "ha-import-thermostat"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "target_temperature",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 67,
+              "endpoint": 0,
+              "property": "setpoint"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_binary_sensor_boolean_797",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [48],
+        "endpoint": [0],
+        "property": ["currentValue"],
+        "metadataType": ["boolean"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "sensor",
+          "driverTemplateId": "ha-import-binary-sensor"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "alarm_generic",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 48,
+              "endpoint": 0,
+              "property": "currentValue"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_binary_sensor_boolean_808",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [48],
+        "endpoint": [0],
+        "property": ["currentValue"],
+        "metadataType": ["boolean"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "sensor",
+          "driverTemplateId": "ha-import-binary-sensor"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "alarm_generic",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 48,
+              "endpoint": 0,
+              "property": "currentValue"
+            }
+          },
+          "flags": {
+            "entityRegistryEnabledDefault": false
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_binary_sensor_boolean_817",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [128],
+        "endpoint": [0],
+        "property": ["currentValue"],
+        "metadataType": ["boolean"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "sensor",
+          "driverTemplateId": "ha-import-binary-sensor"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "alarm_generic",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 128,
+              "endpoint": 0,
+              "property": "currentValue"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_binary_sensor_boolean_829",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [87],
+        "endpoint": [0],
+        "property": ["currentValue"],
+        "metadataType": ["boolean"],
+        "readable": true,
+        "writeable": false
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "sensor",
+          "driverTemplateId": "ha-import-binary-sensor"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "alarm_generic",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 87,
+              "endpoint": 0,
+              "property": "currentValue"
+            }
+          },
+          "flags": {
+            "entityRegistryEnabledDefault": false
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_sensor_string_sensor_842",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [156],
+        "endpoint": [0],
+        "property": ["currentValue"],
+        "metadataType": ["string"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "sensor",
+          "driverTemplateId": "ha-import-sensor"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "measure_generic",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 156,
+              "endpoint": 0,
+              "property": "currentValue"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_sensor_numeric_sensor_851",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [144],
+        "endpoint": [0],
+        "property": ["currentValue"],
+        "metadataType": ["number"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "sensor",
+          "driverTemplateId": "ha-import-sensor"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "measure_generic",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 144,
+              "endpoint": 0,
+              "property": "currentValue"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_sensor_numeric_sensor_864",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [128],
+        "endpoint": [0],
+        "property": ["level"],
+        "metadataType": ["number"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "sensor",
+          "driverTemplateId": "ha-import-sensor"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "measure_generic",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 128,
+              "endpoint": 0,
+              "property": "level"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_sensor_numeric_sensor_874",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [128],
+        "endpoint": [0],
+        "property": ["temperature"],
+        "metadataType": ["number"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "sensor",
+          "driverTemplateId": "ha-import-sensor"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "measure_generic",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 128,
+              "endpoint": 0,
+              "property": "temperature"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_sensor_list_884",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [128],
+        "endpoint": [0],
+        "property": ["chargingStatus"],
+        "metadataType": ["number"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "sensor",
+          "driverTemplateId": "ha-import-sensor"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "measure_generic",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 128,
+              "endpoint": 0,
+              "property": "chargingStatus"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_sensor_numeric_sensor_894",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [87],
+        "endpoint": [0],
+        "property": ["currentValue"],
+        "metadataType": ["number"],
+        "readable": true,
+        "writeable": false
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "sensor",
+          "driverTemplateId": "ha-import-sensor"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "measure_generic",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 87,
+              "endpoint": 0,
+              "property": "currentValue"
+            }
+          },
+          "flags": {
+            "entityRegistryEnabledDefault": false
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_sensor_meter_908",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [50],
+        "endpoint": [0],
+        "property": ["value"],
+        "metadataType": ["number"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "sensor",
+          "driverTemplateId": "ha-import-sensor"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "measure_generic",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 50,
+              "endpoint": 0,
+              "property": "value"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_number_921_921",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [87],
+        "endpoint": [0],
+        "property": ["currentValue"],
+        "metadataType": ["number"],
+        "readable": true,
+        "writeable": true
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "other",
+          "driverTemplateId": "ha-import-number"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "number_value",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 87,
+              "endpoint": 0,
+              "property": "currentValue"
+            }
+          },
+          "flags": {
+            "entityRegistryEnabledDefault": false
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_button_934_934",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [87],
+        "endpoint": [0],
+        "property": ["currentValue"],
+        "metadataType": ["boolean"],
+        "readable": false,
+        "writeable": true
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "button",
+          "driverTemplateId": "ha-import-button"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "button_action",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 87,
+              "endpoint": 0,
+              "property": "currentValue"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_switch_indicator_945",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [87],
+        "endpoint": [0],
+        "property": ["currentValue"],
+        "metadataType": ["boolean"],
+        "readable": true,
+        "writeable": true
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "socket",
+          "driverTemplateId": "ha-import-switch"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "onoff",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 87,
+              "endpoint": 0,
+              "property": "currentValue"
+            }
+          },
+          "flags": {
+            "entityRegistryEnabledDefault": false
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_switch_barrier_event_signaling_state_959",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [102],
+        "endpoint": [0],
+        "property": ["signalingState"],
+        "metadataType": ["number"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "socket",
+          "driverTemplateId": "ha-import-switch"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "onoff",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 102,
+              "endpoint": 0,
+              "property": "signalingState"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_cover_window_covering_970",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [106],
+        "endpoint": [0],
+        "property": ["currentValue"],
+        "metadataType": ["number"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "curtain",
+          "driverTemplateId": "ha-import-cover"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "windowcoverings_set",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 106,
+              "endpoint": 0,
+              "property": "currentValue"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_cover_window_covering_975",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [106],
+        "endpoint": [0],
+        "property": ["currentValue"],
+        "metadataType": ["number"]
+      },
+      "constraints": {
+        "absentValues": [
+          {
+            "commandClass": [106],
+            "endpoint": [0],
+            "property": ["currentValue"]
+          }
+        ]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "curtain",
+          "driverTemplateId": "ha-import-cover"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "windowcoverings_set",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 106,
+              "endpoint": 0,
+              "property": "currentValue"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_cover_multilevel_switch_981",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [38],
+        "endpoint": [0],
+        "property": ["currentValue"],
+        "metadataType": ["number"]
+      },
+      "constraints": {
+        "absentValues": [
+          {
+            "commandClass": [106],
+            "endpoint": [0],
+            "property": ["currentValue"]
+          },
+          {
+            "commandClass": [106],
+            "endpoint": [0],
+            "property": ["currentValue"]
+          }
+        ]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "curtain",
+          "driverTemplateId": "ha-import-cover"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "windowcoverings_set",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 38,
+              "endpoint": 0,
+              "property": "currentValue"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_cover_motorized_barrier_999",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [102],
+        "endpoint": [0],
+        "property": ["currentState"],
+        "metadataType": ["number"]
+      },
+      "constraints": {
+        "requiredValues": [
+          {
+            "commandClass": [102],
+            "endpoint": [0],
+            "property": ["targetState"]
+          }
+        ]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "curtain",
+          "driverTemplateId": "ha-import-cover"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "windowcoverings_set",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 102,
+              "endpoint": 0,
+              "property": "currentState"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_fan_fan_1016",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [38],
+        "endpoint": [0],
+        "property": ["currentValue"],
+        "metadataType": ["number"]
+      },
+      "constraints": {
+        "requiredValues": [
+          {
+            "commandClass": [38],
+            "endpoint": [0],
+            "property": ["targetValue"]
+          }
+        ]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "fan",
+          "driverTemplateId": "ha-import-fan"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "dim",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 38,
+              "endpoint": 0,
+              "property": "currentValue"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_number_valve_control_1026",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [38],
+        "endpoint": [0],
+        "property": ["currentValue"],
+        "metadataType": ["number"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "other",
+          "driverTemplateId": "ha-import-number"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "number_value",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 38,
+              "endpoint": 0,
+              "property": "currentValue"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_light_1039_1039",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [38],
+        "endpoint": [0],
+        "property": ["currentValue"],
+        "metadataType": ["number"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "light",
+          "driverTemplateId": "ha-import-light"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "dim",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 38,
+              "endpoint": 0,
+              "property": "currentValue"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_switch_1045_1045",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [37],
+        "endpoint": [0],
+        "property": ["currentValue"],
+        "metadataType": ["boolean"]
+      },
+      "constraints": {
+        "requiredValues": [
+          {
+            "commandClass": [38],
+            "endpoint": [0],
+            "property": ["currentValue"]
+          },
+          {
+            "commandClass": [51],
+            "endpoint": [0],
+            "property": ["currentValue"]
+          }
+        ]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "socket",
+          "driverTemplateId": "ha-import-switch"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "onoff",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 37,
+              "endpoint": 0,
+              "property": "currentValue"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_light_color_onoff_1055",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [37],
+        "endpoint": [0],
+        "property": ["currentValue"],
+        "metadataType": ["boolean"]
+      },
+      "constraints": {
+        "requiredValues": [
+          {
+            "commandClass": [51],
+            "endpoint": [0],
+            "property": ["currentValue"]
+          }
+        ]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "light",
+          "driverTemplateId": "ha-import-light"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "onoff",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 37,
+              "endpoint": 0,
+              "property": "currentValue"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_switch_1062_1062",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [37],
+        "endpoint": [0],
+        "property": ["currentValue"],
+        "metadataType": ["boolean"]
+      },
+      "constraints": {
+        "absentValues": [
+          {
+            "commandClass": [51],
+            "endpoint": [0],
+            "property": ["currentValue"]
+          }
+        ]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "socket",
+          "driverTemplateId": "ha-import-switch"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "onoff",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 37,
+              "endpoint": 0,
+              "property": "currentValue"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_light_color_onoff_1068",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [51],
+        "endpoint": [0],
+        "property": ["currentValue"],
+        "metadataType": ["number"]
+      },
+      "constraints": {
+        "absentValues": [
+          {
+            "commandClass": [37],
+            "endpoint": [0],
+            "property": ["currentValue"]
+          },
+          {
+            "commandClass": [38],
+            "endpoint": [0],
+            "property": ["currentValue"]
+          }
+        ]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "light",
+          "driverTemplateId": "ha-import-light"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "onoff",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 51,
+              "endpoint": 0,
+              "property": "currentValue"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_light_1078_1078",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [32],
+        "endpoint": [0],
+        "property": ["currentValue"],
+        "metadataType": ["number"]
+      },
+      "constraints": {
+        "requiredValues": [
+          {
+            "commandClass": [32],
+            "endpoint": [0],
+            "property": ["targetValue"]
+          }
+        ]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "light",
+          "driverTemplateId": "ha-import-light"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "onoff",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 32,
+              "endpoint": 0,
+              "property": "currentValue"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_sensor_numeric_sensor_1094",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [32],
+        "endpoint": [0],
+        "property": ["currentValue"],
+        "metadataType": ["number"]
+      },
+      "constraints": {
+        "absentValues": [
+          {
+            "commandClass": [32],
+            "endpoint": [0],
+            "property": ["targetValue"]
+          }
+        ]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "sensor",
+          "driverTemplateId": "ha-import-sensor"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "measure_generic",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 32,
+              "endpoint": 0,
+              "property": "currentValue"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_siren_1111_1111",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [121],
+        "endpoint": [0],
+        "property": ["toneId"],
+        "metadataType": ["number"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "alarm",
+          "driverTemplateId": "ha-import-siren"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "alarm_siren",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 121,
+              "endpoint": 0,
+              "property": "toneId"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_select_default_tone_1117",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [121],
+        "endpoint": [0],
+        "property": ["defaultToneId"],
+        "metadataType": ["number"]
+      },
+      "constraints": {
+        "requiredValues": [
+          {
+            "commandClass": [121],
+            "endpoint": [0],
+            "property": ["toneId"]
+          }
+        ]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "other",
+          "driverTemplateId": "ha-import-select"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "enum_select",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 121,
+              "endpoint": 0,
+              "property": "defaultToneId"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_number_volume_1129",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [121],
+        "endpoint": [0],
+        "property": ["defaultVolume"],
+        "metadataType": ["number"]
+      },
+      "constraints": {
+        "requiredValues": [
+          {
+            "commandClass": [121],
+            "endpoint": [0],
+            "property": ["toneId"]
+          }
+        ]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "other",
+          "driverTemplateId": "ha-import-number"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "number_value",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 121,
+              "endpoint": 0,
+              "property": "defaultVolume"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_select_1141_1141",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [117],
+        "endpoint": [0],
+        "property": ["local"],
+        "metadataType": ["number"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "other",
+          "driverTemplateId": "ha-import-select"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "enum_select",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 117,
+              "endpoint": 0,
+              "property": "local"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_button_notification_idle_1151",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [113],
+        "endpoint": [0],
+        "property": ["currentValue"],
+        "metadataType": ["number"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "button",
+          "driverTemplateId": "ha-import-button"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "button_action",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 113,
+              "endpoint": 0,
+              "property": "currentValue"
+            }
+          },
+          "flags": {
+            "allowMulti": true,
+            "entityRegistryEnabledDefault": false
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_button_meter_reset_1164",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [50],
+        "endpoint": [0],
+        "property": ["reset"],
+        "metadataType": ["boolean"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "button",
+          "driverTemplateId": "ha-import-button"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "button_action",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 50,
+              "endpoint": 0,
+              "property": "reset"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_binary_sensor_notification_1174",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [113],
+        "endpoint": [0],
+        "property": ["currentValue"],
+        "metadataType": ["number"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "sensor",
+          "driverTemplateId": "ha-import-binary-sensor"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "alarm_generic",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 113,
+              "endpoint": 0,
+              "property": "currentValue"
+            }
+          },
+          "flags": {
+            "allowMulti": true
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_sensor_notification_alarm_1188",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [113],
+        "endpoint": [0],
+        "property": ["alarmType"],
+        "metadataType": ["number"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "sensor",
+          "driverTemplateId": "ha-import-sensor"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "measure_generic",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 113,
+              "endpoint": 0,
+              "property": "alarmType"
+            }
+          },
+          "flags": {
+            "entityRegistryEnabledDefault": false
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "ha:ha_extracted_sensor_notification_1201",
+      "layer": "ha-derived",
+      "value": {
+        "commandClass": [113],
+        "endpoint": [0],
+        "property": ["currentValue"],
+        "metadataType": ["number"]
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "homeyClass": "sensor",
+          "driverTemplateId": "ha-import-sensor"
+        },
+        {
+          "type": "capability",
+          "capabilityId": "measure_generic",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 113,
+              "endpoint": 0,
+              "property": "currentValue"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

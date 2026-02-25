@@ -10,5 +10,8 @@ Planned layout:
 
 Current state:
 
-- Directory skeleton only (no real project rules checked in yet)
-- Test fixtures under `packages/compiler/test/fixtures/` are still the active examples
+- Canonical layered manifest: `rules/manifest.json`
+- HA-derived generated rules file checked in under `rules/ha-derived/`
+- Initial project generic rules checked in under `rules/project/generic/`
+- Product overrides directory is ready but currently empty
+- Test fixtures under `packages/compiler/test/fixtures/` are still used for targeted compiler tests

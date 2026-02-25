@@ -1,0 +1,11 @@
+[
+  {
+    "filePath": "ha-derived/home-assistant.zwave_js.generated.json",
+    "kind": "ha-derived-generated",
+    "layer": "ha-derived"
+  },
+  {
+    "filePath": "project/generic/base-generic.json",
+    "layer": "project-generic"
+  }
+]

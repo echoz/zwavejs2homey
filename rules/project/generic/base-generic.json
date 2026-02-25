@@ -1,0 +1,115 @@
+[
+  {
+    "ruleId": "generic-switch-binary-onoff",
+    "layer": "project-generic",
+    "value": {
+      "commandClass": [37],
+      "property": ["currentValue"],
+      "readable": true
+    },
+    "actions": [
+      {
+        "type": "device-identity",
+        "homeyClass": "socket",
+        "driverTemplateId": "generic-switch-binary"
+      },
+      {
+        "type": "capability",
+        "capabilityId": "onoff",
+        "inboundMapping": {
+          "kind": "value",
+          "selector": {
+            "commandClass": 37,
+            "endpoint": 0,
+            "property": "currentValue"
+          }
+        },
+        "outboundMapping": {
+          "kind": "set_value",
+          "target": {
+            "commandClass": 37,
+            "endpoint": 0,
+            "property": "currentValue"
+          }
+        },
+        "flags": {
+          "readable": true,
+          "writeable": true
+        }
+      }
+    ]
+  },
+  {
+    "ruleId": "generic-switch-multilevel-dim",
+    "layer": "project-generic",
+    "value": {
+      "commandClass": [38],
+      "property": ["currentValue"],
+      "readable": true
+    },
+    "actions": [
+      {
+        "type": "device-identity",
+        "homeyClass": "light",
+        "driverTemplateId": "generic-dimmer"
+      },
+      {
+        "type": "capability",
+        "capabilityId": "dim",
+        "inboundMapping": {
+          "kind": "value",
+          "selector": {
+            "commandClass": 38,
+            "endpoint": 0,
+            "property": "currentValue"
+          },
+          "transformRef": "zwave_level_0_99_to_homey_dim"
+        },
+        "outboundMapping": {
+          "kind": "set_value",
+          "target": {
+            "commandClass": 38,
+            "endpoint": 0,
+            "property": "currentValue"
+          },
+          "transformRef": "homey_dim_to_zwave_level_0_99",
+          "validation": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        "flags": {
+          "readable": true,
+          "writeable": true
+        }
+      }
+    ]
+  },
+  {
+    "ruleId": "generic-battery-level",
+    "layer": "project-generic",
+    "value": {
+      "commandClass": [128],
+      "property": ["level"],
+      "readable": true
+    },
+    "actions": [
+      {
+        "type": "capability",
+        "capabilityId": "measure_battery",
+        "inboundMapping": {
+          "kind": "value",
+          "selector": {
+            "commandClass": 128,
+            "endpoint": 0,
+            "property": "level"
+          }
+        },
+        "flags": {
+          "readable": true,
+          "writeable": false
+        }
+      }
+    ]
+  }
+]

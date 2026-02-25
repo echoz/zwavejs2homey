@@ -949,6 +949,8 @@ Progress on the extended scope:
 - Added `compiler:build` (`homey-compile-build`) to compile one or more device facts files into a reusable `compiled-homey-profiles/v1` artifact
 - Added `compiled-homey-profiles/v1` artifact contract + validation in `packages/compiler`
 - Added `rules/` directory skeleton (`ha-derived`, `project/generic`, `project/product`) to formalize the real rule pipeline layout
+- Generated and checked in canonical HA-derived rules (`rules/ha-derived/home-assistant.zwave_js.generated.json`) for the currently supported HA extraction set
+- Added canonical layered rule manifest (`rules/manifest.json`) and initial project generic rules (`rules/project/generic/base-generic.json`)
 
 Deferred / later Phase 3 expansion (not required for compiler runtime-validation readiness):
 
