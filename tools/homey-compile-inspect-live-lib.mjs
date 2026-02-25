@@ -297,6 +297,32 @@ function formatBool(value) {
   return value === true ? 'yes' : value === false ? 'no' : '';
 }
 
+function isTechnicalCurationReason(reason) {
+  return (
+    typeof reason === 'string' &&
+    (reason.startsWith('suppressed-fill-actions:') || reason.startsWith('high-unmatched-ratio:'))
+  );
+}
+
+function firstActionableReviewReason(reasons) {
+  const list = Array.isArray(reasons) ? reasons : [];
+  return list.find((reason) => !isTechnicalCurationReason(reason)) ?? '';
+}
+
+function humanizeReviewReasonForList(reason) {
+  if (!reason) return '';
+  if (reason === 'no-applied-actions') return 'No applied actions';
+  if (reason === 'no-meaningful-mapping') return 'No meaningful mapping';
+  if (reason === 'known-device-unmapped') return 'Known device unmapped';
+  if (reason === 'known-device-generic-fallback') return 'Known device generic fallback';
+  if (reason === 'unknown-device-generic-fallback') return 'Unknown device generic fallback';
+  if (reason.startsWith('uncurated-profile:')) {
+    const confidence = reason.split(':', 2)[1] ?? 'unknown';
+    return `Uncurated profile (${confidence})`;
+  }
+  return reason;
+}
+
 export function formatListOutput(rows) {
   const headers = ['Node', 'Name', 'Class', 'Outcome', 'Conf', 'Uncur', 'Catalog', 'Review'];
   const body = rows.map((row) => [
@@ -332,7 +358,9 @@ function formatLiveOutput(results, format) {
       confidence: row.compiled.profile.classification.confidence,
       uncurated: row.compiled.profile.classification.uncurated,
       catalogRef: row.compiled.profile.catalogMatch?.catalogId ?? '',
-      reviewReason: row.compiled.report.curationCandidates.reasons[0] ?? '',
+      reviewReason: humanizeReviewReasonForList(
+        firstActionableReviewReason(row.compiled.report.curationCandidates.reasons),
+      ),
     }));
     return formatListOutput(rows);
   }

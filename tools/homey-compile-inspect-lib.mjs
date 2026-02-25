@@ -179,6 +179,85 @@ function formatSelector(selector) {
   return `cc=${selector.commandClass}@ep${endpoint}:${String(selector.property)}${propertyKey}`;
 }
 
+const TECHNICAL_CURATION_REASON_PREFIXES = ['suppressed-fill-actions:', 'high-unmatched-ratio:'];
+
+function isTechnicalCurationReason(reason) {
+  return TECHNICAL_CURATION_REASON_PREFIXES.some((prefix) => reason.startsWith(prefix));
+}
+
+function splitCurationReasons(reasons) {
+  const actionable = [];
+  const technical = [];
+  for (const reason of reasons ?? []) {
+    if (isTechnicalCurationReason(reason)) {
+      technical.push(reason);
+    } else {
+      actionable.push(reason);
+    }
+  }
+  return { actionable, technical };
+}
+
+function humanizeCurationReason(reason) {
+  if (reason === 'no-applied-actions') {
+    return 'No rule actions produced an applied mapping change.';
+  }
+  if (reason === 'no-meaningful-mapping') {
+    return 'No meaningful mapping was produced (no capabilities and no driver template).';
+  }
+  if (reason === 'known-device-unmapped') {
+    return 'Known catalog device produced no usable mapping.';
+  }
+  if (reason === 'known-device-generic-fallback') {
+    return 'Known catalog device fell back to a generic profile.';
+  }
+  if (reason === 'unknown-device-generic-fallback') {
+    return 'Unknown device fell back to a generic profile.';
+  }
+  if (reason.startsWith('uncurated-profile:')) {
+    const confidence = reason.split(':', 2)[1] ?? 'unknown';
+    return `Profile is uncurated (${confidence}).`;
+  }
+  if (reason.startsWith('suppressed-fill-actions:')) {
+    const count = reason.split(':', 2)[1] ?? '?';
+    return `${count} fill actions matched but were skipped because their target slot was already occupied.`;
+  }
+  if (reason.startsWith('high-unmatched-ratio:')) {
+    const ratio = reason.split(':', 2)[1] ?? '?';
+    return `A high share of actions were unmatched (${ratio}); this is common with broad layered rule sets.`;
+  }
+  return reason;
+}
+
+function buildTechnicalCurationLines(result, markdown = false, topLimit = 3) {
+  const lines = [];
+  const reasons = result?.report?.curationCandidates?.reasons ?? [];
+  const { technical } = splitCurationReasons(reasons);
+  if (technical.length === 0) return lines;
+
+  const render = (text) => (markdown ? `- ${text}` : text);
+  const suppressed = technical.find((reason) => reason.startsWith('suppressed-fill-actions:'));
+  const unmatched = technical.find((reason) => reason.startsWith('high-unmatched-ratio:'));
+
+  if (suppressed) {
+    lines.push(render(`Curation diagnostic: ${humanizeCurationReason(suppressed)}`));
+    const bySuppressed = Array.isArray(result?.report?.bySuppressedSlot)
+      ? result.report.bySuppressedSlot
+      : [];
+    if (bySuppressed.length > 0) {
+      const top = bySuppressed
+        .slice(0, topLimit)
+        .map((row) => `${row.layer}:${row.ruleId} ${row.slot} x${row.count}`)
+        .join(', ');
+      lines.push(render(`Suppressed fill examples: ${top}`));
+    }
+  }
+  if (unmatched) {
+    lines.push(render(`Curation diagnostic: ${humanizeCurationReason(unmatched)}`));
+  }
+  return lines;
+}
+
 function getConflictSuppressions(result) {
   const suppressed = result?.report?.overlapPolicy?.suppressedCapabilities;
   return Array.isArray(suppressed) ? suppressed : [];
@@ -368,6 +447,8 @@ export function formatCompileSummary(result) {
     )
     .slice(0, topLimit);
   const lines = [];
+  const curationReasons = result?.report?.curationCandidates?.reasons ?? [];
+  const curationReasonGroups = splitCurationReasons(curationReasons);
   lines.push(`Profile: ${result.profile.profileId}`);
   lines.push(
     `Class: ${result.profile.classification.homeyClass} (${result.profile.classification.confidence}, uncurated=${result.profile.classification.uncurated})`,
@@ -464,19 +545,24 @@ export function formatCompileSummary(result) {
     );
   }
   if (focus === 'all' || focus === 'curation') {
-    if (result.report.curationCandidates.likelyNeedsReview) {
-      lines.push(`Curation review: yes (${result.report.curationCandidates.reasons.join(', ')})`);
+    if (curationReasonGroups.actionable.length > 0) {
+      lines.push(
+        `Curation review: yes (${curationReasonGroups.actionable.map((reason) => humanizeCurationReason(reason)).join('; ')})`,
+      );
     } else {
       lines.push('Curation review: no');
     }
   }
-  if (
-    (show === 'curation' || show === 'all') &&
-    result.report.curationCandidates.reasons.length > 0
-  ) {
+  if (focus === 'all' || focus === 'curation') {
+    lines.push(...buildTechnicalCurationLines(result, false, topLimit));
+  }
+  if ((show === 'curation' || show === 'all') && curationReasons.length > 0) {
     lines.push('Curation reasons detail:');
-    for (const reason of result.report.curationCandidates.reasons.slice(0, topLimit)) {
-      lines.push(`  - ${reason}`);
+    for (const reason of curationReasonGroups.actionable.slice(0, topLimit)) {
+      lines.push(`  - ${reason} — ${humanizeCurationReason(reason)}`);
+    }
+    for (const reason of curationReasonGroups.technical.slice(0, topLimit)) {
+      lines.push(`  - ${reason} — ${humanizeCurationReason(reason)}`);
     }
   }
   lines.push(...buildCapabilityExplanationLines(result, false));
@@ -498,6 +584,8 @@ export function formatCompileMarkdown(result) {
     )
     .slice(0, topLimit);
   const lines = [];
+  const curationReasons = result?.report?.curationCandidates?.reasons ?? [];
+  const curationReasonGroups = splitCurationReasons(curationReasons);
   lines.push(`## Compiled Profile: \`${result.profile.profileId}\``);
   lines.push(
     `- Class: \`${result.profile.classification.homeyClass}\` (${result.profile.classification.confidence}, uncurated=${result.profile.classification.uncurated})`,
@@ -534,11 +622,16 @@ export function formatCompileMarkdown(result) {
     lines.push(`- Diagnostic device key: \`${result.report.diagnosticDeviceKey}\``);
   }
   if (focus === 'all' || focus === 'curation') {
-    if (result.report.curationCandidates.likelyNeedsReview) {
-      lines.push(`- Curation review: yes (${result.report.curationCandidates.reasons.join(', ')})`);
+    if (curationReasonGroups.actionable.length > 0) {
+      lines.push(
+        `- Curation review: yes (${curationReasonGroups.actionable.map((reason) => humanizeCurationReason(reason)).join('; ')})`,
+      );
     } else {
       lines.push(`- Curation review: no`);
     }
+  }
+  if (focus === 'all' || focus === 'curation') {
+    lines.push(...buildTechnicalCurationLines(result, true, topLimit));
   }
   if ((focus === 'all' || focus === 'curation') && result.report.catalogContext) {
     lines.push(
@@ -600,13 +693,13 @@ export function formatCompileMarkdown(result) {
       }
     }
   }
-  if (
-    (show === 'curation' || show === 'all') &&
-    result.report.curationCandidates.reasons.length > 0
-  ) {
+  if ((show === 'curation' || show === 'all') && curationReasons.length > 0) {
     lines.push(`- Curation reasons detail:`);
-    for (const reason of result.report.curationCandidates.reasons.slice(0, topLimit)) {
-      lines.push(`  - \`${reason}\``);
+    for (const reason of curationReasonGroups.actionable.slice(0, topLimit)) {
+      lines.push(`  - \`${reason}\` — ${humanizeCurationReason(reason)}`);
+    }
+    for (const reason of curationReasonGroups.technical.slice(0, topLimit)) {
+      lines.push(`  - \`${reason}\` — ${humanizeCurationReason(reason)}`);
     }
   }
   lines.push(...buildCapabilityExplanationLines(result, true));

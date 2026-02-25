@@ -222,6 +222,11 @@ test('formatCompileSummary includes classification provenance and suppressed slo
     summary,
     /Suppressed slots: project-generic:generic-device-class-fill:deviceIdentity.homeyClass=1/,
   );
+  assert.match(summary, /Curation review: no/);
+  assert.match(
+    summary,
+    /Curation diagnostic: 1 fill actions matched but were skipped because their target slot was already occupied\./,
+  );
 });
 
 test('formatCompileOutput supports markdown/json/ndjson variants', async () => {

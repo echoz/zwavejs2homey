@@ -202,7 +202,73 @@ test('runLiveInspectCommand compiles all nodes and renders list output with mock
   assert.equal(logs.length, 1);
   assert.match(logs[0], /Kitchen Plug/);
   assert.match(logs[0], /generic/);
-  assert.match(logs[0], /known-device-generic-fallback/);
+  assert.match(logs[0], /Known device generic fallback/);
+});
+
+test('runLiveInspectCommand list output hides technical-only review reasons', async () => {
+  const { runLiveInspectCommand } = await loadLib();
+  const logs = [];
+  await runLiveInspectCommand(
+    {
+      url: 'ws://x',
+      allNodes: true,
+      nodeId: undefined,
+      manifestFile: undefined,
+      rulesFiles: [path.join(fixturesDir, 'rules-switch-meter.json')],
+      catalogFile: undefined,
+      format: 'list',
+      schemaVersion: 0,
+      includeValues: 'summary',
+      maxValues: 10,
+      includeControllerNodes: false,
+      focus: 'all',
+      top: 3,
+      show: 'none',
+      explainAll: false,
+      explainOnly: false,
+      homeyClass: undefined,
+      driverTemplateId: undefined,
+    },
+    { log: (line) => logs.push(line) },
+    {
+      connectAndInitializeImpl: async () => ({ stop: async () => {} }),
+      fetchNodesListImpl: async () => [{ nodeId: 5, name: 'Kitchen Dimmer' }],
+      fetchNodeDetailsImpl: async () => ({
+        nodeId: 5,
+        state: {
+          name: 'Kitchen Dimmer',
+          manufacturerId: '0x0184',
+          productType: '0x4447',
+          productId: '0x3034',
+        },
+        values: [],
+      }),
+      compileProfilePlanFromRuleSetManifestImpl: () => ({
+        profile: {
+          profileId: 'p1',
+          classification: { homeyClass: 'light', confidence: 'curated', uncurated: false },
+          capabilities: [],
+          ignoredValues: [],
+        },
+        report: {
+          profileOutcome: 'curated',
+          summary: { appliedActions: 1, unmatchedActions: 2, suppressedFillActions: 2 },
+          byRule: [],
+          bySuppressedSlot: [],
+          curationCandidates: {
+            likelyNeedsReview: true,
+            reasons: ['suppressed-fill-actions:2', 'high-unmatched-ratio:0.90'],
+          },
+          diagnosticDeviceKey: 'product-triple:1-2-3',
+        },
+        ruleSources: [],
+      }),
+    },
+  );
+
+  assert.equal(logs.length, 1);
+  assert.match(logs[0], /Kitchen Dimmer/);
+  assert.doesNotMatch(logs[0], /suppressed-fill-actions|high-unmatched-ratio/);
 });
 
 test('runLiveInspectCommand skips controller-like nodes by default', async () => {

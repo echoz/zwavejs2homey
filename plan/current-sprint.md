@@ -77,6 +77,10 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - added product-layer lock override for Yale YRD226-family (`297:32770:1536`) preserving `locked` + `enum_select` capability mapping under curated lock identity
     - added root-manifest regression tests to lock expected curated outcomes for these signatures
     - live rebuild now reports `Outcomes: curated=33` for the current node set
+18. Improved human-readable curation diagnostics ergonomics:
+    - list output now suppresses technical-only review codes (`suppressed-fill-actions`, `high-unmatched-ratio`) to keep `Review` focused on actionable signals
+    - summary/markdown output now expands technical diagnostics with plain-language explanations and top suppressed-slot examples
+    - added tool-level regression tests for technical-reason rendering behavior
 
 ## Next Tasks
 
