@@ -260,3 +260,49 @@ test('compileDevice device-level gating preserves unmatched reporting for device
     true,
   );
 });
+
+test('compileDevice unmatched reporting emits one entry per action for ineligible rules', () => {
+  const device = {
+    deviceKey: 'dev-multi-unmatched-1',
+    values: [
+      {
+        valueId: { commandClass: 37, endpoint: 0, property: 'currentValue' },
+        metadata: { type: 'boolean', readable: true, writeable: false },
+      },
+    ],
+  };
+  const rules = [
+    {
+      ruleId: 'multi-action-unmatched',
+      layer: 'project-product',
+      value: { commandClass: [50], property: ['value'] },
+      actions: [{ type: 'capability', capabilityId: 'measure_power' }, { type: 'ignore-value' }],
+    },
+  ];
+
+  const result = compiler.compileDevice(device, rules);
+
+  assert.equal(result.report.actions.length, 2);
+  assert.deepEqual(
+    result.report.actions.map((action) => ({
+      actionType: action.actionType,
+      applied: action.applied,
+      reason: action.reason,
+      layer: action.layer,
+    })),
+    [
+      {
+        actionType: 'capability',
+        applied: false,
+        reason: 'rule-not-matched',
+        layer: 'project-product',
+      },
+      {
+        actionType: 'ignore-value',
+        applied: false,
+        reason: 'rule-not-matched',
+        layer: 'project-product',
+      },
+    ],
+  );
+});

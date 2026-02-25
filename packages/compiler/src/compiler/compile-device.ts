@@ -49,7 +49,7 @@ interface SortedRulesCacheEntry {
 
 interface CompileRuleExecutionEntry {
   rule: MappingRule;
-  actionTypes: RuleAction['type'][];
+  unmatchedTemplates: Array<Omit<CompileDeviceReportEntry, 'valueId'>>;
 }
 
 interface CompileRuleExecutionPlan {
@@ -87,7 +87,13 @@ function buildRuleExecutionPlan(rules: MappingRule[]): CompileRuleExecutionPlan 
   });
   const entries = sortedRules.map((rule) => ({
     rule,
-    actionTypes: rule.actions.map((action) => action.type),
+    unmatchedTemplates: rule.actions.map((action) => ({
+      ruleId: rule.ruleId,
+      actionType: action.type,
+      applied: false as const,
+      reason: 'rule-not-matched' as const,
+      layer: rule.layer,
+    })),
   }));
   const commandClassWildcardIndices: number[] = [];
   const byCommandClass = new Map<number, number[]>();
@@ -188,13 +194,9 @@ function pushUnmatchedActions(
   entry: CompileRuleExecutionEntry,
   valueId: NormalizedZwaveValueId,
 ): void {
-  for (const actionType of entry.actionTypes) {
+  for (const template of entry.unmatchedTemplates) {
     actions.push({
-      ruleId: entry.rule.ruleId,
-      actionType,
-      applied: false,
-      reason: 'rule-not-matched',
-      layer: entry.rule.layer,
+      ...template,
       valueId: { ...valueId },
     });
   }

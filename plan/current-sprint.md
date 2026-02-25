@@ -107,6 +107,10 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - `compileDevice` now precomputes per-rule device eligibility (`device` matcher + companion constraints) once per compile
     - rules that cannot match the current device are fast-pathed to unmatched action entries for each value without full matcher evaluation
     - preserves report parity (`rule-not-matched` semantics) and adds regression coverage for device/constraints mismatch paths
+25. Completed sixth performance slice for unmatched-report allocation churn:
+    - `compileDevice` execution plan now precomputes unmatched action templates per rule/action
+    - unmatched fast paths now reuse templates and only append the dynamic `valueId` payload per action
+    - added regression coverage for multi-action unmatched emission shape and layer/action typing parity
 
 ## Next Tasks
 

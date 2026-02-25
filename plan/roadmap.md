@@ -43,6 +43,7 @@
 - [x] Performance slice 3: command-class candidate pruning in `compileDevice` with preserved unmatched-report semantics; benchmark manifest-path resolution hardened
 - [x] Performance slice 4: command-class + property + endpoint candidate intersection in `compileDevice` prior to full rule matching
 - [x] Performance slice 5: device-static gating (`device` matcher + companion constraints) precomputed once per compile and fast-pathed to unmatched entries
+- [x] Performance slice 6: precomputed unmatched-action templates in compile execution plan to reduce per-value report object churn
 - [ ] Decide and document final ownership of generic fallback inference policy (currently leaning Homey adapter-owned)
 - [ ] Add second real catalog source adapter when a concrete source format is available
 
