@@ -66,7 +66,17 @@ export interface IgnoreValueRuleAction {
   valueId?: NormalizedZwaveValueId;
 }
 
-export type RuleAction = CapabilityRuleAction | DeviceIdentityRuleAction | IgnoreValueRuleAction;
+export interface RemoveCapabilityRuleAction {
+  type: 'remove-capability';
+  mode?: RuleActionMode;
+  capabilityId: string;
+}
+
+export type RuleAction =
+  | CapabilityRuleAction
+  | DeviceIdentityRuleAction
+  | IgnoreValueRuleAction
+  | RemoveCapabilityRuleAction;
 
 export interface MappingRule {
   ruleId: string;

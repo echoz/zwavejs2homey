@@ -45,6 +45,7 @@ export type {
   CapabilityRuleAction,
   DeviceIdentityRuleAction,
   IgnoreValueRuleAction,
+  RemoveCapabilityRuleAction,
   MappingRule,
   RuleAction,
   RuleActionMode,
@@ -102,6 +103,7 @@ export {
   materializeCapabilityPlans,
   materializeDeviceIdentity,
   materializeIgnoredValues,
+  removeCapabilityRuleAction,
 } from './compiler/profile-build-state';
 export type { AppliedRuleActionResult } from './compiler/apply-rule';
 export { applyRuleToValue } from './compiler/apply-rule';

@@ -1,0 +1,17 @@
+[
+  {
+    "ruleId": "invalid-remove-capability-mode",
+    "layer": "project-product",
+    "value": {
+      "commandClass": [50],
+      "property": ["reset"]
+    },
+    "actions": [
+      {
+        "type": "remove-capability",
+        "mode": "fill",
+        "capabilityId": "button_action"
+      }
+    ]
+  }
+]

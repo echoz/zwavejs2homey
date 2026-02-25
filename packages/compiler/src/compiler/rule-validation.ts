@@ -40,11 +40,26 @@ function validateRuleActionShape(
     );
   }
 
-  const mode = normalizeRuleActionMode(
+  const requestedMode =
     action.mode === 'fill' || action.mode === 'augment' || action.mode === 'replace'
       ? action.mode
-      : undefined,
-  );
+      : undefined;
+  const mode =
+    action.type === 'remove-capability'
+      ? (requestedMode ?? 'replace')
+      : normalizeRuleActionMode(requestedMode);
+
+  if (
+    action.type === 'remove-capability' &&
+    requestedMode !== undefined &&
+    requestedMode !== 'replace'
+  ) {
+    throw new RuleFileLoadError(
+      `Rule "${ruleId}" remove-capability action ${actionIndex} only supports mode "replace"`,
+      filePath,
+    );
+  }
+
   if (!isRuleActionModeAllowedForLayer(layer, mode)) {
     throw new RuleFileLoadError(
       `Rule "${ruleId}" action ${actionIndex} uses mode "${mode}" not allowed in layer "${layer}"`,
@@ -113,6 +128,16 @@ function validateRuleActionShape(
     if (action.valueId !== undefined && !isValidValueIdShape(action.valueId)) {
       throw new RuleFileLoadError(
         `Rule "${ruleId}" ignore-value action ${actionIndex} has invalid valueId shape`,
+        filePath,
+      );
+    }
+    return;
+  }
+
+  if (action.type === 'remove-capability') {
+    if (typeof action.capabilityId !== 'string' || action.capabilityId.length === 0) {
+      throw new RuleFileLoadError(
+        `Rule "${ruleId}" remove-capability action ${actionIndex} requires a non-empty capabilityId`,
         filePath,
       );
     }

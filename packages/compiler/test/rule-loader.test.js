@@ -67,3 +67,14 @@ test('loadJsonRuleFile rejects invalid capability conflict metadata', () => {
       error && error.filePath === filePath && /conflict\.(key|mode|priority)/i.test(error.message),
   );
 });
+
+test('loadJsonRuleFile rejects invalid remove-capability action mode', () => {
+  const filePath = path.join(fixturesDir, 'rules-invalid-remove-capability.json');
+  assert.throws(
+    () => compiler.loadJsonRuleFile(filePath),
+    (error) =>
+      error &&
+      error.filePath === filePath &&
+      /remove-capability action .*mode \"replace\"/i.test(error.message),
+  );
+});

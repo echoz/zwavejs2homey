@@ -958,6 +958,7 @@ Progress on the extended scope:
 - Replaced hardcoded HA overlap suppression with rule-owned capability conflict metadata (`conflict.key/mode/priority`) and deterministic conflict reporting
 - Regenerated checked-in HA-derived rules after conflict-metadata support so generated artifacts include overlap-conflict annotations
 - Added first live-validated project product overrides (`rules/project/product/live-network-overrides.json`) for `1120:2:136` (Shelly Wave Plug US) and `622:17235:23089` (Springs CSZ1 shade)
+- Added product-layer capability de-noising via `remove-capability` rule action and applied it to Shelly Wave Plug US (`button_action` / generic meter `measure_generic`)
 
 Deferred / later Phase 3 expansion (not required for compiler runtime-validation readiness):
 

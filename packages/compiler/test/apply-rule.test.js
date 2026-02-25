@@ -97,6 +97,45 @@ test('applyRuleToValue applies ignore-value action and records ignored selector'
   assert.deepEqual(compiler.materializeIgnoredValues(state), [value.valueId]);
 });
 
+test('applyRuleToValue removes an existing capability via remove-capability action', () => {
+  const device = makeDevice();
+  const value = device.values[2];
+  const state = compiler.createProfileBuildState();
+  compiler.applyCapabilityRuleAction(
+    state,
+    {
+      type: 'capability',
+      capabilityId: 'button_action',
+      inboundMapping: {
+        kind: 'value',
+        selector: { commandClass: 50, endpoint: 0, property: 'reset' },
+      },
+    },
+    { layer: 'ha-derived', ruleId: 'ha-button-reset', action: 'fill' },
+  );
+
+  const rule = {
+    ruleId: 'product-remove-button-action',
+    layer: 'project-product',
+    value: { commandClass: [50], property: ['value'] },
+    actions: [{ type: 'remove-capability', capabilityId: 'button_action' }],
+  };
+
+  const results = compiler.applyRuleToValue(state, device, value, rule);
+  assert.deepEqual(results, [
+    {
+      ruleId: 'product-remove-button-action',
+      actionType: 'remove-capability',
+      applied: true,
+      changed: true,
+    },
+  ]);
+  assert.equal(
+    compiler.materializeCapabilityPlans(state).some((cap) => cap.capabilityId === 'button_action'),
+    false,
+  );
+});
+
 test('applyRuleToValue applies device-identity actions from matching values', () => {
   const device = makeDevice();
   const value = device.values[0];

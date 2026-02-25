@@ -34,6 +34,7 @@
 - [x] Live compiler build/inspect defaults skip controller-like nodes to focus device-profile validation
 - [x] Rule-owned same-selector conflict resolution (`conflict.key/mode/priority`) with deterministic overlap suppression diagnostics
 - [x] First project-product overrides from live validation (`rules/project/product/live-network-overrides.json`) for identified device triples
+- [x] Product-layer capability de-noising action (`remove-capability`) for targeted suppression of noisy inferred capabilities
 - [ ] Decide and document final ownership of generic fallback inference policy (currently leaning Homey adapter-owned)
 - [ ] Add second real catalog source adapter when a concrete source format is available
 

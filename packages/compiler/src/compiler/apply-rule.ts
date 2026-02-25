@@ -5,6 +5,7 @@ import type {
   DeviceIdentityRuleAction,
   IgnoreValueRuleAction,
   MappingRule,
+  RemoveCapabilityRuleAction,
   RuleAction,
 } from '../rules/types';
 import {
@@ -12,9 +13,10 @@ import {
   applyCapabilityRuleAction,
   applyDeviceIdentityRuleAction,
   type ProfileBuildState,
+  removeCapabilityRuleAction,
 } from './profile-build-state';
 import { matchesRuleForValue } from './rule-matcher';
-import { normalizeRuleActionMode } from './layer-semantics';
+import { assertRuleActionModeAllowedForLayer, normalizeRuleActionMode } from './layer-semantics';
 
 export interface AppliedRuleActionResult {
   ruleId: string;
@@ -36,7 +38,10 @@ function toProvenance(
   return {
     layer: rule.layer,
     ruleId: rule.ruleId,
-    action: normalizeRuleActionMode(action.mode),
+    action:
+      action.type === 'remove-capability'
+        ? (action.mode ?? 'replace')
+        : normalizeRuleActionMode(action.mode),
     sourceRef: rule.ruleId,
     reason: selector,
   };
@@ -53,6 +58,25 @@ function applyIgnoreValueAction(
     ruleId: provenance.ruleId,
     actionType: 'ignore-value',
     applied: true,
+  };
+}
+
+function applyRemoveCapabilityAction(
+  state: ProfileBuildState,
+  action: RemoveCapabilityRuleAction,
+  provenance: ProvenanceRecord,
+): AppliedRuleActionResult {
+  const mode = action.mode ?? 'replace';
+  assertRuleActionModeAllowedForLayer(
+    provenance.layer as Exclude<ProvenanceRecord['layer'], 'user-curation'>,
+    mode,
+  );
+  const changed = removeCapabilityRuleAction(state, action.capabilityId);
+  return {
+    ruleId: provenance.ruleId,
+    actionType: 'remove-capability',
+    applied: true,
+    changed,
   };
 }
 
@@ -105,6 +129,9 @@ export function applyRuleToValue(
         applied: true,
         changed: outcome !== 'noop',
       };
+    }
+    if (action.type === 'remove-capability') {
+      return applyRemoveCapabilityAction(state, action as RemoveCapabilityRuleAction, provenance);
     }
     const ignoreResult = applyIgnoreValueAction(
       state,

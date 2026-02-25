@@ -7,5 +7,5 @@ These rules are layered after `ha-derived` and can use `fill`, `augment`, or exp
 Current state:
 
 - `live-network-overrides.json`
-  - `1120:2:136` (Shelly Wave Plug US): class/onoff normalization + meter power/energy mappings
+  - `1120:2:136` (Shelly Wave Plug US): class/onoff normalization + meter power/energy mappings + suppression of noisy HA-derived `button_action`/`measure_generic`
   - `622:17235:23089` (Springs Window Fashions CSZ1): class/cover position normalization + battery capability preference

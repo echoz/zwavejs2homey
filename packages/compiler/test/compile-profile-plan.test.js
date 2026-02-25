@@ -325,3 +325,55 @@ test('compileProfilePlan keeps allow-multi conflict candidates and suppresses ex
   ]);
   assert.equal(report.overlapPolicy, undefined);
 });
+
+test('compileProfilePlan supports project-product remove-capability actions for noisy HA mappings', () => {
+  const deviceFacts = {
+    deviceKey: 'fixture-plug-1',
+    manufacturerId: 1120,
+    productType: 2,
+    productId: 136,
+    values: [
+      {
+        valueId: { commandClass: 50, endpoint: 0, property: 'reset' },
+        metadata: { type: 'boolean', readable: false, writeable: true },
+      },
+    ],
+  };
+  const rulesForDevice = [
+    {
+      ruleId: 'ha-button-reset',
+      layer: 'ha-derived',
+      value: { commandClass: [50], property: ['reset'] },
+      actions: [
+        {
+          type: 'capability',
+          capabilityId: 'button_action',
+          inboundMapping: {
+            kind: 'value',
+            selector: { commandClass: 50, endpoint: 0, property: 'reset' },
+          },
+        },
+      ],
+    },
+    {
+      ruleId: 'product-remove-button',
+      layer: 'project-product',
+      value: { commandClass: [50], property: ['reset'] },
+      actions: [{ type: 'remove-capability', capabilityId: 'button_action' }],
+    },
+  ];
+
+  const { profile, report } = compiler.compileProfilePlan(deviceFacts, rulesForDevice);
+  assert.equal(
+    profile.capabilities.some((cap) => cap.capabilityId === 'button_action'),
+    false,
+  );
+  assert.ok(
+    report.actions.some(
+      (action) =>
+        action.ruleId === 'product-remove-button' &&
+        action.actionType === 'remove-capability' &&
+        action.applied,
+    ),
+  );
+});

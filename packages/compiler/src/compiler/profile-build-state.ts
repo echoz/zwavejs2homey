@@ -367,6 +367,13 @@ export function applyCapabilityRuleAction(
   return 'replaced';
 }
 
+export function removeCapabilityRuleAction(
+  state: ProfileBuildState,
+  capabilityId: string,
+): boolean {
+  return state.capabilities.delete(capabilityId);
+}
+
 export function materializeCapabilityPlans(state: ProfileBuildState): HomeyCapabilityPlan[] {
   return [...state.capabilities.values()]
     .map((cap) => ({

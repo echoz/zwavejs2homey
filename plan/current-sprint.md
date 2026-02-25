@@ -59,6 +59,10 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - new `rules/project/product/live-network-overrides.json` for Shelly Wave Plug US (`1120:2:136`) and Springs CSZ1 shade (`622:17235:23089`)
     - regenerated canonical HA-derived rules so conflict metadata is present in checked-in generated rules
     - live validation moved 8 nodes to `curated` outcome (`compiler:inspect-live` with compiled artifact)
+14. Added `remove-capability` rule action for targeted de-noising in product overrides:
+    - compiler DSL/validation/runtime now supports product-layer capability removal (`replace` semantics)
+    - used on Shelly Wave Plug US to remove noisy HA-derived `button_action` and generic meter `measure_generic`
+    - live validation confirms curated plug profiles now expose focused capabilities (`onoff`, `measure_power`, `meter_power`)
 
 ## Next Tasks
 

@@ -115,6 +115,66 @@
     ]
   },
   {
+    "ruleId": "product-shelly-wave-plug-us-remove-meter-reset-button",
+    "layer": "project-product",
+    "device": {
+      "manufacturerId": [1120],
+      "productType": [2],
+      "productId": [136]
+    },
+    "value": {
+      "commandClass": [50],
+      "property": ["reset"],
+      "metadataType": ["boolean"]
+    },
+    "actions": [
+      {
+        "type": "remove-capability",
+        "capabilityId": "button_action"
+      }
+    ]
+  },
+  {
+    "ruleId": "product-shelly-wave-plug-us-remove-notification-generic",
+    "layer": "project-product",
+    "device": {
+      "manufacturerId": [1120],
+      "productType": [2],
+      "productId": [136]
+    },
+    "value": {
+      "commandClass": [113],
+      "property": ["alarmType"],
+      "metadataType": ["number"]
+    },
+    "actions": [
+      {
+        "type": "remove-capability",
+        "capabilityId": "measure_generic"
+      }
+    ]
+  },
+  {
+    "ruleId": "product-shelly-wave-plug-us-remove-meter-generic",
+    "layer": "project-product",
+    "device": {
+      "manufacturerId": [1120],
+      "productType": [2],
+      "productId": [136]
+    },
+    "value": {
+      "commandClass": [50],
+      "property": ["value"],
+      "metadataType": ["number"]
+    },
+    "actions": [
+      {
+        "type": "remove-capability",
+        "capabilityId": "measure_generic"
+      }
+    ]
+  },
+  {
     "ruleId": "product-swf-csz1-cover-class-and-position",
     "layer": "project-product",
     "device": {
