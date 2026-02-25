@@ -115,6 +115,10 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - replaced per-value candidate mask allocations with reusable stamp-based candidate scratch buffers in `compileDevice`
     - candidate gating still intersects command-class/property/endpoint dimensions but now avoids per-value `Uint8Array` allocations
     - added regression coverage to ensure candidate marks do not leak across values
+27. Completed eighth performance slice for report-summary accounting:
+    - `compileDevice` now tracks applied/unmatched counters during action emission instead of re-scanning the full action array for summary fields
+    - keeps summary semantics identical while removing post-pass `filter(...)` scans over report actions
+    - added regression coverage asserting summary counters remain consistent with emitted actions
 
 ## Next Tasks
 

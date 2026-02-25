@@ -69,6 +69,11 @@ interface CandidateScratch {
   stamp: number;
 }
 
+interface ActionSummaryCounters {
+  appliedActions: number;
+  unmatchedActions: number;
+}
+
 const ruleLayerOrder = getRuleLayerOrder();
 const ruleLayerRank = new Map(ruleLayerOrder.map((layer, index) => [layer, index]));
 const sortedRulesCache = new WeakMap<readonly MappingRule[], SortedRulesCacheEntry>();
@@ -223,6 +228,7 @@ function pushUnmatchedActions(
   actions: CompileDeviceReportEntry[],
   entry: CompileRuleExecutionEntry,
   valueId: NormalizedZwaveValueId,
+  counters: ActionSummaryCounters,
 ): void {
   for (const template of entry.unmatchedTemplates) {
     actions.push({
@@ -230,6 +236,7 @@ function pushUnmatchedActions(
       valueId: { ...valueId },
     });
   }
+  counters.unmatchedActions += entry.unmatchedTemplates.length;
 }
 
 function pushAppliedRuleResults(
@@ -237,6 +244,7 @@ function pushAppliedRuleResults(
   entry: CompileRuleExecutionEntry,
   valueId: NormalizedZwaveValueId,
   results: AppliedRuleActionResult[],
+  counters: ActionSummaryCounters,
 ): void {
   for (const result of results) {
     actions.push({
@@ -244,6 +252,12 @@ function pushAppliedRuleResults(
       layer: entry.rule.layer,
       valueId: { ...valueId },
     });
+    if (result.applied && result.changed !== false) {
+      counters.appliedActions += 1;
+    }
+    if (result.reason === 'rule-not-matched') {
+      counters.unmatchedActions += 1;
+    }
   }
 }
 
@@ -271,6 +285,10 @@ export function compileDevice(
   const deviceEligibleMask = buildDeviceEligibleMask(device, executionPlan);
   const candidateScratch = createCandidateScratch(executionPlan.entries.length);
   const actions: CompileDeviceReportEntry[] = [];
+  const counters: ActionSummaryCounters = {
+    appliedActions: 0,
+    unmatchedActions: 0,
+  };
 
   for (const value of device.values) {
     const candidateStamp = markCandidatesForValue(executionPlan, candidateScratch, value.valueId);
@@ -279,12 +297,12 @@ export function compileDevice(
         deviceEligibleMask[index] === 0 ||
         !isRuleCandidate(candidateScratch, index, candidateStamp)
       ) {
-        pushUnmatchedActions(actions, entry, value.valueId);
+        pushUnmatchedActions(actions, entry, value.valueId, counters);
         continue;
       }
 
       const results = applyRuleToValue(state, device, value, entry.rule);
-      pushAppliedRuleResults(actions, entry, value.valueId, results);
+      pushAppliedRuleResults(actions, entry, value.valueId, results, counters);
     }
   }
 
@@ -298,8 +316,8 @@ export function compileDevice(
       actions,
       suppressedActions: [...state.suppressedActions],
       summary: {
-        appliedActions: actions.filter((a) => a.applied && a.changed !== false).length,
-        unmatchedActions: actions.filter((a) => a.reason === 'rule-not-matched').length,
+        appliedActions: counters.appliedActions,
+        unmatchedActions: counters.unmatchedActions,
         suppressedFillActions: state.suppressedActions.filter((a) => a.mode === 'fill').length,
         ignoredValues: state.ignoredValues.size,
       },

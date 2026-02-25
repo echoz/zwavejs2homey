@@ -362,3 +362,32 @@ test('compileDevice candidate scratch does not leak matches across multiple valu
     'rule-never': { applied: 0, unmatched: 2 },
   });
 });
+
+test('compileDevice summary counters remain consistent with action results', () => {
+  const device = makeDevice();
+  const rules = [
+    {
+      ruleId: 'matched-capability',
+      layer: 'ha-derived',
+      value: { commandClass: [37], property: ['currentValue'] },
+      actions: [{ type: 'capability', capabilityId: 'onoff' }],
+    },
+    {
+      ruleId: 'unmatched-multi-action',
+      layer: 'project-product',
+      value: { commandClass: [99], property: ['never'] },
+      actions: [{ type: 'capability', capabilityId: 'alarm_generic' }, { type: 'ignore-value' }],
+    },
+  ];
+
+  const result = compiler.compileDevice(device, rules);
+  const countedApplied = result.report.actions.filter(
+    (action) => action.applied && action.changed !== false,
+  ).length;
+  const countedUnmatched = result.report.actions.filter(
+    (action) => action.reason === 'rule-not-matched',
+  ).length;
+
+  assert.equal(result.report.summary.appliedActions, countedApplied);
+  assert.equal(result.report.summary.unmatchedActions, countedUnmatched);
+});
