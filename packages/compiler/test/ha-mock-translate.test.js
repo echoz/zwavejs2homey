@@ -156,3 +156,36 @@ test('translateHaMockDiscoveryToGeneratedArtifact validates input shape with exp
       /match\.commandClass must be a number/i.test(error.message),
   );
 });
+
+test('translateHaMockDiscoveryToGeneratedArtifact preserves device class constraints', () => {
+  const result = compiler.translateHaMockDiscoveryToGeneratedArtifact({
+    schemaVersion: 'ha-mock-discovery/v1',
+    source: { generatedAt: '2026-02-24T00:00:00Z', sourceRef: 'x' },
+    definitions: [
+      {
+        id: 'cover_multilevel_switch',
+        sourceRef: 'x:1',
+        device: {
+          deviceClassGeneric: ['Multilevel Switch'],
+          deviceClassSpecific: ['Motor Control Class A'],
+        },
+        match: {
+          commandClass: 38,
+          endpoint: 0,
+          property: 'currentValue',
+          metadataType: 'number',
+        },
+        output: {
+          homeyClass: 'curtain',
+          capabilityId: 'windowcoverings_set',
+        },
+      },
+    ],
+  });
+
+  assert.equal(result.report.skipped, 0);
+  assert.deepEqual(result.artifact.rules[0].device, {
+    deviceClassGeneric: ['Multilevel Switch'],
+    deviceClassSpecific: ['Motor Control Class A'],
+  });
+});

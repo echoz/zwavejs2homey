@@ -24,6 +24,8 @@ export interface RuleDeviceMatcher {
   productType?: number[];
   productId?: number[];
   firmwareVersionRange?: { min?: string; max?: string };
+  deviceClassGeneric?: string[];
+  deviceClassSpecific?: string[];
 }
 
 export interface RuleCompanionConstraints {

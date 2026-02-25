@@ -57,6 +57,10 @@ export function normalizeCompilerDeviceFactsFromZwjsDetail(detail) {
     productType,
     productId,
     firmwareVersion: typeof state.firmwareVersion === 'string' ? state.firmwareVersion : undefined,
+    deviceClassGeneric:
+      typeof state?.deviceClass?.generic === 'string' ? state.deviceClass.generic : undefined,
+    deviceClassSpecific:
+      typeof state?.deviceClass?.specific === 'string' ? state.deviceClass.specific : undefined,
     values,
   };
 }

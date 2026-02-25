@@ -63,6 +63,10 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - compiler DSL/validation/runtime now supports product-layer capability removal (`replace` semantics)
     - used on Shelly Wave Plug US to remove noisy HA-derived `button_action` and generic meter `measure_generic`
     - live validation confirms curated plug profiles now expose focused capabilities (`onoff`, `measure_power`, `meter_power`)
+15. Fixed HA-derived overmatching for multilevel dimmers:
+    - HA extraction/translation pipeline now preserves `device_class_generic` / `device_class_specific` constraints from Home Assistant discovery schemas
+    - compiler rule matching now evaluates device class constraints against normalized live node facts
+    - regenerated `rules/ha-derived/home-assistant.zwave_js.generated.json`; live validation shows Leviton dimmers now classify as `light` instead of `curtain`
 
 ## Next Tasks
 

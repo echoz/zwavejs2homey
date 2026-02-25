@@ -259,3 +259,69 @@ test('translateHaExtractedDiscoveryToGeneratedArtifact preserves extracted seman
     entityRegistryEnabledDefault: false,
   });
 });
+
+test('translateHaExtractedDiscoveryToGeneratedArtifact preserves device class match constraints', () => {
+  const result = compiler.translateHaExtractedDiscoveryToGeneratedArtifact({
+    schemaVersion: 'ha-extracted-discovery/v1',
+    source: { generatedAt: '2026-02-24T00:00:00Z', sourceRef: 'x' },
+    entries: [
+      {
+        id: 'cover_multilevel_switch',
+        sourceRef: 'x:2',
+        deviceMatch: {
+          deviceClassGeneric: ['Multilevel Switch'],
+          deviceClassSpecific: ['Motor Control Class A'],
+        },
+        valueMatch: {
+          commandClass: 38,
+          endpoint: 0,
+          property: 'currentValue',
+          metadata: { type: 'number', readable: true, writeable: false },
+        },
+        output: {
+          homeyClass: 'curtain',
+          driverTemplateId: 'ha-import-cover',
+          capabilityId: 'windowcoverings_set',
+        },
+      },
+    ],
+  });
+
+  assert.equal(result.report.skipped, 0);
+  assert.deepEqual(result.artifact.rules[0].device, {
+    deviceClassGeneric: ['Multilevel Switch'],
+    deviceClassSpecific: ['Motor Control Class A'],
+  });
+
+  const matching = compiler.compileProfilePlan(
+    {
+      deviceKey: 'matching-device-class',
+      deviceClassGeneric: 'Multilevel Switch',
+      deviceClassSpecific: 'Motor Control Class A',
+      values: [
+        {
+          valueId: { commandClass: 38, endpoint: 0, property: 'currentValue' },
+          metadata: { type: 'number', readable: true, writeable: false },
+        },
+      ],
+    },
+    result.artifact.rules,
+  );
+  assert.equal(matching.profile.classification.homeyClass, 'curtain');
+
+  const nonMatching = compiler.compileProfilePlan(
+    {
+      deviceKey: 'nonmatching-device-class',
+      deviceClassGeneric: 'Multilevel Switch',
+      deviceClassSpecific: 'Multilevel Power Switch',
+      values: [
+        {
+          valueId: { commandClass: 38, endpoint: 0, property: 'currentValue' },
+          metadata: { type: 'number', readable: true, writeable: false },
+        },
+      ],
+    },
+    result.artifact.rules,
+  );
+  assert.equal(nonMatching.profile.classification.homeyClass, 'other');
+});

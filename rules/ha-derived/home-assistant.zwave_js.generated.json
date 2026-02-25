@@ -3,7 +3,7 @@
   "source": {
     "upstream": "home-assistant",
     "component": "zwave_js",
-    "generatedAt": "2026-02-25T08:04:24.364Z",
+    "generatedAt": "2026-02-25T08:43:46.066Z",
     "sourceRef": "docs/external/home-assistant/homeassistant/components/zwave_js/discovery.py"
   },
   "rules": [
@@ -1332,6 +1332,9 @@
     {
       "ruleId": "ha:ha_extracted_binary_sensor_boolean_797",
       "layer": "ha-derived",
+      "device": {
+        "deviceClassGeneric": ["Binary Sensor"]
+      },
       "value": {
         "commandClass": [48],
         "endpoint": [0],
@@ -1859,6 +1862,15 @@
     {
       "ruleId": "ha:ha_extracted_cover_multilevel_switch_981",
       "layer": "ha-derived",
+      "device": {
+        "deviceClassGeneric": ["Multilevel Switch"],
+        "deviceClassSpecific": [
+          "Motor Control Class A",
+          "Motor Control Class B",
+          "Motor Control Class C",
+          "Multiposition Motor"
+        ]
+      },
       "value": {
         "commandClass": [38],
         "endpoint": [0],
@@ -1945,6 +1957,10 @@
     {
       "ruleId": "ha:ha_extracted_fan_fan_1016",
       "layer": "ha-derived",
+      "device": {
+        "deviceClassGeneric": ["Multilevel Switch"],
+        "deviceClassSpecific": ["Fan Switch"]
+      },
       "value": {
         "commandClass": [38],
         "endpoint": [0],
@@ -1988,6 +2004,9 @@
     {
       "ruleId": "ha:ha_extracted_number_valve_control_1026",
       "layer": "ha-derived",
+      "device": {
+        "deviceClassGeneric": ["Thermostat"]
+      },
       "value": {
         "commandClass": [38],
         "endpoint": [0],

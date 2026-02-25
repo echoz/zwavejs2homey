@@ -72,11 +72,20 @@ test('normalizeCompilerDeviceFactsFromZwjsDetail converts zwjs-inspect node deta
       metadata: { type: 'boolean', readable: true, writeable: true },
     },
   ];
+  detail.state = {
+    ...(detail.state ?? {}),
+    deviceClass: {
+      generic: 'Multilevel Power Switch',
+      specific: 'Class A Motor Control',
+    },
+  };
   const facts = normalizeCompilerDeviceFactsFromZwjsDetail(detail);
   assert.equal(facts.nodeId, 5);
   assert.equal(facts.manufacturerId, 0x0184);
   assert.equal(facts.productType, 0x4447);
   assert.equal(facts.productId, 0x3034);
+  assert.equal(facts.deviceClassGeneric, 'Multilevel Power Switch');
+  assert.equal(facts.deviceClassSpecific, 'Class A Motor Control');
   assert.equal(facts.values.length, 1);
   assert.equal(facts.values[0].valueId.commandClass, 37);
 });

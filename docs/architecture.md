@@ -73,6 +73,7 @@ Current implemented foundation in `packages/compiler`:
   - source extractor subset from `discovery.py`
   - extracted artifact contract
   - translation to generated `ha-derived` rules
+  - device class constraint propagation (`device_class_generic` / `device_class_specific`) to prevent over-broad matches (e.g. dimmer vs cover on CC 38)
   - tooling (`ha-import:extract`, `ha-import:report`)
 - Catalog tooling and artifacts:
   - `catalog-devices/v1` artifact contract

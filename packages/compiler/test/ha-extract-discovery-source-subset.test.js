@@ -207,6 +207,25 @@ ZWaveDiscoverySchema(
   assert.equal(result.artifact.entries[1].output.capabilityId, 'dim');
 });
 
+test('extractHaDiscoverySubsetFromSource parses device class constraints', () => {
+  const source = `
+ZWaveDiscoverySchema(
+    platform=Platform.COVER,
+    hint="multilevel_switch",
+    device_class_generic={"Multilevel Switch"},
+    device_class_specific={"Motor Control Class A", "Motor Control Class B"},
+    primary_value=SWITCH_MULTILEVEL_CURRENT_VALUE_SCHEMA,
+),
+`;
+  const result = compiler.extractHaDiscoverySubsetFromSource(source, 'discovery.py');
+  assert.equal(result.report.translated, 1);
+  assert.equal(result.report.skipped, 0);
+  assert.deepEqual(result.artifact.entries[0].deviceMatch, {
+    deviceClassGeneric: ['Multilevel Switch'],
+    deviceClassSpecific: ['Motor Control Class A', 'Motor Control Class B'],
+  });
+});
+
 test('extractHaDiscoverySubsetFromFile parses pinned HA discovery.py with full current coverage', () => {
   const discoveryPy = path.join(
     __dirname,

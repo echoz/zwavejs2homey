@@ -33,5 +33,7 @@ export interface NormalizedZwaveDeviceFacts {
   productType?: number;
   productId?: number;
   firmwareVersion?: string;
+  deviceClassGeneric?: string;
+  deviceClassSpecific?: string;
   values: NormalizedZwaveValueFacts[];
 }

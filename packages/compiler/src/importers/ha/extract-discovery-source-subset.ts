@@ -179,6 +179,12 @@ function parseHexSet(content: string): number[] {
     });
 }
 
+function parseStringSet(content: string): string[] {
+  return [...content.matchAll(/"([^"]+)"|'([^']+)'/g)]
+    .map((match) => (match[1] ?? match[2] ?? '').trim())
+    .filter((value) => value.length > 0);
+}
+
 function parsePropertyToken(content: string): string | number | null {
   const trimmed = content.trim();
   if (PROPERTY_TOKEN_MAP[trimmed] !== undefined) return PROPERTY_TOKEN_MAP[trimmed];
@@ -426,6 +432,8 @@ function parseDeviceMatch(block: string): HaExtractedDiscoveryEntryV1['deviceMat
   const manufacturerMatch = block.match(/manufacturer_id=\{([^}]+)\}/);
   const productIdMatch = block.match(/product_id=\{([^}]+)\}/);
   const productTypeMatch = block.match(/product_type=\{([^}]+)\}/);
+  const deviceClassGenericMatch = block.match(/device_class_generic=\{([^}]+)\}/);
+  const deviceClassSpecificMatch = block.match(/device_class_specific=\{([^}]+)\}/);
   const fwMatch = block.match(
     /firmware_version=(?:FirmwareVersionRange\()?min_version=\"([^\"]+)\"[\s\S]*?max_version=\"([^\"]+)\"/,
   );
@@ -434,6 +442,14 @@ function parseDeviceMatch(block: string): HaExtractedDiscoveryEntryV1['deviceMat
   if (manufacturerMatch) result.manufacturerId = parseHexSet(manufacturerMatch[1])[0];
   if (productIdMatch) result.productId = parseHexSet(productIdMatch[1])[0];
   if (productTypeMatch) result.productType = parseHexSet(productTypeMatch[1])[0];
+  if (deviceClassGenericMatch) {
+    const parsed = parseStringSet(deviceClassGenericMatch[1]);
+    if (parsed.length > 0) result.deviceClassGeneric = parsed;
+  }
+  if (deviceClassSpecificMatch) {
+    const parsed = parseStringSet(deviceClassSpecificMatch[1]);
+    if (parsed.length > 0) result.deviceClassSpecific = parsed;
+  }
   if (fwMatch) result.firmwareVersionRange = { min: fwMatch[1], max: fwMatch[2] };
   return Object.keys(result).length > 0 ? result : undefined;
 }

@@ -10,6 +10,8 @@ function makeDevice() {
     productType: 3,
     productId: 2,
     firmwareVersion: '1.2.3',
+    deviceClassGeneric: 'Multilevel Switch',
+    deviceClassSpecific: 'Multilevel Power Switch',
     values: [
       {
         valueId: { commandClass: 37, endpoint: 0, property: 'currentValue' },
@@ -35,10 +37,16 @@ test('matchesDevice checks ids and firmware range', () => {
       productId: [2],
       productType: [3],
       firmwareVersionRange: { min: '1.0.0', max: '1.9.9' },
+      deviceClassGeneric: ['multilevel switch'],
+      deviceClassSpecific: ['Multilevel Power Switch'],
     }),
     true,
   );
   assert.equal(compiler.matchesDevice(device, { firmwareVersionRange: { min: '2.0.0' } }), false);
+  assert.equal(
+    compiler.matchesDevice(device, { deviceClassSpecific: ['Motor Control Class A'] }),
+    false,
+  );
 });
 
 test('matchesValue checks command class/property/propertyKey and metadata predicates', () => {

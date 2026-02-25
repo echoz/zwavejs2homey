@@ -25,6 +25,8 @@ export interface HaMockDiscoveryDefinitionV1 {
     productType?: number;
     productId?: number;
     firmwareVersionRange?: { min?: string; max?: string };
+    deviceClassGeneric?: string[];
+    deviceClassSpecific?: string[];
   };
   match: {
     commandClass: number;
@@ -172,6 +174,18 @@ function validateInputShape(input: unknown): asserts input is HaMockDiscoveryInp
         ) {
           throw new HaMockTranslationError(
             `HA mock discovery definition ${definition.id} device.firmwareVersionRange.max must be a string`,
+          );
+        }
+      }
+      for (const key of ['deviceClassGeneric', 'deviceClassSpecific'] as const) {
+        const value = definition.device[key];
+        if (value === undefined) continue;
+        if (
+          !Array.isArray(value) ||
+          value.some((item) => typeof item !== 'string' || item.length === 0)
+        ) {
+          throw new HaMockTranslationError(
+            `HA mock discovery definition ${definition.id} device.${key} must be a string array`,
           );
         }
       }
@@ -388,6 +402,12 @@ function toRule(definition: HaMockDiscoveryDefinitionV1): MappingRule | null {
               : {}),
             ...(definition.device.firmwareVersionRange !== undefined
               ? { firmwareVersionRange: definition.device.firmwareVersionRange }
+              : {}),
+            ...(definition.device.deviceClassGeneric !== undefined
+              ? { deviceClassGeneric: definition.device.deviceClassGeneric }
+              : {}),
+            ...(definition.device.deviceClassSpecific !== undefined
+              ? { deviceClassSpecific: definition.device.deviceClassSpecific }
               : {}),
           },
         }

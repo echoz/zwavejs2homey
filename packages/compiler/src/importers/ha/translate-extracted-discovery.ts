@@ -30,6 +30,8 @@ export interface HaExtractedDiscoveryEntryV1 {
     productType?: number;
     productId?: number;
     firmwareVersionRange?: { min?: string; max?: string };
+    deviceClassGeneric?: string[];
+    deviceClassSpecific?: string[];
   };
   valueMatch: {
     commandClass: number;
@@ -149,6 +151,18 @@ function validateExtractedInput(input: unknown): asserts input is HaExtractedDis
         if (!isObject(entry.deviceMatch.firmwareVersionRange)) {
           throw new HaExtractedTranslationError(
             `HA extracted discovery entry ${entry.id} deviceMatch.firmwareVersionRange must be an object`,
+          );
+        }
+      }
+      for (const key of ['deviceClassGeneric', 'deviceClassSpecific'] as const) {
+        const value = entry.deviceMatch[key];
+        if (value === undefined) continue;
+        if (
+          !Array.isArray(value) ||
+          value.some((item) => typeof item !== 'string' || item.length === 0)
+        ) {
+          throw new HaExtractedTranslationError(
+            `HA extracted discovery entry ${entry.id} deviceMatch.${key} must be a string array`,
           );
         }
       }

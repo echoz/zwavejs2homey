@@ -10,6 +10,22 @@ function includesIfPresent<T>(values: T[] | undefined, actual: T | undefined): b
   return actual !== undefined && values.includes(actual);
 }
 
+function normalizeDeviceClassToken(token: string | undefined): string | undefined {
+  if (typeof token !== 'string') return undefined;
+  const normalized = token.trim().toLowerCase().replace(/\s+/g, ' ');
+  return normalized.length > 0 ? normalized : undefined;
+}
+
+function includesNormalizedStringIfPresent(
+  values: string[] | undefined,
+  actual: string | undefined,
+): boolean {
+  if (!values) return true;
+  const normalizedActual = normalizeDeviceClassToken(actual);
+  if (!normalizedActual) return false;
+  return values.some((value) => normalizeDeviceClassToken(value) === normalizedActual);
+}
+
 function compareFirmwareRange(
   firmwareVersion: string | undefined,
   range: RuleDeviceMatcher['firmwareVersionRange'],
@@ -43,7 +59,9 @@ export function matchesDevice(
     includesIfPresent(matcher.manufacturerId, device.manufacturerId) &&
     includesIfPresent(matcher.productType, device.productType) &&
     includesIfPresent(matcher.productId, device.productId) &&
-    compareFirmwareRange(device.firmwareVersion, matcher.firmwareVersionRange)
+    compareFirmwareRange(device.firmwareVersion, matcher.firmwareVersionRange) &&
+    includesNormalizedStringIfPresent(matcher.deviceClassGeneric, device.deviceClassGeneric) &&
+    includesNormalizedStringIfPresent(matcher.deviceClassSpecific, device.deviceClassSpecific)
   );
 }
 
