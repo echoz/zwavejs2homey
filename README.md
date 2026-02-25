@@ -104,6 +104,23 @@ This runs:
 - core tests
 - Homey app TypeScript build
 
+### Collaboration / Attribution
+
+This repository has been developed using a tight human+AI workflow:
+
+- Jeremy Foo drives architecture, sequencing, and acceptance criteria
+- Codex (OpenAI) performed a large portion of the implementation/code generation, test scaffolding, CLI tooling, and refactors under Jeremy's direction
+
+Working style used in this repo:
+
+- small scoped slices
+- tests + validation for each slice
+- Prettier + `npm run check` before commit
+- descriptive commits
+- periodic code reviews and plan/doc sync
+
+This attribution is included to make the development process explicit and auditable, not to replace normal code ownership/review standards.
+
 ## Current Boundary Decisions
 
 - Compiler owns:
