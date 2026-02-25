@@ -179,7 +179,31 @@ function formatSelector(selector) {
   return `cc=${selector.commandClass}@ep${endpoint}:${String(selector.property)}${propertyKey}`;
 }
 
-function buildCapabilityExplanationLinesForCapability(capability, markdown = false) {
+function getConflictSuppressions(result) {
+  const suppressed = result?.report?.overlapPolicy?.suppressedCapabilities;
+  return Array.isArray(suppressed) ? suppressed : [];
+}
+
+function getConflictWinRecords(result, capabilityId) {
+  const grouped = new Map();
+  for (const item of getConflictSuppressions(result)) {
+    if (item.winnerCapabilityId !== capabilityId) continue;
+    const key = `${item.conflictKey}::${item.selectorKey}`;
+    const existing = grouped.get(key) ?? {
+      conflictKey: item.conflictKey,
+      selectorKey: item.selectorKey,
+      suppressedCapabilityIds: [],
+    };
+    existing.suppressedCapabilityIds.push(item.capabilityId);
+    grouped.set(key, existing);
+  }
+  return [...grouped.values()].map((entry) => ({
+    ...entry,
+    suppressedCapabilityIds: [...new Set(entry.suppressedCapabilityIds)].sort(),
+  }));
+}
+
+function buildCapabilityExplanationLinesForCapability(capability, result, markdown = false) {
   if (!capability) {
     return [];
   }
@@ -226,6 +250,16 @@ function buildCapabilityExplanationLinesForCapability(capability, markdown = fal
   if (capability.provenance.reason) {
     pushLine('Reason', markdown ? capability.provenance.reason : capability.provenance.reason);
   }
+
+  const conflictWins = getConflictWinRecords(result, capability.capabilityId);
+  if (conflictWins.length > 0) {
+    pushLine('Conflict wins', String(conflictWins.length));
+    for (const win of conflictWins) {
+      const entry = `key=${win.conflictKey}, selector=${win.selectorKey}, suppressed=${win.suppressedCapabilityIds.join(',')}`;
+      lines.push(markdown ? `- Conflict detail: ${wrap(entry)}` : `  Conflict detail: ${entry}`);
+    }
+  }
+
   return lines;
 }
 
@@ -235,7 +269,7 @@ function buildCapabilityExplanationLines(result, markdown = false) {
     const allLines = [];
     for (const capability of result.profile.capabilities) {
       if (allLines.length > 0) allLines.push('');
-      allLines.push(...buildCapabilityExplanationLinesForCapability(capability, markdown));
+      allLines.push(...buildCapabilityExplanationLinesForCapability(capability, result, markdown));
     }
     return allLines;
   }
@@ -248,7 +282,7 @@ function buildCapabilityExplanationLines(result, markdown = false) {
       ? [`- Explain: capability \`${capabilityId}\` not found`]
       : [`Explain: capability "${capabilityId}" not found`];
   }
-  return buildCapabilityExplanationLinesForCapability(capability, markdown);
+  return buildCapabilityExplanationLinesForCapability(capability, result, markdown);
 }
 
 function getCapabilityExplanationRecord(result) {
@@ -278,6 +312,7 @@ function getCapabilityExplanationRecord(result) {
                   : formatSelector(capability.outboundMapping.target),
             }
           : null,
+        conflictWins: getConflictWinRecords(result, capability.capabilityId),
         flags: capability.flags ?? null,
         provenance: capability.provenance,
       })),
@@ -312,6 +347,7 @@ function getCapabilityExplanationRecord(result) {
               : formatSelector(capability.outboundMapping.target),
         }
       : null,
+    conflictWins: getConflictWinRecords(result, capability.capabilityId),
     flags: capability.flags ?? null,
     provenance: capability.provenance,
   };
@@ -321,6 +357,7 @@ export function formatCompileSummary(result) {
   const topLimit = Number.isInteger(result.__top) && result.__top > 0 ? result.__top : 3;
   const focus = result.__focus ?? 'all';
   const show = result.__show ?? 'none';
+  const conflictSuppressions = getConflictSuppressions(result);
   const topUnmatchedRules = [...(result.report.byRule ?? [])]
     .filter((row) => (row.unmatched ?? 0) > 0)
     .sort(
@@ -371,10 +408,21 @@ export function formatCompileSummary(result) {
       .join(', ');
     lines.push(`Suppressed slots: ${top}`);
   }
+  if ((focus === 'all' || focus === 'suppressed') && conflictSuppressions.length > 0) {
+    lines.push(`Conflict suppressions: ${conflictSuppressions.length}`);
+  }
   if ((show === 'suppressed' || show === 'all') && result.report.bySuppressedSlot.length > 0) {
     lines.push('Suppressed detail:');
     for (const row of result.report.bySuppressedSlot.slice(0, topLimit)) {
       lines.push(`  - ${row.layer}:${row.ruleId} ${row.slot} x${row.count}`);
+    }
+  }
+  if ((show === 'suppressed' || show === 'all') && conflictSuppressions.length > 0) {
+    lines.push('Conflict suppression detail:');
+    for (const row of conflictSuppressions.slice(0, topLimit)) {
+      lines.push(
+        `  - ${row.capabilityId} -> ${row.winnerCapabilityId} (${row.conflictKey} @ ${row.selectorKey})`,
+      );
     }
   }
   if ((focus === 'all' || focus === 'unmatched') && topUnmatchedRules.length > 0) {
@@ -439,6 +487,7 @@ export function formatCompileMarkdown(result) {
   const topLimit = Number.isInteger(result.__top) && result.__top > 0 ? result.__top : 3;
   const focus = result.__focus ?? 'all';
   const show = result.__show ?? 'none';
+  const conflictSuppressions = getConflictSuppressions(result);
   const topUnmatchedRules = [...(result.report.byRule ?? [])]
     .filter((row) => (row.unmatched ?? 0) > 0)
     .sort(
@@ -521,6 +570,17 @@ export function formatCompileMarkdown(result) {
       lines.push(`  - \`${row.layer}:${row.ruleId}\` \`${row.slot}\` x${row.count}`);
     }
   }
+  if ((focus === 'all' || focus === 'suppressed') && conflictSuppressions.length > 0) {
+    lines.push(`- Conflict suppressions: ${conflictSuppressions.length}`);
+  }
+  if ((show === 'suppressed' || show === 'all') && conflictSuppressions.length > 0) {
+    lines.push(`- Conflict suppression detail:`);
+    for (const row of conflictSuppressions.slice(0, topLimit)) {
+      lines.push(
+        `  - \`${row.capabilityId}\` -> \`${row.winnerCapabilityId}\` (\`${row.conflictKey}\` @ \`${row.selectorKey}\`)`,
+      );
+    }
+  }
   if (show === 'rule' || show === 'all') {
     const topRules = [...(result.report.byRule ?? [])]
       .sort(
@@ -556,6 +616,7 @@ export function formatCompileMarkdown(result) {
 export function formatCompileNdjson(result) {
   const topLimit = Number.isInteger(result.__top) && result.__top > 0 ? result.__top : 3;
   const capabilityExplain = getCapabilityExplanationRecord(result);
+  const conflictSuppressions = getConflictSuppressions(result);
   const records = [
     { type: 'profile', profile: result.profile },
     ...(result.classificationProvenance
@@ -580,6 +641,7 @@ export function formatCompileNdjson(result) {
     },
     ...result.report.byRule.map((row) => ({ type: 'byRule', row })),
     ...result.report.bySuppressedSlot.map((row) => ({ type: 'bySuppressedSlot', row })),
+    ...conflictSuppressions.map((row) => ({ type: 'conflictSuppression', row })),
     ...result.report.curationCandidates.reasons.map((reason) => ({
       type: 'curationReason',
       reason,

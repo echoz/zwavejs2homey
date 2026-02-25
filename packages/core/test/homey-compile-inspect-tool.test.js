@@ -395,6 +395,17 @@ test('formatCompileSummary/markdown support --show detail sections', async () =>
       bySuppressedSlot: [
         { slot: 'capability:onoff', layer: 'project-generic', ruleId: 'r2', count: 2 },
       ],
+      overlapPolicy: {
+        suppressedCapabilities: [
+          {
+            capabilityId: 'dim',
+            winnerCapabilityId: 'windowcoverings_set',
+            selectorKey: 'value:38:0:currentValue:',
+            conflictKey: 'cover.position_control',
+            reason: 'conflict-exclusive:cover.position_control',
+          },
+        ],
+      },
       curationCandidates: {
         likelyNeedsReview: true,
         reasons: ['known-device-generic-fallback', 'suppressed-fill-actions:2'],
@@ -406,10 +417,12 @@ test('formatCompileSummary/markdown support --show detail sections', async () =>
   const summary = formatCompileSummary(fixture);
   assert.match(summary, /Rule detail:/);
   assert.match(summary, /Suppressed detail:/);
+  assert.match(summary, /Conflict suppression detail:/);
   assert.match(summary, /Curation reasons detail:/);
   const markdown = formatCompileOutput(fixture, 'markdown');
   assert.match(markdown, /- Rule detail:/);
   assert.match(markdown, /- Suppressed detail:/);
+  assert.match(markdown, /- Conflict suppression detail:/);
   assert.match(markdown, /- Curation reasons detail:/);
 });
 
@@ -450,6 +463,17 @@ test('formatCompileSummary/markdown support --explain capability output', async 
       diagnosticDeviceKey: 'catalog:demo',
       byRule: [],
       bySuppressedSlot: [],
+      overlapPolicy: {
+        suppressedCapabilities: [
+          {
+            capabilityId: 'dim',
+            winnerCapabilityId: 'onoff',
+            selectorKey: 'value:37:0:currentValue:',
+            conflictKey: 'switch.control',
+            reason: 'conflict-exclusive:switch.control',
+          },
+        ],
+      },
       curationCandidates: { likelyNeedsReview: false, reasons: [] },
     },
     __explainCapabilityId: 'onoff',
@@ -461,15 +485,20 @@ test('formatCompileSummary/markdown support --explain capability output', async 
   assert.match(summary, /Outbound: set_value -> cc=37@ep0:targetValue/);
   assert.match(summary, /Watchers: event:zwjs\.event\.node\.value-updated/);
   assert.match(summary, /Provenance: ha-derived:ha-switch-binary-current \(fill\)/);
+  assert.match(summary, /Conflict wins: 1/);
+  assert.match(summary, /Conflict detail: key=switch\.control/);
 
   const markdown = formatCompileOutput(fixture, 'markdown');
   assert.match(markdown, /### Explain: `onoff`/);
   assert.match(markdown, /- Directionality: `bidirectional`/);
   assert.match(markdown, /- Outbound: `set_value` -> `cc=37@ep0:targetValue`/);
+  assert.match(markdown, /- Conflict wins: 1/);
   const ndjson = formatCompileOutput(fixture, 'ndjson');
   assert.match(ndjson, /\"type\":\"capabilityExplain\"/);
+  assert.match(ndjson, /\"type\":\"conflictSuppression\"/);
   assert.match(ndjson, /\"requestedCapabilityId\":\"onoff\"/);
   assert.match(ndjson, /\"selector\":\"cc=37@ep0:currentValue\"/);
+  assert.match(ndjson, /\"conflictWins\":\[/);
 });
 
 test('formatCompileSummary/markdown/ndjson support --explain-all', async () => {

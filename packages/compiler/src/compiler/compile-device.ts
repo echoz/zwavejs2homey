@@ -5,10 +5,12 @@ import type { AppliedRuleActionResult } from './apply-rule';
 import { applyRuleToValue } from './apply-rule';
 import { getRuleLayerOrder } from './layer-semantics';
 import {
+  type CapabilityConflictSuppression,
   createProfileBuildState,
   materializeCapabilityPlans,
   materializeDeviceIdentity,
   materializeIgnoredValues,
+  resolveCapabilityConflicts,
 } from './profile-build-state';
 
 export interface CompileDeviceReportEntry extends AppliedRuleActionResult {
@@ -34,11 +36,7 @@ export interface CompileDeviceResult {
       ignoredValues: number;
     };
     overlapPolicy?: {
-      suppressedCapabilities: Array<{
-        capabilityId: string;
-        selectorKey: string;
-        reason: string;
-      }>;
+      suppressedCapabilities: CapabilityConflictSuppression[];
     };
   };
 }
@@ -67,6 +65,8 @@ export function compileDevice(
     }
   }
 
+  const overlap = resolveCapabilityConflicts(state);
+
   return {
     deviceIdentity: materializeDeviceIdentity(state),
     capabilities: materializeCapabilityPlans(state),
@@ -80,6 +80,11 @@ export function compileDevice(
         suppressedFillActions: state.suppressedActions.filter((a) => a.mode === 'fill').length,
         ignoredValues: state.ignoredValues.size,
       },
+      ...(overlap.suppressedCapabilities.length > 0
+        ? {
+            overlapPolicy: overlap,
+          }
+        : {}),
     },
   };
 }

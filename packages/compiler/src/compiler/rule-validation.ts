@@ -59,6 +59,40 @@ function validateRuleActionShape(
         filePath,
       );
     }
+    if (action.conflict !== undefined) {
+      if (!isObject(action.conflict)) {
+        throw new RuleFileLoadError(
+          `Rule "${ruleId}" capability action ${actionIndex} conflict must be an object`,
+          filePath,
+        );
+      }
+      if (typeof action.conflict.key !== 'string' || action.conflict.key.length === 0) {
+        throw new RuleFileLoadError(
+          `Rule "${ruleId}" capability action ${actionIndex} conflict.key must be a non-empty string`,
+          filePath,
+        );
+      }
+      if (
+        action.conflict.mode !== undefined &&
+        action.conflict.mode !== 'exclusive' &&
+        action.conflict.mode !== 'allow-multi'
+      ) {
+        throw new RuleFileLoadError(
+          `Rule "${ruleId}" capability action ${actionIndex} conflict.mode must be "exclusive" or "allow-multi"`,
+          filePath,
+        );
+      }
+      const priority = action.conflict.priority;
+      if (
+        priority !== undefined &&
+        (typeof priority !== 'number' || !Number.isInteger(priority) || priority < 0)
+      ) {
+        throw new RuleFileLoadError(
+          `Rule "${ruleId}" capability action ${actionIndex} conflict.priority must be a non-negative integer`,
+          filePath,
+        );
+      }
+    }
     return;
   }
 

@@ -1,0 +1,29 @@
+[
+  {
+    "ruleId": "invalid-capability-conflict",
+    "layer": "project-product",
+    "value": {
+      "commandClass": [38],
+      "property": ["currentValue"]
+    },
+    "actions": [
+      {
+        "type": "capability",
+        "capabilityId": "dim",
+        "conflict": {
+          "key": "",
+          "mode": "maybe",
+          "priority": -1
+        },
+        "inboundMapping": {
+          "kind": "value",
+          "selector": {
+            "commandClass": 38,
+            "endpoint": 0,
+            "property": "currentValue"
+          }
+        }
+      }
+    ]
+  }
+]

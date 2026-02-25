@@ -23,6 +23,11 @@ const CAPABILITY_FLAG_KEYS: Array<keyof CapabilityFlags> = [
 ];
 
 export interface ProfileBuildStateCapability extends HomeyCapabilityPlan {
+  conflict?: {
+    key: string;
+    mode: 'exclusive' | 'allow-multi';
+    priority: number;
+  };
   provenanceHistory: ProvenanceRecord[];
 }
 
@@ -46,7 +51,8 @@ export interface ProfileBuildState {
       | 'capability'
       | 'inboundMapping'
       | 'outboundMapping'
-      | 'flags';
+      | 'flags'
+      | 'conflict';
     reason: 'occupied';
     mode: RuleActionMode;
     layer: ProvenanceRecord['layer'];
@@ -210,10 +216,21 @@ function deriveDirectionality(action: CapabilityRuleAction): HomeyCapabilityPlan
   return 'inbound-only';
 }
 
+function normalizeConflict(
+  conflict: CapabilityRuleAction['conflict'],
+): ProfileBuildStateCapability['conflict'] | undefined {
+  if (!conflict) return undefined;
+  return {
+    key: conflict.key,
+    mode: conflict.mode ?? 'exclusive',
+    priority: conflict.priority ?? 50,
+  };
+}
+
 function pushSuppressed(
   state: ProfileBuildState,
   action: CapabilityRuleAction,
-  slot: 'capability' | 'inboundMapping' | 'outboundMapping' | 'flags',
+  slot: 'capability' | 'inboundMapping' | 'outboundMapping' | 'flags' | 'conflict',
   mode: RuleActionMode,
   provenance: ProvenanceRecord,
 ): void {
@@ -246,6 +263,7 @@ export function applyCapabilityRuleAction(
     }
     state.capabilities.set(action.capabilityId, {
       capabilityId: action.capabilityId,
+      conflict: normalizeConflict(action.conflict),
       inboundMapping: cloneInboundMapping(action.inboundMapping),
       outboundMapping: cloneOutboundMapping(action.outboundMapping),
       directionality: deriveDirectionality(action),
@@ -287,6 +305,13 @@ export function applyCapabilityRuleAction(
       }
     }
 
+    if (!existing.conflict && action.conflict) {
+      existing.conflict = normalizeConflict(action.conflict);
+      changed = true;
+    } else if (existing.conflict && action.conflict) {
+      pushSuppressed(state, action, 'conflict', mode, provenance);
+    }
+
     if (changed) {
       existing.directionality =
         existing.inboundMapping && existing.outboundMapping
@@ -314,10 +339,12 @@ export function applyCapabilityRuleAction(
 
     const nextOutbound = existing.outboundMapping ?? cloneOutboundMapping(action.outboundMapping);
     const nextFlags = mergeFlags(existing.flags, action.flags);
+    const nextConflict = existing.conflict ?? normalizeConflict(action.conflict);
 
     existing.inboundMapping = nextInbound;
     existing.outboundMapping = nextOutbound;
     existing.flags = nextFlags;
+    existing.conflict = nextConflict;
     existing.directionality =
       existing.inboundMapping && existing.outboundMapping
         ? 'bidirectional'
@@ -333,6 +360,7 @@ export function applyCapabilityRuleAction(
   existing.inboundMapping = cloneInboundMapping(action.inboundMapping);
   existing.outboundMapping = cloneOutboundMapping(action.outboundMapping);
   existing.flags = mergeFlags(undefined, action.flags);
+  existing.conflict = normalizeConflict(action.conflict);
   existing.directionality = deriveDirectionality(action);
   existing.provenance = { ...provenance, action: mode, supersedes: superseded };
   existing.provenanceHistory.push({ ...provenance, action: mode, supersedes: superseded });
@@ -350,6 +378,101 @@ export function materializeCapabilityPlans(state: ProfileBuildState): HomeyCapab
       provenance: cap.provenance,
     }))
     .sort((a, b) => a.capabilityId.localeCompare(b.capabilityId));
+}
+
+function inboundSelectorKey(cap: ProfileBuildStateCapability): string | null {
+  const mapping = cap.inboundMapping;
+  if (!mapping) return null;
+  if (mapping.kind === 'event') {
+    return `event:${(mapping.selector as { eventType: string }).eventType}`;
+  }
+  const selector = mapping.selector as {
+    commandClass: number;
+    endpoint?: number;
+    property: string | number;
+    propertyKey?: string | number;
+  };
+  return [
+    'value',
+    selector.commandClass,
+    selector.endpoint ?? 0,
+    String(selector.property),
+    selector.propertyKey === undefined ? '' : String(selector.propertyKey),
+  ].join(':');
+}
+
+const OVERLAP_LAYER_WEIGHT: Record<ProvenanceRecord['layer'], number> = {
+  'project-product': 3,
+  'ha-derived': 2,
+  'project-generic': 1,
+  'user-curation': 4,
+};
+
+function compareOverlapPriority(
+  a: ProfileBuildStateCapability,
+  b: ProfileBuildStateCapability,
+): number {
+  const layerCmp =
+    OVERLAP_LAYER_WEIGHT[b.provenance.layer] - OVERLAP_LAYER_WEIGHT[a.provenance.layer];
+  if (layerCmp !== 0) return layerCmp;
+  const prioA = a.conflict?.priority ?? 0;
+  const prioB = b.conflict?.priority ?? 0;
+  if (prioB !== prioA) return prioB - prioA;
+  const ruleCmp = a.provenance.ruleId.localeCompare(b.provenance.ruleId);
+  if (ruleCmp !== 0) return ruleCmp;
+  return a.capabilityId.localeCompare(b.capabilityId);
+}
+
+export interface CapabilityConflictSuppression {
+  capabilityId: string;
+  winnerCapabilityId: string;
+  selectorKey: string;
+  conflictKey: string;
+  reason: string;
+}
+
+export function resolveCapabilityConflicts(state: ProfileBuildState): {
+  suppressedCapabilities: CapabilityConflictSuppression[];
+} {
+  const buckets = new Map<string, ProfileBuildStateCapability[]>();
+  for (const cap of state.capabilities.values()) {
+    const selectorKey = inboundSelectorKey(cap);
+    if (!selectorKey || !cap.conflict) continue;
+    if (cap.conflict.mode === 'allow-multi') continue;
+    const bucketKey = `${selectorKey}::${cap.conflict.key}`;
+    const arr = buckets.get(bucketKey) ?? [];
+    arr.push(cap);
+    buckets.set(bucketKey, arr);
+  }
+
+  const suppressed: CapabilityConflictSuppression[] = [];
+  for (const [bucketKey, caps] of buckets.entries()) {
+    if (caps.length < 2) continue;
+    const sep = bucketKey.indexOf('::');
+    const selectorKey = sep >= 0 ? bucketKey.slice(0, sep) : bucketKey;
+    const sorted = [...caps].sort(compareOverlapPriority);
+    const winner = sorted[0];
+    const conflictKey = winner.conflict?.key ?? 'unknown';
+    for (const loser of sorted.slice(1)) {
+      state.capabilities.delete(loser.capabilityId);
+      suppressed.push({
+        capabilityId: loser.capabilityId,
+        winnerCapabilityId: winner.capabilityId,
+        selectorKey,
+        conflictKey,
+        reason: `conflict-exclusive:${conflictKey}`,
+      });
+      state.suppressedActions.push({
+        capabilityId: loser.capabilityId,
+        slot: 'conflict',
+        reason: 'occupied',
+        mode: loser.provenance.action,
+        layer: loser.provenance.layer,
+        ruleId: loser.provenance.ruleId,
+      });
+    }
+  }
+  return { suppressedCapabilities: suppressed };
 }
 
 export function materializeIgnoredValues(state: ProfileBuildState): NormalizedZwaveValueId[] {

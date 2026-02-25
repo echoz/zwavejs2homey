@@ -35,6 +35,11 @@ export interface CapabilityRuleAction {
   type: 'capability';
   mode?: RuleActionMode;
   capabilityId: string;
+  conflict?: {
+    key: string;
+    mode?: 'exclusive' | 'allow-multi';
+    priority?: number;
+  };
   inboundMapping?: HomeyInboundMapping;
   outboundMapping?: HomeyOutboundMapping;
   flags?: {

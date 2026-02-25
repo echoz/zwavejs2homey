@@ -58,3 +58,12 @@ test('loadJsonRuleFile rejects invalid ignore-value valueId shapes', () => {
       /ignore-value action .*invalid valueId shape/i.test(error.message),
   );
 });
+
+test('loadJsonRuleFile rejects invalid capability conflict metadata', () => {
+  const filePath = path.join(fixturesDir, 'rules-invalid-capability-conflict.json');
+  assert.throws(
+    () => compiler.loadJsonRuleFile(filePath),
+    (error) =>
+      error && error.filePath === filePath && /conflict\.(key|mode|priority)/i.test(error.message),
+  );
+});

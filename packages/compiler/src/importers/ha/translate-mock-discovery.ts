@@ -323,6 +323,21 @@ function toRule(definition: HaMockDiscoveryDefinitionV1): MappingRule | null {
     });
   }
   if (definition.output.capabilityId) {
+    const conflict =
+      definition.match.commandClass === 38 &&
+      String(definition.match.property) === 'currentValue' &&
+      definition.output.capabilityId === 'windowcoverings_set'
+        ? { key: 'cover.position_control', mode: 'exclusive' as const, priority: 90 }
+        : definition.match.commandClass === 38 &&
+            String(definition.match.property) === 'currentValue' &&
+            definition.output.capabilityId === 'dim'
+          ? { key: 'cover.position_control', mode: 'exclusive' as const, priority: 40 }
+          : definition.match.commandClass === 38 &&
+              String(definition.match.property) === 'currentValue' &&
+              definition.output.capabilityId === 'number_value'
+            ? { key: 'cover.position_control', mode: 'exclusive' as const, priority: 10 }
+            : undefined;
+
     const flags = {
       ...(definition.output.assumedState !== undefined
         ? { assumedState: definition.output.assumedState }
@@ -339,6 +354,7 @@ function toRule(definition: HaMockDiscoveryDefinitionV1): MappingRule | null {
     actions.push({
       type: 'capability',
       capabilityId: definition.output.capabilityId,
+      ...(conflict ? { conflict } : {}),
       inboundMapping: {
         kind: 'value',
         selector: {

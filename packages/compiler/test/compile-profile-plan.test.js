@@ -163,7 +163,7 @@ test('compileProfilePlan reports catalog lookup match when catalog artifact is p
   assert.match(result.profile.provenance.reason, /catalogId=observed:29-13313-1/);
 });
 
-test('compileProfilePlan suppresses overlapping HA-derived capabilities for curtain multilevel selectors', () => {
+test('compileProfilePlan resolves same-selector conflicts using capability conflict metadata', () => {
   const coverDevice = {
     deviceKey: 'fixture-cover-1',
     manufacturerId: 29,
@@ -191,6 +191,7 @@ test('compileProfilePlan suppresses overlapping HA-derived capabilities for curt
         {
           type: 'capability',
           capabilityId: 'dim',
+          conflict: { key: 'cover.position_control', mode: 'exclusive', priority: 40 },
           inboundMapping: {
             kind: 'value',
             selector: { commandClass: 38, endpoint: 0, property: 'currentValue' },
@@ -210,6 +211,7 @@ test('compileProfilePlan suppresses overlapping HA-derived capabilities for curt
         {
           type: 'capability',
           capabilityId: 'number_value',
+          conflict: { key: 'cover.position_control', mode: 'exclusive', priority: 10 },
           inboundMapping: {
             kind: 'value',
             selector: { commandClass: 38, endpoint: 0, property: 'currentValue' },
@@ -225,6 +227,7 @@ test('compileProfilePlan suppresses overlapping HA-derived capabilities for curt
         {
           type: 'capability',
           capabilityId: 'windowcoverings_set',
+          conflict: { key: 'cover.position_control', mode: 'exclusive', priority: 90 },
           inboundMapping: {
             kind: 'value',
             selector: { commandClass: 38, endpoint: 0, property: 'currentValue' },
@@ -243,4 +246,82 @@ test('compileProfilePlan suppresses overlapping HA-derived capabilities for curt
     'dim',
     'number_value',
   ]);
+  assert.deepEqual(
+    report.overlapPolicy?.suppressedCapabilities.map((s) => s.reason),
+    ['conflict-exclusive:cover.position_control', 'conflict-exclusive:cover.position_control'],
+  );
+  assert.deepEqual(
+    report.overlapPolicy?.suppressedCapabilities.map((s) => s.winnerCapabilityId),
+    ['windowcoverings_set', 'windowcoverings_set'],
+  );
+  assert.deepEqual(
+    report.overlapPolicy?.suppressedCapabilities.map((s) => s.conflictKey),
+    ['cover.position_control', 'cover.position_control'],
+  );
+});
+
+test('compileProfilePlan keeps allow-multi conflict candidates and suppresses exclusive conflict candidates', () => {
+  const deviceFacts = {
+    deviceKey: 'fixture-sensor-1',
+    manufacturerId: 1120,
+    productType: 2,
+    productId: 136,
+    values: [
+      {
+        valueId: { commandClass: 50, endpoint: 0, property: 'reset' },
+        metadata: { type: 'boolean', readable: true },
+      },
+      {
+        valueId: { commandClass: 113, endpoint: 0, property: 'alarmType' },
+        metadata: { type: 'number', readable: true },
+      },
+    ],
+  };
+  const rulesForSensor = [
+    {
+      ruleId: 'ha-sensor-class',
+      layer: 'ha-derived',
+      value: { commandClass: [113], property: ['alarmType'] },
+      actions: [{ type: 'device-identity', homeyClass: 'sensor' }],
+    },
+    {
+      ruleId: 'ha-button-reset',
+      layer: 'ha-derived',
+      value: { commandClass: [50], property: ['reset'] },
+      actions: [
+        {
+          type: 'capability',
+          capabilityId: 'button_action',
+          conflict: { key: 'service.control', mode: 'allow-multi', priority: 5 },
+          inboundMapping: {
+            kind: 'value',
+            selector: { commandClass: 50, endpoint: 0, property: 'reset' },
+          },
+        },
+      ],
+    },
+    {
+      ruleId: 'ha-sensor-alarm',
+      layer: 'ha-derived',
+      value: { commandClass: [113], property: ['alarmType'] },
+      actions: [
+        {
+          type: 'capability',
+          capabilityId: 'measure_generic',
+          conflict: { key: 'service.control', mode: 'exclusive', priority: 100 },
+          inboundMapping: {
+            kind: 'value',
+            selector: { commandClass: 113, endpoint: 0, property: 'alarmType' },
+          },
+        },
+      ],
+    },
+  ];
+
+  const { profile, report } = compiler.compileProfilePlan(deviceFacts, rulesForSensor);
+  assert.deepEqual(profile.capabilities.map((c) => c.capabilityId).sort(), [
+    'button_action',
+    'measure_generic',
+  ]);
+  assert.equal(report.overlapPolicy, undefined);
 });

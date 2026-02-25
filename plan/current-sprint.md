@@ -43,15 +43,22 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
    - compile one node or all nodes directly from a ZWJS instance into a `compiled-homey-profiles/v1` artifact
 9. Tightened live compiler tooling defaults:
    - `compiler:build` and `compiler:inspect-live` now skip controller-like nodes by default (overrideable for diagnostics)
-10. Added initial HA-derived overlap suppression in compiler output:
+10. Replaced hardcoded HA overlap suppression with rule-owned conflict metadata:
 
-- suppresses `number_value` when a more specific HA-derived capability targets the same selector
-- suppresses `dim` in curtain profiles when `windowcoverings_set` targets the same selector
+- capability actions support `conflict: { key, mode, priority }`
+- compiler resolves exclusive conflicts deterministically (layer + priority + stable tiebreak)
+- overlap report now records suppressed capability + winner capability attribution
+
+11. Extended compiler diagnostics/explain output for conflict resolution:
+
+- `compiler:inspect`/`compiler:inspect-live` summary + markdown now show conflict suppression counts/details
+- `--explain` / `--explain-all` now includes conflict-win context per capability
+- NDJSON diagnostics now emit `conflictSuppression` records
 
 ## Next Tasks
 
 1. Tighten `compiler:build` into the canonical layered build pipeline (HA-derived + project rules + catalog) with real non-fixture node facts sources
-2. Improve HA-derived overlap/selection behavior further (current highest-impact issue on live network)
+2. Continue widening HA-derived rules coverage and selector semantics against live nodes
 3. Add first project-product override rules from real device validation
 4. Use `compiler:inspect-live --compiled-file ...` to validate compiled artifacts on real ZWJS data
 5. Keep project-generic rules minimal/provisional; likely move generic fallback inference policy into the Homey adapter

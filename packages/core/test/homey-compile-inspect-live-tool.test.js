@@ -373,3 +373,93 @@ test('runLiveInspectCommand applies precompiled artifact when --compiled-file is
   assert.match(logs[0], /Kitchen Plug/);
   assert.match(logs[0], /curated/);
 });
+
+test('runLiveInspectCommand summary explain includes conflict suppression details', async () => {
+  const { runLiveInspectCommand } = await loadLib();
+  const logs = [];
+  await runLiveInspectCommand(
+    {
+      url: 'ws://x',
+      allNodes: false,
+      nodeId: 5,
+      compiledFile: undefined,
+      manifestFile: undefined,
+      rulesFiles: [path.join(fixturesDir, 'rules-switch-meter.json')],
+      catalogFile: undefined,
+      format: 'summary',
+      schemaVersion: 0,
+      includeValues: 'summary',
+      maxValues: 10,
+      focus: 'all',
+      top: 3,
+      show: 'all',
+      explainCapabilityId: 'onoff',
+      explainAll: false,
+      explainOnly: false,
+      homeyClass: undefined,
+      driverTemplateId: undefined,
+    },
+    { log: (line) => logs.push(line) },
+    {
+      connectAndInitializeImpl: async () => ({ stop: async () => {} }),
+      fetchNodesListImpl: async () => [],
+      fetchNodeDetailsImpl: async () => ({
+        nodeId: 5,
+        state: {
+          name: 'Kitchen Plug',
+          manufacturerId: '0x0184',
+          productType: '0x4447',
+          productId: '0x3034',
+        },
+        values: [],
+      }),
+      compileProfilePlanFromRuleSetManifestImpl: () => ({
+        profile: {
+          profileId: 'p-conflict',
+          classification: { homeyClass: 'socket', confidence: 'curated', uncurated: false },
+          capabilities: [
+            {
+              capabilityId: 'onoff',
+              directionality: 'bidirectional',
+              inboundMapping: {
+                kind: 'value',
+                selector: { commandClass: 37, endpoint: 0, property: 'currentValue' },
+              },
+              outboundMapping: {
+                kind: 'set_value',
+                target: { commandClass: 37, endpoint: 0, property: 'targetValue' },
+              },
+              provenance: { layer: 'ha-derived', ruleId: 'ha-onoff', action: 'fill' },
+            },
+          ],
+          ignoredValues: [],
+        },
+        report: {
+          profileOutcome: 'curated',
+          summary: { appliedActions: 1, unmatchedActions: 0, suppressedFillActions: 0 },
+          byRule: [],
+          bySuppressedSlot: [],
+          overlapPolicy: {
+            suppressedCapabilities: [
+              {
+                capabilityId: 'dim',
+                winnerCapabilityId: 'onoff',
+                selectorKey: 'value:37:0:currentValue:',
+                conflictKey: 'switch.control',
+                reason: 'conflict-exclusive:switch.control',
+              },
+            ],
+          },
+          curationCandidates: { likelyNeedsReview: false, reasons: [] },
+          diagnosticDeviceKey: 'catalog:demo-conflict',
+        },
+        ruleSources: [],
+      }),
+    },
+  );
+
+  assert.equal(logs.length, 1);
+  assert.match(logs[0], /Conflict suppression detail:/);
+  assert.match(logs[0], /Explain: onoff/);
+  assert.match(logs[0], /Conflict wins: 1/);
+});
