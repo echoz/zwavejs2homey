@@ -63,6 +63,7 @@ The project is intentionally split into layers:
 Compiled-artifact apply mode is now also supported for runtime-style validation:
 
 - `npm run compiler:inspect-live -- --url ws://HOST:PORT --all-nodes --compiled-file /tmp/compiled-profiles.json --format list`
+  - live inspection/build tools skip controller-like nodes by default; use `--include-controller-nodes` to include them for diagnostics
 
 ### Compiler build/export (compiled profiles artifact)
 

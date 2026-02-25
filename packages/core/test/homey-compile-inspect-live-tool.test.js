@@ -81,6 +81,28 @@ test('normalizeCompilerDeviceFactsFromZwjsDetail converts zwjs-inspect node deta
   assert.equal(facts.values[0].valueId.commandClass, 37);
 });
 
+test('isControllerLikeZwjsNodeDetail detects controller node detail', async () => {
+  const { isControllerLikeZwjsNodeDetail } = await loadLib();
+  const controllerDetail = {
+    nodeId: 1,
+    state: {
+      label: '700/800 Series',
+      deviceClass: { generic: 'Static Controller', basic: 'Static Controller' },
+    },
+    values: [],
+  };
+  const switchDetail = {
+    nodeId: 5,
+    state: {
+      label: 'Switch',
+      deviceClass: { generic: 'Binary Switch', basic: 'Routing Slave' },
+    },
+    values: [],
+  };
+  assert.equal(isControllerLikeZwjsNodeDetail(controllerDetail), true);
+  assert.equal(isControllerLikeZwjsNodeDetail(switchDetail), false);
+});
+
 test('formatListOutput renders compiled live overview rows', async () => {
   const { formatListOutput } = await loadLib();
   const out = formatListOutput([
@@ -141,6 +163,7 @@ test('runLiveInspectCommand compiles all nodes and renders list output with mock
       schemaVersion: 0,
       includeValues: 'summary',
       maxValues: 10,
+      includeControllerNodes: false,
       focus: 'all',
       top: 3,
       show: 'none',
@@ -171,6 +194,81 @@ test('runLiveInspectCommand compiles all nodes and renders list output with mock
   assert.match(logs[0], /Kitchen Plug/);
   assert.match(logs[0], /generic/);
   assert.match(logs[0], /known-device-generic-fallback/);
+});
+
+test('runLiveInspectCommand skips controller-like nodes by default', async () => {
+  const { runLiveInspectCommand } = await loadLib();
+  const logs = [];
+  await runLiveInspectCommand(
+    {
+      url: 'ws://x',
+      allNodes: true,
+      nodeId: undefined,
+      manifestFile: undefined,
+      rulesFiles: [path.join(fixturesDir, 'rules-switch-meter.json')],
+      catalogFile: undefined,
+      format: 'list',
+      schemaVersion: 0,
+      includeValues: 'summary',
+      maxValues: 10,
+      includeControllerNodes: false,
+      focus: 'all',
+      top: 3,
+      show: 'none',
+      explainAll: false,
+      explainOnly: false,
+      homeyClass: undefined,
+      driverTemplateId: undefined,
+    },
+    { log: (line) => logs.push(line) },
+    {
+      connectAndInitializeImpl: async () => ({ stop: async () => {} }),
+      fetchNodesListImpl: async () => [
+        { nodeId: 1, name: 'Controller' },
+        { nodeId: 5, name: 'Kitchen Plug' },
+      ],
+      fetchNodeDetailsImpl: async (_client, nodeId) =>
+        nodeId === 1
+          ? {
+              nodeId: 1,
+              state: {
+                label: '700/800 Series',
+                deviceClass: { generic: 'Static Controller', basic: 'Static Controller' },
+              },
+              values: [],
+            }
+          : {
+              nodeId: 5,
+              state: {
+                name: 'Kitchen Plug',
+                manufacturerId: '0x0184',
+                productType: '0x4447',
+                productId: '0x3034',
+              },
+              values: [],
+            },
+      compileProfilePlanFromRuleSetManifestImpl: () => ({
+        profile: {
+          profileId: 'p1',
+          classification: { homeyClass: 'socket', confidence: 'generic', uncurated: true },
+          capabilities: [],
+          ignoredValues: [],
+        },
+        report: {
+          profileOutcome: 'generic',
+          summary: { appliedActions: 1, unmatchedActions: 0, suppressedFillActions: 0 },
+          byRule: [],
+          bySuppressedSlot: [],
+          curationCandidates: { likelyNeedsReview: false, reasons: [] },
+          diagnosticDeviceKey: 'zwjs-live:0184-4447-3034',
+        },
+        ruleSources: [],
+      }),
+    },
+  );
+  assert.equal(logs.length, 1);
+  assert.doesNotMatch(logs[0], /Controller/);
+  assert.match(logs[0], /Kitchen Plug/);
 });
 
 test('runLiveInspectCommand applies precompiled artifact when --compiled-file is used', async () => {

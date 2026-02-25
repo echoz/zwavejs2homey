@@ -41,6 +41,8 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
    - `rules/` directory skeleton for real HA-derived + project rulesets
 8. Added live ZWJS build mode to `compiler:build`:
    - compile one node or all nodes directly from a ZWJS instance into a `compiled-homey-profiles/v1` artifact
+9. Tightened live compiler tooling defaults:
+   - `compiler:build` and `compiler:inspect-live` now skip controller-like nodes by default (overrideable for diagnostics)
 
 ## Next Tasks
 

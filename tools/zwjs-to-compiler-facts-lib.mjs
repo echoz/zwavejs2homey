@@ -9,6 +9,20 @@ function parseHexish(value) {
   return Number.isInteger(parsed) ? parsed : undefined;
 }
 
+export function isControllerLikeZwjsNodeDetail(detail) {
+  const state = detail?.state ?? {};
+  const nodeId = typeof detail?.nodeId === 'number' ? detail.nodeId : undefined;
+  const genericClass = String(state?.deviceClass?.generic ?? '').toLowerCase();
+  const basicClass = String(state?.deviceClass?.basic ?? '').toLowerCase();
+  const label = String(state?.label ?? '').toLowerCase();
+  const values = Array.isArray(detail?.values) ? detail.values : [];
+
+  if (genericClass.includes('controller') || basicClass.includes('controller')) return true;
+  if (label.includes('controller') && values.length === 0) return true;
+  if (nodeId === 1 && values.length === 0 && genericClass.includes('static')) return true;
+  return false;
+}
+
 export function normalizeCompilerDeviceFactsFromZwjsDetail(detail) {
   const state = detail?.state ?? {};
   const manufacturerId = parseHexish(state.manufacturerId);

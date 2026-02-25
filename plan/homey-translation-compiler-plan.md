@@ -948,6 +948,7 @@ Progress on the extended scope:
 
 - Added `compiler:build` (`homey-compile-build`) to compile one or more device facts files into a reusable `compiled-homey-profiles/v1` artifact
 - Added live ZWJS source mode to `compiler:build` (`--url` + `--all-nodes`/`--node`) so runtime-validation artifacts can be built directly from live nodes
+- Live compiler tooling (`compiler:build`, `compiler:inspect-live`) skips controller-like nodes by default to focus runtime-validation artifacts on actual device profiles (overrideable via CLI flag for diagnostics)
 - Added `compiled-homey-profiles/v1` artifact contract + validation in `packages/compiler`
 - Added `rules/` directory skeleton (`ha-derived`, `project/generic`, `project/product`) to formalize the real rule pipeline layout
 - Generated and checked in canonical HA-derived rules (`rules/ha-derived/home-assistant.zwave_js.generated.json`) for the currently supported HA extraction set

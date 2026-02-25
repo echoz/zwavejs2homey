@@ -31,6 +31,7 @@
 - [x] Generate HA-derived ruleset from HA import pipeline for supported discovery coverage
 - [x] Initial project-generic ruleset for device-profile inference from Z-Wave configuration/metadata (starter set)
 - [x] Live ZWJS validation path can apply compiled profiles artifact (not on-the-fly compile)
+- [x] Live compiler build/inspect defaults skip controller-like nodes to focus device-profile validation
 - [ ] Add second real catalog source adapter when a concrete source format is available
 
 ## Phase 4: Homey Adapter MVP (Next Major Area)

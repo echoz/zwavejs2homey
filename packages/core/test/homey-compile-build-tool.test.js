@@ -123,6 +123,7 @@ test('buildCompiledProfilesArtifact supports live ZWJS mode with mocks', async (
       catalogFile: undefined,
       outputFile: undefined,
       format: 'summary',
+      includeControllerNodes: false,
     },
     {
       connectAndInitializeImpl: async () => ({ stop: async () => {} }),
@@ -143,4 +144,58 @@ test('buildCompiledProfilesArtifact supports live ZWJS mode with mocks', async (
   assert.equal(artifact.entries.length, 1);
   assert.equal(artifact.entries[0].device.nodeId, 5);
   assert.match(artifact.entries[0].device.deviceKey, /^zwjs-live:/);
+});
+
+test('buildCompiledProfilesArtifact skips controller-like live nodes by default', async () => {
+  const { buildCompiledProfilesArtifact } = await loadLib();
+  const artifact = await buildCompiledProfilesArtifact(
+    {
+      url: 'ws://x',
+      token: undefined,
+      schemaVersion: 0,
+      allNodes: true,
+      nodeId: undefined,
+      includeValues: 'summary',
+      maxValues: 50,
+      includeControllerNodes: false,
+      deviceFiles: [],
+      manifestFile: undefined,
+      rulesFiles: [path.join(fixturesDir, 'rules-switch-meter.json')],
+      catalogFile: undefined,
+      outputFile: undefined,
+      format: 'summary',
+    },
+    {
+      connectAndInitializeImpl: async () => ({ stop: async () => {} }),
+      fetchNodesListImpl: async () => [
+        { nodeId: 1, name: 'Controller' },
+        { nodeId: 5, name: 'Kitchen Plug' },
+      ],
+      fetchNodeDetailsImpl: async (_client, nodeId) =>
+        nodeId === 1
+          ? {
+              nodeId: 1,
+              state: {
+                label: '700/800 Series',
+                deviceClass: { generic: 'Static Controller', basic: 'Static Controller' },
+                manufacturerId: 0,
+                productType: 4,
+                productId: 4,
+              },
+              values: [],
+            }
+          : {
+              nodeId: 5,
+              state: {
+                name: 'Kitchen Plug',
+                manufacturerId: '0x0184',
+                productType: '0x4447',
+                productId: '0x3034',
+              },
+              values: [],
+            },
+    },
+  );
+  assert.equal(artifact.entries.length, 1);
+  assert.equal(artifact.entries[0].device.nodeId, 5);
 });

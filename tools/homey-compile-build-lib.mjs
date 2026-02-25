@@ -3,7 +3,10 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { formatJsonCompact, formatJsonPretty } from './output-format-lib.mjs';
 import { connectAndInitialize, fetchNodeDetails, fetchNodesList } from './zwjs-inspect-lib.mjs';
-import { normalizeCompilerDeviceFactsFromZwjsDetail } from './zwjs-to-compiler-facts-lib.mjs';
+import {
+  isControllerLikeZwjsNodeDetail,
+  normalizeCompilerDeviceFactsFromZwjsDetail,
+} from './zwjs-to-compiler-facts-lib.mjs';
 
 const require = createRequire(import.meta.url);
 const {
@@ -62,6 +65,7 @@ export function getUsageText() {
     '                     [--catalog-file <catalog.json>]',
     '                     [--schema-version 0] [--token ...]',
     '                     [--include-values none|summary|full] [--max-values N]',
+    '                     [--include-controller-nodes]',
     '                     [--output-file <compiled-profiles.json>]',
     '                     [--format summary|json|json-pretty|json-compact]',
   ].join('\n');
@@ -141,6 +145,7 @@ export function parseCliArgs(argv) {
       nodeId,
       includeValues,
       maxValues,
+      includeControllerNodes: flags.has('--include-controller-nodes'),
       deviceFiles,
       manifestFile,
       rulesFiles,
@@ -173,6 +178,9 @@ async function loadDevices(command, deps = {}) {
         includeValues: command.includeValues,
         maxValues: command.maxValues,
       });
+      if (!command.includeControllerNodes && isControllerLikeZwjsNodeDetail(detail)) {
+        continue;
+      }
       devices.push({
         file: `zwjs-live:node-${node.nodeId}`,
         device: normalizeCompilerDeviceFactsFromZwjsDetail(detail),

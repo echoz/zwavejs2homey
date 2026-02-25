@@ -9,9 +9,15 @@ import {
 } from './output-format-lib.mjs';
 import { connectAndInitialize, fetchNodeDetails, fetchNodesList } from './zwjs-inspect-lib.mjs';
 import { formatCompileOutput } from './homey-compile-inspect-lib.mjs';
-import { normalizeCompilerDeviceFactsFromZwjsDetail } from './zwjs-to-compiler-facts-lib.mjs';
+import {
+  isControllerLikeZwjsNodeDetail,
+  normalizeCompilerDeviceFactsFromZwjsDetail,
+} from './zwjs-to-compiler-facts-lib.mjs';
 
-export { normalizeCompilerDeviceFactsFromZwjsDetail } from './zwjs-to-compiler-facts-lib.mjs';
+export {
+  isControllerLikeZwjsNodeDetail,
+  normalizeCompilerDeviceFactsFromZwjsDetail,
+} from './zwjs-to-compiler-facts-lib.mjs';
 
 const require = createRequire(import.meta.url);
 const {
@@ -78,6 +84,7 @@ export function getUsageText() {
     '                           [--format list|summary|markdown|json|json-pretty|json-compact|ndjson]',
     '                           [--schema-version 0] [--token ...]',
     '                           [--include-values none|summary|full] [--max-values N]',
+    '                           [--include-controller-nodes]',
     '                           [--focus ...] [--top N] [--show ...] [--explain <cap>] [--explain-all] [--explain-only]',
   ].join('\n');
 }
@@ -181,6 +188,7 @@ export function parseCliArgs(argv) {
       format,
       includeValues,
       maxValues,
+      includeControllerNodes: flags.has('--include-controller-nodes'),
       focus,
       top,
       show,
@@ -389,6 +397,9 @@ export async function runLiveInspectCommand(command, io = console, deps = {}) {
         includeValues: command.includeValues,
         maxValues: command.maxValues,
       });
+      if (!command.includeControllerNodes && isControllerLikeZwjsNodeDetail(detail)) {
+        continue;
+      }
       const deviceFacts = normalizeCompilerDeviceFactsFromZwjsDetail(detail);
       const compiledBase = compiledArtifactIndex
         ? (selectCompiledEntryForDevice(deviceFacts, compiledArtifactIndex)?.compiled ??
