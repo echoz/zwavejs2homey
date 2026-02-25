@@ -43,11 +43,13 @@ test('runCompileBenchmark returns timing stats and profile summary', async () =>
   });
   assert.equal(result.benchmark.iterations, 3);
   assert.equal(result.benchmark.samples, 3);
+  assert.equal(typeof result.benchmark.setupMs, 'number');
   assert.equal(typeof result.benchmark.avgMs, 'number');
   assert.equal(result.profileSummary.profileId, 'fixture-switch-meter-1');
   assert.equal(result.profileSummary.outcome, 'curated');
   const summary = formatBenchmarkSummary(result);
   assert.match(summary, /Iterations: 3/);
+  assert.match(summary, /Setup: /);
   assert.match(summary, /Timing: avg=/);
   assert.match(summary, /Profile: fixture-switch-meter-1 outcome=curated/);
 });

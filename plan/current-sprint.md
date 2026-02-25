@@ -85,6 +85,10 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - hardened rule matcher validation at load time (`device`, `value`, `constraints`) to prevent runtime matcher-shape crashes
     - aligned `curationCandidates.likelyNeedsReview` with actionable reasons only (technical reasons still retained in diagnostics)
     - preserved HA alias `property_key` semantics (including cover position vs tilt groups), regenerated HA-derived rules, and added extractor/translator regressions
+20. Completed first performance slice for authoring/inspection workflows:
+    - `compiler:inspect-live` now preloads rule manifests once and reuses loaded rulesets across nodes (instead of reloading/parsing per node)
+    - `compiler:bench` now preloads manifests once and reports one-time setup timing separately from steady-state compile timing
+    - added core-tool regression coverage for loaded-ruleset reuse path
 
 ## Next Tasks
 

@@ -38,6 +38,7 @@
 - [x] Curate current live-node signatures into product overrides (live validation snapshot on February 25, 2026: `Outcomes: curated=33`)
 - [x] Humanize compiler review diagnostics: actionable review reasons in list output + expanded technical diagnostics in summary/markdown
 - [x] Code-review hardening pass before perf: strict matcher-shape validation, actionable review-flag semantics, and HA alias `property_key` fidelity in generated rules
+- [x] Performance slice 1: CLI compile paths reuse loaded rule manifests (`compiler:inspect-live`, `compiler:bench`) to avoid per-node/per-iteration manifest reload overhead
 - [ ] Decide and document final ownership of generic fallback inference policy (currently leaning Homey adapter-owned)
 - [ ] Add second real catalog source adapter when a concrete source format is available
 

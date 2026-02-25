@@ -3,7 +3,10 @@ import { createRequire } from 'node:module';
 import { performance } from 'node:perf_hooks';
 
 const require = createRequire(import.meta.url);
-const { compileProfilePlanFromRuleSetManifest } = require('../packages/compiler/dist');
+const {
+  compileProfilePlanFromLoadedRuleSetManifest,
+  loadJsonRuleSetManifest,
+} = require('../packages/compiler/dist');
 
 function parseFlagMap(argv) {
   const flags = new Map();
@@ -78,15 +81,6 @@ function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
 
-function resolveManifestEntries(command) {
-  if (command.manifest) {
-    const manifest = readJson(command.manifest);
-    if (!Array.isArray(manifest)) throw new Error('Manifest JSON must be an array');
-    return manifest;
-  }
-  return command.rulesFiles.map((filePath) => ({ filePath }));
-}
-
 function basicStats(samples) {
   const sorted = [...samples].sort((a, b) => a - b);
   const totalMs = samples.reduce((sum, x) => sum + x, 0);
@@ -104,23 +98,39 @@ function basicStats(samples) {
   };
 }
 
-export function runCompileBenchmark(command) {
-  const device = readJson(command.deviceFile);
-  const manifestEntries = resolveManifestEntries(command);
+export function runCompileBenchmark(command, deps = {}) {
+  const compileLoadedImpl =
+    deps.compileProfilePlanFromLoadedRuleSetManifestImpl ??
+    compileProfilePlanFromLoadedRuleSetManifest;
+  const loadRuleSetImpl = deps.loadJsonRuleSetManifestImpl ?? loadJsonRuleSetManifest;
+  const readJsonImpl = deps.readJsonImpl ?? readJson;
+
+  const setupStart = performance.now();
+  const device = readJsonImpl(command.deviceFile);
+  const manifestEntries = command.manifest
+    ? (() => {
+        const manifest = readJsonImpl(command.manifest);
+        if (!Array.isArray(manifest)) throw new Error('Manifest JSON must be an array');
+        return manifest;
+      })()
+    : command.rulesFiles.map((filePath) => ({ filePath }));
+  const loadedRuleSet = loadRuleSetImpl(manifestEntries);
+  const setupMs = performance.now() - setupStart;
+
   const options = {
     homeyClass: command.homeyClass,
     driverTemplateId: command.driverTemplateId,
   };
 
   for (let i = 0; i < command.warmup; i += 1) {
-    compileProfilePlanFromRuleSetManifest(device, manifestEntries, options);
+    compileLoadedImpl(device, loadedRuleSet, options);
   }
 
   const samples = [];
   let lastResult;
   for (let i = 0; i < command.iterations; i += 1) {
     const start = performance.now();
-    lastResult = compileProfilePlanFromRuleSetManifest(device, manifestEntries, options);
+    lastResult = compileLoadedImpl(device, loadedRuleSet, options);
     samples.push(performance.now() - start);
   }
 
@@ -128,6 +138,7 @@ export function runCompileBenchmark(command) {
     benchmark: {
       iterations: command.iterations,
       warmup: command.warmup,
+      setupMs,
       ...basicStats(samples),
     },
     profileSummary: {
@@ -146,6 +157,7 @@ function fmt(ms) {
 export function formatBenchmarkSummary(result) {
   return [
     `Iterations: ${result.benchmark.iterations} (warmup ${result.benchmark.warmup})`,
+    `Setup: ${fmt(result.benchmark.setupMs ?? 0)}`,
     `Timing: avg=${fmt(result.benchmark.avgMs)} p50=${fmt(result.benchmark.p50Ms)} p95=${fmt(result.benchmark.p95Ms)} min=${fmt(result.benchmark.minMs)} max=${fmt(result.benchmark.maxMs)}`,
     `Profile: ${result.profileSummary.profileId} outcome=${result.profileSummary.outcome} capabilities=${result.profileSummary.capabilityCount} curationReview=${result.profileSummary.curationReview}`,
   ].join('\n');

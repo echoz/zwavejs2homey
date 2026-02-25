@@ -205,6 +205,86 @@ test('runLiveInspectCommand compiles all nodes and renders list output with mock
   assert.match(logs[0], /Known device generic fallback/);
 });
 
+test('runLiveInspectCommand preloads rules once and reuses loaded ruleset across nodes', async () => {
+  const { runLiveInspectCommand } = await loadLib();
+  const logs = [];
+  const loadedRuleSet = { entries: [] };
+  let loadCalls = 0;
+  let compileLoadedCalls = 0;
+
+  await runLiveInspectCommand(
+    {
+      url: 'ws://x',
+      allNodes: true,
+      nodeId: undefined,
+      manifestFile: undefined,
+      rulesFiles: [path.join(fixturesDir, 'rules-switch-meter.json')],
+      catalogFile: undefined,
+      format: 'list',
+      schemaVersion: 0,
+      includeValues: 'summary',
+      maxValues: 10,
+      includeControllerNodes: false,
+      focus: 'all',
+      top: 3,
+      show: 'none',
+      explainAll: false,
+      explainOnly: false,
+      homeyClass: undefined,
+      driverTemplateId: undefined,
+    },
+    { log: (line) => logs.push(line) },
+    {
+      connectAndInitializeImpl: async () => ({ stop: async () => {} }),
+      fetchNodesListImpl: async () => [
+        { nodeId: 5, name: 'Kitchen Plug' },
+        { nodeId: 6, name: 'Hall Plug' },
+      ],
+      fetchNodeDetailsImpl: async (client, nodeId) => ({
+        nodeId,
+        state: {
+          name: nodeId === 5 ? 'Kitchen Plug' : 'Hall Plug',
+          manufacturerId: '0x0184',
+          productType: '0x4447',
+          productId: '0x3034',
+        },
+        values: [],
+      }),
+      loadJsonRuleSetManifestImpl: () => {
+        loadCalls += 1;
+        return loadedRuleSet;
+      },
+      compileProfilePlanFromLoadedRuleSetManifestImpl: (_deviceFacts, loaded) => {
+        compileLoadedCalls += 1;
+        assert.equal(loaded, loadedRuleSet);
+        return {
+          profile: {
+            profileId: 'p1',
+            classification: { homeyClass: 'socket', confidence: 'generic', uncurated: true },
+            capabilities: [],
+            ignoredValues: [],
+          },
+          report: {
+            profileOutcome: 'generic',
+            summary: { appliedActions: 0, unmatchedActions: 0, suppressedFillActions: 0 },
+            byRule: [],
+            bySuppressedSlot: [],
+            curationCandidates: { likelyNeedsReview: false, reasons: [] },
+            diagnosticDeviceKey: 'product-triple:1-2-3',
+          },
+          ruleSources: [],
+        };
+      },
+    },
+  );
+
+  assert.equal(loadCalls, 1);
+  assert.equal(compileLoadedCalls, 2);
+  assert.equal(logs.length, 1);
+  assert.match(logs[0], /Kitchen Plug/);
+  assert.match(logs[0], /Hall Plug/);
+});
+
 test('runLiveInspectCommand list output hides technical-only review reasons', async () => {
   const { runLiveInspectCommand } = await loadLib();
   const logs = [];
