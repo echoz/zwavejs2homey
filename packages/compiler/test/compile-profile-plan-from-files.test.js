@@ -10,6 +10,15 @@ const unmappedDevice = require('./fixtures/device-unmapped.json');
 const reorderedDevice = require('./fixtures/device-switch-meter-reordered.json');
 
 const fixturesDir = path.join(__dirname, 'fixtures');
+const rootRulesDir = path.join(__dirname, '../../../rules');
+
+function loadRootManifestEntries() {
+  const manifest = JSON.parse(fs.readFileSync(path.join(rootRulesDir, 'manifest.json'), 'utf8'));
+  return manifest.map((entry) => ({
+    ...entry,
+    filePath: path.join(rootRulesDir, entry.filePath),
+  }));
+}
 
 test('compileProfilePlanFromRuleFiles returns rule source metadata and grouped report stats', () => {
   const rulesFile = path.join(fixturesDir, 'rules-switch-meter.json');
@@ -342,4 +351,69 @@ test('compileProfilePlanFromRuleFilesWithCatalog reports catalog lookup match', 
     catalogId: 'observed:29-13313-1',
     label: undefined,
   });
+});
+
+test('root manifest product overrides curate Leviton dimmers', () => {
+  const manifestEntries = loadRootManifestEntries();
+  const levitonNodes = [
+    {
+      deviceKey: 'leviton-dz6hd',
+      manufacturerId: 29,
+      productType: 12801,
+      productId: 1,
+      values: [
+        {
+          valueId: { commandClass: 38, endpoint: 0, property: 'currentValue' },
+          metadata: { type: 'number', readable: true, writeable: false },
+        },
+        {
+          valueId: { commandClass: 38, endpoint: 0, property: 'targetValue' },
+          metadata: { type: 'number', readable: true, writeable: true },
+        },
+      ],
+    },
+    {
+      deviceKey: 'leviton-zw6hd',
+      manufacturerId: 29,
+      productType: 65,
+      productId: 2,
+      values: [
+        {
+          valueId: { commandClass: 38, endpoint: 0, property: 'currentValue' },
+          metadata: { type: 'number', readable: true, writeable: false },
+        },
+        {
+          valueId: { commandClass: 38, endpoint: 0, property: 'targetValue' },
+          metadata: { type: 'number', readable: true, writeable: true },
+        },
+      ],
+    },
+  ];
+
+  for (const deviceFacts of levitonNodes) {
+    const result = compiler.compileProfilePlanFromRuleSetManifest(deviceFacts, manifestEntries);
+    assert.equal(result.profile.classification.homeyClass, 'light');
+    assert.equal(result.profile.classification.driverTemplateId, 'product-leviton-dimmer');
+    assert.equal(result.profile.classification.confidence, 'curated');
+    assert.equal(result.profile.classification.uncurated, false);
+    assert.equal(
+      result.profile.capabilities.some((capability) => capability.capabilityId === 'dim'),
+      true,
+    );
+    assert.equal(
+      result.profile.capabilities.some(
+        (capability) => capability.capabilityId === 'windowcoverings_set',
+      ),
+      false,
+    );
+    assert.equal(result.report.profileOutcome, 'curated');
+    assert.deepEqual(result.classificationProvenance, {
+      layer: 'project-product',
+      ruleId:
+        deviceFacts.productType === 12801
+          ? 'product-leviton-dz6hd-class-and-dim'
+          : 'product-leviton-zw6hd-class-and-dim',
+      action: 'derived-from-device-identity-action',
+    });
+  }
 });

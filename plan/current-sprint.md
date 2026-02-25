@@ -67,6 +67,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - HA extraction/translation pipeline now preserves `device_class_generic` / `device_class_specific` constraints from Home Assistant discovery schemas
     - compiler rule matching now evaluates device class constraints against normalized live node facts
     - regenerated `rules/ha-derived/home-assistant.zwave_js.generated.json`; live validation shows Leviton dimmers now classify as `light` instead of `curtain`
+16. Added curated product overrides for Leviton dimmers on the live network:
+    - added product-layer dimmer rules for `29:12801:1` (DZ6HD) and `29:65:2` (ZW6HD) in `rules/project/product/live-network-overrides.json`
+    - normalized to curated `light` + `dim` mapping with explicit CC38 inbound/outbound transforms
+    - added compiler regression coverage to ensure both signatures remain `curated light` and do not regress to cover capability mappings
+    - live rebuild/inspection now shows Leviton light nodes promoted from `ha-derived` to `curated`
 
 ## Next Tasks
 
