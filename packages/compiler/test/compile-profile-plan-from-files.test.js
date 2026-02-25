@@ -71,6 +71,17 @@ test('compileProfilePlanFromRuleSetManifest supports manifest entries and groupe
   assert.equal(result.classificationProvenance, undefined);
 });
 
+test('compileProfilePlanFromLoadedRuleSetManifest reuses preloaded manifest data', () => {
+  const rulesFile = path.join(fixturesDir, 'rules-switch-meter.json');
+  const loaded = compiler.loadJsonRuleSetManifest([{ filePath: rulesFile }]);
+  const result = compiler.compileProfilePlanFromLoadedRuleSetManifest(device, loaded, {
+    homeyClass: 'socket',
+  });
+  assert.equal(result.profile.classification.homeyClass, 'socket');
+  assert.equal(result.ruleSources.length, 1);
+  assert.equal(result.ruleSources[0].filePath, rulesFile);
+});
+
 test('compileProfilePlanFromRuleSetManifest groups suppressed fills and flags curation review', () => {
   const baseRules = path.join(fixturesDir, 'rules-switch-meter-device-identity.json');
   const extraGeneric = path.join(

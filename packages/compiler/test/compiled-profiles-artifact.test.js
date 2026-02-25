@@ -18,7 +18,19 @@ test('createCompiledHomeyProfilesArtifactV1 creates valid artifact', () => {
         },
       },
     ],
-    { manifestFile: 'rules/manifest.json' },
+    {
+      manifestFile: 'rules/manifest.json',
+      buildProfile: 'default-manifest',
+      pipelineFingerprint: 'abcd',
+      ruleSources: [
+        {
+          filePath: 'rules/manifest.json',
+          ruleCount: 1,
+          declaredLayer: 'ha-derived',
+          resolvedLayer: 'ha-derived',
+        },
+      ],
+    },
     new Date('2026-02-24T00:00:00.000Z'),
   );
 
@@ -37,5 +49,26 @@ test('assertCompiledHomeyProfilesArtifactV1 rejects malformed artifact', () => {
         entries: [{ device: {}, compiled: {} }],
       }),
     /deviceKey is required/,
+  );
+});
+
+test('assertCompiledHomeyProfilesArtifactV1 rejects malformed optional source metadata', () => {
+  assert.throws(
+    () =>
+      compiler.assertCompiledHomeyProfilesArtifactV1({
+        schemaVersion: 'compiled-homey-profiles/v1',
+        generatedAt: 'x',
+        source: {
+          buildProfile: 'weird',
+          ruleSources: [{ filePath: '', ruleCount: 'x' }],
+        },
+        entries: [
+          {
+            device: { deviceKey: 'dev-1' },
+            compiled: { profile: {}, report: {} },
+          },
+        ],
+      }),
+    /buildProfile|ruleSources/i,
   );
 });

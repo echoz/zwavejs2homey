@@ -13,7 +13,15 @@ const fixturesDir = path.join(__dirname, '../../compiler/test/fixtures');
 test('parseCliArgs validates required inputs for compiler build', async () => {
   const { parseCliArgs } = await loadLib();
   assert.equal(parseCliArgs(['--rules-file', 'r.json']).ok, false);
-  assert.equal(parseCliArgs(['--device-file', 'd.json']).ok, false);
+  const withDefaultManifest = parseCliArgs(['--device-file', 'd.json']);
+  assert.equal(withDefaultManifest.ok, true);
+  assert.match(withDefaultManifest.command.manifestFile, /rules\/manifest\.json$/);
+  assert.equal(withDefaultManifest.command.ruleInputMode, 'default-manifest');
+  assert.equal(
+    parseCliArgs(['--device-file', 'd.json'], { defaultManifestFile: '/tmp/does-not-exist.json' })
+      .ok,
+    false,
+  );
   assert.equal(parseCliArgs(['--url', 'ws://x', '--rules-file', 'r.json']).ok, false);
   assert.equal(
     parseCliArgs(['--device-file', 'd.json', '--rules-file', 'r.json', '--format', 'yaml']).ok,
@@ -40,6 +48,7 @@ test('parseCliArgs validates required inputs for compiler build', async () => {
     'summary',
   ]);
   assert.equal(parsed.ok, true);
+  assert.equal(parsed.command.ruleInputMode, 'rules-files');
   const liveParsed = parseCliArgs([
     '--url',
     'ws://x',
@@ -50,6 +59,7 @@ test('parseCliArgs validates required inputs for compiler build', async () => {
     'summary',
   ]);
   assert.equal(liveParsed.ok, true);
+  assert.equal(liveParsed.command.ruleInputMode, 'rules-files');
 });
 
 test('buildCompiledProfilesArtifact compiles multiple devices and emits artifact', async () => {
@@ -75,6 +85,10 @@ test('buildCompiledProfilesArtifact compiles multiple devices and emits artifact
   assert.equal(artifact.schemaVersion, 'compiled-homey-profiles/v1');
   assert.equal(artifact.entries.length, 2);
   assert.equal(typeof artifact.entries[0].compiled.profile.profileId, 'string');
+  assert.equal(artifact.source.buildProfile, 'rules-files');
+  assert.equal(Array.isArray(artifact.source.ruleSources), true);
+  assert.equal(typeof artifact.source.pipelineFingerprint, 'string');
+  assert.equal(artifact.source.pipelineFingerprint.length, 64);
 });
 
 test('runBuildCommand writes output file and summary', async () => {
@@ -103,7 +117,11 @@ test('runBuildCommand writes output file and summary', async () => {
   assert.equal(fs.existsSync(outFile), true);
   const parsed = JSON.parse(fs.readFileSync(outFile, 'utf8'));
   assert.equal(parsed.schemaVersion, 'compiled-homey-profiles/v1');
+  assert.equal(parsed.source.buildProfile, 'manifest-file');
+  assert.equal(Array.isArray(parsed.source.ruleSources), true);
   assert.match(logs[0], /Compiled profiles artifact:/);
+  assert.match(logs[0], /Build profile:/);
+  assert.match(logs[0], /Pipeline fingerprint:/);
 });
 
 test('buildCompiledProfilesArtifact supports live ZWJS mode with mocks', async () => {
@@ -144,6 +162,30 @@ test('buildCompiledProfilesArtifact supports live ZWJS mode with mocks', async (
   assert.equal(artifact.entries.length, 1);
   assert.equal(artifact.entries[0].device.nodeId, 5);
   assert.match(artifact.entries[0].device.deviceKey, /^zwjs-live:/);
+});
+
+test('buildCompiledProfilesArtifact rejects duplicate --rules-file entries', async () => {
+  const { buildCompiledProfilesArtifact } = await loadLib();
+  const rulesFile = path.join(fixturesDir, 'rules-switch-meter.json');
+  await assert.rejects(
+    () =>
+      buildCompiledProfilesArtifact({
+        deviceFiles: [path.join(fixturesDir, 'device-switch-meter.json')],
+        url: undefined,
+        token: undefined,
+        schemaVersion: 0,
+        allNodes: false,
+        nodeId: undefined,
+        includeValues: 'full',
+        maxValues: 200,
+        manifestFile: undefined,
+        rulesFiles: [rulesFile, rulesFile],
+        catalogFile: undefined,
+        outputFile: undefined,
+        format: 'summary',
+      }),
+    /Duplicate --rules-file entry/i,
+  );
 });
 
 test('buildCompiledProfilesArtifact skips controller-like live nodes by default', async () => {

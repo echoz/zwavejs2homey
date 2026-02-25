@@ -6,7 +6,7 @@ import type { NormalizedZwaveDeviceFacts } from '../models/zwave-facts';
 import type { CompileProfilePlanOptions } from './compile-profile-plan';
 import { compileProfilePlan } from './compile-profile-plan';
 import {
-  loadJsonRuleFiles,
+  type LoadedRuleSetManifest,
   loadJsonRuleSetManifest,
   type RuleSetManifestEntry,
 } from './rule-loader';
@@ -251,57 +251,15 @@ export function compileProfilePlanFromRuleFiles(
   ruleFilePaths: string[],
   options?: CompileProfilePlanOptions,
 ): CompileProfilePlanFromFilesResult {
-  const loaded = loadJsonRuleFiles(ruleFilePaths);
-  const rules = loaded.flatMap((entry) => entry.rules);
-  const { profile, report, catalogLookup } = compileProfilePlan(device, rules, options);
-  const profileOutcome = deriveProfileOutcome(profile);
-  const curationCandidates = deriveCurationCandidates(report, profile, catalogLookup);
-  const diagnosticDeviceKey = deriveDiagnosticDeviceKey(device, catalogLookup);
-
-  return {
-    profile,
-    report: {
-      ...report,
-      profileOutcome,
-      byRule: groupReportByRule(report),
-      bySuppressedSlot: groupSuppressedBySlot(report),
-      curationCandidates,
-      catalogContext: catalogLookup?.matched
-        ? {
-            knownCatalogDevice: true,
-            catalogId: catalogLookup.catalogId,
-            label: catalogLookup.label,
-            matchRef: `catalog:${catalogLookup.catalogId}`,
-          }
-        : catalogLookup
-          ? {
-              knownCatalogDevice: false,
-            }
-          : undefined,
-      unknownDeviceReport: deriveUnknownDeviceReport(
-        profile,
-        curationCandidates,
-        diagnosticDeviceKey,
-        catalogLookup,
-      ),
-      diagnosticDeviceKey,
-    },
-    ruleSources: loaded.map((entry) => ({
-      filePath: entry.filePath,
-      ruleCount: entry.rules.length,
-      ruleIds: entry.rules.map((rule) => rule.ruleId),
-    })),
-    classificationProvenance: deriveClassificationProvenance(report),
-    catalogLookup,
-  };
+  const loaded = loadJsonRuleSetManifest(ruleFilePaths.map((filePath) => ({ filePath })));
+  return compileProfilePlanFromLoadedRuleSetManifest(device, loaded, options);
 }
 
-export function compileProfilePlanFromRuleSetManifest(
+export function compileProfilePlanFromLoadedRuleSetManifest(
   device: NormalizedZwaveDeviceFacts,
-  manifestEntries: RuleSetManifestEntry[],
+  loaded: LoadedRuleSetManifest,
   options?: CompileProfilePlanOptions,
 ): CompileProfilePlanFromFilesResult {
-  const loaded = loadJsonRuleSetManifest(manifestEntries);
   const rules = loaded.entries.flatMap((entry) => entry.rules);
   const { profile, report, catalogLookup } = compileProfilePlan(device, rules, options);
   const profileOutcome = deriveProfileOutcome(profile);
@@ -344,6 +302,15 @@ export function compileProfilePlanFromRuleSetManifest(
     classificationProvenance: deriveClassificationProvenance(report),
     catalogLookup,
   };
+}
+
+export function compileProfilePlanFromRuleSetManifest(
+  device: NormalizedZwaveDeviceFacts,
+  manifestEntries: RuleSetManifestEntry[],
+  options?: CompileProfilePlanOptions,
+): CompileProfilePlanFromFilesResult {
+  const loaded = loadJsonRuleSetManifest(manifestEntries);
+  return compileProfilePlanFromLoadedRuleSetManifest(device, loaded, options);
 }
 
 export function compileProfilePlanFromRuleFilesWithCatalog(

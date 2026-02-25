@@ -44,20 +44,21 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 9. Tightened live compiler tooling defaults:
    - `compiler:build` and `compiler:inspect-live` now skip controller-like nodes by default (overrideable for diagnostics)
 10. Replaced hardcoded HA overlap suppression with rule-owned conflict metadata:
-
-- capability actions support `conflict: { key, mode, priority }`
-- compiler resolves exclusive conflicts deterministically (layer + priority + stable tiebreak)
-- overlap report now records suppressed capability + winner capability attribution
-
+    - capability actions support `conflict: { key, mode, priority }`
+    - compiler resolves exclusive conflicts deterministically (layer + priority + stable tiebreak)
+    - overlap report now records suppressed capability + winner capability attribution
 11. Extended compiler diagnostics/explain output for conflict resolution:
-
-- `compiler:inspect`/`compiler:inspect-live` summary + markdown now show conflict suppression counts/details
-- `--explain` / `--explain-all` now includes conflict-win context per capability
-- NDJSON diagnostics now emit `conflictSuppression` records
+    - `compiler:inspect`/`compiler:inspect-live` summary + markdown now show conflict suppression counts/details
+    - `--explain` / `--explain-all` now includes conflict-win context per capability
+    - NDJSON diagnostics now emit `conflictSuppression` records
+12. Hardened canonical layered build pipeline behavior:
+    - `compiler:build` now defaults to `rules/manifest.json` when no rules source flags are provided
+    - rule/manifest inputs are validated for readability and duplicate file entries before compile
+    - build artifacts now embed rule-source metadata and a deterministic pipeline fingerprint for reproducibility
 
 ## Next Tasks
 
-1. Tighten `compiler:build` into the canonical layered build pipeline (HA-derived + project rules + catalog) with real non-fixture node facts sources
+1. Run canonical `compiler:build` pipeline against larger live node sets and review profile outcomes + curation diagnostics
 2. Continue widening HA-derived rules coverage and selector semantics against live nodes
 3. Add first project-product override rules from real device validation
 4. Use `compiler:inspect-live --compiled-file ...` to validate compiled artifacts on real ZWJS data

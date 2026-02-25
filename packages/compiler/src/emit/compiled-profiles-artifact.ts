@@ -1,4 +1,5 @@
 import type { CompileProfilePlanFromFilesResult } from '../compiler/compile-profile-plan-from-files';
+import type { RuleLayer } from '../rules/types';
 
 export const COMPILED_HOMEY_PROFILES_ARTIFACT_V1 = 'compiled-homey-profiles/v1' as const;
 
@@ -21,6 +22,14 @@ export interface CompiledHomeyProfilesArtifactV1 {
     manifestFile?: string;
     rulesFiles?: string[];
     catalogFile?: string;
+    buildProfile?: 'default-manifest' | 'manifest-file' | 'rules-files';
+    pipelineFingerprint?: string;
+    ruleSources?: Array<{
+      filePath: string;
+      ruleCount: number;
+      declaredLayer?: RuleLayer;
+      resolvedLayer?: RuleLayer;
+    }>;
   };
   entries: CompiledHomeyProfilesArtifactEntryV1[];
 }
@@ -34,6 +43,10 @@ export class CompiledHomeyProfilesArtifactError extends Error {
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isRuleLayer(value: unknown): value is RuleLayer {
+  return value === 'ha-derived' || value === 'project-product' || value === 'project-generic';
 }
 
 export function assertCompiledHomeyProfilesArtifactV1(
@@ -50,6 +63,66 @@ export function assertCompiledHomeyProfilesArtifactV1(
   }
   if (!isObject(input.source)) {
     throw new CompiledHomeyProfilesArtifactError('source must be an object');
+  }
+  if (input.source.manifestFile !== undefined && typeof input.source.manifestFile !== 'string') {
+    throw new CompiledHomeyProfilesArtifactError('source.manifestFile must be a string');
+  }
+  if (
+    input.source.rulesFiles !== undefined &&
+    (!Array.isArray(input.source.rulesFiles) ||
+      input.source.rulesFiles.some((item) => typeof item !== 'string'))
+  ) {
+    throw new CompiledHomeyProfilesArtifactError('source.rulesFiles must be an array of strings');
+  }
+  if (input.source.catalogFile !== undefined && typeof input.source.catalogFile !== 'string') {
+    throw new CompiledHomeyProfilesArtifactError('source.catalogFile must be a string');
+  }
+  if (
+    input.source.buildProfile !== undefined &&
+    input.source.buildProfile !== 'default-manifest' &&
+    input.source.buildProfile !== 'manifest-file' &&
+    input.source.buildProfile !== 'rules-files'
+  ) {
+    throw new CompiledHomeyProfilesArtifactError(
+      'source.buildProfile must be default-manifest, manifest-file, or rules-files',
+    );
+  }
+  if (
+    input.source.pipelineFingerprint !== undefined &&
+    typeof input.source.pipelineFingerprint !== 'string'
+  ) {
+    throw new CompiledHomeyProfilesArtifactError('source.pipelineFingerprint must be a string');
+  }
+  if (input.source.ruleSources !== undefined) {
+    if (!Array.isArray(input.source.ruleSources)) {
+      throw new CompiledHomeyProfilesArtifactError('source.ruleSources must be an array');
+    }
+    for (let i = 0; i < input.source.ruleSources.length; i += 1) {
+      const source = input.source.ruleSources[i];
+      if (!isObject(source)) {
+        throw new CompiledHomeyProfilesArtifactError(`source.ruleSources[${i}] must be an object`);
+      }
+      if (typeof source.filePath !== 'string' || source.filePath.length === 0) {
+        throw new CompiledHomeyProfilesArtifactError(
+          `source.ruleSources[${i}].filePath must be a non-empty string`,
+        );
+      }
+      if (typeof source.ruleCount !== 'number' || !Number.isInteger(source.ruleCount)) {
+        throw new CompiledHomeyProfilesArtifactError(
+          `source.ruleSources[${i}].ruleCount must be an integer`,
+        );
+      }
+      if (source.declaredLayer !== undefined && !isRuleLayer(source.declaredLayer)) {
+        throw new CompiledHomeyProfilesArtifactError(
+          `source.ruleSources[${i}].declaredLayer is invalid`,
+        );
+      }
+      if (source.resolvedLayer !== undefined && !isRuleLayer(source.resolvedLayer)) {
+        throw new CompiledHomeyProfilesArtifactError(
+          `source.ruleSources[${i}].resolvedLayer is invalid`,
+        );
+      }
+    }
   }
   if (!Array.isArray(input.entries)) {
     throw new CompiledHomeyProfilesArtifactError('entries must be an array');

@@ -31,6 +31,7 @@ export interface LoadedRuleSetManifest {
   entries: Array<
     LoadedRuleFile & {
       declaredLayer?: MappingRule['layer'];
+      resolvedLayer?: MappingRule['layer'];
     }
   >;
   duplicateRuleIds: string[];
@@ -53,6 +54,23 @@ export function loadJsonRuleFiles(filePaths: string[]): LoadedRuleFile[] {
 }
 
 export function loadJsonRuleSetManifest(entries: RuleSetManifestEntry[]): LoadedRuleSetManifest {
+  if (!Array.isArray(entries) || entries.length === 0) {
+    throw new RuleSetLoadError('Manifest must include at least one entry');
+  }
+
+  const seenFilePaths = new Set<string>();
+  for (const [index, entry] of entries.entries()) {
+    if (typeof entry.filePath !== 'string' || entry.filePath.length === 0) {
+      throw new RuleSetLoadError(`Manifest entry ${index} requires a non-empty filePath`);
+    }
+    if (seenFilePaths.has(entry.filePath)) {
+      throw new RuleSetLoadError(
+        `Duplicate manifest filePath detected at entry ${index}: ${entry.filePath}`,
+      );
+    }
+    seenFilePaths.add(entry.filePath);
+  }
+
   for (const [index, entry] of entries.entries()) {
     if (
       entry.kind !== undefined &&
@@ -64,19 +82,39 @@ export function loadJsonRuleSetManifest(entries: RuleSetManifestEntry[]): Loaded
       );
     }
   }
-  const loaded = entries.map((entry) => ({
+
+  const layerOrder = getRuleLayerOrder();
+  let previousDeclaredLayerIndex = -1;
+  for (const [index, entry] of entries.entries()) {
+    if (!entry.layer) continue;
+    const currentLayerIndex = layerOrder.indexOf(entry.layer);
+    if (currentLayerIndex === -1) {
+      throw new RuleSetLoadError(
+        `Manifest entry ${index} has unsupported layer "${String(entry.layer)}"`,
+      );
+    }
+    if (currentLayerIndex < previousDeclaredLayerIndex) {
+      throw new RuleSetLoadError(
+        `Manifest entry ${index} layer "${entry.layer}" is out of order; expected non-decreasing layer order ${layerOrder.join(' -> ')}`,
+      );
+    }
+    previousDeclaredLayerIndex = currentLayerIndex;
+  }
+
+  const loaded: LoadedRuleSetManifest['entries'] = entries.map((entry) => ({
     filePath: entry.filePath,
     declaredLayer: entry.layer,
+    resolvedLayer: undefined,
     rules:
       entry.kind === 'ha-derived-generated'
         ? loadHaDerivedGeneratedRuleArtifact(entry.filePath).rules
         : loadJsonRuleFile(entry.filePath),
   }));
 
-  const layerOrder = getRuleLayerOrder();
   const ruleIdCounts = new Map<string, number>();
 
   for (const file of loaded) {
+    const layersInFile = new Set<MappingRule['layer']>();
     for (const rule of file.rules) {
       if (file.declaredLayer && rule.layer !== file.declaredLayer) {
         throw new RuleSetLoadError(
@@ -88,7 +126,11 @@ export function loadJsonRuleSetManifest(entries: RuleSetManifestEntry[]): Loaded
           `Rule "${rule.ruleId}" has unsupported layer "${String(rule.layer)}"`,
         );
       }
+      layersInFile.add(rule.layer);
       ruleIdCounts.set(rule.ruleId, (ruleIdCounts.get(rule.ruleId) ?? 0) + 1);
+    }
+    if (layersInFile.size === 1) {
+      file.resolvedLayer = [...layersInFile][0];
     }
   }
 

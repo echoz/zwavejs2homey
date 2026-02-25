@@ -1,6 +1,8 @@
 import fs from 'node:fs';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
 import { formatJsonCompact, formatJsonPretty } from './output-format-lib.mjs';
 import { connectAndInitialize, fetchNodeDetails, fetchNodesList } from './zwjs-inspect-lib.mjs';
 import {
@@ -10,9 +12,13 @@ import {
 
 const require = createRequire(import.meta.url);
 const {
-  compileProfilePlanFromRuleSetManifest,
+  compileProfilePlanFromLoadedRuleSetManifest,
   createCompiledHomeyProfilesArtifactV1,
+  loadJsonRuleSetManifest,
 } = require('../packages/compiler/dist');
+
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const DEFAULT_RULE_MANIFEST_FILE = path.join(REPO_ROOT, 'rules', 'manifest.json');
 
 function parseFlagMap(argv) {
   const flags = new Map();
@@ -39,29 +45,89 @@ function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
 
+function resolveFilePath(filePath) {
+  return path.isAbsolute(filePath) ? filePath : path.resolve(filePath);
+}
+
+function assertReadableFile(filePath, contextLabel) {
+  try {
+    fs.accessSync(filePath, fs.constants.R_OK);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new Error(`${contextLabel} is not readable: ${filePath} (${reason})`);
+  }
+}
+
 function coerceManifestEntries(raw, manifestPath) {
   if (!Array.isArray(raw)) throw new Error('Manifest JSON must be an array');
   const manifestDir = path.dirname(manifestPath);
+  const seen = new Set();
   return raw.map((entry, index) => {
     if (!entry || typeof entry !== 'object')
       throw new Error(`Manifest entry ${index} must be an object`);
     if (typeof entry.filePath !== 'string' || entry.filePath.length === 0) {
       throw new Error(`Manifest entry ${index} requires a non-empty filePath`);
     }
+    if (
+      entry.kind !== undefined &&
+      entry.kind !== 'rules-json' &&
+      entry.kind !== 'ha-derived-generated'
+    ) {
+      throw new Error(`Manifest entry ${index} has unsupported kind "${String(entry.kind)}"`);
+    }
+    if (
+      entry.layer !== undefined &&
+      entry.layer !== 'ha-derived' &&
+      entry.layer !== 'project-product' &&
+      entry.layer !== 'project-generic'
+    ) {
+      throw new Error(`Manifest entry ${index} has unsupported layer "${String(entry.layer)}"`);
+    }
+    const resolvedFilePath = path.isAbsolute(entry.filePath)
+      ? entry.filePath
+      : path.resolve(manifestDir, entry.filePath);
+    if (seen.has(resolvedFilePath)) {
+      throw new Error(`Manifest contains duplicate filePath: ${resolvedFilePath}`);
+    }
+    seen.add(resolvedFilePath);
+    assertReadableFile(resolvedFilePath, `Manifest entry ${index} filePath`);
     return {
       ...entry,
-      filePath: path.isAbsolute(entry.filePath)
-        ? entry.filePath
-        : path.resolve(manifestDir, entry.filePath),
+      filePath: resolvedFilePath,
     };
   });
+}
+
+function normalizeRuleFiles(filePaths) {
+  const seen = new Set();
+  return filePaths.map((filePath, index) => {
+    const resolvedFilePath = resolveFilePath(filePath);
+    if (seen.has(resolvedFilePath)) {
+      throw new Error(`Duplicate --rules-file entry: ${resolvedFilePath}`);
+    }
+    seen.add(resolvedFilePath);
+    assertReadableFile(resolvedFilePath, `--rules-file[${index}]`);
+    return resolvedFilePath;
+  });
+}
+
+function deriveBuildProfile(command) {
+  if (command.ruleInputMode === 'default-manifest') return 'default-manifest';
+  if (command.ruleInputMode === 'manifest-file') return 'manifest-file';
+  if (command.manifestFile) return 'manifest-file';
+  return 'rules-files';
+}
+
+function buildPipelineFingerprint(payload) {
+  return createHash('sha256').update(JSON.stringify(payload)).digest('hex');
 }
 
 export function getUsageText() {
   return [
     'Usage:',
     '  homey-compile-build (--device-file <device.json> [--device-file <device2.json> ...] | --url ws://host:port (--all-nodes | --node <id>))',
-    '                     (--manifest-file <manifest.json> | --rules-file <rules.json> [--rules-file ...])',
+    '                     [--manifest-file <manifest.json> | --rules-file <rules.json> [--rules-file ...]]',
+    '                     (defaults to rules/manifest.json when neither is provided)',
     '                     [--catalog-file <catalog.json>]',
     '                     [--schema-version 0] [--token ...]',
     '                     [--include-values none|summary|full] [--max-values N]',
@@ -71,10 +137,13 @@ export function getUsageText() {
   ].join('\n');
 }
 
-export function parseCliArgs(argv) {
+export function parseCliArgs(argv, options = {}) {
   if (argv.includes('--help') || argv.includes('-h')) return { ok: false, error: getUsageText() };
   const flags = parseFlagMap(argv);
   const url = flags.get('--url');
+  const defaultManifestFile = resolveFilePath(
+    options.defaultManifestFile ?? DEFAULT_RULE_MANIFEST_FILE,
+  );
 
   const deviceFiles = [];
   for (let i = 0; i < argv.length; i += 1) {
@@ -102,17 +171,28 @@ export function parseCliArgs(argv) {
     return { ok: false, error: 'Use either --all-nodes or --node in live mode, not both' };
   }
 
-  const manifestFile = flags.get('--manifest-file');
+  const manifestFlag = flags.get('--manifest-file');
   const rulesFiles = [];
   for (let i = 0; i < argv.length; i += 1) {
     if (argv[i] === '--rules-file' && argv[i + 1]) rulesFiles.push(argv[i + 1]);
     if (argv[i].startsWith('--rules-file=')) rulesFiles.push(argv[i].split('=', 2)[1]);
   }
-  if (!manifestFile && rulesFiles.length === 0) {
-    return { ok: false, error: 'Provide --manifest-file or at least one --rules-file' };
-  }
-  if (manifestFile && rulesFiles.length > 0) {
+  if (manifestFlag && rulesFiles.length > 0) {
     return { ok: false, error: 'Use either --manifest-file or --rules-file, not both' };
+  }
+  let manifestFile = manifestFlag ? resolveFilePath(manifestFlag) : undefined;
+  let ruleInputMode = manifestFlag ? 'manifest-file' : 'rules-files';
+  if (!manifestFile && rulesFiles.length === 0) {
+    if (!fs.existsSync(defaultManifestFile)) {
+      return {
+        ok: false,
+        error:
+          `No rules source provided and default manifest not found: ${defaultManifestFile}. ` +
+          'Provide --manifest-file or at least one --rules-file',
+      };
+    }
+    manifestFile = defaultManifestFile;
+    ruleInputMode = 'default-manifest';
   }
 
   const format = flags.get('--format') ?? 'summary';
@@ -149,6 +229,7 @@ export function parseCliArgs(argv) {
       deviceFiles,
       manifestFile,
       rulesFiles,
+      ruleInputMode,
       catalogFile: flags.get('--catalog-file'),
       outputFile: flags.get('--output-file'),
       format,
@@ -193,15 +274,24 @@ async function loadDevices(command, deps = {}) {
 }
 
 export async function buildCompiledProfilesArtifact(command, deps = {}) {
-  const compileImpl =
-    deps.compileProfilePlanFromRuleSetManifestImpl ?? compileProfilePlanFromRuleSetManifest;
+  const compileLoadedRuleSetImpl =
+    deps.compileProfilePlanFromLoadedRuleSetManifestImpl ??
+    compileProfilePlanFromLoadedRuleSetManifest;
+  const loadRuleSetImpl = deps.loadJsonRuleSetManifestImpl ?? loadJsonRuleSetManifest;
   const createArtifactImpl =
     deps.createCompiledHomeyProfilesArtifactV1Impl ?? createCompiledHomeyProfilesArtifactV1;
   const devices = await loadDevices(command, deps);
-  const manifestEntries = command.manifestFile
-    ? coerceManifestEntries(readJson(command.manifestFile), command.manifestFile)
-    : command.rulesFiles.map((filePath) => ({ filePath }));
-  const catalogArtifact = command.catalogFile ? readJson(command.catalogFile) : undefined;
+  const manifestFilePath = command.manifestFile ? resolveFilePath(command.manifestFile) : undefined;
+  const normalizedRulesFiles = manifestFilePath
+    ? undefined
+    : normalizeRuleFiles(command.rulesFiles ?? []);
+  const manifestEntries = manifestFilePath
+    ? coerceManifestEntries(readJson(manifestFilePath), manifestFilePath)
+    : (normalizedRulesFiles ?? []).map((filePath) => ({ filePath }));
+  const loadedRuleSet = loadRuleSetImpl(manifestEntries);
+  const catalogFilePath = command.catalogFile ? resolveFilePath(command.catalogFile) : undefined;
+  if (catalogFilePath) assertReadableFile(catalogFilePath, '--catalog-file');
+  const catalogArtifact = catalogFilePath ? readJson(catalogFilePath) : undefined;
 
   const entries = devices.map(({ file, device }) => ({
     device: {
@@ -213,14 +303,31 @@ export async function buildCompiledProfilesArtifact(command, deps = {}) {
       firmwareVersion: device.firmwareVersion,
       sourceFile: file,
     },
-    compiled: compileImpl(device, manifestEntries, { catalogArtifact }),
+    compiled: compileLoadedRuleSetImpl(device, loadedRuleSet, { catalogArtifact }),
   }));
 
-  return createArtifactImpl(entries, {
-    manifestFile: command.manifestFile,
-    rulesFiles: command.manifestFile ? undefined : [...command.rulesFiles],
-    catalogFile: command.catalogFile,
-  });
+  const ruleSources = loadedRuleSet.entries.map((entry) => ({
+    filePath: entry.filePath,
+    ruleCount: entry.rules.length,
+    ...(entry.declaredLayer ? { declaredLayer: entry.declaredLayer } : {}),
+    ...(entry.resolvedLayer ? { resolvedLayer: entry.resolvedLayer } : {}),
+  }));
+  const source = {
+    ...(manifestFilePath ? { manifestFile: manifestFilePath } : {}),
+    ...(manifestFilePath ? {} : { rulesFiles: normalizedRulesFiles }),
+    ...(catalogFilePath ? { catalogFile: catalogFilePath } : {}),
+    buildProfile: deriveBuildProfile(command),
+    ruleSources,
+    pipelineFingerprint: buildPipelineFingerprint({
+      buildProfile: deriveBuildProfile(command),
+      manifestFile: manifestFilePath,
+      rulesFiles: normalizedRulesFiles,
+      catalogFile: catalogFilePath,
+      ruleSources,
+    }),
+  };
+
+  return createArtifactImpl(entries, source);
 }
 
 export function formatBuildOutput(artifact, format) {
@@ -240,6 +347,11 @@ export function formatBuildOutput(artifact, format) {
   return [
     `Compiled profiles artifact: ${artifact.schemaVersion}`,
     `Entries: ${artifact.entries.length}`,
+    `Build profile: ${artifact.source.buildProfile ?? 'unspecified'}`,
+    `Rule sources: ${artifact.source.ruleSources?.length ?? 0}`,
+    ...(artifact.source.pipelineFingerprint
+      ? [`Pipeline fingerprint: ${artifact.source.pipelineFingerprint}`]
+      : []),
     `Catalog matches: ${withCatalogMatch}`,
     `Outcomes: ${outcomeSummary || '(none)'}`,
   ].join('\n');

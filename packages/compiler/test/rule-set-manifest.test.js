@@ -11,7 +11,18 @@ test('loadJsonRuleSetManifest validates declared layers and returns loaded entri
   const loaded = compiler.loadJsonRuleSetManifest([{ filePath: rulesFile }]);
   assert.equal(loaded.entries.length, 1);
   assert.equal(loaded.entries[0].rules.length, 3);
+  assert.equal(loaded.entries[0].resolvedLayer, undefined);
   assert.deepEqual(loaded.duplicateRuleIds, []);
+});
+
+test('loadJsonRuleSetManifest resolves layer metadata for single-layer files', () => {
+  const rulesFile = path.join(fixturesDir, 'rules-switch-meter-generic-onoff-fill.json');
+  const loaded = compiler.loadJsonRuleSetManifest([{ filePath: rulesFile }]);
+  assert.equal(loaded.entries[0].resolvedLayer, 'project-generic');
+});
+
+test('loadJsonRuleSetManifest rejects empty manifest entries', () => {
+  assert.throws(() => compiler.loadJsonRuleSetManifest([]), /at least one entry/i);
 });
 
 test('loadJsonRuleSetManifest rejects duplicate ruleIds across files', () => {
@@ -28,6 +39,27 @@ test('loadJsonRuleSetManifest rejects layer mismatch when declared in manifest',
   assert.throws(
     () => compiler.loadJsonRuleSetManifest([{ filePath: rulesFile, layer: 'project-generic' }]),
     /manifest declares/,
+  );
+});
+
+test('loadJsonRuleSetManifest rejects duplicate manifest file paths', () => {
+  const rulesFile = path.join(fixturesDir, 'rules-switch-meter.json');
+  assert.throws(
+    () => compiler.loadJsonRuleSetManifest([{ filePath: rulesFile }, { filePath: rulesFile }]),
+    /Duplicate manifest filePath/i,
+  );
+});
+
+test('loadJsonRuleSetManifest rejects out-of-order declared layers', () => {
+  const genericFile = path.join(fixturesDir, 'rules-switch-meter-generic-onoff-fill.json');
+  const haGeneratedFile = path.join(fixturesDir, 'ha-derived-rules-v1.json');
+  assert.throws(
+    () =>
+      compiler.loadJsonRuleSetManifest([
+        { filePath: genericFile, layer: 'project-generic' },
+        { filePath: haGeneratedFile, kind: 'ha-derived-generated', layer: 'ha-derived' },
+      ]),
+    /out of order/i,
   );
 });
 

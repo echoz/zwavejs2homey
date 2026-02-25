@@ -115,6 +115,7 @@ export type {
   RuleSourceMetadata,
 } from './compiler/compile-profile-plan-from-files';
 export {
+  compileProfilePlanFromLoadedRuleSetManifest,
   compileProfilePlanFromRuleFiles,
   compileProfilePlanFromRuleFilesWithCatalog,
   compileProfilePlanFromRuleSetManifest,
