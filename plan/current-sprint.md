@@ -101,5 +101,7 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
   - `plan/homey-translation-compiler-plan.md`
 - Current system architecture overview:
   - `docs/architecture.md`
+- Documentation sync contract (readme/plan/docs update expectations):
+  - `README.md` (Documentation Sync Contract section)
 - Diagnostic CLIs support:
   - `summary`, `markdown`, `json`, `json-pretty`, `json-compact`, `ndjson`

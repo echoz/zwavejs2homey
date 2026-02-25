@@ -100,7 +100,21 @@ Using the canonical layered rules pipeline:
 - `rules/project/generic/` (starter/provisional generic rules; fallback inference policy may move to the Homey adapter)
 - `rules/project/product/` (product-specific overrides)
 
-At the moment, many examples still live in `packages/compiler/test/fixtures/`. The next compiler slices will populate `rules/` with the real working rulesets.
+`rules/` is now the primary runtime-validation rules source. `packages/compiler/test/fixtures/` remains for isolated unit/integration test scenarios.
+
+## Documentation Sync Contract
+
+To keep repo memory consistent, each behavior-changing slice updates these files together:
+
+- `README.md`: high-level architecture/workflow/CLI contract
+- `plan/current-sprint.md`: latest completed slices + live validation outcomes
+- `plan/roadmap.md`: phase-level completion state
+- `docs/architecture.md`: ownership boundaries + system structure
+- `rules/project/product/README.md` and/or `rules/ha-derived/README.md` when rule coverage changes
+
+Rule of thumb:
+
+- If code/rules changed and at least one of the above docs did not change, the slice is not done.
 
 ## Development Workflow
 
