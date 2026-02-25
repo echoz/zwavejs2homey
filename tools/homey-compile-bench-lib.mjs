@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import path from 'node:path';
 import { createRequire } from 'node:module';
 import { performance } from 'node:perf_hooks';
 
@@ -81,6 +82,32 @@ function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
 
+function coerceManifestEntries(raw, manifestPath) {
+  if (!Array.isArray(raw)) throw new Error('Manifest JSON must be an array');
+  const manifestDir = path.dirname(manifestPath);
+  return raw.map((entry, index) => {
+    if (!entry || typeof entry !== 'object') {
+      throw new Error(`Manifest entry ${index} must be an object`);
+    }
+    if (typeof entry.filePath !== 'string' || entry.filePath.length === 0) {
+      throw new Error(`Manifest entry ${index} requires a non-empty filePath`);
+    }
+    if (
+      entry.kind !== undefined &&
+      entry.kind !== 'rules-json' &&
+      entry.kind !== 'ha-derived-generated'
+    ) {
+      throw new Error(`Manifest entry ${index} has unsupported kind "${String(entry.kind)}"`);
+    }
+    return {
+      ...entry,
+      filePath: path.isAbsolute(entry.filePath)
+        ? entry.filePath
+        : path.resolve(manifestDir, entry.filePath),
+    };
+  });
+}
+
 function basicStats(samples) {
   const sorted = [...samples].sort((a, b) => a - b);
   const totalMs = samples.reduce((sum, x) => sum + x, 0);
@@ -109,9 +136,11 @@ export function runCompileBenchmark(command, deps = {}) {
   const device = readJsonImpl(command.deviceFile);
   const manifestEntries = command.manifest
     ? (() => {
-        const manifest = readJsonImpl(command.manifest);
-        if (!Array.isArray(manifest)) throw new Error('Manifest JSON must be an array');
-        return manifest;
+        const manifestPath = path.isAbsolute(command.manifest)
+          ? command.manifest
+          : path.resolve(process.cwd(), command.manifest);
+        const manifest = readJsonImpl(manifestPath);
+        return coerceManifestEntries(manifest, manifestPath);
       })()
     : command.rulesFiles.map((filePath) => ({ filePath }));
   const loadedRuleSet = loadRuleSetImpl(manifestEntries);

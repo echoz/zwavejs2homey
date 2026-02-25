@@ -94,6 +94,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - `compileDevice` now caches layer-sorted execution order per rules array instance
     - `compileProfilePlan` now caches catalog index builds per catalog artifact instance
     - added compiler regression tests for loaded-manifest flatten caching and catalog-index reuse
+22. Completed third performance slice focused on matcher candidate pruning and benchmark reliability:
+    - `compileDevice` now precomputes command-class rule candidate indexes and fast-paths impossible command-class matches to direct unmatched report entries
+    - preserved report semantics (`rule-not-matched` entries remain emitted for pruned rules)
+    - added compiler regression coverage for no-CC rules + pruned-CC unmatched behavior
+    - fixed `compiler:bench --manifest ...` to resolve manifest rule paths relative to manifest location and added regression test coverage
 
 ## Next Tasks
 

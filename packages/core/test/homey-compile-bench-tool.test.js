@@ -53,3 +53,20 @@ test('runCompileBenchmark returns timing stats and profile summary', async () =>
   assert.match(summary, /Timing: avg=/);
   assert.match(summary, /Profile: fixture-switch-meter-1 outcome=curated/);
 });
+
+test('runCompileBenchmark resolves manifest entries relative to manifest path', async () => {
+  const { runCompileBenchmark } = await loadLib();
+  const result = runCompileBenchmark({
+    deviceFile: path.join(fixturesDir, 'device-switch-meter.json'),
+    manifest: path.join(fixturesDir, 'rule-manifest-with-ha-generated.json'),
+    rulesFiles: [],
+    iterations: 2,
+    warmup: 0,
+    homeyClass: undefined,
+    driverTemplateId: undefined,
+  });
+
+  assert.equal(result.benchmark.iterations, 2);
+  assert.equal(result.profileSummary.profileId, 'fixture-switch-meter-1');
+  assert.equal(result.profileSummary.outcome, 'curated');
+});
