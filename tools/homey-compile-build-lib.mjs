@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { formatJsonCompact, formatJsonPretty } from './output-format-lib.mjs';
+import { connectAndInitialize, fetchNodeDetails, fetchNodesList } from './zwjs-inspect-lib.mjs';
+import { normalizeCompilerDeviceFactsFromZwjsDetail } from './zwjs-to-compiler-facts-lib.mjs';
 
 const require = createRequire(import.meta.url);
 const {
@@ -55,9 +57,11 @@ function coerceManifestEntries(raw, manifestPath) {
 export function getUsageText() {
   return [
     'Usage:',
-    '  homey-compile-build --device-file <device.json> [--device-file <device2.json> ...]',
+    '  homey-compile-build (--device-file <device.json> [--device-file <device2.json> ...] | --url ws://host:port (--all-nodes | --node <id>))',
     '                     (--manifest-file <manifest.json> | --rules-file <rules.json> [--rules-file ...])',
     '                     [--catalog-file <catalog.json>]',
+    '                     [--schema-version 0] [--token ...]',
+    '                     [--include-values none|summary|full] [--max-values N]',
     '                     [--output-file <compiled-profiles.json>]',
     '                     [--format summary|json|json-pretty|json-compact]',
   ].join('\n');
@@ -66,12 +70,33 @@ export function getUsageText() {
 export function parseCliArgs(argv) {
   if (argv.includes('--help') || argv.includes('-h')) return { ok: false, error: getUsageText() };
   const flags = parseFlagMap(argv);
+  const url = flags.get('--url');
+
   const deviceFiles = [];
   for (let i = 0; i < argv.length; i += 1) {
     if (argv[i] === '--device-file' && argv[i + 1]) deviceFiles.push(argv[i + 1]);
     if (argv[i].startsWith('--device-file=')) deviceFiles.push(argv[i].split('=', 2)[1]);
   }
-  if (deviceFiles.length === 0) return { ok: false, error: 'Provide at least one --device-file' };
+
+  const allNodes = flags.has('--all-nodes');
+  const nodeRaw = flags.get('--node');
+  const nodeId = nodeRaw === undefined ? undefined : Number.parseInt(nodeRaw, 10);
+  if (nodeRaw !== undefined && !Number.isInteger(nodeId)) {
+    return { ok: false, error: `Invalid --node: ${nodeRaw}` };
+  }
+  const deviceSourceModeCount = (deviceFiles.length > 0 ? 1 : 0) + (url ? 1 : 0);
+  if (deviceSourceModeCount === 0) {
+    return { ok: false, error: 'Provide --device-file or --url with --all-nodes/--node' };
+  }
+  if (deviceSourceModeCount > 1) {
+    return { ok: false, error: 'Use either --device-file or --url live mode, not both' };
+  }
+  if (url && !allNodes && nodeRaw === undefined) {
+    return { ok: false, error: 'Live mode requires --all-nodes or --node <id>' };
+  }
+  if (url && allNodes && nodeRaw !== undefined) {
+    return { ok: false, error: 'Use either --all-nodes or --node in live mode, not both' };
+  }
 
   const manifestFile = flags.get('--manifest-file');
   const rulesFiles = [];
@@ -91,9 +116,31 @@ export function parseCliArgs(argv) {
     return { ok: false, error: `Unsupported format: ${format}` };
   }
 
+  const schemaVersionRaw = flags.get('--schema-version') ?? '0';
+  const schemaVersion = Number(schemaVersionRaw);
+  if (!Number.isInteger(schemaVersion) || schemaVersion < 0) {
+    return { ok: false, error: `Invalid --schema-version: ${schemaVersionRaw}` };
+  }
+  const includeValues = flags.get('--include-values') ?? (allNodes ? 'summary' : 'full');
+  if (!['none', 'summary', 'full'].includes(includeValues)) {
+    return { ok: false, error: `Unsupported --include-values: ${includeValues}` };
+  }
+  const maxValuesRaw = flags.get('--max-values') ?? (allNodes ? '100' : '200');
+  const maxValues = Number(maxValuesRaw);
+  if (!Number.isInteger(maxValues) || maxValues < 1) {
+    return { ok: false, error: `Invalid --max-values: ${maxValuesRaw}` };
+  }
+
   return {
     ok: true,
     command: {
+      url,
+      token: flags.get('--token'),
+      schemaVersion,
+      allNodes,
+      nodeId,
+      includeValues,
+      maxValues,
       deviceFiles,
       manifestFile,
       rulesFiles,
@@ -104,12 +151,45 @@ export function parseCliArgs(argv) {
   };
 }
 
-export function buildCompiledProfilesArtifact(command, deps = {}) {
+async function loadDevices(command, deps = {}) {
+  if (command.deviceFiles.length > 0) {
+    return command.deviceFiles.map((file) => ({ file, device: readJson(file) }));
+  }
+  const connect = deps.connectAndInitializeImpl ?? connectAndInitialize;
+  const fetchList = deps.fetchNodesListImpl ?? fetchNodesList;
+  const fetchDetail = deps.fetchNodeDetailsImpl ?? fetchNodeDetails;
+  const client = await connect({
+    url: command.url,
+    token: command.token,
+    schemaVersion: command.schemaVersion,
+  });
+  try {
+    const nodeSummaries = command.allNodes
+      ? await fetchList(client)
+      : [{ nodeId: command.nodeId, name: undefined }];
+    const devices = [];
+    for (const node of nodeSummaries) {
+      const detail = await fetchDetail(client, node.nodeId, {
+        includeValues: command.includeValues,
+        maxValues: command.maxValues,
+      });
+      devices.push({
+        file: `zwjs-live:node-${node.nodeId}`,
+        device: normalizeCompilerDeviceFactsFromZwjsDetail(detail),
+      });
+    }
+    return devices;
+  } finally {
+    await client.stop();
+  }
+}
+
+export async function buildCompiledProfilesArtifact(command, deps = {}) {
   const compileImpl =
     deps.compileProfilePlanFromRuleSetManifestImpl ?? compileProfilePlanFromRuleSetManifest;
   const createArtifactImpl =
     deps.createCompiledHomeyProfilesArtifactV1Impl ?? createCompiledHomeyProfilesArtifactV1;
-  const devices = command.deviceFiles.map((file) => ({ file, device: readJson(file) }));
+  const devices = await loadDevices(command, deps);
   const manifestEntries = command.manifestFile
     ? coerceManifestEntries(readJson(command.manifestFile), command.manifestFile)
     : command.rulesFiles.map((filePath) => ({ filePath }));
@@ -128,12 +208,11 @@ export function buildCompiledProfilesArtifact(command, deps = {}) {
     compiled: compileImpl(device, manifestEntries, { catalogArtifact }),
   }));
 
-  const artifact = createArtifactImpl(entries, {
+  return createArtifactImpl(entries, {
     manifestFile: command.manifestFile,
     rulesFiles: command.manifestFile ? undefined : [...command.rulesFiles],
     catalogFile: command.catalogFile,
   });
-  return artifact;
 }
 
 export function formatBuildOutput(artifact, format) {
@@ -158,8 +237,8 @@ export function formatBuildOutput(artifact, format) {
   ].join('\n');
 }
 
-export function runBuildCommand(command, io = console) {
-  const artifact = buildCompiledProfilesArtifact(command);
+export async function runBuildCommand(command, io = console, deps = {}) {
+  const artifact = await buildCompiledProfilesArtifact(command, deps);
   if (command.outputFile) {
     fs.writeFileSync(command.outputFile, `${formatJsonPretty(artifact)}\n`, 'utf8');
   }

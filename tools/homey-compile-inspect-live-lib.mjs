@@ -9,6 +9,9 @@ import {
 } from './output-format-lib.mjs';
 import { connectAndInitialize, fetchNodeDetails, fetchNodesList } from './zwjs-inspect-lib.mjs';
 import { formatCompileOutput } from './homey-compile-inspect-lib.mjs';
+import { normalizeCompilerDeviceFactsFromZwjsDetail } from './zwjs-to-compiler-facts-lib.mjs';
+
+export { normalizeCompilerDeviceFactsFromZwjsDetail } from './zwjs-to-compiler-facts-lib.mjs';
 
 const require = createRequire(import.meta.url);
 const {
@@ -64,55 +67,6 @@ function coerceManifestEntries(raw, manifestPath) {
         : path.resolve(manifestDir, entry.filePath),
     };
   });
-}
-
-function parseHexish(value) {
-  if (typeof value === 'number' && Number.isInteger(value)) return value;
-  if (typeof value !== 'string') return undefined;
-  const trimmed = value.trim();
-  if (!trimmed) return undefined;
-  const parsed = trimmed.startsWith('0x')
-    ? Number.parseInt(trimmed.slice(2), 16)
-    : Number.parseInt(trimmed, 10);
-  return Number.isInteger(parsed) ? parsed : undefined;
-}
-
-export function normalizeCompilerDeviceFactsFromZwjsDetail(detail) {
-  const state = detail?.state ?? {};
-  const manufacturerId = parseHexish(state.manufacturerId);
-  const productType = parseHexish(state.productType);
-  const productId = parseHexish(state.productId);
-  const values = Array.isArray(detail?.values)
-    ? detail.values
-        .filter((row) => row && row.valueId && !row._error)
-        .map((row) => ({
-          valueId: {
-            commandClass: row.valueId.commandClass,
-            endpoint: row.valueId.endpoint,
-            property: row.valueId.property,
-            propertyKey: row.valueId.propertyKey,
-          },
-          metadata: row.metadata && typeof row.metadata === 'object' ? row.metadata : {},
-          propertyName: row.valueId.propertyName,
-          propertyKeyName: row.valueId.propertyKeyName,
-          commandClassName: row.valueId.commandClassName,
-        }))
-    : [];
-  const parts =
-    manufacturerId !== undefined && productType !== undefined && productId !== undefined
-      ? [manufacturerId, productType, productId]
-          .map((n) => n.toString(16).padStart(4, '0'))
-          .join('-')
-      : `node-${detail?.nodeId ?? 'unknown'}`;
-  return {
-    deviceKey: `zwjs-live:${parts}`,
-    nodeId: typeof detail?.nodeId === 'number' ? detail.nodeId : undefined,
-    manufacturerId,
-    productType,
-    productId,
-    firmwareVersion: typeof state.firmwareVersion === 'string' ? state.firmwareVersion : undefined,
-    values,
-  };
 }
 
 export function getUsageText() {

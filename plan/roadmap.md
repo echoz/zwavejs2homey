@@ -26,6 +26,7 @@
 - [x] Defer curation-seed artifact generation (schema-first curation/rule authoring for now)
 - [x] Compiler/Homey boundary decision: runtime curation patch schema/apply is adapter-owned (not compiler-owned)
 - [x] Compiler build/export command foundation for compiled profiles artifact (`compiler:build`)
+- [x] `compiler:build` can compile directly from live ZWJS nodes (not just fixture device facts)
 - [x] Real rule pipeline directory skeleton in repo (`rules/ha-derived`, `rules/project/generic`, `rules/project/product`)
 - [x] Generate HA-derived ruleset from HA import pipeline for supported discovery coverage
 - [x] Initial project-generic ruleset for device-profile inference from Z-Wave configuration/metadata (starter set)

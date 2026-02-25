@@ -39,10 +39,12 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
    - `compiler:build` for `compiled-homey-profiles/v1`
    - compiler artifact contract/validation
    - `rules/` directory skeleton for real HA-derived + project rulesets
+8. Added live ZWJS build mode to `compiler:build`:
+   - compile one node or all nodes directly from a ZWJS instance into a `compiled-homey-profiles/v1` artifact
 
 ## Next Tasks
 
-1. Tighten `compiler:build` into the canonical layered build pipeline (HA-derived + project rules + catalog)
+1. Tighten `compiler:build` into the canonical layered build pipeline (HA-derived + project rules + catalog) with real non-fixture node facts sources
 2. Expand project-generic ruleset for device-profile inference from Z-Wave configuration/metadata
 3. Add first project-product override rules from real device validation
 4. Use `compiler:inspect-live --compiled-file ...` to validate compiled artifacts on real ZWJS data

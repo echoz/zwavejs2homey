@@ -60,8 +60,6 @@ The project is intentionally split into layers:
 - `npm run compiler:inspect-live -- --help`
 - `npm run compiler:inspect-live -- --url ws://HOST:PORT --all-nodes --manifest-file <manifest.json> --format list`
 
-Note: this currently compiles on the fly. A compiled-artifact apply path is planned next.
-
 Compiled-artifact apply mode is now also supported for runtime-style validation:
 
 - `npm run compiler:inspect-live -- --url ws://HOST:PORT --all-nodes --compiled-file /tmp/compiled-profiles.json --format list`
@@ -70,6 +68,7 @@ Compiled-artifact apply mode is now also supported for runtime-style validation:
 
 - `npm run compiler:build -- --help`
 - `npm run compiler:build -- --device-file <device.json> --manifest-file <manifest.json> --output-file /tmp/compiled-profiles.json --format summary`
+- `npm run compiler:build -- --url ws://HOST:PORT --all-nodes --manifest-file rules/manifest.json --output-file /tmp/compiled-live.json --format summary`
 
 This emits a `compiled-homey-profiles/v1` artifact.
 

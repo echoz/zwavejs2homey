@@ -14,8 +14,21 @@ test('parseCliArgs validates required inputs for compiler build', async () => {
   const { parseCliArgs } = await loadLib();
   assert.equal(parseCliArgs(['--rules-file', 'r.json']).ok, false);
   assert.equal(parseCliArgs(['--device-file', 'd.json']).ok, false);
+  assert.equal(parseCliArgs(['--url', 'ws://x', '--rules-file', 'r.json']).ok, false);
   assert.equal(
     parseCliArgs(['--device-file', 'd.json', '--rules-file', 'r.json', '--format', 'yaml']).ok,
+    false,
+  );
+  assert.equal(
+    parseCliArgs([
+      '--url',
+      'ws://x',
+      '--all-nodes',
+      '--device-file',
+      'd.json',
+      '--rules-file',
+      'r.json',
+    ]).ok,
     false,
   );
   const parsed = parseCliArgs([
@@ -27,15 +40,32 @@ test('parseCliArgs validates required inputs for compiler build', async () => {
     'summary',
   ]);
   assert.equal(parsed.ok, true);
+  const liveParsed = parseCliArgs([
+    '--url',
+    'ws://x',
+    '--all-nodes',
+    '--rules-file',
+    'r.json',
+    '--include-values',
+    'summary',
+  ]);
+  assert.equal(liveParsed.ok, true);
 });
 
 test('buildCompiledProfilesArtifact compiles multiple devices and emits artifact', async () => {
   const { buildCompiledProfilesArtifact } = await loadLib();
-  const artifact = buildCompiledProfilesArtifact({
+  const artifact = await buildCompiledProfilesArtifact({
     deviceFiles: [
       path.join(fixturesDir, 'device-switch-meter.json'),
       path.join(fixturesDir, 'device-unmapped.json'),
     ],
+    url: undefined,
+    token: undefined,
+    schemaVersion: 0,
+    allNodes: false,
+    nodeId: undefined,
+    includeValues: 'full',
+    maxValues: 200,
     manifestFile: undefined,
     rulesFiles: [path.join(fixturesDir, 'rules-switch-meter.json')],
     catalogFile: path.join(fixturesDir, 'catalog-devices-v1.json'),
@@ -52,8 +82,15 @@ test('runBuildCommand writes output file and summary', async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zwjs2homey-compile-build-'));
   const outFile = path.join(tmpDir, 'compiled-profiles.json');
   const logs = [];
-  runBuildCommand(
+  await runBuildCommand(
     {
+      url: undefined,
+      token: undefined,
+      schemaVersion: 0,
+      allNodes: false,
+      nodeId: undefined,
+      includeValues: 'full',
+      maxValues: 200,
       deviceFiles: [path.join(fixturesDir, 'device-switch-meter.json')],
       manifestFile: path.join(fixturesDir, 'rule-manifest-with-ha-generated.json'),
       rulesFiles: [],
@@ -67,4 +104,43 @@ test('runBuildCommand writes output file and summary', async () => {
   const parsed = JSON.parse(fs.readFileSync(outFile, 'utf8'));
   assert.equal(parsed.schemaVersion, 'compiled-homey-profiles/v1');
   assert.match(logs[0], /Compiled profiles artifact:/);
+});
+
+test('buildCompiledProfilesArtifact supports live ZWJS mode with mocks', async () => {
+  const { buildCompiledProfilesArtifact } = await loadLib();
+  const artifact = await buildCompiledProfilesArtifact(
+    {
+      url: 'ws://x',
+      token: undefined,
+      schemaVersion: 0,
+      allNodes: true,
+      nodeId: undefined,
+      includeValues: 'summary',
+      maxValues: 50,
+      deviceFiles: [],
+      manifestFile: undefined,
+      rulesFiles: [path.join(fixturesDir, 'rules-switch-meter.json')],
+      catalogFile: undefined,
+      outputFile: undefined,
+      format: 'summary',
+    },
+    {
+      connectAndInitializeImpl: async () => ({ stop: async () => {} }),
+      fetchNodesListImpl: async () => [{ nodeId: 5, name: 'Kitchen Plug' }],
+      fetchNodeDetailsImpl: async () => ({
+        nodeId: 5,
+        state: {
+          name: 'Kitchen Plug',
+          manufacturerId: '0x0184',
+          productType: '0x4447',
+          productId: '0x3034',
+          firmwareVersion: '1.0',
+        },
+        values: [],
+      }),
+    },
+  );
+  assert.equal(artifact.entries.length, 1);
+  assert.equal(artifact.entries[0].device.nodeId, 5);
+  assert.match(artifact.entries[0].device.deviceKey, /^zwjs-live:/);
 });

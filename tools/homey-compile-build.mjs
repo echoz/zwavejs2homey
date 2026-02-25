@@ -8,7 +8,7 @@ if (!parsed.ok) {
 }
 
 try {
-  runBuildCommand(parsed.command, console);
+  await runBuildCommand(parsed.command, console);
 } catch (error) {
   console.error(error?.stack ?? String(error));
   process.exit(1);
