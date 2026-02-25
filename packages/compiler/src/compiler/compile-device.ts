@@ -53,13 +53,30 @@ interface CompileRuleExecutionEntry {
 
 interface CompileRuleExecutionPlan {
   entries: CompileRuleExecutionEntry[];
-  alwaysCandidateIndices: number[];
+  commandClassWildcardIndices: number[];
   byCommandClass: Map<number, number[]>;
+  propertyWildcardIndices: number[];
+  byProperty: Map<string, number[]>;
+  endpointWildcardIndices: number[];
+  byEndpoint: Map<number, number[]>;
 }
 
 const ruleLayerOrder = getRuleLayerOrder();
 const ruleLayerRank = new Map(ruleLayerOrder.map((layer, index) => [layer, index]));
 const sortedRulesCache = new WeakMap<readonly MappingRule[], SortedRulesCacheEntry>();
+
+function pushIndex<K>(indexMap: Map<K, number[]>, key: K, index: number): void {
+  const list = indexMap.get(key);
+  if (list) {
+    list.push(index);
+    return;
+  }
+  indexMap.set(key, [index]);
+}
+
+function propertyTokenKey(value: string | number): string {
+  return `${typeof value}:${String(value)}`;
+}
 
 function buildRuleExecutionPlan(rules: MappingRule[]): CompileRuleExecutionPlan {
   const sortedRules = [...rules].sort((a, b) => {
@@ -71,26 +88,51 @@ function buildRuleExecutionPlan(rules: MappingRule[]): CompileRuleExecutionPlan 
     rule,
     actionTypes: rule.actions.map((action) => action.type),
   }));
-  const alwaysCandidateIndices: number[] = [];
+  const commandClassWildcardIndices: number[] = [];
   const byCommandClass = new Map<number, number[]>();
+  const propertyWildcardIndices: number[] = [];
+  const byProperty = new Map<string, number[]>();
+  const endpointWildcardIndices: number[] = [];
+  const byEndpoint = new Map<number, number[]>();
 
   for (const [index, entry] of entries.entries()) {
+    const matcher = entry.rule.value;
     const commandClasses = entry.rule.value?.commandClass;
     if (!commandClasses || commandClasses.length === 0) {
-      alwaysCandidateIndices.push(index);
-      continue;
+      commandClassWildcardIndices.push(index);
+    } else {
+      for (const commandClass of commandClasses) {
+        pushIndex(byCommandClass, commandClass, index);
+      }
     }
-    for (const commandClass of commandClasses) {
-      const list = byCommandClass.get(commandClass) ?? [];
-      list.push(index);
-      byCommandClass.set(commandClass, list);
+
+    const properties = matcher?.property;
+    if (!properties || properties.length === 0) {
+      propertyWildcardIndices.push(index);
+    } else {
+      for (const property of properties) {
+        pushIndex(byProperty, propertyTokenKey(property), index);
+      }
+    }
+
+    const endpoints = matcher?.endpoint;
+    if (!endpoints || endpoints.length === 0) {
+      endpointWildcardIndices.push(index);
+    } else {
+      for (const endpoint of endpoints) {
+        pushIndex(byEndpoint, endpoint, index);
+      }
     }
   }
 
   return {
     entries,
-    alwaysCandidateIndices,
+    commandClassWildcardIndices,
     byCommandClass,
+    propertyWildcardIndices,
+    byProperty,
+    endpointWildcardIndices,
+    byEndpoint,
   };
 }
 
@@ -105,16 +147,39 @@ function resolveRuleExecutionPlan(rules: MappingRule[]): CompileRuleExecutionPla
 
 function buildCandidateMaskForValue(
   plan: CompileRuleExecutionPlan,
-  commandClass: number,
+  valueId: NormalizedZwaveValueId,
 ): Uint8Array {
-  const mask = new Uint8Array(plan.entries.length);
-  for (const index of plan.alwaysCandidateIndices) {
-    mask[index] = 1;
+  const commandClassMask = new Uint8Array(plan.entries.length);
+  for (const index of plan.commandClassWildcardIndices) {
+    commandClassMask[index] = 1;
   }
-  for (const index of plan.byCommandClass.get(commandClass) ?? []) {
-    mask[index] = 1;
+  for (const index of plan.byCommandClass.get(valueId.commandClass) ?? []) {
+    commandClassMask[index] = 1;
   }
-  return mask;
+
+  const propertyMask = new Uint8Array(plan.entries.length);
+  for (const index of plan.propertyWildcardIndices) {
+    propertyMask[index] = 1;
+  }
+  for (const index of plan.byProperty.get(propertyTokenKey(valueId.property)) ?? []) {
+    propertyMask[index] = 1;
+  }
+
+  const endpointMask = new Uint8Array(plan.entries.length);
+  for (const index of plan.endpointWildcardIndices) {
+    endpointMask[index] = 1;
+  }
+  for (const index of plan.byEndpoint.get(valueId.endpoint ?? 0) ?? []) {
+    endpointMask[index] = 1;
+  }
+
+  for (let index = 0; index < commandClassMask.length; index += 1) {
+    if (commandClassMask[index] === 0 || propertyMask[index] === 0 || endpointMask[index] === 0) {
+      commandClassMask[index] = 0;
+    }
+  }
+
+  return commandClassMask;
 }
 
 function pushUnmatchedActions(
@@ -134,6 +199,21 @@ function pushUnmatchedActions(
   }
 }
 
+function pushAppliedRuleResults(
+  actions: CompileDeviceReportEntry[],
+  entry: CompileRuleExecutionEntry,
+  valueId: NormalizedZwaveValueId,
+  results: AppliedRuleActionResult[],
+): void {
+  for (const result of results) {
+    actions.push({
+      ...result,
+      layer: entry.rule.layer,
+      valueId: { ...valueId },
+    });
+  }
+}
+
 export function compileDevice(
   device: NormalizedZwaveDeviceFacts,
   rules: MappingRule[],
@@ -143,7 +223,7 @@ export function compileDevice(
   const actions: CompileDeviceReportEntry[] = [];
 
   for (const value of device.values) {
-    const candidateMask = buildCandidateMaskForValue(executionPlan, value.valueId.commandClass);
+    const candidateMask = buildCandidateMaskForValue(executionPlan, value.valueId);
     for (const [index, entry] of executionPlan.entries.entries()) {
       if (candidateMask[index] === 0) {
         pushUnmatchedActions(actions, entry, value.valueId);
@@ -151,13 +231,7 @@ export function compileDevice(
       }
 
       const results = applyRuleToValue(state, device, value, entry.rule);
-      for (const result of results) {
-        actions.push({
-          ...result,
-          layer: entry.rule.layer,
-          valueId: { ...value.valueId },
-        });
-      }
+      pushAppliedRuleResults(actions, entry, value.valueId, results);
     }
   }
 

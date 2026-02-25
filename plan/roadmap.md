@@ -41,6 +41,7 @@
 - [x] Performance slice 1: CLI compile paths reuse loaded rule manifests (`compiler:inspect-live`, `compiler:bench`) to avoid per-node/per-iteration manifest reload overhead
 - [x] Performance slice 2: compiler-core caches for loaded-manifest flattening, layer-sorted rule execution order, and catalog index reuse
 - [x] Performance slice 3: command-class candidate pruning in `compileDevice` with preserved unmatched-report semantics; benchmark manifest-path resolution hardened
+- [x] Performance slice 4: command-class + property + endpoint candidate intersection in `compileDevice` prior to full rule matching
 - [ ] Decide and document final ownership of generic fallback inference policy (currently leaning Homey adapter-owned)
 - [ ] Add second real catalog source adapter when a concrete source format is available
 

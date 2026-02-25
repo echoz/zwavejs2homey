@@ -124,7 +124,7 @@ test('compileDevice sorts by layer, applies mappings, and returns report entries
   assert.equal(result.report.summary.ignoredValues, 1);
 });
 
-test('compileDevice command-class candidate pruning preserves unmatched reporting and no-cc matching', () => {
+test('compileDevice candidate pruning preserves unmatched reporting for commandClass/property/endpoint', () => {
   const device = {
     deviceKey: 'dev-prune-1',
     values: [
@@ -153,8 +153,20 @@ test('compileDevice command-class candidate pruning preserves unmatched reportin
     {
       ruleId: 'rule-wrong-cc',
       layer: 'project-product',
-      value: { commandClass: [50], property: ['value'] },
+      value: { commandClass: [50], property: ['currentValue'] },
       actions: [{ type: 'capability', capabilityId: 'measure_power' }],
+    },
+    {
+      ruleId: 'rule-wrong-property',
+      layer: 'project-product',
+      value: { commandClass: [37], property: ['targetValue'] },
+      actions: [{ type: 'capability', capabilityId: 'alarm_generic' }],
+    },
+    {
+      ruleId: 'rule-wrong-endpoint',
+      layer: 'project-product',
+      value: { commandClass: [37], endpoint: [1], property: ['currentValue'] },
+      actions: [{ type: 'capability', capabilityId: 'alarm_motion' }],
     },
   ];
 
@@ -164,7 +176,7 @@ test('compileDevice command-class candidate pruning preserves unmatched reportin
     result.capabilities.map((capability) => capability.capabilityId),
     ['onoff'],
   );
-  assert.equal(result.report.actions.length, 2);
+  assert.equal(result.report.actions.length, 4);
   assert.deepEqual(
     result.report.actions.map((action) => ({
       ruleId: action.ruleId,
@@ -174,6 +186,8 @@ test('compileDevice command-class candidate pruning preserves unmatched reportin
     [
       { ruleId: 'rule-no-cc-filter', applied: true, reason: undefined },
       { ruleId: 'rule-wrong-cc', applied: false, reason: 'rule-not-matched' },
+      { ruleId: 'rule-wrong-property', applied: false, reason: 'rule-not-matched' },
+      { ruleId: 'rule-wrong-endpoint', applied: false, reason: 'rule-not-matched' },
     ],
   );
 });

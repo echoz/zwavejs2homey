@@ -99,6 +99,10 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - preserved report semantics (`rule-not-matched` entries remain emitted for pruned rules)
     - added compiler regression coverage for no-CC rules + pruned-CC unmatched behavior
     - fixed `compiler:bench --manifest ...` to resolve manifest rule paths relative to manifest location and added regression test coverage
+23. Completed fourth performance slice for value matcher dimensions:
+    - `compileDevice` candidate pruning now intersects command-class, property, and endpoint indexes before invoking full matcher evaluation
+    - keeps deterministic rule order and unchanged unmatched reporting semantics
+    - expanded compile-device regression coverage to include command-class/property/endpoint prune cases in one pass
 
 ## Next Tasks
 
