@@ -4,6 +4,7 @@ import type { MappingRule, RuleAction } from '../rules/types';
 import type { AppliedRuleActionResult } from './apply-rule';
 import { applyRuleToValue } from './apply-rule';
 import { getRuleLayerOrder } from './layer-semantics';
+import { matchesDevice, matchesRuleCompanionConstraints } from './rule-matcher';
 import {
   type CapabilityConflictSuppression,
   createProfileBuildState,
@@ -214,18 +215,34 @@ function pushAppliedRuleResults(
   }
 }
 
+function buildDeviceEligibleMask(
+  device: NormalizedZwaveDeviceFacts,
+  plan: CompileRuleExecutionPlan,
+): Uint8Array {
+  const mask = new Uint8Array(plan.entries.length);
+  for (const [index, entry] of plan.entries.entries()) {
+    mask[index] =
+      matchesDevice(device, entry.rule.device) &&
+      matchesRuleCompanionConstraints(device, entry.rule)
+        ? 1
+        : 0;
+  }
+  return mask;
+}
+
 export function compileDevice(
   device: NormalizedZwaveDeviceFacts,
   rules: MappingRule[],
 ): CompileDeviceResult {
   const state = createProfileBuildState();
   const executionPlan = resolveRuleExecutionPlan(rules);
+  const deviceEligibleMask = buildDeviceEligibleMask(device, executionPlan);
   const actions: CompileDeviceReportEntry[] = [];
 
   for (const value of device.values) {
     const candidateMask = buildCandidateMaskForValue(executionPlan, value.valueId);
     for (const [index, entry] of executionPlan.entries.entries()) {
-      if (candidateMask[index] === 0) {
+      if (deviceEligibleMask[index] === 0 || candidateMask[index] === 0) {
         pushUnmatchedActions(actions, entry, value.valueId);
         continue;
       }

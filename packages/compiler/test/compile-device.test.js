@@ -191,3 +191,72 @@ test('compileDevice candidate pruning preserves unmatched reporting for commandC
     ],
   );
 });
+
+test('compileDevice device-level gating preserves unmatched reporting for device/constraints mismatch', () => {
+  const device = makeDevice();
+  const rules = [
+    {
+      ruleId: 'rule-device-mismatch',
+      layer: 'project-product',
+      device: { manufacturerId: [999] },
+      value: { commandClass: [37], property: ['currentValue'] },
+      actions: [{ type: 'capability', capabilityId: 'alarm_generic' }],
+    },
+    {
+      ruleId: 'rule-required-values-mismatch',
+      layer: 'project-product',
+      value: { commandClass: [37], property: ['currentValue'] },
+      constraints: {
+        requiredValues: [{ commandClass: [49], endpoint: [0], property: ['Air temperature'] }],
+      },
+      actions: [{ type: 'capability', capabilityId: 'measure_temperature' }],
+    },
+    {
+      ruleId: 'rule-absent-values-mismatch',
+      layer: 'project-product',
+      value: { commandClass: [37], property: ['currentValue'] },
+      constraints: {
+        absentValues: [{ commandClass: [37], endpoint: [0], property: ['targetValue'] }],
+      },
+      actions: [{ type: 'capability', capabilityId: 'alarm_motion' }],
+    },
+    {
+      ruleId: 'rule-match',
+      layer: 'ha-derived',
+      value: { commandClass: [37], property: ['currentValue'] },
+      actions: [
+        {
+          type: 'capability',
+          capabilityId: 'onoff',
+          inboundMapping: {
+            kind: 'value',
+            selector: { commandClass: 37, endpoint: 0, property: 'currentValue' },
+          },
+        },
+      ],
+    },
+  ];
+
+  const result = compiler.compileDevice(device, rules);
+
+  assert.deepEqual(
+    result.capabilities.map((capability) => capability.capabilityId),
+    ['onoff'],
+  );
+
+  const byRule = result.report.actions.reduce((acc, action) => {
+    acc[action.ruleId] = (acc[action.ruleId] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  assert.equal(byRule['rule-device-mismatch'], device.values.length);
+  assert.equal(byRule['rule-required-values-mismatch'], device.values.length);
+  assert.equal(byRule['rule-absent-values-mismatch'], device.values.length);
+  assert.equal(byRule['rule-match'], device.values.length);
+  assert.equal(
+    result.report.actions
+      .filter((action) => action.ruleId !== 'rule-match')
+      .every((action) => action.applied === false && action.reason === 'rule-not-matched'),
+    true,
+  );
+});

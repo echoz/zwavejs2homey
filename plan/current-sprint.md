@@ -103,6 +103,10 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - `compileDevice` candidate pruning now intersects command-class, property, and endpoint indexes before invoking full matcher evaluation
     - keeps deterministic rule order and unchanged unmatched reporting semantics
     - expanded compile-device regression coverage to include command-class/property/endpoint prune cases in one pass
+24. Completed fifth performance slice for device-static rule gating:
+    - `compileDevice` now precomputes per-rule device eligibility (`device` matcher + companion constraints) once per compile
+    - rules that cannot match the current device are fast-pathed to unmatched action entries for each value without full matcher evaluation
+    - preserves report parity (`rule-not-matched` semantics) and adds regression coverage for device/constraints mismatch paths
 
 ## Next Tasks
 
