@@ -349,6 +349,154 @@
     ]
   },
   {
+    "ruleId": "product-leviton-dz15s-class-and-onoff",
+    "layer": "project-product",
+    "device": {
+      "manufacturerId": [29],
+      "productType": [13313],
+      "productId": [1]
+    },
+    "value": {
+      "commandClass": [37],
+      "property": ["currentValue"],
+      "metadataType": ["boolean"],
+      "readable": true
+    },
+    "actions": [
+      {
+        "type": "device-identity",
+        "mode": "replace",
+        "homeyClass": "socket",
+        "driverTemplateId": "product-leviton-switch"
+      },
+      {
+        "type": "capability",
+        "mode": "replace",
+        "capabilityId": "onoff",
+        "inboundMapping": {
+          "kind": "value",
+          "selector": {
+            "commandClass": 37,
+            "endpoint": 0,
+            "property": "currentValue"
+          }
+        },
+        "outboundMapping": {
+          "kind": "set_value",
+          "target": {
+            "commandClass": 37,
+            "endpoint": 0,
+            "property": "targetValue"
+          }
+        },
+        "flags": {
+          "readable": true,
+          "writeable": true
+        }
+      }
+    ]
+  },
+  {
+    "ruleId": "product-leviton-zw15s-class-and-onoff",
+    "layer": "project-product",
+    "device": {
+      "manufacturerId": [29],
+      "productType": [66],
+      "productId": [2]
+    },
+    "value": {
+      "commandClass": [37],
+      "property": ["currentValue"],
+      "metadataType": ["boolean"],
+      "readable": true
+    },
+    "actions": [
+      {
+        "type": "device-identity",
+        "mode": "replace",
+        "homeyClass": "socket",
+        "driverTemplateId": "product-leviton-switch"
+      },
+      {
+        "type": "capability",
+        "mode": "replace",
+        "capabilityId": "onoff",
+        "inboundMapping": {
+          "kind": "value",
+          "selector": {
+            "commandClass": 37,
+            "endpoint": 0,
+            "property": "currentValue"
+          }
+        },
+        "outboundMapping": {
+          "kind": "set_value",
+          "target": {
+            "commandClass": 37,
+            "endpoint": 0,
+            "property": "targetValue"
+          }
+        },
+        "flags": {
+          "readable": true,
+          "writeable": true
+        }
+      }
+    ]
+  },
+  {
+    "ruleId": "product-yale-yrd226-class-and-lock",
+    "layer": "project-product",
+    "device": {
+      "manufacturerId": [297],
+      "productType": [32770],
+      "productId": [1536]
+    },
+    "value": {
+      "commandClass": [98],
+      "property": ["currentMode"],
+      "metadataType": ["number"],
+      "readable": true
+    },
+    "actions": [
+      {
+        "type": "device-identity",
+        "mode": "replace",
+        "homeyClass": "lock",
+        "driverTemplateId": "product-yale-lock"
+      },
+      {
+        "type": "capability",
+        "mode": "replace",
+        "capabilityId": "locked",
+        "inboundMapping": {
+          "kind": "value",
+          "selector": {
+            "commandClass": 98,
+            "endpoint": 0,
+            "property": "currentMode"
+          }
+        },
+        "flags": {
+          "allowMulti": true
+        }
+      },
+      {
+        "type": "capability",
+        "mode": "replace",
+        "capabilityId": "enum_select",
+        "inboundMapping": {
+          "kind": "value",
+          "selector": {
+            "commandClass": 98,
+            "endpoint": 0,
+            "property": "currentMode"
+          }
+        }
+      }
+    ]
+  },
+  {
     "ruleId": "product-swf-csz1-battery-prefer-measure-battery",
     "layer": "project-product",
     "device": {

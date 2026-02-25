@@ -11,3 +11,5 @@ Current state:
   - `622:17235:23089` (Springs Window Fashions CSZ1): class/cover position normalization + battery capability preference
   - `29:12801:1` (Leviton DZ6HD): curated dimmer class/mapping normalization (`homeyClass=light`, `capability=dim`)
   - `29:65:2` (Leviton ZW6HD): curated dimmer class/mapping normalization (`homeyClass=light`, `capability=dim`)
+  - `29:13313:1` (Leviton DZ15S) + `29:66:2` (Leviton ZW15S): curated switch class/mapping normalization (`homeyClass=socket`, `capability=onoff`)
+  - `297:32770:1536` (Yale YRD226 family): curated lock class/mapping normalization (`homeyClass=lock`, `capabilities=locked, enum_select`)

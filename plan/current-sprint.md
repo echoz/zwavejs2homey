@@ -72,6 +72,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - normalized to curated `light` + `dim` mapping with explicit CC38 inbound/outbound transforms
     - added compiler regression coverage to ensure both signatures remain `curated light` and do not regress to cover capability mappings
     - live rebuild/inspection now shows Leviton light nodes promoted from `ha-derived` to `curated`
+17. Curated the remaining live `ha-derived` switch/lock families:
+    - added product-layer switch overrides for Leviton DZ15S (`29:13313:1`) and ZW15S (`29:66:2`) with explicit on/off inbound/outbound mappings
+    - added product-layer lock override for Yale YRD226-family (`297:32770:1536`) preserving `locked` + `enum_select` capability mapping under curated lock identity
+    - added root-manifest regression tests to lock expected curated outcomes for these signatures
+    - live rebuild now reports `Outcomes: curated=33` for the current node set
 
 ## Next Tasks
 

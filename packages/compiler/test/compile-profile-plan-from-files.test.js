@@ -417,3 +417,104 @@ test('root manifest product overrides curate Leviton dimmers', () => {
     });
   }
 });
+
+test('root manifest product overrides curate Leviton switches and Yale locks', () => {
+  const manifestEntries = loadRootManifestEntries();
+  const curatedDevices = [
+    {
+      name: 'leviton-dz15s',
+      facts: {
+        deviceKey: 'leviton-dz15s',
+        manufacturerId: 29,
+        productType: 13313,
+        productId: 1,
+        values: [
+          {
+            valueId: { commandClass: 37, endpoint: 0, property: 'currentValue' },
+            metadata: { type: 'boolean', readable: true, writeable: false },
+          },
+          {
+            valueId: { commandClass: 37, endpoint: 0, property: 'targetValue' },
+            metadata: { type: 'boolean', readable: true, writeable: true },
+          },
+        ],
+      },
+      expected: {
+        homeyClass: 'socket',
+        driverTemplateId: 'product-leviton-switch',
+        requiredCapabilities: ['onoff'],
+        forbiddenCapabilities: [],
+      },
+    },
+    {
+      name: 'leviton-zw15s',
+      facts: {
+        deviceKey: 'leviton-zw15s',
+        manufacturerId: 29,
+        productType: 66,
+        productId: 2,
+        values: [
+          {
+            valueId: { commandClass: 37, endpoint: 0, property: 'currentValue' },
+            metadata: { type: 'boolean', readable: true, writeable: false },
+          },
+          {
+            valueId: { commandClass: 37, endpoint: 0, property: 'targetValue' },
+            metadata: { type: 'boolean', readable: true, writeable: true },
+          },
+        ],
+      },
+      expected: {
+        homeyClass: 'socket',
+        driverTemplateId: 'product-leviton-switch',
+        requiredCapabilities: ['onoff'],
+        forbiddenCapabilities: [],
+      },
+    },
+    {
+      name: 'yale-yrd226',
+      facts: {
+        deviceKey: 'yale-yrd226',
+        manufacturerId: 297,
+        productType: 32770,
+        productId: 1536,
+        values: [
+          {
+            valueId: { commandClass: 98, endpoint: 0, property: 'currentMode' },
+            metadata: { type: 'number', readable: true, writeable: false },
+          },
+        ],
+      },
+      expected: {
+        homeyClass: 'lock',
+        driverTemplateId: 'product-yale-lock',
+        requiredCapabilities: ['locked', 'enum_select'],
+        forbiddenCapabilities: [],
+      },
+    },
+  ];
+
+  for (const entry of curatedDevices) {
+    const result = compiler.compileProfilePlanFromRuleSetManifest(entry.facts, manifestEntries);
+    assert.equal(result.profile.classification.homeyClass, entry.expected.homeyClass);
+    assert.equal(result.profile.classification.driverTemplateId, entry.expected.driverTemplateId);
+    assert.equal(result.profile.classification.confidence, 'curated');
+    assert.equal(result.profile.classification.uncurated, false);
+    assert.equal(result.report.profileOutcome, 'curated');
+
+    for (const capability of entry.expected.requiredCapabilities) {
+      assert.equal(
+        result.profile.capabilities.some((item) => item.capabilityId === capability),
+        true,
+        `${entry.name} expected capability ${capability}`,
+      );
+    }
+    for (const capability of entry.expected.forbiddenCapabilities) {
+      assert.equal(
+        result.profile.capabilities.some((item) => item.capabilityId === capability),
+        false,
+        `${entry.name} should not include capability ${capability}`,
+      );
+    }
+  }
+});
