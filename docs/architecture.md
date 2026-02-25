@@ -93,6 +93,7 @@ Current implemented foundation in `packages/compiler`:
   - canonical layered manifest now lives at `rules/manifest.json`
   - HA-derived generated rules and an initial project-generic ruleset are now checked in
   - current direction: keep compiler generic rules minimal/provisional and move Homey-specific fallback inference policy into the Homey adapter
+  - compiler now applies a small HA-derived overlap suppression policy for same-selector conflicts (initially focused on curtain/multilevel duplicates and generic `number_value` shadowing)
 - Catalog/curation workflow decision:
   - no curation-seed artifact for now; rule/patch authoring remains schema-first using compiler diagnostics and stable device identifiers
 - Runtime curation boundary decision:

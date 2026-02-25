@@ -954,6 +954,7 @@ Progress on the extended scope:
 - Generated and checked in canonical HA-derived rules (`rules/ha-derived/home-assistant.zwave_js.generated.json`) for the currently supported HA extraction set
 - Added canonical layered rule manifest (`rules/manifest.json`) and initial project generic rules (`rules/project/generic/base-generic.json`)
 - Added compiled-artifact apply mode to `compiler:inspect-live` (`--compiled-file`) for runtime-style live validation without on-the-fly compilation
+- Added initial compiler-side HA-derived overlap suppression for same-selector capability conflicts (e.g. curtain `windowcoverings_set` preferred over duplicate `dim` / `number_value` from the same multilevel selector)
 
 Deferred / later Phase 3 expansion (not required for compiler runtime-validation readiness):
 

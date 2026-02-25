@@ -33,6 +33,13 @@ export interface CompileDeviceResult {
       suppressedFillActions: number;
       ignoredValues: number;
     };
+    overlapPolicy?: {
+      suppressedCapabilities: Array<{
+        capabilityId: string;
+        selectorKey: string;
+        reason: string;
+      }>;
+    };
   };
 }
 

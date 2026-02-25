@@ -162,3 +162,85 @@ test('compileProfilePlan reports catalog lookup match when catalog artifact is p
   });
   assert.match(result.profile.provenance.reason, /catalogId=observed:29-13313-1/);
 });
+
+test('compileProfilePlan suppresses overlapping HA-derived capabilities for curtain multilevel selectors', () => {
+  const coverDevice = {
+    deviceKey: 'fixture-cover-1',
+    manufacturerId: 29,
+    productType: 12801,
+    productId: 1,
+    values: [
+      {
+        valueId: { commandClass: 38, endpoint: 0, property: 'currentValue' },
+        metadata: { type: 'number', readable: true, writeable: true },
+      },
+    ],
+  };
+  const overlapRules = [
+    {
+      ruleId: 'ha-cover-class',
+      layer: 'ha-derived',
+      value: { commandClass: [38], property: ['currentValue'] },
+      actions: [{ type: 'device-identity', homeyClass: 'curtain' }],
+    },
+    {
+      ruleId: 'ha-dim',
+      layer: 'ha-derived',
+      value: { commandClass: [38], property: ['currentValue'] },
+      actions: [
+        {
+          type: 'capability',
+          capabilityId: 'dim',
+          inboundMapping: {
+            kind: 'value',
+            selector: { commandClass: 38, endpoint: 0, property: 'currentValue' },
+          },
+          outboundMapping: {
+            kind: 'set_value',
+            target: { commandClass: 38, endpoint: 0, property: 'currentValue' },
+          },
+        },
+      ],
+    },
+    {
+      ruleId: 'ha-number',
+      layer: 'ha-derived',
+      value: { commandClass: [38], property: ['currentValue'] },
+      actions: [
+        {
+          type: 'capability',
+          capabilityId: 'number_value',
+          inboundMapping: {
+            kind: 'value',
+            selector: { commandClass: 38, endpoint: 0, property: 'currentValue' },
+          },
+        },
+      ],
+    },
+    {
+      ruleId: 'ha-cover-window',
+      layer: 'ha-derived',
+      value: { commandClass: [38], property: ['currentValue'] },
+      actions: [
+        {
+          type: 'capability',
+          capabilityId: 'windowcoverings_set',
+          inboundMapping: {
+            kind: 'value',
+            selector: { commandClass: 38, endpoint: 0, property: 'currentValue' },
+          },
+        },
+      ],
+    },
+  ];
+
+  const { profile, report } = compiler.compileProfilePlan(coverDevice, overlapRules);
+  assert.deepEqual(
+    profile.capabilities.map((c) => c.capabilityId),
+    ['windowcoverings_set'],
+  );
+  assert.deepEqual(report.overlapPolicy?.suppressedCapabilities.map((s) => s.capabilityId).sort(), [
+    'dim',
+    'number_value',
+  ]);
+});

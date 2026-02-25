@@ -32,6 +32,7 @@
 - [x] Initial project-generic ruleset (starter/provisional; may be reduced as adapter-owned inference policy is defined)
 - [x] Live ZWJS validation path can apply compiled profiles artifact (not on-the-fly compile)
 - [x] Live compiler build/inspect defaults skip controller-like nodes to focus device-profile validation
+- [x] Initial HA-derived overlap suppression policy for same-selector capability conflicts (e.g. curtain multilevel duplicates)
 - [ ] Decide and document final ownership of generic fallback inference policy (currently leaning Homey adapter-owned)
 - [ ] Add second real catalog source adapter when a concrete source format is available
 
