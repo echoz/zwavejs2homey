@@ -15,6 +15,15 @@ The project is intentionally split into layers:
 - Validate compiled profiles against live ZWJS data before implementing the Homey adapter runtime
 - Keep compiler and Homey adapter responsibilities separate
 
+## Interesting Project Characteristics
+
+- **Protocol-first foundation**: `packages/core` is a standalone `zwave-js-server` client, not a Homey-specific wrapper. This keeps protocol work testable and reusable.
+- **HA-assisted compiler pipeline**: Home Assistant `zwave_js` discovery rules are extracted and translated into a generated `ha-derived` rule layer, then combined with project rules.
+- **Static-first mapping design**: the compiler emits reusable Homey profile artifacts (`compiled-homey-profiles/v1`) instead of relying on runtime inference.
+- **Diagnostics-heavy workflow**: the compiler and import tools support `summary`, `markdown`, `json-*`, and `ndjson` outputs for debugging and review.
+- **Live validation loop**: tooling can inspect live ZWJS nodes and compare/validate compiler behavior against real device data.
+- **Catalog-aware diagnostics**: compiler reporting can attach catalog context (`catalogId`, known vs unknown device) without changing rule precedence.
+
 ## Repository Layout
 
 - `co.lazylabs.zwavejs2homey/`
@@ -59,6 +68,12 @@ Note: this currently compiles on the fly. A compiled-artifact apply path is plan
 - `npm run compiler:build -- --device-file <device.json> --manifest-file <manifest.json> --output-file /tmp/compiled-profiles.json --format summary`
 
 This emits a `compiled-homey-profiles/v1` artifact.
+
+Using the canonical layered rules pipeline:
+
+- `rules/manifest.json`
+- `rules/ha-derived/home-assistant.zwave_js.generated.json`
+- `rules/project/generic/base-generic.json`
 
 ### HA import pipeline
 
