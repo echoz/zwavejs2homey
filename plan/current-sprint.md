@@ -119,6 +119,10 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - `compileDevice` now tracks applied/unmatched counters during action emission instead of re-scanning the full action array for summary fields
     - keeps summary semantics identical while removing post-pass `filter(...)` scans over report actions
     - added regression coverage asserting summary counters remain consistent with emitted actions
+28. Completed ninth performance slice for valueId allocation reduction:
+    - `compileDevice` now precomputes one cloned/frozen `valueId` snapshot per input value and reuses it across emitted action records for that value
+    - removes repeated per-action `valueId` object cloning while preserving immutable report snapshots
+    - added regression coverage for immutable snapshot behavior and input-mutation isolation
 
 ## Next Tasks
 

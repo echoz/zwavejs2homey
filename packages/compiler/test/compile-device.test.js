@@ -391,3 +391,25 @@ test('compileDevice summary counters remain consistent with action results', () 
   assert.equal(result.report.summary.appliedActions, countedApplied);
   assert.equal(result.report.summary.unmatchedActions, countedUnmatched);
 });
+
+test('compileDevice report valueIds are immutable snapshots of input values', () => {
+  const device = makeDevice();
+  const rules = [
+    {
+      ruleId: 'matched-capability',
+      layer: 'ha-derived',
+      value: { commandClass: [37], property: ['currentValue'] },
+      actions: [{ type: 'capability', capabilityId: 'onoff' }],
+    },
+  ];
+
+  const result = compiler.compileDevice(device, rules);
+  const firstReported = result.report.actions.find(
+    (action) => action.valueId.property === 'currentValue',
+  );
+  assert.ok(firstReported);
+  assert.equal(Object.isFrozen(firstReported.valueId), true);
+
+  device.values[0].valueId.property = 'mutatedProperty';
+  assert.equal(firstReported.valueId.property, 'currentValue');
+});

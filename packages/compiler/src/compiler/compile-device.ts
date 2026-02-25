@@ -74,6 +74,11 @@ interface ActionSummaryCounters {
   unmatchedActions: number;
 }
 
+interface PreparedValue {
+  original: NormalizedZwaveDeviceFacts['values'][number];
+  clonedValueId: NormalizedZwaveValueId;
+}
+
 const ruleLayerOrder = getRuleLayerOrder();
 const ruleLayerRank = new Map(ruleLayerOrder.map((layer, index) => [layer, index]));
 const sortedRulesCache = new WeakMap<readonly MappingRule[], SortedRulesCacheEntry>();
@@ -233,7 +238,7 @@ function pushUnmatchedActions(
   for (const template of entry.unmatchedTemplates) {
     actions.push({
       ...template,
-      valueId: { ...valueId },
+      valueId,
     });
   }
   counters.unmatchedActions += entry.unmatchedTemplates.length;
@@ -250,7 +255,7 @@ function pushAppliedRuleResults(
     actions.push({
       ...result,
       layer: entry.rule.layer,
-      valueId: { ...valueId },
+      valueId,
     });
     if (result.applied && result.changed !== false) {
       counters.appliedActions += 1;
@@ -259,6 +264,14 @@ function pushAppliedRuleResults(
       counters.unmatchedActions += 1;
     }
   }
+}
+
+function prepareValues(device: NormalizedZwaveDeviceFacts): PreparedValue[] {
+  return device.values.map((value) => ({
+    original: value,
+    // Reused across many emitted action records; frozen to prevent accidental cross-record mutation.
+    clonedValueId: Object.freeze({ ...value.valueId }),
+  }));
 }
 
 function buildDeviceEligibleMask(
@@ -284,25 +297,30 @@ export function compileDevice(
   const executionPlan = resolveRuleExecutionPlan(rules);
   const deviceEligibleMask = buildDeviceEligibleMask(device, executionPlan);
   const candidateScratch = createCandidateScratch(executionPlan.entries.length);
+  const preparedValues = prepareValues(device);
   const actions: CompileDeviceReportEntry[] = [];
   const counters: ActionSummaryCounters = {
     appliedActions: 0,
     unmatchedActions: 0,
   };
 
-  for (const value of device.values) {
-    const candidateStamp = markCandidatesForValue(executionPlan, candidateScratch, value.valueId);
+  for (const value of preparedValues) {
+    const candidateStamp = markCandidatesForValue(
+      executionPlan,
+      candidateScratch,
+      value.original.valueId,
+    );
     for (const [index, entry] of executionPlan.entries.entries()) {
       if (
         deviceEligibleMask[index] === 0 ||
         !isRuleCandidate(candidateScratch, index, candidateStamp)
       ) {
-        pushUnmatchedActions(actions, entry, value.valueId, counters);
+        pushUnmatchedActions(actions, entry, value.clonedValueId, counters);
         continue;
       }
 
-      const results = applyRuleToValue(state, device, value, entry.rule);
-      pushAppliedRuleResults(actions, entry, value.valueId, results, counters);
+      const results = applyRuleToValue(state, device, value.original, entry.rule);
+      pushAppliedRuleResults(actions, entry, value.clonedValueId, results, counters);
     }
   }
 

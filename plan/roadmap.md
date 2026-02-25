@@ -46,6 +46,7 @@
 - [x] Performance slice 6: precomputed unmatched-action templates in compile execution plan to reduce per-value report object churn
 - [x] Performance slice 7: reusable stamp-based candidate scratch buffers in `compileDevice` to remove per-value candidate-mask allocations
 - [x] Performance slice 8: incremental summary counters in `compileDevice` to remove post-pass scans of report actions
+- [x] Performance slice 9: reuse per-value cloned/frozen `valueId` snapshots across emitted action records
 - [ ] Decide and document final ownership of generic fallback inference policy (currently leaning Homey adapter-owned)
 - [ ] Add second real catalog source adapter when a concrete source format is available
 
