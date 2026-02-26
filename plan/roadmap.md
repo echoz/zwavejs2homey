@@ -66,6 +66,7 @@
 - [x] Performance slice 26: add all-eligible summary fast path to bypass eligible-seed filtering/cache setup when device-static rule eligibility is universally true
 - [x] Performance slice 27: evaluate device/companion eligibility on sparse constrained-rule indices only, with lazy ineligible-mask materialization and no-op fast paths when all checks pass
 - [x] Performance slice 28: remove `Set` allocation in summary selector-seed merges via stamp-based typed-array dedupe marks
+- [x] Performance slice 29: add candidate apply paths that assume prevalidated device eligibility, removing redundant device/companion matcher checks inside hot rule-apply loops
 - [ ] Decide and document final ownership of generic fallback inference policy (currently leaning Homey adapter-owned)
 - [ ] Add second real catalog source adapter when a concrete source format is available
 

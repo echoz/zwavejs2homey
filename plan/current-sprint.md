@@ -218,6 +218,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - summary selector resolution now avoids per-miss hash-set allocation while preserving deterministic merged-rule ordering
     - added overflow-safe mark-stamp rollover handling to prevent stale dedupe marks on long-running plan reuse
     - added regression coverage to ensure selector-merge marks do not leak across consecutive selector resolutions
+48. Completed twenty-ninth performance slice for candidate apply-path matcher narrowing:
+    - added `applyRuleToValueAssumingDeviceEligible` and `applyRuleToValueSummaryAssumingDeviceEligible` so compile loops can skip redundant device/companion re-checks for candidate rules
+    - `compileDevice` now uses the assume-eligible apply paths after precomputed eligibility gating in both summary and full modes
+    - refactored apply-rule internals with matched-rule helpers to preserve existing external semantics for `applyRuleToValue`/`applyRuleToValueSummary`
+    - preserves report parity while reducing repeated matcher work in hot candidate-apply paths
 
 ## Next Tasks
 

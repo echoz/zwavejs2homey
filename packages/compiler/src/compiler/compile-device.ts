@@ -2,7 +2,10 @@ import type { HomeyCapabilityPlan } from '../models/homey-plan';
 import type { NormalizedZwaveDeviceFacts, NormalizedZwaveValueId } from '../models/zwave-facts';
 import type { MappingRule } from '../rules/types';
 import type { AppliedRuleActionResult } from './apply-rule';
-import { applyRuleToValue, applyRuleToValueSummary } from './apply-rule';
+import {
+  applyRuleToValueAssumingDeviceEligible,
+  applyRuleToValueSummaryAssumingDeviceEligible,
+} from './apply-rule';
 import { getRuleLayerOrder } from './layer-semantics';
 import { matchesDevice, matchesRuleCompanionConstraints } from './rule-matcher';
 import {
@@ -701,7 +704,11 @@ export function compileDevice(
 
         for (const index of eligibleSummarySeed.indices) {
           const entry = executionPlan.entries[index];
-          const summaryResult = applyRuleToValueSummary(state, device, value, entry.rule);
+          const summaryResult = applyRuleToValueSummaryAssumingDeviceEligible(
+            state,
+            value,
+            entry.rule,
+          );
           if (!summaryResult.matched) {
             unmatchedForValue += summaryResult.actionCount;
             continue;
@@ -721,7 +728,11 @@ export function compileDevice(
 
         for (const index of summarySeed.indices) {
           const entry = executionPlan.entries[index];
-          const summaryResult = applyRuleToValueSummary(state, device, value, entry.rule);
+          const summaryResult = applyRuleToValueSummaryAssumingDeviceEligible(
+            state,
+            value,
+            entry.rule,
+          );
           if (!summaryResult.matched) {
             unmatchedForValue += summaryResult.actionCount;
             continue;
@@ -762,7 +773,7 @@ export function compileDevice(
             continue;
           }
 
-          const results = applyRuleToValue(state, device, value, entry.rule);
+          const results = applyRuleToValueAssumingDeviceEligible(state, value, entry.rule);
           pushAppliedRuleResults(actions, entry, valueIdSnapshot, results, counters);
         }
       }
@@ -780,7 +791,7 @@ export function compileDevice(
             continue;
           }
 
-          const results = applyRuleToValue(state, device, value, entry.rule);
+          const results = applyRuleToValueAssumingDeviceEligible(state, value, entry.rule);
           pushAppliedRuleResults(actions, entry, valueIdSnapshot, results, counters);
         }
       }
