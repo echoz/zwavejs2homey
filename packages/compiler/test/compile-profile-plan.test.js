@@ -86,9 +86,22 @@ test('compileProfilePlan emits a Homey-targeted compiled profile skeleton and re
   assert.deepEqual(report.summary, {
     appliedActions: 4,
     unmatchedActions: 8,
+    totalActions: 12,
+    appliedProjectProductActions: 1,
     suppressedFillActions: 0,
     ignoredValues: 1,
   });
+});
+
+test('compileProfilePlan supports summary report mode without changing confidence', () => {
+  const { profile, report } = compiler.compileProfilePlan(device, rules, {
+    reportMode: 'summary',
+  });
+
+  assert.equal(profile.classification.confidence, 'curated');
+  assert.equal(report.actions.length, 0);
+  assert.equal(report.summary.totalActions, 12);
+  assert.equal(report.summary.appliedProjectProductActions, 1);
 });
 
 test('compileProfilePlan derives classification from compiled device-identity actions', () => {

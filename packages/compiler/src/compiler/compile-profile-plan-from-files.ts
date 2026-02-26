@@ -174,8 +174,9 @@ function deriveCurationCandidates(
   if (report.summary.appliedActions === 0) {
     reasons.push('no-applied-actions');
   }
+  const totalActionCount = report.summary.totalActions ?? report.actions.length;
   const unmatchedRatio =
-    report.actions.length > 0 ? report.summary.unmatchedActions / report.actions.length : 0;
+    totalActionCount > 0 ? report.summary.unmatchedActions / totalActionCount : 0;
   if (unmatchedRatio > 0.75) {
     reasons.push(`high-unmatched-ratio:${unmatchedRatio.toFixed(2)}`);
   }

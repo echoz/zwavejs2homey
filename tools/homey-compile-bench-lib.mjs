@@ -149,6 +149,7 @@ export function runCompileBenchmark(command, deps = {}) {
   const options = {
     homeyClass: command.homeyClass,
     driverTemplateId: command.driverTemplateId,
+    reportMode: 'summary',
   };
 
   for (let i = 0; i < command.warmup; i += 1) {

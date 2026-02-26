@@ -70,3 +70,43 @@ test('runCompileBenchmark resolves manifest entries relative to manifest path', 
   assert.equal(result.profileSummary.profileId, 'fixture-switch-meter-1');
   assert.equal(result.profileSummary.outcome, 'curated');
 });
+
+test('runCompileBenchmark uses summary report mode for compile iterations', async () => {
+  const { runCompileBenchmark } = await loadLib();
+  const calls = [];
+  const result = runCompileBenchmark(
+    {
+      deviceFile: path.join(fixturesDir, 'device-switch-meter.json'),
+      manifest: undefined,
+      rulesFiles: [path.join(fixturesDir, 'rules-switch-meter.json')],
+      iterations: 2,
+      warmup: 1,
+      homeyClass: 'socket',
+      driverTemplateId: 'generic-socket',
+    },
+    {
+      compileProfilePlanFromLoadedRuleSetManifestImpl: (device, loaded, options) => {
+        calls.push({ device, loaded, options });
+        return {
+          profile: {
+            profileId: 'fixture-switch-meter-1',
+            capabilities: [],
+          },
+          report: {
+            profileOutcome: 'curated',
+            curationCandidates: { likelyNeedsReview: false, reasons: [] },
+          },
+        };
+      },
+      loadJsonRuleSetManifestImpl: () => ({ entries: [] }),
+    },
+  );
+
+  assert.equal(calls.length, 3);
+  assert.deepEqual(calls[0].options, {
+    homeyClass: 'socket',
+    driverTemplateId: 'generic-socket',
+    reportMode: 'summary',
+  });
+  assert.equal(result.benchmark.iterations, 2);
+});

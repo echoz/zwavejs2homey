@@ -33,6 +33,8 @@ export interface CompileDeviceResult {
     summary: {
       appliedActions: number;
       unmatchedActions: number;
+      totalActions: number;
+      appliedProjectProductActions: number;
       suppressedFillActions: number;
       ignoredValues: number;
     };
@@ -40,6 +42,10 @@ export interface CompileDeviceResult {
       suppressedCapabilities: CapabilityConflictSuppression[];
     };
   };
+}
+
+export interface CompileDeviceOptions {
+  reportMode?: 'full' | 'summary';
 }
 
 interface SortedRulesCacheEntry {
@@ -72,6 +78,8 @@ interface CandidateScratch {
 interface ActionSummaryCounters {
   appliedActions: number;
   unmatchedActions: number;
+  totalActions: number;
+  appliedProjectProductActions: number;
 }
 
 interface PreparedValue {
@@ -234,14 +242,18 @@ function pushUnmatchedActions(
   entry: CompileRuleExecutionEntry,
   valueId: NormalizedZwaveValueId,
   counters: ActionSummaryCounters,
+  includeActions: boolean,
 ): void {
-  for (const template of entry.unmatchedTemplates) {
-    actions.push({
-      ...template,
-      valueId,
-    });
+  if (includeActions) {
+    for (const template of entry.unmatchedTemplates) {
+      actions.push({
+        ...template,
+        valueId,
+      });
+    }
   }
   counters.unmatchedActions += entry.unmatchedTemplates.length;
+  counters.totalActions += entry.unmatchedTemplates.length;
 }
 
 function pushAppliedRuleResults(
@@ -250,15 +262,22 @@ function pushAppliedRuleResults(
   valueId: NormalizedZwaveValueId,
   results: AppliedRuleActionResult[],
   counters: ActionSummaryCounters,
+  includeActions: boolean,
 ): void {
   for (const result of results) {
-    actions.push({
-      ...result,
-      layer: entry.rule.layer,
-      valueId,
-    });
+    if (includeActions) {
+      actions.push({
+        ...result,
+        layer: entry.rule.layer,
+        valueId,
+      });
+    }
+    counters.totalActions += 1;
     if (result.applied && result.changed !== false) {
       counters.appliedActions += 1;
+      if (entry.rule.layer === 'project-product') {
+        counters.appliedProjectProductActions += 1;
+      }
     }
     if (result.reason === 'rule-not-matched') {
       counters.unmatchedActions += 1;
@@ -292,7 +311,9 @@ function buildDeviceEligibleMask(
 export function compileDevice(
   device: NormalizedZwaveDeviceFacts,
   rules: MappingRule[],
+  options?: CompileDeviceOptions,
 ): CompileDeviceResult {
+  const includeActions = options?.reportMode !== 'summary';
   const state = createProfileBuildState();
   const executionPlan = resolveRuleExecutionPlan(rules);
   const deviceEligibleMask = buildDeviceEligibleMask(device, executionPlan);
@@ -302,6 +323,8 @@ export function compileDevice(
   const counters: ActionSummaryCounters = {
     appliedActions: 0,
     unmatchedActions: 0,
+    totalActions: 0,
+    appliedProjectProductActions: 0,
   };
 
   for (const value of preparedValues) {
@@ -315,12 +338,19 @@ export function compileDevice(
         deviceEligibleMask[index] === 0 ||
         !isRuleCandidate(candidateScratch, index, candidateStamp)
       ) {
-        pushUnmatchedActions(actions, entry, value.clonedValueId, counters);
+        pushUnmatchedActions(actions, entry, value.clonedValueId, counters, includeActions);
         continue;
       }
 
       const results = applyRuleToValue(state, device, value.original, entry.rule);
-      pushAppliedRuleResults(actions, entry, value.clonedValueId, results, counters);
+      pushAppliedRuleResults(
+        actions,
+        entry,
+        value.clonedValueId,
+        results,
+        counters,
+        includeActions,
+      );
     }
   }
 
@@ -336,6 +366,8 @@ export function compileDevice(
       summary: {
         appliedActions: counters.appliedActions,
         unmatchedActions: counters.unmatchedActions,
+        totalActions: counters.totalActions,
+        appliedProjectProductActions: counters.appliedProjectProductActions,
         suppressedFillActions: state.suppressedActions.filter((a) => a.mode === 'fill').length,
         ignoredValues: state.ignoredValues.size,
       },

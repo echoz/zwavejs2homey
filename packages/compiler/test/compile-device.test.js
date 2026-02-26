@@ -121,6 +121,7 @@ test('compileDevice sorts by layer, applies mappings, and returns report entries
     ),
   );
   assert.equal(result.report.summary.appliedActions > 0, true);
+  assert.equal(result.report.summary.totalActions, result.report.actions.length);
   assert.equal(result.report.summary.ignoredValues, 1);
 });
 
@@ -387,9 +388,54 @@ test('compileDevice summary counters remain consistent with action results', () 
   const countedUnmatched = result.report.actions.filter(
     (action) => action.reason === 'rule-not-matched',
   ).length;
+  const countedAppliedProjectProduct = result.report.actions.filter(
+    (action) => action.layer === 'project-product' && action.applied && action.changed !== false,
+  ).length;
 
   assert.equal(result.report.summary.appliedActions, countedApplied);
   assert.equal(result.report.summary.unmatchedActions, countedUnmatched);
+  assert.equal(result.report.summary.totalActions, result.report.actions.length);
+  assert.equal(result.report.summary.appliedProjectProductActions, countedAppliedProjectProduct);
+});
+
+test('compileDevice summary report mode omits action records while preserving summaries', () => {
+  const device = makeDevice();
+  const rules = [
+    {
+      ruleId: 'ha-onoff',
+      layer: 'ha-derived',
+      value: { commandClass: [37], property: ['currentValue'] },
+      actions: [{ type: 'capability', capabilityId: 'onoff' }],
+    },
+    {
+      ruleId: 'product-driver',
+      layer: 'project-product',
+      value: { commandClass: [37], property: ['targetValue'] },
+      actions: [
+        {
+          type: 'device-identity',
+          mode: 'replace',
+          homeyClass: 'light',
+          driverTemplateId: 'product-light',
+        },
+      ],
+    },
+    {
+      ruleId: 'generic-meter',
+      layer: 'project-generic',
+      value: { commandClass: [50], property: ['value'] },
+      actions: [{ type: 'capability', capabilityId: 'measure_power' }],
+    },
+  ];
+
+  const full = compiler.compileDevice(device, rules);
+  const summaryOnly = compiler.compileDevice(device, rules, { reportMode: 'summary' });
+
+  assert.equal(summaryOnly.report.actions.length, 0);
+  assert.deepEqual(summaryOnly.capabilities, full.capabilities);
+  assert.deepEqual(summaryOnly.deviceIdentity, full.deviceIdentity);
+  assert.deepEqual(summaryOnly.report.suppressedActions, full.report.suppressedActions);
+  assert.deepEqual(summaryOnly.report.summary, full.report.summary);
 });
 
 test('compileDevice report valueIds are immutable snapshots of input values', () => {

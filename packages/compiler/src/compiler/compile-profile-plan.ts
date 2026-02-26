@@ -7,7 +7,11 @@ import {
 import type { CompiledHomeyProfilePlan, ProvenanceRecord } from '../models/homey-plan';
 import type { NormalizedZwaveDeviceFacts } from '../models/zwave-facts';
 import type { MappingRule } from '../rules/types';
-import { compileDevice, type CompileDeviceResult } from './compile-device';
+import {
+  compileDevice,
+  type CompileDeviceOptions,
+  type CompileDeviceResult,
+} from './compile-device';
 
 export interface CompileProfilePlanOptions {
   profileId?: string;
@@ -22,6 +26,7 @@ export interface CompileProfilePlanOptions {
     devices: CatalogDeviceRecordV1[];
   };
   catalogIndex?: CatalogIndexBuildResult;
+  reportMode?: CompileDeviceOptions['reportMode'];
 }
 
 export interface CompileProfilePlanCatalogLookup {
@@ -53,11 +58,7 @@ function deriveProfileId(device: NormalizedZwaveDeviceFacts): string {
 function deriveConfidence(
   compileResult: CompileDeviceResult,
 ): CompiledHomeyProfilePlan['classification']['confidence'] {
-  if (
-    compileResult.report.actions.some(
-      (action) => action.applied && action.changed !== false && action.layer === 'project-product',
-    )
-  ) {
+  if (compileResult.report.summary.appliedProjectProductActions > 0) {
     return 'curated';
   }
   if (compileResult.capabilities.some((cap) => cap.provenance.layer === 'ha-derived')) {
@@ -104,7 +105,9 @@ export function compileProfilePlan(
   report: CompileDeviceResult['report'];
   catalogLookup?: CompileProfilePlanCatalogLookup;
 } {
-  const compileResult = compileDevice(device, rules);
+  const compileResult = compileDevice(device, rules, {
+    reportMode: options?.reportMode,
+  });
   const profileId = options?.profileId ?? deriveProfileId(device);
   const catalogIndex = resolveCatalogIndex(options);
   const catalogLookup =

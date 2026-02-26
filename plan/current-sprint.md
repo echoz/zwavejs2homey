@@ -123,6 +123,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - `compileDevice` now precomputes one cloned/frozen `valueId` snapshot per input value and reuses it across emitted action records for that value
     - removes repeated per-action `valueId` object cloning while preserving immutable report snapshots
     - added regression coverage for immutable snapshot behavior and input-mutation isolation
+29. Completed tenth performance slice for report-light benchmark mode:
+    - added `reportMode` support (`full`/`summary`) to `compileDevice` and propagated it through `compileProfilePlan`
+    - summary mode skips per-action report entry emission while retaining deterministic compile outputs and summary counters
+    - added `summary.totalActions` + `summary.appliedProjectProductActions` so unmatched-ratio and confidence derivation stay correct without action arrays
+    - `compiler:bench` now forces summary report mode and regression coverage verifies option wiring
 
 ## Next Tasks
 
