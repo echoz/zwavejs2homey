@@ -36,6 +36,7 @@ export type RuleActionApplyOutcome = 'created' | 'updated' | 'replaced' | 'noop'
 export interface ProfileBuildState {
   collectSuppressedActions: boolean;
   suppressedFillActionsCount: number;
+  hasPotentialConflicts: boolean;
   appliedDeviceIdentityActions: Set<string>;
   deviceIdentity?: {
     homeyClass?: string;
@@ -96,6 +97,7 @@ export function createProfileBuildState(options?: {
   return {
     collectSuppressedActions: options?.collectSuppressedActions ?? true,
     suppressedFillActionsCount: 0,
+    hasPotentialConflicts: false,
     appliedDeviceIdentityActions: new Set(),
     deviceIdentity: undefined,
     capabilities: new Map(),
@@ -261,6 +263,16 @@ function normalizeConflict(
   };
 }
 
+function markPotentialConflictsFromConflict(
+  state: ProfileBuildState,
+  conflict: ProfileBuildStateCapability['conflict'] | undefined,
+): void {
+  if (state.hasPotentialConflicts) return;
+  if (conflict && conflict.mode !== 'allow-multi') {
+    state.hasPotentialConflicts = true;
+  }
+}
+
 function pushSuppressed(
   state: ProfileBuildState,
   action: CapabilityRuleAction,
@@ -295,9 +307,11 @@ export function applyCapabilityRuleAction(
     if (mode === 'augment') {
       // Augment against missing target behaves as fill in v1.
     }
+    const conflict = normalizeConflict(action.conflict);
+    markPotentialConflictsFromConflict(state, conflict);
     state.capabilities.set(action.capabilityId, {
       capabilityId: action.capabilityId,
-      conflict: normalizeConflict(action.conflict),
+      conflict,
       inboundMapping: cloneInboundMapping(action.inboundMapping),
       outboundMapping: cloneOutboundMapping(action.outboundMapping),
       directionality: deriveDirectionality(action),
@@ -341,6 +355,7 @@ export function applyCapabilityRuleAction(
 
     if (!existing.conflict && action.conflict) {
       existing.conflict = normalizeConflict(action.conflict);
+      markPotentialConflictsFromConflict(state, existing.conflict);
       changed = true;
     } else if (existing.conflict && action.conflict) {
       pushSuppressed(state, action, 'conflict', mode, provenance);
@@ -374,6 +389,7 @@ export function applyCapabilityRuleAction(
     const nextOutbound = existing.outboundMapping ?? cloneOutboundMapping(action.outboundMapping);
     const nextFlags = mergeFlags(existing.flags, action.flags);
     const nextConflict = existing.conflict ?? normalizeConflict(action.conflict);
+    markPotentialConflictsFromConflict(state, nextConflict);
 
     existing.inboundMapping = nextInbound;
     existing.outboundMapping = nextOutbound;
@@ -395,6 +411,7 @@ export function applyCapabilityRuleAction(
   existing.outboundMapping = cloneOutboundMapping(action.outboundMapping);
   existing.flags = mergeFlags(undefined, action.flags);
   existing.conflict = normalizeConflict(action.conflict);
+  markPotentialConflictsFromConflict(state, existing.conflict);
   existing.directionality = deriveDirectionality(action);
   existing.provenance = { ...provenance, action: mode, supersedes: superseded };
   existing.provenanceHistory.push({ ...provenance, action: mode, supersedes: superseded });
@@ -475,6 +492,10 @@ export interface CapabilityConflictSuppression {
 export function resolveCapabilityConflicts(state: ProfileBuildState): {
   suppressedCapabilities: CapabilityConflictSuppression[];
 } {
+  if (!state.hasPotentialConflicts) {
+    return { suppressedCapabilities: [] };
+  }
+
   const buckets = new Map<string, ProfileBuildStateCapability[]>();
   for (const cap of state.capabilities.values()) {
     const selectorKey = inboundSelectorKey(cap);

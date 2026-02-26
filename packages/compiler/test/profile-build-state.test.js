@@ -200,3 +200,44 @@ test('device identity actions support fill and product replace with supersedes t
     ),
   );
 });
+
+test('profile build state keeps conflict fast-path disabled without exclusive conflict metadata', () => {
+  const state = compiler.createProfileBuildState();
+  compiler.applyCapabilityRuleAction(
+    state,
+    {
+      type: 'capability',
+      capabilityId: 'onoff',
+      inboundMapping: inboundValue(37, 'currentValue'),
+    },
+    prov('ha-derived', 'ha-onoff'),
+  );
+
+  assert.equal(state.hasPotentialConflicts, false);
+});
+
+test('profile build state marks conflict fast-path when exclusive conflicts are introduced', () => {
+  const state = compiler.createProfileBuildState();
+  compiler.applyCapabilityRuleAction(
+    state,
+    {
+      type: 'capability',
+      capabilityId: 'dim',
+      inboundMapping: inboundValue(38, 'currentValue'),
+      conflict: { key: 'cover-cc38', mode: 'exclusive', priority: 80 },
+    },
+    prov('project-product', 'prod-dim'),
+  );
+  compiler.applyCapabilityRuleAction(
+    state,
+    {
+      type: 'capability',
+      capabilityId: 'windowcoverings_set',
+      inboundMapping: inboundValue(38, 'currentValue'),
+      conflict: { key: 'cover-cc38', mode: 'exclusive', priority: 10 },
+    },
+    prov('ha-derived', 'ha-cover'),
+  );
+
+  assert.equal(state.hasPotentialConflicts, true);
+});

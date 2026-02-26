@@ -153,6 +153,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - summary-mode runs iterate live values directly and skip per-value cloned/frozen `valueId` snapshot preparation entirely
     - full mode preserves immutable `report.actions[].valueId` semantics by retaining snapshot reuse for emitted-action paths only
     - keeps full behavioral parity while removing avoidable allocation work from summary-only compile runs
+35. Completed sixteenth performance slice for conflict-resolution fast-pathing:
+    - `profile-build-state` now tracks whether any exclusive conflict metadata has been introduced during rule application (`hasPotentialConflicts`)
+    - `resolveCapabilityConflicts` now short-circuits immediately when no potential exclusive conflicts exist
+    - preserves overlap semantics while avoiding conflict-bucket scans on devices/rulesets that never emit exclusive conflict metadata
+    - added state-level regression coverage for fast-path flag transitions (no-conflict vs exclusive-conflict rule application)
 
 ## Next Tasks
 
