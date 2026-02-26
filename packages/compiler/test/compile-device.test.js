@@ -539,3 +539,44 @@ test('compileDevice summary mode does not double-apply rules with duplicate comm
   assert.equal(summaryOnly.report.summary.appliedActions, 1);
   assert.equal(summaryOnly.report.summary.unmatchedActions, 0);
 });
+
+test('compileDevice summary mode does not double-apply rules with duplicate property tokens', () => {
+  const device = {
+    deviceKey: 'dev-summary-dup-prop-1',
+    values: [
+      {
+        valueId: { commandClass: 37, endpoint: 0, property: 'currentValue' },
+        metadata: { type: 'boolean', readable: true, writeable: false },
+      },
+    ],
+  };
+  const rules = [
+    {
+      ruleId: 'dup-prop-summary-rule',
+      layer: 'project-product',
+      value: {
+        commandClass: [37],
+        property: ['currentValue', 'currentValue'],
+      },
+      actions: [
+        {
+          type: 'capability',
+          mode: 'replace',
+          capabilityId: 'onoff',
+          inboundMapping: {
+            kind: 'value',
+            selector: { commandClass: 37, endpoint: 0, property: 'currentValue' },
+          },
+        },
+      ],
+    },
+  ];
+
+  const full = compiler.compileDevice(device, rules);
+  const summaryOnly = compiler.compileDevice(device, rules, { reportMode: 'summary' });
+
+  assert.deepEqual(summaryOnly.capabilities, full.capabilities);
+  assert.deepEqual(summaryOnly.report.summary, full.report.summary);
+  assert.equal(summaryOnly.report.summary.appliedActions, 1);
+  assert.equal(summaryOnly.report.summary.unmatchedActions, 0);
+});

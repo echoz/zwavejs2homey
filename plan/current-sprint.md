@@ -163,6 +163,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - summary mode now iterates a single precomputed seed list per value (wildcard + exact command-class indices) and removes per-value visited-mark dedupe tracking
     - keeps deterministic execution and parity while reducing summary hot-loop branching/work
     - added regression coverage for duplicate command-class matcher tokens to ensure summary mode does not double-apply rules
+37. Completed eighteenth performance slice for summary candidate property specialization:
+    - `compileDevice` execution plan now precomputes summary candidate seeds by `(commandClass, property)` plus fallback seeds for command-class-only and unknown-command-class cases
+    - summary mode now selects one precomputed seed set per value and only applies endpoint + device-eligibility gates before invoking `applyRuleToValueSummary`
+    - removes property-dimension checks from the summary hot loop while preserving deterministic ordering/parity
+    - added regression coverage for duplicate property matcher tokens to ensure summary mode does not double-apply rules
 
 ## Next Tasks
 

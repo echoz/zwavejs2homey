@@ -62,7 +62,10 @@ interface CompileRuleExecutionPlan {
   entries: CompileRuleExecutionEntry[];
   commandClassWildcardIndices: number[];
   byCommandClass: Map<number, number[]>;
-  summarySeedByCommandClass: Map<number, number[]>;
+  summarySeedByCommandClassProperty: Map<number, Map<string, number[]>>;
+  summarySeedByCommandClassAnyProperty: Map<number, number[]>;
+  summarySeedForUnknownCommandClassByProperty: Map<string, number[]>;
+  summarySeedForUnknownCommandClassAnyProperty: number[];
   propertyWildcardIndices: number[];
   byProperty: Map<string, number[]>;
   endpointWildcardIndices: number[];
@@ -120,6 +123,28 @@ function mergeSortedUniqueIndices(a: readonly number[], b: readonly number[]): n
   return merged;
 }
 
+function intersectSortedUniqueIndices(a: readonly number[], b: readonly number[]): number[] {
+  const intersected: number[] = [];
+  let i = 0;
+  let j = 0;
+  while (i < a.length && j < b.length) {
+    const aValue = a[i];
+    const bValue = b[j];
+    if (aValue === bValue) {
+      intersected.push(aValue);
+      i += 1;
+      j += 1;
+      continue;
+    }
+    if (aValue < bValue) {
+      i += 1;
+      continue;
+    }
+    j += 1;
+  }
+  return intersected;
+}
+
 function buildRuleExecutionPlan(rules: MappingRule[]): CompileRuleExecutionPlan {
   const sortedRules = [...rules].sort((a, b) => {
     const aRank = ruleLayerRank.get(a.layer) ?? Number.MAX_SAFE_INTEGER;
@@ -138,11 +163,13 @@ function buildRuleExecutionPlan(rules: MappingRule[]): CompileRuleExecutionPlan 
   }));
   const commandClassWildcardIndices: number[] = [];
   const byCommandClass = new Map<number, number[]>();
-  const summarySeedByCommandClass = new Map<number, number[]>();
   const propertyWildcardIndices: number[] = [];
   const byProperty = new Map<string, number[]>();
   const endpointWildcardIndices: number[] = [];
   const byEndpoint = new Map<number, number[]>();
+  const summarySeedByCommandClassProperty = new Map<number, Map<string, number[]>>();
+  const summarySeedByCommandClassAnyProperty = new Map<number, number[]>();
+  const summarySeedForUnknownCommandClassByProperty = new Map<string, number[]>();
   let totalActionCountPerValue = 0;
 
   for (const [index, entry] of entries.entries()) {
@@ -176,18 +203,55 @@ function buildRuleExecutionPlan(rules: MappingRule[]): CompileRuleExecutionPlan 
     }
   }
 
-  for (const [commandClass, exactIndices] of byCommandClass.entries()) {
-    summarySeedByCommandClass.set(
-      commandClass,
-      mergeSortedUniqueIndices(commandClassWildcardIndices, exactIndices),
+  const summaryPropertySeedByProperty = new Map<string, number[]>();
+  for (const [property, exactIndices] of byProperty.entries()) {
+    summaryPropertySeedByProperty.set(
+      property,
+      mergeSortedUniqueIndices(propertyWildcardIndices, exactIndices),
     );
+  }
+
+  const summarySeedForUnknownCommandClassAnyProperty = intersectSortedUniqueIndices(
+    commandClassWildcardIndices,
+    propertyWildcardIndices,
+  );
+  for (const [property, propertySeed] of summaryPropertySeedByProperty.entries()) {
+    const intersected = intersectSortedUniqueIndices(commandClassWildcardIndices, propertySeed);
+    if (intersected.length > 0) {
+      summarySeedForUnknownCommandClassByProperty.set(property, intersected);
+    }
+  }
+
+  for (const [commandClass, exactIndices] of byCommandClass.entries()) {
+    const summarySeedForCommandClass = mergeSortedUniqueIndices(
+      commandClassWildcardIndices,
+      exactIndices,
+    );
+    summarySeedByCommandClassAnyProperty.set(
+      commandClass,
+      intersectSortedUniqueIndices(summarySeedForCommandClass, propertyWildcardIndices),
+    );
+
+    const byPropertyForCommandClass = new Map<string, number[]>();
+    for (const [property, propertySeed] of summaryPropertySeedByProperty.entries()) {
+      const intersected = intersectSortedUniqueIndices(summarySeedForCommandClass, propertySeed);
+      if (intersected.length > 0) {
+        byPropertyForCommandClass.set(property, intersected);
+      }
+    }
+    if (byPropertyForCommandClass.size > 0) {
+      summarySeedByCommandClassProperty.set(commandClass, byPropertyForCommandClass);
+    }
   }
 
   return {
     entries,
     commandClassWildcardIndices,
     byCommandClass,
-    summarySeedByCommandClass,
+    summarySeedByCommandClassProperty,
+    summarySeedByCommandClassAnyProperty,
+    summarySeedForUnknownCommandClassByProperty,
+    summarySeedForUnknownCommandClassAnyProperty,
     propertyWildcardIndices,
     byProperty,
     endpointWildcardIndices,
@@ -254,6 +318,17 @@ function markCandidatesForValue(
   markIndices(scratch.endpointMarks, plan.endpointWildcardIndices, stamp);
   markIndices(scratch.endpointMarks, plan.byEndpoint.get(valueId.endpoint ?? 0) ?? [], stamp);
 
+  return stamp;
+}
+
+function markEndpointCandidatesForValue(
+  plan: CompileRuleExecutionPlan,
+  scratch: CandidateScratch,
+  valueId: NormalizedZwaveValueId,
+): number {
+  const stamp = nextScratchStamp(scratch);
+  markIndices(scratch.endpointMarks, plan.endpointWildcardIndices, stamp);
+  markIndices(scratch.endpointMarks, plan.byEndpoint.get(valueId.endpoint ?? 0) ?? [], stamp);
   return stamp;
 }
 
@@ -342,17 +417,25 @@ export function compileDevice(
 
   if (!includeActions) {
     for (const value of device.values) {
-      const candidateStamp = markCandidatesForValue(executionPlan, candidateScratch, value.valueId);
+      const candidateStamp = markEndpointCandidatesForValue(
+        executionPlan,
+        candidateScratch,
+        value.valueId,
+      );
       counters.totalActions += executionPlan.totalActionCountPerValue;
       counters.unmatchedActions += executionPlan.totalActionCountPerValue;
 
+      const propertyKey = propertyTokenKey(value.valueId.property);
       const summarySeedIndices =
-        executionPlan.summarySeedByCommandClass.get(value.valueId.commandClass) ??
-        executionPlan.commandClassWildcardIndices;
+        executionPlan.summarySeedByCommandClassProperty
+          .get(value.valueId.commandClass)
+          ?.get(propertyKey) ??
+        executionPlan.summarySeedByCommandClassAnyProperty.get(value.valueId.commandClass) ??
+        executionPlan.summarySeedForUnknownCommandClassByProperty.get(propertyKey) ??
+        executionPlan.summarySeedForUnknownCommandClassAnyProperty;
       for (const index of summarySeedIndices) {
         if (
           deviceEligibleMask[index] === 0 ||
-          candidateScratch.propertyMarks[index] !== candidateStamp ||
           candidateScratch.endpointMarks[index] !== candidateStamp
         ) {
           continue;
