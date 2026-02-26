@@ -65,6 +65,7 @@
 - [x] Performance slice 25: make bounded summary selector-cache eviction amortized O(1) via head-index FIFO queue + queue compaction under long selector churn
 - [x] Performance slice 26: add all-eligible summary fast path to bypass eligible-seed filtering/cache setup when device-static rule eligibility is universally true
 - [x] Performance slice 27: evaluate device/companion eligibility on sparse constrained-rule indices only, with lazy ineligible-mask materialization and no-op fast paths when all checks pass
+- [x] Performance slice 28: remove `Set` allocation in summary selector-seed merges via stamp-based typed-array dedupe marks
 - [ ] Decide and document final ownership of generic fallback inference policy (currently leaning Homey adapter-owned)
 - [ ] Add second real catalog source adapter when a concrete source format is available
 

@@ -840,6 +840,50 @@ test('compileDevice summary selector cache eviction stays stable under sustained
   }
 });
 
+test('compileDevice summary selector merge marks stay isolated between selector resolutions', () => {
+  const device = {
+    deviceKey: 'dev-summary-selector-merge-stamp-1',
+    values: [
+      {
+        valueId: { commandClass: 49, endpoint: 0, property: 'sensor-a' },
+        metadata: { type: 'number', readable: true, writeable: false },
+      },
+      {
+        valueId: { commandClass: 49, endpoint: 0, property: 'sensor-b' },
+        metadata: { type: 'number', readable: true, writeable: false },
+      },
+    ],
+  };
+  const rules = [
+    {
+      ruleId: 'wildcard-ignore',
+      layer: 'ha-derived',
+      actions: [{ type: 'ignore-value' }],
+    },
+    {
+      ruleId: 'sensor-a-capability',
+      layer: 'project-product',
+      value: { commandClass: [49], property: ['sensor-a'] },
+      actions: [{ type: 'capability', capabilityId: 'measure_power' }],
+    },
+    {
+      ruleId: 'sensor-b-capability',
+      layer: 'project-product',
+      value: { commandClass: [49], property: ['sensor-b'] },
+      actions: [{ type: 'capability', capabilityId: 'measure_voltage' }],
+    },
+  ];
+
+  const full = compiler.compileDevice(device, rules);
+  const summaryOnly = compiler.compileDevice(device, rules, { reportMode: 'summary' });
+
+  assert.deepEqual(summaryOnly.capabilities, full.capabilities);
+  assert.deepEqual(summaryOnly.ignoredValues, full.ignoredValues);
+  assert.deepEqual(summaryOnly.report.summary, full.report.summary);
+  assert.equal(summaryOnly.report.summary.appliedActions, 4);
+  assert.equal(summaryOnly.report.summary.unmatchedActions, 2);
+});
+
 test('compileDevice summary mode preserves mixed matched/unmatched multi-action counters', () => {
   const device = {
     deviceKey: 'dev-summary-multi-counter-parity-1',

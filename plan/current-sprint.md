@@ -213,6 +213,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - device eligibility is now represented as a sparse ineligible mask (`1` = ineligible), allocated only when at least one constrained rule fails
     - summary/full compile paths now branch on `hasIneligibleRules` to skip per-rule eligibility checks entirely when all constrained rules pass
     - preserves full/summary parity and avoids unnecessary matcher work for unconstrained rule-heavy rule sets
+47. Completed twenty-eighth performance slice for selector-merge dedupe allocation removal:
+    - replaced `Set`-based selector merge dedupe in `resolveSummaryCandidateSeed` with stamp-based `Uint32Array` marks stored in the execution plan
+    - summary selector resolution now avoids per-miss hash-set allocation while preserving deterministic merged-rule ordering
+    - added overflow-safe mark-stamp rollover handling to prevent stale dedupe marks on long-running plan reuse
+    - added regression coverage to ensure selector-merge marks do not leak across consecutive selector resolutions
 
 ## Next Tasks
 

@@ -85,6 +85,8 @@ interface CompileRuleExecutionPlan {
   summarySelectorCacheOrder: Array<[commandClass: number, propertyKey: string, endpoint: number]>;
   summarySelectorCacheOrderHead: number;
   summarySelectorCacheSize: number;
+  summarySelectorMergeMarks: Uint32Array;
+  summarySelectorMergeStamp: number;
   deviceEligibilityRuleIndices: number[];
   propertyWildcardIndices: number[];
   byProperty: Map<string, number[]>;
@@ -216,12 +218,12 @@ function resolveSummaryCandidateSeed(
 
   const merged: number[] = [];
   let actionCount = 0;
-  const seen = new Set<number>();
+  const mergeStamp = nextSummarySelectorMergeStamp(plan);
   const addIndices = (indices: readonly number[] | undefined): void => {
     if (!indices) return;
     for (const index of indices) {
-      if (seen.has(index)) continue;
-      seen.add(index);
+      if (plan.summarySelectorMergeMarks[index] === mergeStamp) continue;
+      plan.summarySelectorMergeMarks[index] = mergeStamp;
       merged.push(index);
       actionCount += plan.entries[index].actionCount;
     }
@@ -366,6 +368,8 @@ function buildRuleExecutionPlan(rules: MappingRule[]): CompileRuleExecutionPlan 
   const summarySelectorCacheOrder: Array<
     [commandClass: number, propertyKey: string, endpoint: number]
   > = [];
+  const summarySelectorMergeMarks = new Uint32Array(entries.length);
+  const summarySelectorMergeStamp = 0;
   const deviceEligibilityRuleIndices: number[] = [];
   let summarySelectorCacheOrderHead = 0;
   let summarySelectorCacheSize = 0;
@@ -500,6 +504,8 @@ function buildRuleExecutionPlan(rules: MappingRule[]): CompileRuleExecutionPlan 
     summarySelectorCacheOrder,
     summarySelectorCacheOrderHead,
     summarySelectorCacheSize,
+    summarySelectorMergeMarks,
+    summarySelectorMergeStamp,
     deviceEligibilityRuleIndices,
     propertyWildcardIndices,
     byProperty,
@@ -537,6 +543,16 @@ function nextScratchStamp(scratch: CandidateScratch): number {
   }
   scratch.stamp += 1;
   return scratch.stamp;
+}
+
+function nextSummarySelectorMergeStamp(plan: CompileRuleExecutionPlan): number {
+  if (plan.summarySelectorMergeStamp >= 0xffffffff) {
+    plan.summarySelectorMergeMarks.fill(0);
+    plan.summarySelectorMergeStamp = 1;
+    return plan.summarySelectorMergeStamp;
+  }
+  plan.summarySelectorMergeStamp += 1;
+  return plan.summarySelectorMergeStamp;
 }
 
 function markIndices(marks: Uint32Array, indices: number[], stamp: number): void {
