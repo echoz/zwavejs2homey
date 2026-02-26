@@ -173,6 +173,12 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - summary mode now resolves one precomputed selector seed per value and drops all candidate-mark stamping/gating on command-class/property/endpoint dimensions (device-eligibility gating remains)
     - preserves deterministic parity across endpoint-specific and wildcard-endpoint rules while simplifying summary hot-loop logic
     - added regression coverage for duplicate endpoint matcher tokens and endpoint-specific + wildcard parity behavior
+39. Completed twentieth performance slice for compact summary seed modeling + selector caching:
+    - replaced wildcard-expanded summary seed generation with compact 8-bucket selector modeling (`CPE`, `CP`, `CE`, `C`, `PE`, `P`, `E`, `ANY`)
+    - added per-plan selector cache keyed by `(commandClass, property, endpoint)` to memoize merged candidate seeds for repeated selectors
+    - summary runtime now resolves one cached seed per selector and executes candidate rules directly with device-eligibility gating
+    - preserves deterministic ordering/parity while reducing summary plan-build memory blow-up from wildcard expansion
+    - added regression coverage for repeated-selector wildcard parity behavior
 
 ## Next Tasks
 

@@ -677,3 +677,52 @@ test('compileDevice summary mode preserves endpoint-specific and wildcard endpoi
   assert.deepEqual(summaryOnly.report.summary, full.report.summary);
   assert.equal(summaryOnly.report.summary.appliedActions, 2);
 });
+
+test('compileDevice summary mode preserves wildcard selector parity on repeated selectors', () => {
+  const device = {
+    deviceKey: 'dev-summary-cache-shape-1',
+    values: [
+      {
+        valueId: { commandClass: 37, endpoint: 0, property: 'currentValue' },
+        metadata: { type: 'boolean', readable: true, writeable: false },
+      },
+      {
+        valueId: { commandClass: 37, endpoint: 0, property: 'currentValue' },
+        metadata: { type: 'boolean', readable: true, writeable: false },
+      },
+      {
+        valueId: { commandClass: 50, endpoint: 0, property: 'value' },
+        metadata: { type: 'number', readable: true, writeable: false },
+      },
+    ],
+  };
+  const rules = [
+    {
+      ruleId: 'wildcard-all',
+      layer: 'ha-derived',
+      actions: [{ type: 'ignore-value' }],
+    },
+    {
+      ruleId: 'switch-onoff',
+      layer: 'project-product',
+      value: { commandClass: [37], property: ['currentValue'] },
+      actions: [
+        {
+          type: 'capability',
+          capabilityId: 'onoff',
+          inboundMapping: {
+            kind: 'value',
+            selector: { commandClass: 37, endpoint: 0, property: 'currentValue' },
+          },
+        },
+      ],
+    },
+  ];
+
+  const full = compiler.compileDevice(device, rules);
+  const summaryOnly = compiler.compileDevice(device, rules, { reportMode: 'summary' });
+
+  assert.deepEqual(summaryOnly.capabilities, full.capabilities);
+  assert.deepEqual(summaryOnly.report.summary, full.report.summary);
+  assert.equal(summaryOnly.report.summary.appliedActions, 4);
+});

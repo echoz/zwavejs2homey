@@ -62,7 +62,15 @@ interface CompileRuleExecutionPlan {
   entries: CompileRuleExecutionEntry[];
   commandClassWildcardIndices: number[];
   byCommandClass: Map<number, number[]>;
-  summarySeedBySelector: Map<string, number[]>;
+  summaryBucketCPE: Map<string, number[]>;
+  summaryBucketCP: Map<string, number[]>;
+  summaryBucketCE: Map<string, number[]>;
+  summaryBucketC: Map<number, number[]>;
+  summaryBucketPE: Map<string, number[]>;
+  summaryBucketP: Map<string, number[]>;
+  summaryBucketE: Map<number, number[]>;
+  summaryBucketAny: number[];
+  summarySelectorCache: Map<string, number[]>;
   propertyWildcardIndices: number[];
   byProperty: Map<string, number[]>;
   endpointWildcardIndices: number[];
@@ -105,12 +113,20 @@ function uniqueTokens<T>(tokens: readonly T[]): T[] {
   return [...new Set(tokens)];
 }
 
-function summarySelectorKey(
-  commandClass: number | null,
-  propertyKey: string | null,
-  endpoint: number | null,
-): string {
-  return `${commandClass ?? '*'}|${propertyKey ?? '*'}|${endpoint ?? '*'}`;
+function keyCPE(commandClass: number, propertyKey: string, endpoint: number): string {
+  return `${commandClass}|${propertyKey}|${endpoint}`;
+}
+
+function keyCP(commandClass: number, propertyKey: string): string {
+  return `${commandClass}|${propertyKey}`;
+}
+
+function keyCE(commandClass: number, endpoint: number): string {
+  return `${commandClass}|${endpoint}`;
+}
+
+function keyPE(propertyKey: string, endpoint: number): string {
+  return `${propertyKey}|${endpoint}`;
 }
 
 function resolveSummaryCandidateSeed(
@@ -120,21 +136,43 @@ function resolveSummaryCandidateSeed(
   const commandClass = valueId.commandClass;
   const property = propertyTokenKey(valueId.property);
   const endpoint = valueId.endpoint ?? 0;
-  const keys = [
-    summarySelectorKey(commandClass, property, endpoint),
-    summarySelectorKey(commandClass, property, null),
-    summarySelectorKey(commandClass, null, endpoint),
-    summarySelectorKey(commandClass, null, null),
-    summarySelectorKey(null, property, endpoint),
-    summarySelectorKey(null, property, null),
-    summarySelectorKey(null, null, endpoint),
-    summarySelectorKey(null, null, null),
-  ];
-  for (const key of keys) {
-    const seed = plan.summarySeedBySelector.get(key);
-    if (seed) return seed;
+  const cacheKey = keyCPE(commandClass, property, endpoint);
+  const cached = plan.summarySelectorCache.get(cacheKey);
+  if (cached) return cached;
+
+  const merged: number[] = [];
+  const seen = new Set<number>();
+  const addIndices = (indices: readonly number[] | undefined): void => {
+    if (!indices) return;
+    for (const index of indices) {
+      if (seen.has(index)) continue;
+      seen.add(index);
+      merged.push(index);
+    }
+  };
+
+  addIndices(plan.summaryBucketCPE.get(keyCPE(commandClass, property, endpoint)));
+  addIndices(plan.summaryBucketCP.get(keyCP(commandClass, property)));
+  addIndices(plan.summaryBucketCE.get(keyCE(commandClass, endpoint)));
+  addIndices(plan.summaryBucketC.get(commandClass));
+  addIndices(plan.summaryBucketPE.get(keyPE(property, endpoint)));
+  addIndices(plan.summaryBucketP.get(property));
+  addIndices(plan.summaryBucketE.get(endpoint));
+  addIndices(plan.summaryBucketAny);
+
+  plan.summarySelectorCache.set(cacheKey, merged);
+  return merged;
+}
+
+function pushSummaryBucket<K>(bucket: Map<K, number[]>, key: K, index: number): void {
+  const list = bucket.get(key);
+  if (!list) {
+    bucket.set(key, [index]);
+    return;
   }
-  return [];
+  if (list[list.length - 1] !== index) {
+    list.push(index);
+  }
 }
 
 function buildRuleExecutionPlan(rules: MappingRule[]): CompileRuleExecutionPlan {
@@ -159,7 +197,15 @@ function buildRuleExecutionPlan(rules: MappingRule[]): CompileRuleExecutionPlan 
   const byProperty = new Map<string, number[]>();
   const endpointWildcardIndices: number[] = [];
   const byEndpoint = new Map<number, number[]>();
-  const summarySeedBySelector = new Map<string, number[]>();
+  const summaryBucketCPE = new Map<string, number[]>();
+  const summaryBucketCP = new Map<string, number[]>();
+  const summaryBucketCE = new Map<string, number[]>();
+  const summaryBucketC = new Map<number, number[]>();
+  const summaryBucketPE = new Map<string, number[]>();
+  const summaryBucketP = new Map<string, number[]>();
+  const summaryBucketE = new Map<number, number[]>();
+  const summaryBucketAny: number[] = [];
+  const summarySelectorCache = new Map<string, number[]>();
   let totalActionCountPerValue = 0;
 
   for (const [index, entry] of entries.entries()) {
@@ -193,45 +239,93 @@ function buildRuleExecutionPlan(rules: MappingRule[]): CompileRuleExecutionPlan 
     }
   }
 
-  const knownCommandClasses = [...byCommandClass.keys()];
-  const knownProperties = [...byProperty.keys()];
-  const knownEndpoints = [...byEndpoint.keys()];
   for (const [index, entry] of entries.entries()) {
     const matcher = entry.rule.value;
-    const summaryCommandClasses: Array<number | null> = matcher?.commandClass
-      ? uniqueTokens(matcher.commandClass)
-      : [null, ...knownCommandClasses];
-    const summaryProperties: Array<string | null> = matcher?.property
+    const commandClasses = matcher?.commandClass ? uniqueTokens(matcher.commandClass) : undefined;
+    const properties = matcher?.property
       ? uniqueTokens(matcher.property.map((property) => propertyTokenKey(property)))
-      : [null, ...knownProperties];
-    const summaryEndpoints: Array<number | null> = matcher?.endpoint
-      ? uniqueTokens(matcher.endpoint)
-      : [null, ...knownEndpoints];
+      : undefined;
+    const endpoints = matcher?.endpoint ? uniqueTokens(matcher.endpoint) : undefined;
 
-    for (const summaryCommandClass of summaryCommandClasses) {
-      for (const summaryProperty of summaryProperties) {
-        for (const summaryEndpoint of summaryEndpoints) {
-          pushIndex(
-            summarySeedBySelector,
-            summarySelectorKey(summaryCommandClass, summaryProperty, summaryEndpoint),
-            index,
-          );
+    if (!commandClasses && !properties && !endpoints) {
+      if (summaryBucketAny[summaryBucketAny.length - 1] !== index) {
+        summaryBucketAny.push(index);
+      }
+      continue;
+    }
+
+    if (commandClasses && properties && endpoints) {
+      for (const commandClass of commandClasses) {
+        for (const property of properties) {
+          for (const endpoint of endpoints) {
+            pushSummaryBucket(summaryBucketCPE, keyCPE(commandClass, property, endpoint), index);
+          }
         }
       }
+      continue;
     }
-  }
 
-  for (const indices of summarySeedBySelector.values()) {
-    const deduped = uniqueTokens(indices);
-    indices.length = 0;
-    indices.push(...deduped);
+    if (commandClasses && properties) {
+      for (const commandClass of commandClasses) {
+        for (const property of properties) {
+          pushSummaryBucket(summaryBucketCP, keyCP(commandClass, property), index);
+        }
+      }
+      continue;
+    }
+
+    if (commandClasses && endpoints) {
+      for (const commandClass of commandClasses) {
+        for (const endpoint of endpoints) {
+          pushSummaryBucket(summaryBucketCE, keyCE(commandClass, endpoint), index);
+        }
+      }
+      continue;
+    }
+
+    if (properties && endpoints) {
+      for (const property of properties) {
+        for (const endpoint of endpoints) {
+          pushSummaryBucket(summaryBucketPE, keyPE(property, endpoint), index);
+        }
+      }
+      continue;
+    }
+
+    if (commandClasses) {
+      for (const commandClass of commandClasses) {
+        pushSummaryBucket(summaryBucketC, commandClass, index);
+      }
+      continue;
+    }
+
+    if (properties) {
+      for (const property of properties) {
+        pushSummaryBucket(summaryBucketP, property, index);
+      }
+      continue;
+    }
+
+    if (endpoints) {
+      for (const endpoint of endpoints) {
+        pushSummaryBucket(summaryBucketE, endpoint, index);
+      }
+    }
   }
 
   return {
     entries,
     commandClassWildcardIndices,
     byCommandClass,
-    summarySeedBySelector,
+    summaryBucketCPE,
+    summaryBucketCP,
+    summaryBucketCE,
+    summaryBucketC,
+    summaryBucketPE,
+    summaryBucketP,
+    summaryBucketE,
+    summaryBucketAny,
+    summarySelectorCache,
     propertyWildcardIndices,
     byProperty,
     endpointWildcardIndices,
