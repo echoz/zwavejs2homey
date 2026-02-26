@@ -74,10 +74,18 @@ export function matchesValue(
   matcher?: RuleValueMatcher,
 ): boolean {
   if (!matcher) return true;
-  const key = propertyKeyAsComparable(value.valueId);
   if (!includesIfPresent(matcher.commandClass, value.valueId.commandClass)) return false;
   if (!includesIfPresent(matcher.endpoint, value.valueId.endpoint ?? 0)) return false;
   if (!includesIfPresent(matcher.property, value.valueId.property)) return false;
+  return matchesValueAfterSelectorGates(value, matcher);
+}
+
+export function matchesValueAfterSelectorGates(
+  value: NormalizedZwaveValueFacts,
+  matcher?: RuleValueMatcher,
+): boolean {
+  if (!matcher) return true;
+  const key = propertyKeyAsComparable(value.valueId);
   if (matcher.propertyKey && !matcher.propertyKey.includes(key)) return false;
   if (matcher.notPropertyKey && matcher.notPropertyKey.includes(key)) return false;
   if (!includesIfPresent(matcher.metadataType, value.metadata.type)) return false;

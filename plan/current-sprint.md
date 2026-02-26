@@ -223,6 +223,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - `compileDevice` now uses the assume-eligible apply paths after precomputed eligibility gating in both summary and full modes
     - refactored apply-rule internals with matched-rule helpers to preserve existing external semantics for `applyRuleToValue`/`applyRuleToValueSummary`
     - preserves report parity while reducing repeated matcher work in hot candidate-apply paths
+49. Completed thirtieth performance slice for selector-gated value matcher narrowing:
+    - introduced `matchesValueAfterSelectorGates` to evaluate only residual value predicates (`propertyKey`, `notPropertyKey`, metadata/read-write flags) after selector candidate gating
+    - assume-eligible apply paths now use the narrowed matcher to avoid re-checking command-class/property/endpoint constraints already enforced by compile-time candidate selection
+    - retained `matchesValue` semantics by delegating to the residual matcher after selector predicates, preserving existing behavior for non-optimized call sites
+    - preserves compile parity while reducing redundant per-candidate predicate work in summary/full hot paths
 
 ## Next Tasks
 

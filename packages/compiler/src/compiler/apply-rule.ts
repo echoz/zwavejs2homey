@@ -15,7 +15,7 @@ import {
   type ProfileBuildState,
   removeCapabilityRuleAction,
 } from './profile-build-state';
-import { matchesRuleForValue, matchesValue } from './rule-matcher';
+import { matchesRuleForValue, matchesValueAfterSelectorGates } from './rule-matcher';
 import { assertRuleActionModeAllowedForLayer, normalizeRuleActionMode } from './layer-semantics';
 
 export interface AppliedRuleActionResult {
@@ -227,7 +227,7 @@ export function applyRuleToValueAssumingDeviceEligible(
   value: NormalizedZwaveValueFacts,
   rule: MappingRule,
 ): AppliedRuleActionResult[] {
-  if (!matchesValue(value, rule.value)) {
+  if (!matchesValueAfterSelectorGates(value, rule.value)) {
     return ruleNotMatchedResults(rule);
   }
   return applyMatchedRuleToValue(state, value, rule);
@@ -250,7 +250,7 @@ export function applyRuleToValueSummaryAssumingDeviceEligible(
   value: NormalizedZwaveValueFacts,
   rule: MappingRule,
 ): ApplyRuleToValueSummaryResult {
-  if (!matchesValue(value, rule.value)) {
+  if (!matchesValueAfterSelectorGates(value, rule.value)) {
     return unmatchedSummaryResult(rule);
   }
   return applyMatchedRuleToValueSummary(state, value, rule);

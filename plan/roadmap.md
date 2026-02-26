@@ -67,6 +67,7 @@
 - [x] Performance slice 27: evaluate device/companion eligibility on sparse constrained-rule indices only, with lazy ineligible-mask materialization and no-op fast paths when all checks pass
 - [x] Performance slice 28: remove `Set` allocation in summary selector-seed merges via stamp-based typed-array dedupe marks
 - [x] Performance slice 29: add candidate apply paths that assume prevalidated device eligibility, removing redundant device/companion matcher checks inside hot rule-apply loops
+- [x] Performance slice 30: narrow candidate apply matcher checks to residual value predicates after selector gating (`propertyKey`/metadata/read-write)
 - [ ] Decide and document final ownership of generic fallback inference policy (currently leaning Homey adapter-owned)
 - [ ] Add second real catalog source adapter when a concrete source format is available
 
