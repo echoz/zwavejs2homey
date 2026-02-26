@@ -63,6 +63,7 @@
 - [x] Performance slice 23: summary counter accounting rewrite to direct unmatched accumulation using cached per-selector action totals (no baseline-add/subtract loop)
 - [x] Performance slice 24: precompute per-selector device-eligible summary seeds to remove per-rule eligibility branching in summary hot loops
 - [x] Performance slice 25: make bounded summary selector-cache eviction amortized O(1) via head-index FIFO queue + queue compaction under long selector churn
+- [x] Performance slice 26: add all-eligible summary fast path to bypass eligible-seed filtering/cache setup when device-static rule eligibility is universally true
 - [ ] Decide and document final ownership of generic fallback inference policy (currently leaning Homey adapter-owned)
 - [ ] Add second real catalog source adapter when a concrete source format is available
 

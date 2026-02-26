@@ -203,6 +203,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - added queue compaction thresholding so eviction remains amortized O(1) without unbounded tombstone growth in long-running heterogeneous selector churn
     - hardened eviction fallback to recover cleanly if queue/counter state ever diverges
     - expanded regression coverage with sustained selector-churn parity checks (multi-round >cache-capacity runs, repeated summary compiles)
+45. Completed twenty-sixth performance slice for all-eligible summary fast path:
+    - `compileDevice` now computes `{ mask, hasIneligibleRules }` once and uses a direct summary-seed path when every rule is device-eligible
+    - all-eligible summary mode now skips compile-local eligible-seed filtering/cache construction and executes directly against base selector seeds
+    - retained existing filtered path for mixed/ineligible rule sets; unmatched/applied counters remain parity-safe across both paths
+    - added regression coverage that reuses a cached execution plan across eligible and ineligible devices and asserts full/summary parity
 
 ## Next Tasks
 

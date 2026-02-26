@@ -106,6 +106,11 @@ interface ActionSummaryCounters {
   appliedProjectProductActions: number;
 }
 
+interface DeviceEligibility {
+  mask: Uint8Array;
+  hasIneligibleRules: boolean;
+}
+
 const ruleLayerOrder = getRuleLayerOrder();
 const ruleLayerRank = new Map(ruleLayerOrder.map((layer, index) => [layer, index]));
 const sortedRulesCache = new WeakMap<readonly MappingRule[], SortedRulesCacheEntry>();
@@ -604,19 +609,25 @@ function pushAppliedRuleResults(
   }
 }
 
-function buildDeviceEligibleMask(
+function buildDeviceEligibility(
   device: NormalizedZwaveDeviceFacts,
   plan: CompileRuleExecutionPlan,
-): Uint8Array {
+): DeviceEligibility {
   const mask = new Uint8Array(plan.entries.length);
+  let hasIneligibleRules = false;
   for (const [index, entry] of plan.entries.entries()) {
-    mask[index] =
+    const eligible =
       matchesDevice(device, entry.rule.device) &&
-      matchesRuleCompanionConstraints(device, entry.rule)
-        ? 1
-        : 0;
+      matchesRuleCompanionConstraints(device, entry.rule);
+    mask[index] = eligible ? 1 : 0;
+    if (!eligible) {
+      hasIneligibleRules = true;
+    }
   }
-  return mask;
+  return {
+    mask,
+    hasIneligibleRules,
+  };
 }
 
 export function compileDevice(
@@ -627,7 +638,8 @@ export function compileDevice(
   const includeActions = options?.reportMode !== 'summary';
   const state = createProfileBuildState({ collectSuppressedActions: includeActions });
   const executionPlan = resolveRuleExecutionPlan(rules);
-  const deviceEligibleMask = buildDeviceEligibleMask(device, executionPlan);
+  const deviceEligibility = buildDeviceEligibility(device, executionPlan);
+  const deviceEligibleMask = deviceEligibility.mask;
   const actions: CompileDeviceReportEntry[] = [];
   const counters: ActionSummaryCounters = {
     appliedActions: 0,
@@ -637,35 +649,57 @@ export function compileDevice(
   };
 
   if (!includeActions) {
-    const eligibleSummarySelectorCache = new Map<
-      number,
-      Map<string, Map<number, EligibleSummarySeedSelection>>
-    >();
     counters.totalActions = executionPlan.totalActionCountPerValue * device.values.length;
-    for (const value of device.values) {
-      const eligibleSummarySeed = resolveEligibleSummaryCandidateSeed(
-        executionPlan,
-        value.valueId,
-        deviceEligibleMask,
-        eligibleSummarySelectorCache,
-      );
-      let unmatchedForValue =
-        executionPlan.totalActionCountPerValue - eligibleSummarySeed.actionCount;
+    if (deviceEligibility.hasIneligibleRules) {
+      const eligibleSummarySelectorCache = new Map<
+        number,
+        Map<string, Map<number, EligibleSummarySeedSelection>>
+      >();
+      for (const value of device.values) {
+        const eligibleSummarySeed = resolveEligibleSummaryCandidateSeed(
+          executionPlan,
+          value.valueId,
+          deviceEligibleMask,
+          eligibleSummarySelectorCache,
+        );
+        let unmatchedForValue =
+          executionPlan.totalActionCountPerValue - eligibleSummarySeed.actionCount;
 
-      for (const index of eligibleSummarySeed.indices) {
-        const entry = executionPlan.entries[index];
-        const summaryResult = applyRuleToValueSummary(state, device, value, entry.rule);
-        if (!summaryResult.matched) {
-          unmatchedForValue += summaryResult.actionCount;
-          continue;
+        for (const index of eligibleSummarySeed.indices) {
+          const entry = executionPlan.entries[index];
+          const summaryResult = applyRuleToValueSummary(state, device, value, entry.rule);
+          if (!summaryResult.matched) {
+            unmatchedForValue += summaryResult.actionCount;
+            continue;
+          }
+          counters.appliedActions += summaryResult.appliedChangedActions;
+          if (entry.rule.layer === 'project-product') {
+            counters.appliedProjectProductActions += summaryResult.appliedChangedActions;
+          }
         }
-        counters.appliedActions += summaryResult.appliedChangedActions;
-        if (entry.rule.layer === 'project-product') {
-          counters.appliedProjectProductActions += summaryResult.appliedChangedActions;
-        }
+
+        counters.unmatchedActions += unmatchedForValue;
       }
+    } else {
+      for (const value of device.values) {
+        const summarySeed = resolveSummaryCandidateSeed(executionPlan, value.valueId);
+        let unmatchedForValue = executionPlan.totalActionCountPerValue - summarySeed.actionCount;
 
-      counters.unmatchedActions += unmatchedForValue;
+        for (const index of summarySeed.indices) {
+          const entry = executionPlan.entries[index];
+          const summaryResult = applyRuleToValueSummary(state, device, value, entry.rule);
+          if (!summaryResult.matched) {
+            unmatchedForValue += summaryResult.actionCount;
+            continue;
+          }
+          counters.appliedActions += summaryResult.appliedChangedActions;
+          if (entry.rule.layer === 'project-product') {
+            counters.appliedProjectProductActions += summaryResult.appliedChangedActions;
+          }
+        }
+
+        counters.unmatchedActions += unmatchedForValue;
+      }
     }
   } else {
     const candidateScratch = createCandidateScratch(executionPlan.entries.length);

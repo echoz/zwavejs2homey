@@ -932,3 +932,59 @@ test('compileDevice summary mode preserves counters with device-ineligible multi
   assert.equal(summaryOnly.report.summary.unmatchedActions, 6);
   assert.equal(summaryOnly.report.summary.appliedActions, 2);
 });
+
+test('compileDevice summary mode preserves parity when all-eligible and ineligible devices share cached plan', () => {
+  const rules = [
+    {
+      ruleId: 'wildcard-ignore',
+      layer: 'ha-derived',
+      actions: [{ type: 'ignore-value' }],
+    },
+    {
+      ruleId: 'mfg-1-onoff',
+      layer: 'project-product',
+      device: { manufacturerId: [1] },
+      value: { commandClass: [37], property: ['currentValue'] },
+      actions: [{ type: 'capability', capabilityId: 'onoff' }],
+    },
+    {
+      ruleId: 'meter-power',
+      layer: 'project-generic',
+      value: { commandClass: [50], property: ['value'] },
+      actions: [{ type: 'capability', capabilityId: 'measure_power' }],
+    },
+  ];
+  const createDevice = (deviceKey, manufacturerId) => ({
+    deviceKey,
+    manufacturerId,
+    values: [
+      {
+        valueId: { commandClass: 37, endpoint: 0, property: 'currentValue' },
+        metadata: { type: 'boolean', readable: true, writeable: false },
+      },
+      {
+        valueId: { commandClass: 50, endpoint: 0, property: 'value' },
+        metadata: { type: 'number', readable: true, writeable: false },
+      },
+    ],
+  });
+
+  const eligibleDevice = createDevice('dev-summary-eligibility-1', 1);
+  const ineligibleDevice = createDevice('dev-summary-eligibility-2', 2);
+
+  const eligibleFull = compiler.compileDevice(eligibleDevice, rules);
+  const eligibleSummary = compiler.compileDevice(eligibleDevice, rules, { reportMode: 'summary' });
+  assert.deepEqual(eligibleSummary.capabilities, eligibleFull.capabilities);
+  assert.deepEqual(eligibleSummary.report.summary, eligibleFull.report.summary);
+  assert.equal(eligibleSummary.report.summary.appliedActions, 4);
+  assert.equal(eligibleSummary.report.summary.unmatchedActions, 2);
+
+  const ineligibleFull = compiler.compileDevice(ineligibleDevice, rules);
+  const ineligibleSummary = compiler.compileDevice(ineligibleDevice, rules, {
+    reportMode: 'summary',
+  });
+  assert.deepEqual(ineligibleSummary.capabilities, ineligibleFull.capabilities);
+  assert.deepEqual(ineligibleSummary.report.summary, ineligibleFull.report.summary);
+  assert.equal(ineligibleSummary.report.summary.appliedActions, 3);
+  assert.equal(ineligibleSummary.report.summary.unmatchedActions, 3);
+});
