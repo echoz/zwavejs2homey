@@ -242,6 +242,10 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - added optional machine summary artifact output (`--summary-json-file`) for CI/dashboard consumption with counts, top diagnostics, and gate outcomes
     - command now exits non-zero when configured gates are violated, while still writing artifact/report/summary outputs for triage
     - added regression coverage for gate parsing, summary JSON generation, and failure semantics when thresholds are exceeded
+53. Completed runtime-validation gate setup documentation slice:
+    - added `docs/compiler-validation-gates.md` with baseline collection process, threshold calibration guidance, and practical gate examples
+    - documented failure semantics and expected triage workflow when gates fail but artifacts/reports are still emitted
+    - linked gate setup docs from README live-validation section and architecture/docs index for discoverability
 
 ## Next Tasks
 

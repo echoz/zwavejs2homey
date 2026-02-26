@@ -88,6 +88,8 @@ This runs the canonical live validation loop in one command:
 - writes a markdown validation summary with outcomes/review reasons/top unmatched/suppressed signatures
 - optionally enforces quality gates and exits non-zero (CI-friendly) via `--max-*` and `--fail-on-reason`
 
+Gate setup guide: `docs/compiler-validation-gates.md`
+
 Using the canonical layered rules pipeline:
 
 - `rules/manifest.json`

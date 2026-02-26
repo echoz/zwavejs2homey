@@ -90,6 +90,7 @@ Current implemented foundation in `packages/compiler`:
   - supports both compile-on-the-fly (rule authoring) and compiled-artifact apply mode (runtime-style validation)
   - `compiler:validate-live` runs build + compiled-artifact apply in one pass and writes a markdown validation report (outcomes, review reasons, unmatched/suppressed hotspots)
   - supports optional validation gates (`--max-review-nodes`, `--max-generic-nodes`, `--max-empty-nodes`, `--fail-on-reason`) and machine summary JSON for CI automation
+  - gate calibration/setup playbook lives in `docs/compiler-validation-gates.md`
 - Added compiler artifact build foundation:
   - `compiler:build` emits `compiled-homey-profiles/v1` from compiler device facts files or directly from a live ZWJS instance (`--url` + `--all-nodes`/`--node`) plus layered rules inputs
   - `rules/` directory skeleton established for real `ha-derived`, `project/generic`, and `project/product` rulesets
