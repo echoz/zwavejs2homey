@@ -84,11 +84,6 @@ interface ActionSummaryCounters {
   appliedProjectProductActions: number;
 }
 
-interface PreparedValue {
-  original: NormalizedZwaveDeviceFacts['values'][number];
-  clonedValueId: NormalizedZwaveValueId;
-}
-
 const ruleLayerOrder = getRuleLayerOrder();
 const ruleLayerRank = new Map(ruleLayerOrder.map((layer, index) => [layer, index]));
 const sortedRulesCache = new WeakMap<readonly MappingRule[], SortedRulesCacheEntry>();
@@ -249,15 +244,12 @@ function pushUnmatchedActions(
   entry: CompileRuleExecutionEntry,
   valueId: NormalizedZwaveValueId,
   counters: ActionSummaryCounters,
-  includeActions: boolean,
 ): void {
-  if (includeActions) {
-    for (const template of entry.unmatchedTemplates) {
-      actions.push({
-        ...template,
-        valueId,
-      });
-    }
+  for (const template of entry.unmatchedTemplates) {
+    actions.push({
+      ...template,
+      valueId,
+    });
   }
   counters.unmatchedActions += entry.unmatchedTemplates.length;
   counters.totalActions += entry.unmatchedTemplates.length;
@@ -269,16 +261,13 @@ function pushAppliedRuleResults(
   valueId: NormalizedZwaveValueId,
   results: AppliedRuleActionResult[],
   counters: ActionSummaryCounters,
-  includeActions: boolean,
 ): void {
   for (const result of results) {
-    if (includeActions) {
-      actions.push({
-        ...result,
-        layer: entry.rule.layer,
-        valueId,
-      });
-    }
+    actions.push({
+      ...result,
+      layer: entry.rule.layer,
+      valueId,
+    });
     counters.totalActions += 1;
     if (result.applied && result.changed !== false) {
       counters.appliedActions += 1;
@@ -290,14 +279,6 @@ function pushAppliedRuleResults(
       counters.unmatchedActions += 1;
     }
   }
-}
-
-function prepareValues(device: NormalizedZwaveDeviceFacts): PreparedValue[] {
-  return device.values.map((value) => ({
-    original: value,
-    // Reused across many emitted action records; frozen to prevent accidental cross-record mutation.
-    clonedValueId: Object.freeze({ ...value.valueId }),
-  }));
 }
 
 function buildDeviceEligibleMask(
@@ -325,7 +306,6 @@ export function compileDevice(
   const executionPlan = resolveRuleExecutionPlan(rules);
   const deviceEligibleMask = buildDeviceEligibleMask(device, executionPlan);
   const candidateScratch = createCandidateScratch(executionPlan.entries.length);
-  const preparedValues = prepareValues(device);
   const actions: CompileDeviceReportEntry[] = [];
   const counters: ActionSummaryCounters = {
     appliedActions: 0,
@@ -334,18 +314,14 @@ export function compileDevice(
     appliedProjectProductActions: 0,
   };
 
-  for (const value of preparedValues) {
-    const candidateStamp = markCandidatesForValue(
-      executionPlan,
-      candidateScratch,
-      value.original.valueId,
-    );
-    if (!includeActions) {
+  if (!includeActions) {
+    for (const value of device.values) {
+      const candidateStamp = markCandidatesForValue(executionPlan, candidateScratch, value.valueId);
       counters.totalActions += executionPlan.totalActionCountPerValue;
       counters.unmatchedActions += executionPlan.totalActionCountPerValue;
 
       const candidateCommandClassIndices = executionPlan.byCommandClass.get(
-        value.original.valueId.commandClass,
+        value.valueId.commandClass,
       );
       for (const index of executionPlan.commandClassWildcardIndices) {
         if (candidateScratch.visitedMarks[index] === candidateStamp) continue;
@@ -358,7 +334,7 @@ export function compileDevice(
           continue;
         }
         const entry = executionPlan.entries[index];
-        const summaryResult = applyRuleToValueSummary(state, device, value.original, entry.rule);
+        const summaryResult = applyRuleToValueSummary(state, device, value, entry.rule);
         if (!summaryResult.matched) continue;
         counters.unmatchedActions -= summaryResult.actionCount;
         counters.appliedActions += summaryResult.appliedChangedActions;
@@ -377,7 +353,7 @@ export function compileDevice(
           continue;
         }
         const entry = executionPlan.entries[index];
-        const summaryResult = applyRuleToValueSummary(state, device, value.original, entry.rule);
+        const summaryResult = applyRuleToValueSummary(state, device, value, entry.rule);
         if (!summaryResult.matched) continue;
         counters.unmatchedActions -= summaryResult.actionCount;
         counters.appliedActions += summaryResult.appliedChangedActions;
@@ -385,27 +361,27 @@ export function compileDevice(
           counters.appliedProjectProductActions += summaryResult.appliedChangedActions;
         }
       }
-      continue;
     }
+  } else {
+    const valueIdSnapshots = device.values.map((value) =>
+      // Reused across many emitted action records; frozen to prevent accidental cross-record mutation.
+      Object.freeze({ ...value.valueId }),
+    );
+    for (const [valueIndex, value] of device.values.entries()) {
+      const candidateStamp = markCandidatesForValue(executionPlan, candidateScratch, value.valueId);
+      const valueIdSnapshot = valueIdSnapshots[valueIndex];
+      for (const [index, entry] of executionPlan.entries.entries()) {
+        if (
+          deviceEligibleMask[index] === 0 ||
+          !isRuleCandidate(candidateScratch, index, candidateStamp)
+        ) {
+          pushUnmatchedActions(actions, entry, valueIdSnapshot, counters);
+          continue;
+        }
 
-    for (const [index, entry] of executionPlan.entries.entries()) {
-      if (
-        deviceEligibleMask[index] === 0 ||
-        !isRuleCandidate(candidateScratch, index, candidateStamp)
-      ) {
-        pushUnmatchedActions(actions, entry, value.clonedValueId, counters, includeActions);
-        continue;
+        const results = applyRuleToValue(state, device, value, entry.rule);
+        pushAppliedRuleResults(actions, entry, valueIdSnapshot, results, counters);
       }
-
-      const results = applyRuleToValue(state, device, value.original, entry.rule);
-      pushAppliedRuleResults(
-        actions,
-        entry,
-        value.clonedValueId,
-        results,
-        counters,
-        includeActions,
-      );
     }
   }
 

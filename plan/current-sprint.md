@@ -148,6 +148,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - summary-mode profile-plan reports now skip grouped `byRule` / `bySuppressedSlot` aggregation and classification-provenance scans
     - preserves output shape and curation semantics while avoiding unnecessary per-iteration aggregation work in bench/bulk summary runs
     - added regression coverage for rule-source cache reuse + summary-mode grouping bypass behavior
+34. Completed fifteenth performance slice for compile-loop value snapshot gating:
+    - `compileDevice` now cleanly splits summary/full execution loops
+    - summary-mode runs iterate live values directly and skip per-value cloned/frozen `valueId` snapshot preparation entirely
+    - full mode preserves immutable `report.actions[].valueId` semantics by retaining snapshot reuse for emitted-action paths only
+    - keeps full behavioral parity while removing avoidable allocation work from summary-only compile runs
 
 ## Next Tasks
 
