@@ -198,6 +198,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - summary runtime now iterates only eligible rule indices (no per-rule eligibility branch in the hot loop)
     - preserves direct unmatched accounting by combining non-candidate remainder with candidate non-match paths
     - added regression coverage for device-ineligible multi-action rules to lock summary/full counter parity under ineligible-rule-heavy selectors
+44. Completed twenty-fifth performance slice for selector-cache eviction complexity:
+    - replaced `summarySelectorCacheOrder.shift()` behavior with a head-index FIFO queue for bounded selector-cache eviction in `compileDevice`
+    - added queue compaction thresholding so eviction remains amortized O(1) without unbounded tombstone growth in long-running heterogeneous selector churn
+    - hardened eviction fallback to recover cleanly if queue/counter state ever diverges
+    - expanded regression coverage with sustained selector-churn parity checks (multi-round >cache-capacity runs, repeated summary compiles)
 
 ## Next Tasks
 

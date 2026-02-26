@@ -795,6 +795,51 @@ test('compileDevice summary selector cache eviction preserves outputs', () => {
   assert.equal(summaryOnly.report.summary.unmatchedActions, 0);
 });
 
+test('compileDevice summary selector cache eviction stays stable under sustained selector churn', () => {
+  const rules = [
+    {
+      ruleId: 'wildcard-ignore',
+      layer: 'ha-derived',
+      actions: [{ type: 'ignore-value' }],
+    },
+    {
+      ruleId: 'sensor-1024-capability',
+      layer: 'project-product',
+      value: { commandClass: [49], property: ['sensor-1024'] },
+      actions: [{ type: 'capability', capabilityId: 'measure_power' }],
+    },
+    {
+      ruleId: 'sensor-2048-capability',
+      layer: 'project-product',
+      value: { commandClass: [49], property: ['sensor-2048'] },
+      actions: [{ type: 'capability', capabilityId: 'measure_voltage' }],
+    },
+  ];
+  const createDevice = (start, count) => ({
+    deviceKey: `dev-summary-cache-churn-${start}`,
+    values: Array.from({ length: count }, (_, index) => ({
+      valueId: {
+        commandClass: 49,
+        endpoint: 0,
+        property: `sensor-${start + index}`,
+      },
+      metadata: { type: 'number', readable: true, writeable: false },
+    })),
+  });
+
+  for (let round = 0; round < 5; round += 1) {
+    const device = createDevice(round * 700, 700);
+    const full = compiler.compileDevice(device, rules);
+    const summaryOnly = compiler.compileDevice(device, rules, { reportMode: 'summary' });
+    const summaryRepeat = compiler.compileDevice(device, rules, { reportMode: 'summary' });
+
+    assert.deepEqual(summaryOnly.capabilities, full.capabilities);
+    assert.deepEqual(summaryOnly.ignoredValues, full.ignoredValues);
+    assert.deepEqual(summaryOnly.report.summary, full.report.summary);
+    assert.deepEqual(summaryRepeat.report.summary, summaryOnly.report.summary);
+  }
+});
+
 test('compileDevice summary mode preserves mixed matched/unmatched multi-action counters', () => {
   const device = {
     deviceKey: 'dev-summary-multi-counter-parity-1',

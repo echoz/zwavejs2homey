@@ -83,6 +83,7 @@ interface CompileRuleExecutionPlan {
   summaryBucketAny: number[];
   summarySelectorCache: Map<number, Map<string, Map<number, SummarySeedSelection>>>;
   summarySelectorCacheOrder: Array<[commandClass: number, propertyKey: string, endpoint: number]>;
+  summarySelectorCacheOrderHead: number;
   summarySelectorCacheSize: number;
   propertyWildcardIndices: number[];
   byProperty: Map<string, number[]>;
@@ -109,6 +110,7 @@ const ruleLayerOrder = getRuleLayerOrder();
 const ruleLayerRank = new Map(ruleLayerOrder.map((layer, index) => [layer, index]));
 const sortedRulesCache = new WeakMap<readonly MappingRule[], SortedRulesCacheEntry>();
 const SUMMARY_SELECTOR_CACHE_MAX_ENTRIES = 1024;
+const SUMMARY_SELECTOR_CACHE_ORDER_COMPACT_THRESHOLD = 256;
 
 function pushIndex<K>(indexMap: Map<K, number[]>, key: K, index: number): void {
   const list = indexMap.get(key);
@@ -233,8 +235,16 @@ function resolveSummaryCandidateSeed(
   };
 
   if (plan.summarySelectorCacheSize >= SUMMARY_SELECTOR_CACHE_MAX_ENTRIES) {
-    const oldest = plan.summarySelectorCacheOrder.shift();
-    if (oldest) {
+    while (plan.summarySelectorCacheSize >= SUMMARY_SELECTOR_CACHE_MAX_ENTRIES) {
+      const oldest = plan.summarySelectorCacheOrder[plan.summarySelectorCacheOrderHead];
+      if (!oldest) {
+        plan.summarySelectorCache.clear();
+        plan.summarySelectorCacheOrder = [];
+        plan.summarySelectorCacheOrderHead = 0;
+        plan.summarySelectorCacheSize = 0;
+        break;
+      }
+      plan.summarySelectorCacheOrderHead += 1;
       const [oldestCommandClass, oldestProperty, oldestEndpoint] = oldest;
       const cacheByProperty = plan.summarySelectorCache.get(oldestCommandClass);
       const cacheByEndpoint = cacheByProperty?.get(oldestProperty);
@@ -247,6 +257,15 @@ function resolveSummaryCandidateSeed(
       if (cacheByProperty && cacheByProperty.size === 0) {
         plan.summarySelectorCache.delete(oldestCommandClass);
       }
+    }
+    if (
+      plan.summarySelectorCacheOrderHead >= SUMMARY_SELECTOR_CACHE_ORDER_COMPACT_THRESHOLD &&
+      plan.summarySelectorCacheOrderHead * 2 >= plan.summarySelectorCacheOrder.length
+    ) {
+      plan.summarySelectorCacheOrder = plan.summarySelectorCacheOrder.slice(
+        plan.summarySelectorCacheOrderHead,
+      );
+      plan.summarySelectorCacheOrderHead = 0;
     }
   }
   const cacheByProperty = ensureMap2<number, string, Map<number, SummarySeedSelection>>(
@@ -341,6 +360,7 @@ function buildRuleExecutionPlan(rules: MappingRule[]): CompileRuleExecutionPlan 
   const summarySelectorCacheOrder: Array<
     [commandClass: number, propertyKey: string, endpoint: number]
   > = [];
+  let summarySelectorCacheOrderHead = 0;
   let summarySelectorCacheSize = 0;
   let totalActionCountPerValue = 0;
 
@@ -463,6 +483,7 @@ function buildRuleExecutionPlan(rules: MappingRule[]): CompileRuleExecutionPlan 
     summaryBucketAny,
     summarySelectorCache,
     summarySelectorCacheOrder,
+    summarySelectorCacheOrderHead,
     summarySelectorCacheSize,
     propertyWildcardIndices,
     byProperty,
