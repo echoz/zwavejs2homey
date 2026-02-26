@@ -183,6 +183,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - bounded `compileDevice` summary selector cache to a fixed maximum (`1024` entries) with FIFO eviction of oldest cached selector keys
     - preserves selector-cache hit behavior while preventing unbounded cache growth on long heterogeneous runs
     - added eviction-focused regression coverage using >1k unique selectors to validate summary/full parity under cache churn
+41. Completed twenty-second performance slice for selector key churn removal:
+    - replaced concatenated-string summary buckets/cache keys with nested map structures keyed by native selector dimensions (`commandClass`, typed `property`, `endpoint`)
+    - preserved compact 8-bucket precedence model (`CPE`, `CP`, `CE`, `C`, `PE`, `P`, `E`, `ANY`) while removing per-lookup string key construction for merged-seed/cache access
+    - retained FIFO cache bounding semantics and deterministic candidate ordering
+    - added regression coverage for numeric-vs-string property token parity under summary caching
 
 ## Next Tasks
 

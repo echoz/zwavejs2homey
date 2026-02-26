@@ -727,6 +727,44 @@ test('compileDevice summary mode preserves wildcard selector parity on repeated 
   assert.equal(summaryOnly.report.summary.appliedActions, 4);
 });
 
+test('compileDevice summary mode preserves numeric-vs-string property token parity', () => {
+  const device = {
+    deviceKey: 'dev-summary-property-token-parity-1',
+    values: [
+      {
+        valueId: { commandClass: 112, endpoint: 0, property: 1 },
+        metadata: { type: 'number', readable: true, writeable: false },
+      },
+      {
+        valueId: { commandClass: 112, endpoint: 0, property: '1' },
+        metadata: { type: 'number', readable: true, writeable: false },
+      },
+    ],
+  };
+  const rules = [
+    {
+      ruleId: 'numeric-property',
+      layer: 'project-product',
+      value: { commandClass: [112], property: [1] },
+      actions: [{ type: 'capability', capabilityId: 'measure_power' }],
+    },
+    {
+      ruleId: 'string-property',
+      layer: 'project-product',
+      value: { commandClass: [112], property: ['1'] },
+      actions: [{ type: 'capability', capabilityId: 'measure_voltage' }],
+    },
+  ];
+
+  const full = compiler.compileDevice(device, rules);
+  const summaryOnly = compiler.compileDevice(device, rules, { reportMode: 'summary' });
+
+  assert.deepEqual(summaryOnly.capabilities, full.capabilities);
+  assert.deepEqual(summaryOnly.report.summary, full.report.summary);
+  assert.equal(summaryOnly.report.summary.appliedActions, 2);
+  assert.equal(summaryOnly.report.summary.unmatchedActions, 2);
+});
+
 test('compileDevice summary selector cache eviction preserves outputs', () => {
   const device = {
     deviceKey: 'dev-summary-cache-eviction-1',

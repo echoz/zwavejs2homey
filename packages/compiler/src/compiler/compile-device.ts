@@ -62,15 +62,17 @@ interface CompileRuleExecutionPlan {
   entries: CompileRuleExecutionEntry[];
   commandClassWildcardIndices: number[];
   byCommandClass: Map<number, number[]>;
-  summaryBucketCPE: Map<string, number[]>;
-  summaryBucketCP: Map<string, number[]>;
-  summaryBucketCE: Map<string, number[]>;
+  summaryBucketCPE: Map<number, Map<string, Map<number, number[]>>>;
+  summaryBucketCP: Map<number, Map<string, number[]>>;
+  summaryBucketCE: Map<number, Map<number, number[]>>;
   summaryBucketC: Map<number, number[]>;
-  summaryBucketPE: Map<string, number[]>;
+  summaryBucketPE: Map<string, Map<number, number[]>>;
   summaryBucketP: Map<string, number[]>;
   summaryBucketE: Map<number, number[]>;
   summaryBucketAny: number[];
-  summarySelectorCache: Map<string, number[]>;
+  summarySelectorCache: Map<number, Map<string, Map<number, number[]>>>;
+  summarySelectorCacheOrder: Array<[commandClass: number, propertyKey: string, endpoint: number]>;
+  summarySelectorCacheSize: number;
   propertyWildcardIndices: number[];
   byProperty: Map<string, number[]>;
   endpointWildcardIndices: number[];
@@ -114,20 +116,73 @@ function uniqueTokens<T>(tokens: readonly T[]): T[] {
   return [...new Set(tokens)];
 }
 
-function keyCPE(commandClass: number, propertyKey: string, endpoint: number): string {
-  return `${commandClass}|${propertyKey}|${endpoint}`;
+function getMap2<K1, K2, V>(map: Map<K1, Map<K2, V>>, key1: K1, key2: K2): V | undefined {
+  return map.get(key1)?.get(key2);
 }
 
-function keyCP(commandClass: number, propertyKey: string): string {
-  return `${commandClass}|${propertyKey}`;
+function getMap3<K1, K2, K3, V>(
+  map: Map<K1, Map<K2, Map<K3, V>>>,
+  key1: K1,
+  key2: K2,
+  key3: K3,
+): V | undefined {
+  return map.get(key1)?.get(key2)?.get(key3);
 }
 
-function keyCE(commandClass: number, endpoint: number): string {
-  return `${commandClass}|${endpoint}`;
+function ensureMap2<K1, K2, V>(map: Map<K1, Map<K2, V>>, key1: K1): Map<K2, V> {
+  const existing = map.get(key1);
+  if (existing) return existing;
+  const created = new Map<K2, V>();
+  map.set(key1, created);
+  return created;
 }
 
-function keyPE(propertyKey: string, endpoint: number): string {
-  return `${propertyKey}|${endpoint}`;
+function ensureMap3<K1, K2, K3, V>(
+  map: Map<K1, Map<K2, Map<K3, V>>>,
+  key1: K1,
+  key2: K2,
+): Map<K3, V> {
+  const nested = ensureMap2<K1, K2, Map<K3, V>>(map, key1);
+  const existing = nested.get(key2);
+  if (existing) return existing;
+  const created = new Map<K3, V>();
+  nested.set(key2, created);
+  return created;
+}
+
+function pushSummaryBucket2<K1, K2>(
+  bucket: Map<K1, Map<K2, number[]>>,
+  key1: K1,
+  key2: K2,
+  index: number,
+): void {
+  const nested = ensureMap2<K1, K2, number[]>(bucket, key1);
+  const list = nested.get(key2);
+  if (!list) {
+    nested.set(key2, [index]);
+    return;
+  }
+  if (list[list.length - 1] !== index) {
+    list.push(index);
+  }
+}
+
+function pushSummaryBucket3<K1, K2, K3>(
+  bucket: Map<K1, Map<K2, Map<K3, number[]>>>,
+  key1: K1,
+  key2: K2,
+  key3: K3,
+  index: number,
+): void {
+  const nested = ensureMap3<K1, K2, K3, number[]>(bucket, key1, key2);
+  const list = nested.get(key3);
+  if (!list) {
+    nested.set(key3, [index]);
+    return;
+  }
+  if (list[list.length - 1] !== index) {
+    list.push(index);
+  }
 }
 
 function resolveSummaryCandidateSeed(
@@ -137,8 +192,7 @@ function resolveSummaryCandidateSeed(
   const commandClass = valueId.commandClass;
   const property = propertyTokenKey(valueId.property);
   const endpoint = valueId.endpoint ?? 0;
-  const cacheKey = keyCPE(commandClass, property, endpoint);
-  const cached = plan.summarySelectorCache.get(cacheKey);
+  const cached = getMap3(plan.summarySelectorCache, commandClass, property, endpoint);
   if (cached) return cached;
 
   const merged: number[] = [];
@@ -152,34 +206,47 @@ function resolveSummaryCandidateSeed(
     }
   };
 
-  addIndices(plan.summaryBucketCPE.get(keyCPE(commandClass, property, endpoint)));
-  addIndices(plan.summaryBucketCP.get(keyCP(commandClass, property)));
-  addIndices(plan.summaryBucketCE.get(keyCE(commandClass, endpoint)));
+  addIndices(getMap3(plan.summaryBucketCPE, commandClass, property, endpoint));
+  addIndices(getMap2(plan.summaryBucketCP, commandClass, property));
+  addIndices(getMap2(plan.summaryBucketCE, commandClass, endpoint));
   addIndices(plan.summaryBucketC.get(commandClass));
-  addIndices(plan.summaryBucketPE.get(keyPE(property, endpoint)));
+  addIndices(getMap2(plan.summaryBucketPE, property, endpoint));
   addIndices(plan.summaryBucketP.get(property));
   addIndices(plan.summaryBucketE.get(endpoint));
   addIndices(plan.summaryBucketAny);
 
-  if (plan.summarySelectorCache.size >= SUMMARY_SELECTOR_CACHE_MAX_ENTRIES) {
-    const oldestKey = plan.summarySelectorCache.keys().next().value as string | undefined;
-    if (oldestKey !== undefined) {
-      plan.summarySelectorCache.delete(oldestKey);
+  if (plan.summarySelectorCacheSize >= SUMMARY_SELECTOR_CACHE_MAX_ENTRIES) {
+    const oldest = plan.summarySelectorCacheOrder.shift();
+    if (oldest) {
+      const [oldestCommandClass, oldestProperty, oldestEndpoint] = oldest;
+      const cacheByProperty = plan.summarySelectorCache.get(oldestCommandClass);
+      const cacheByEndpoint = cacheByProperty?.get(oldestProperty);
+      if (cacheByEndpoint && cacheByEndpoint.delete(oldestEndpoint)) {
+        plan.summarySelectorCacheSize -= 1;
+      }
+      if (cacheByEndpoint && cacheByEndpoint.size === 0) {
+        cacheByProperty?.delete(oldestProperty);
+      }
+      if (cacheByProperty && cacheByProperty.size === 0) {
+        plan.summarySelectorCache.delete(oldestCommandClass);
+      }
     }
   }
-  plan.summarySelectorCache.set(cacheKey, merged);
+  const cacheByProperty = ensureMap2<number, string, Map<number, number[]>>(
+    plan.summarySelectorCache,
+    commandClass,
+  );
+  const cacheByEndpoint =
+    cacheByProperty.get(property) ??
+    (() => {
+      const created = new Map<number, number[]>();
+      cacheByProperty.set(property, created);
+      return created;
+    })();
+  cacheByEndpoint.set(endpoint, merged);
+  plan.summarySelectorCacheOrder.push([commandClass, property, endpoint]);
+  plan.summarySelectorCacheSize += 1;
   return merged;
-}
-
-function pushSummaryBucket<K>(bucket: Map<K, number[]>, key: K, index: number): void {
-  const list = bucket.get(key);
-  if (!list) {
-    bucket.set(key, [index]);
-    return;
-  }
-  if (list[list.length - 1] !== index) {
-    list.push(index);
-  }
 }
 
 function buildRuleExecutionPlan(rules: MappingRule[]): CompileRuleExecutionPlan {
@@ -204,15 +271,19 @@ function buildRuleExecutionPlan(rules: MappingRule[]): CompileRuleExecutionPlan 
   const byProperty = new Map<string, number[]>();
   const endpointWildcardIndices: number[] = [];
   const byEndpoint = new Map<number, number[]>();
-  const summaryBucketCPE = new Map<string, number[]>();
-  const summaryBucketCP = new Map<string, number[]>();
-  const summaryBucketCE = new Map<string, number[]>();
+  const summaryBucketCPE = new Map<number, Map<string, Map<number, number[]>>>();
+  const summaryBucketCP = new Map<number, Map<string, number[]>>();
+  const summaryBucketCE = new Map<number, Map<number, number[]>>();
   const summaryBucketC = new Map<number, number[]>();
-  const summaryBucketPE = new Map<string, number[]>();
+  const summaryBucketPE = new Map<string, Map<number, number[]>>();
   const summaryBucketP = new Map<string, number[]>();
   const summaryBucketE = new Map<number, number[]>();
   const summaryBucketAny: number[] = [];
-  const summarySelectorCache = new Map<string, number[]>();
+  const summarySelectorCache = new Map<number, Map<string, Map<number, number[]>>>();
+  const summarySelectorCacheOrder: Array<
+    [commandClass: number, propertyKey: string, endpoint: number]
+  > = [];
+  let summarySelectorCacheSize = 0;
   let totalActionCountPerValue = 0;
 
   for (const [index, entry] of entries.entries()) {
@@ -265,7 +336,7 @@ function buildRuleExecutionPlan(rules: MappingRule[]): CompileRuleExecutionPlan 
       for (const commandClass of commandClasses) {
         for (const property of properties) {
           for (const endpoint of endpoints) {
-            pushSummaryBucket(summaryBucketCPE, keyCPE(commandClass, property, endpoint), index);
+            pushSummaryBucket3(summaryBucketCPE, commandClass, property, endpoint, index);
           }
         }
       }
@@ -275,7 +346,7 @@ function buildRuleExecutionPlan(rules: MappingRule[]): CompileRuleExecutionPlan 
     if (commandClasses && properties) {
       for (const commandClass of commandClasses) {
         for (const property of properties) {
-          pushSummaryBucket(summaryBucketCP, keyCP(commandClass, property), index);
+          pushSummaryBucket2(summaryBucketCP, commandClass, property, index);
         }
       }
       continue;
@@ -284,7 +355,7 @@ function buildRuleExecutionPlan(rules: MappingRule[]): CompileRuleExecutionPlan 
     if (commandClasses && endpoints) {
       for (const commandClass of commandClasses) {
         for (const endpoint of endpoints) {
-          pushSummaryBucket(summaryBucketCE, keyCE(commandClass, endpoint), index);
+          pushSummaryBucket2(summaryBucketCE, commandClass, endpoint, index);
         }
       }
       continue;
@@ -293,7 +364,7 @@ function buildRuleExecutionPlan(rules: MappingRule[]): CompileRuleExecutionPlan 
     if (properties && endpoints) {
       for (const property of properties) {
         for (const endpoint of endpoints) {
-          pushSummaryBucket(summaryBucketPE, keyPE(property, endpoint), index);
+          pushSummaryBucket2(summaryBucketPE, property, endpoint, index);
         }
       }
       continue;
@@ -301,21 +372,21 @@ function buildRuleExecutionPlan(rules: MappingRule[]): CompileRuleExecutionPlan 
 
     if (commandClasses) {
       for (const commandClass of commandClasses) {
-        pushSummaryBucket(summaryBucketC, commandClass, index);
+        pushIndex(summaryBucketC, commandClass, index);
       }
       continue;
     }
 
     if (properties) {
       for (const property of properties) {
-        pushSummaryBucket(summaryBucketP, property, index);
+        pushIndex(summaryBucketP, property, index);
       }
       continue;
     }
 
     if (endpoints) {
       for (const endpoint of endpoints) {
-        pushSummaryBucket(summaryBucketE, endpoint, index);
+        pushIndex(summaryBucketE, endpoint, index);
       }
     }
   }
@@ -333,6 +404,8 @@ function buildRuleExecutionPlan(rules: MappingRule[]): CompileRuleExecutionPlan 
     summaryBucketE,
     summaryBucketAny,
     summarySelectorCache,
+    summarySelectorCacheOrder,
+    summarySelectorCacheSize,
     propertyWildcardIndices,
     byProperty,
     endpointWildcardIndices,
