@@ -26,6 +26,12 @@ export interface AppliedRuleActionResult {
   reason?: 'rule-not-matched' | 'device-identity-already-applied';
 }
 
+export interface ApplyRuleToValueSummaryResult {
+  matched: boolean;
+  actionCount: number;
+  appliedChangedActions: number;
+}
+
 function toProvenance(
   rule: MappingRule,
   action: RuleAction,
@@ -141,4 +147,67 @@ export function applyRuleToValue(
     );
     return { ...ignoreResult, changed: true };
   });
+}
+
+export function applyRuleToValueSummary(
+  state: ProfileBuildState,
+  device: NormalizedZwaveDeviceFacts,
+  value: NormalizedZwaveValueFacts,
+  rule: MappingRule,
+): ApplyRuleToValueSummaryResult {
+  const actionCount = rule.actions.length;
+  if (!matchesRuleForValue(device, value, rule)) {
+    return {
+      matched: false,
+      actionCount,
+      appliedChangedActions: 0,
+    };
+  }
+
+  let appliedChangedActions = 0;
+  for (const [actionIndex, action] of rule.actions.entries()) {
+    const provenance = toProvenance(rule, action, value);
+    if (action.type === 'capability') {
+      const outcome = applyCapabilityRuleAction(state, action as CapabilityRuleAction, provenance);
+      if (outcome !== 'noop') {
+        appliedChangedActions += 1;
+      }
+      continue;
+    }
+    if (action.type === 'device-identity') {
+      const dedupeKey = `${rule.ruleId}:${actionIndex}:${value.valueId.commandClass}:${value.valueId.endpoint ?? 0}:${String(value.valueId.property)}:${String(value.valueId.propertyKey ?? '')}`;
+      if (state.appliedDeviceIdentityActions.has(dedupeKey)) {
+        continue;
+      }
+      const outcome = applyDeviceIdentityRuleAction(
+        state,
+        action as DeviceIdentityRuleAction,
+        provenance,
+      );
+      state.appliedDeviceIdentityActions.add(dedupeKey);
+      if (outcome !== 'noop') {
+        appliedChangedActions += 1;
+      }
+      continue;
+    }
+    if (action.type === 'remove-capability') {
+      const removeMode = action.mode ?? 'replace';
+      assertRuleActionModeAllowedForLayer(
+        provenance.layer as Exclude<ProvenanceRecord['layer'], 'user-curation'>,
+        removeMode,
+      );
+      if (removeCapabilityRuleAction(state, action.capabilityId)) {
+        appliedChangedActions += 1;
+      }
+      continue;
+    }
+    addIgnoredValue(state, action.valueId ?? value.valueId, provenance);
+    appliedChangedActions += 1;
+  }
+
+  return {
+    matched: true,
+    actionCount,
+    appliedChangedActions,
+  };
 }

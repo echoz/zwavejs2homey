@@ -2,7 +2,7 @@ import type { HomeyCapabilityPlan } from '../models/homey-plan';
 import type { NormalizedZwaveDeviceFacts, NormalizedZwaveValueId } from '../models/zwave-facts';
 import type { MappingRule } from '../rules/types';
 import type { AppliedRuleActionResult } from './apply-rule';
-import { applyRuleToValue } from './apply-rule';
+import { applyRuleToValue, applyRuleToValueSummary } from './apply-rule';
 import { getRuleLayerOrder } from './layer-semantics';
 import { matchesDevice, matchesRuleCompanionConstraints } from './rule-matcher';
 import {
@@ -292,24 +292,6 @@ function pushAppliedRuleResults(
   }
 }
 
-function updateCountersForSummaryOnlyResults(
-  entry: CompileRuleExecutionEntry,
-  results: AppliedRuleActionResult[],
-  counters: ActionSummaryCounters,
-): void {
-  for (const result of results) {
-    if (result.reason !== 'rule-not-matched') {
-      counters.unmatchedActions -= 1;
-    }
-    if (result.applied && result.changed !== false) {
-      counters.appliedActions += 1;
-      if (entry.rule.layer === 'project-product') {
-        counters.appliedProjectProductActions += 1;
-      }
-    }
-  }
-}
-
 function prepareValues(device: NormalizedZwaveDeviceFacts): PreparedValue[] {
   return device.values.map((value) => ({
     original: value,
@@ -376,8 +358,13 @@ export function compileDevice(
           continue;
         }
         const entry = executionPlan.entries[index];
-        const results = applyRuleToValue(state, device, value.original, entry.rule);
-        updateCountersForSummaryOnlyResults(entry, results, counters);
+        const summaryResult = applyRuleToValueSummary(state, device, value.original, entry.rule);
+        if (!summaryResult.matched) continue;
+        counters.unmatchedActions -= summaryResult.actionCount;
+        counters.appliedActions += summaryResult.appliedChangedActions;
+        if (entry.rule.layer === 'project-product') {
+          counters.appliedProjectProductActions += summaryResult.appliedChangedActions;
+        }
       }
       for (const index of candidateCommandClassIndices ?? []) {
         if (candidateScratch.visitedMarks[index] === candidateStamp) continue;
@@ -390,8 +377,13 @@ export function compileDevice(
           continue;
         }
         const entry = executionPlan.entries[index];
-        const results = applyRuleToValue(state, device, value.original, entry.rule);
-        updateCountersForSummaryOnlyResults(entry, results, counters);
+        const summaryResult = applyRuleToValueSummary(state, device, value.original, entry.rule);
+        if (!summaryResult.matched) continue;
+        counters.unmatchedActions -= summaryResult.actionCount;
+        counters.appliedActions += summaryResult.appliedChangedActions;
+        if (entry.rule.layer === 'project-product') {
+          counters.appliedProjectProductActions += summaryResult.appliedChangedActions;
+        }
       }
       continue;
     }

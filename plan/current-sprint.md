@@ -133,6 +133,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - candidate execution is limited to command-class wildcard/exact seed sets and filtered by precomputed property/endpoint/device eligibility marks
     - keeps summary parity with full mode while removing full rule-array scans in summary-only runs
     - expanded compile-device regression coverage to include candidate-but-rule-not-matched parity (e.g. propertyKey mismatch)
+31. Completed twelfth performance slice for summary-path action allocation removal:
+    - introduced `applyRuleToValueSummary` to mutate build-state and compute changed-action counts without allocating per-action result records
+    - `compileDevice` summary mode now uses the summary apply path (full mode still emits detailed `report.actions`)
+    - preserves matched/unmatched accounting semantics used by confidence + curation diagnostics
+    - added apply-rule parity tests for summary/full changed-action accounting and unmatched no-mutation behavior
 
 ## Next Tasks
 

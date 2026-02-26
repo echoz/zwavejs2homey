@@ -105,8 +105,8 @@ export {
   materializeIgnoredValues,
   removeCapabilityRuleAction,
 } from './compiler/profile-build-state';
-export type { AppliedRuleActionResult } from './compiler/apply-rule';
-export { applyRuleToValue } from './compiler/apply-rule';
+export type { AppliedRuleActionResult, ApplyRuleToValueSummaryResult } from './compiler/apply-rule';
+export { applyRuleToValue, applyRuleToValueSummary } from './compiler/apply-rule';
 export type { CompileDeviceReportEntry, CompileDeviceResult } from './compiler/compile-device';
 export { compileDevice } from './compiler/compile-device';
 export type { CompileProfilePlanOptions } from './compiler/compile-profile-plan';

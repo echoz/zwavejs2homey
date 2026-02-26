@@ -182,6 +182,74 @@ test('applyRuleToValue deduplicates device-identity actions after first applicat
   ]);
 });
 
+test('applyRuleToValueSummary preserves action counts and changed-action accounting on match', () => {
+  const device = makeDevice();
+  const value = device.values[0];
+  const fullState = compiler.createProfileBuildState();
+  const summaryState = compiler.createProfileBuildState();
+  const rule = {
+    ruleId: 'summary-match',
+    layer: 'project-product',
+    value: { commandClass: [37], property: ['currentValue'] },
+    actions: [
+      {
+        type: 'capability',
+        mode: 'replace',
+        capabilityId: 'onoff',
+        inboundMapping: {
+          kind: 'value',
+          selector: { commandClass: 37, endpoint: 0, property: 'currentValue' },
+        },
+      },
+      { type: 'device-identity', mode: 'replace', homeyClass: 'socket' },
+      { type: 'ignore-value' },
+    ],
+  };
+
+  const fullResults = compiler.applyRuleToValue(fullState, device, value, rule);
+  const summaryResult = compiler.applyRuleToValueSummary(summaryState, device, value, rule);
+
+  assert.equal(summaryResult.matched, true);
+  assert.equal(summaryResult.actionCount, fullResults.length);
+  assert.equal(
+    summaryResult.appliedChangedActions,
+    fullResults.filter((result) => result.applied && result.changed !== false).length,
+  );
+  assert.deepEqual(
+    compiler.materializeCapabilityPlans(summaryState),
+    compiler.materializeCapabilityPlans(fullState),
+  );
+  assert.deepEqual(
+    compiler.materializeDeviceIdentity(summaryState),
+    compiler.materializeDeviceIdentity(fullState),
+  );
+  assert.deepEqual(
+    compiler.materializeIgnoredValues(summaryState),
+    compiler.materializeIgnoredValues(fullState),
+  );
+});
+
+test('applyRuleToValueSummary reports unmatched without mutating state', () => {
+  const device = makeDevice();
+  const value = device.values[2];
+  const state = compiler.createProfileBuildState();
+  const rule = {
+    ruleId: 'summary-no-match',
+    layer: 'ha-derived',
+    value: { commandClass: [37], property: ['currentValue'] },
+    actions: [{ type: 'capability', capabilityId: 'onoff' }, { type: 'ignore-value' }],
+  };
+
+  const result = compiler.applyRuleToValueSummary(state, device, value, rule);
+  assert.deepEqual(result, {
+    matched: false,
+    actionCount: 2,
+    appliedChangedActions: 0,
+  });
+  assert.equal(compiler.materializeCapabilityPlans(state).length, 0);
+  assert.equal(compiler.materializeIgnoredValues(state).length, 0);
+});
+
 test('end-to-end hand-authored layering example preserves curated onoff and adds generic power', () => {
   const device = makeDevice();
   const state = compiler.createProfileBuildState();
