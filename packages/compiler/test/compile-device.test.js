@@ -794,3 +794,47 @@ test('compileDevice summary selector cache eviction preserves outputs', () => {
   assert.equal(summaryOnly.report.summary.appliedActions, 1100);
   assert.equal(summaryOnly.report.summary.unmatchedActions, 0);
 });
+
+test('compileDevice summary mode preserves mixed matched/unmatched multi-action counters', () => {
+  const device = {
+    deviceKey: 'dev-summary-multi-counter-parity-1',
+    values: [
+      {
+        valueId: { commandClass: 37, endpoint: 0, property: 'currentValue' },
+        metadata: { type: 'boolean', readable: true, writeable: false },
+      },
+      {
+        valueId: { commandClass: 37, endpoint: 0, property: 'targetValue' },
+        metadata: { type: 'boolean', readable: true, writeable: true },
+      },
+    ],
+  };
+  const rules = [
+    {
+      ruleId: 'current-multi',
+      layer: 'project-product',
+      value: { commandClass: [37], property: ['currentValue'] },
+      actions: [{ type: 'capability', capabilityId: 'onoff' }, { type: 'ignore-value' }],
+    },
+    {
+      ruleId: 'wildcard-ignore',
+      layer: 'ha-derived',
+      actions: [{ type: 'ignore-value' }],
+    },
+    {
+      ruleId: 'target-single',
+      layer: 'project-generic',
+      value: { commandClass: [37], property: ['targetValue'] },
+      actions: [{ type: 'capability', capabilityId: 'measure_power' }],
+    },
+  ];
+
+  const full = compiler.compileDevice(device, rules);
+  const summaryOnly = compiler.compileDevice(device, rules, { reportMode: 'summary' });
+
+  assert.deepEqual(summaryOnly.capabilities, full.capabilities);
+  assert.deepEqual(summaryOnly.report.summary, full.report.summary);
+  assert.equal(summaryOnly.report.summary.totalActions, 8);
+  assert.equal(summaryOnly.report.summary.unmatchedActions, 3);
+  assert.equal(summaryOnly.report.summary.appliedActions, 5);
+});

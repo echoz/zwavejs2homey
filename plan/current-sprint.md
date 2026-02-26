@@ -188,6 +188,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - preserved compact 8-bucket precedence model (`CPE`, `CP`, `CE`, `C`, `PE`, `P`, `E`, `ANY`) while removing per-lookup string key construction for merged-seed/cache access
     - retained FIFO cache bounding semantics and deterministic candidate ordering
     - added regression coverage for numeric-vs-string property token parity under summary caching
+42. Completed twenty-third performance slice for summary counter accounting simplification:
+    - summary mode now computes unmatched counts directly from per-selector candidate action totals plus candidate non-match/ineligible paths, instead of baseline-all-actions then subtracting matched actions
+    - `compileDevice` now precomputes per-rule action counts in execution entries and exposes per-selector cached seed action totals (`SummarySeedSelection.actionCount`)
+    - kept total action accounting exact (`totalActionCountPerValue * valueCount`) while reducing per-value arithmetic churn in summary loops
+    - added regression coverage for mixed matched/unmatched multi-action selector sets to lock full/summary counter parity
 
 ## Next Tasks
 

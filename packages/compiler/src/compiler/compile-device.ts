@@ -55,7 +55,13 @@ interface SortedRulesCacheEntry {
 
 interface CompileRuleExecutionEntry {
   rule: MappingRule;
+  actionCount: number;
   unmatchedTemplates: Array<Omit<CompileDeviceReportEntry, 'valueId'>>;
+}
+
+interface SummarySeedSelection {
+  indices: number[];
+  actionCount: number;
 }
 
 interface CompileRuleExecutionPlan {
@@ -70,7 +76,7 @@ interface CompileRuleExecutionPlan {
   summaryBucketP: Map<string, number[]>;
   summaryBucketE: Map<number, number[]>;
   summaryBucketAny: number[];
-  summarySelectorCache: Map<number, Map<string, Map<number, number[]>>>;
+  summarySelectorCache: Map<number, Map<string, Map<number, SummarySeedSelection>>>;
   summarySelectorCacheOrder: Array<[commandClass: number, propertyKey: string, endpoint: number]>;
   summarySelectorCacheSize: number;
   propertyWildcardIndices: number[];
@@ -188,7 +194,7 @@ function pushSummaryBucket3<K1, K2, K3>(
 function resolveSummaryCandidateSeed(
   plan: CompileRuleExecutionPlan,
   valueId: NormalizedZwaveValueId,
-): number[] {
+): SummarySeedSelection {
   const commandClass = valueId.commandClass;
   const property = propertyTokenKey(valueId.property);
   const endpoint = valueId.endpoint ?? 0;
@@ -196,6 +202,7 @@ function resolveSummaryCandidateSeed(
   if (cached) return cached;
 
   const merged: number[] = [];
+  let actionCount = 0;
   const seen = new Set<number>();
   const addIndices = (indices: readonly number[] | undefined): void => {
     if (!indices) return;
@@ -203,6 +210,7 @@ function resolveSummaryCandidateSeed(
       if (seen.has(index)) continue;
       seen.add(index);
       merged.push(index);
+      actionCount += plan.entries[index].actionCount;
     }
   };
 
@@ -214,6 +222,10 @@ function resolveSummaryCandidateSeed(
   addIndices(plan.summaryBucketP.get(property));
   addIndices(plan.summaryBucketE.get(endpoint));
   addIndices(plan.summaryBucketAny);
+  const selection: SummarySeedSelection = {
+    indices: merged,
+    actionCount,
+  };
 
   if (plan.summarySelectorCacheSize >= SUMMARY_SELECTOR_CACHE_MAX_ENTRIES) {
     const oldest = plan.summarySelectorCacheOrder.shift();
@@ -232,21 +244,21 @@ function resolveSummaryCandidateSeed(
       }
     }
   }
-  const cacheByProperty = ensureMap2<number, string, Map<number, number[]>>(
+  const cacheByProperty = ensureMap2<number, string, Map<number, SummarySeedSelection>>(
     plan.summarySelectorCache,
     commandClass,
   );
   const cacheByEndpoint =
     cacheByProperty.get(property) ??
     (() => {
-      const created = new Map<number, number[]>();
+      const created = new Map<number, SummarySeedSelection>();
       cacheByProperty.set(property, created);
       return created;
     })();
-  cacheByEndpoint.set(endpoint, merged);
+  cacheByEndpoint.set(endpoint, selection);
   plan.summarySelectorCacheOrder.push([commandClass, property, endpoint]);
   plan.summarySelectorCacheSize += 1;
-  return merged;
+  return selection;
 }
 
 function buildRuleExecutionPlan(rules: MappingRule[]): CompileRuleExecutionPlan {
@@ -257,6 +269,7 @@ function buildRuleExecutionPlan(rules: MappingRule[]): CompileRuleExecutionPlan 
   });
   const entries = sortedRules.map((rule) => ({
     rule,
+    actionCount: rule.actions.length,
     unmatchedTemplates: rule.actions.map((action) => ({
       ruleId: rule.ruleId,
       actionType: action.type,
@@ -279,7 +292,7 @@ function buildRuleExecutionPlan(rules: MappingRule[]): CompileRuleExecutionPlan 
   const summaryBucketP = new Map<string, number[]>();
   const summaryBucketE = new Map<number, number[]>();
   const summaryBucketAny: number[] = [];
-  const summarySelectorCache = new Map<number, Map<string, Map<number, number[]>>>();
+  const summarySelectorCache = new Map<number, Map<string, Map<number, SummarySeedSelection>>>();
   const summarySelectorCacheOrder: Array<
     [commandClass: number, propertyKey: string, endpoint: number]
   > = [];
@@ -288,7 +301,7 @@ function buildRuleExecutionPlan(rules: MappingRule[]): CompileRuleExecutionPlan 
 
   for (const [index, entry] of entries.entries()) {
     const matcher = entry.rule.value;
-    totalActionCountPerValue += entry.unmatchedTemplates.length;
+    totalActionCountPerValue += entry.actionCount;
     const commandClasses = matcher?.commandClass;
     if (!commandClasses || commandClasses.length === 0) {
       commandClassWildcardIndices.push(index);
@@ -558,22 +571,29 @@ export function compileDevice(
   };
 
   if (!includeActions) {
+    counters.totalActions = executionPlan.totalActionCountPerValue * device.values.length;
     for (const value of device.values) {
-      counters.totalActions += executionPlan.totalActionCountPerValue;
-      counters.unmatchedActions += executionPlan.totalActionCountPerValue;
+      const summarySeed = resolveSummaryCandidateSeed(executionPlan, value.valueId);
+      let unmatchedForValue = executionPlan.totalActionCountPerValue - summarySeed.actionCount;
 
-      const summarySeedIndices = resolveSummaryCandidateSeed(executionPlan, value.valueId);
-      for (const index of summarySeedIndices) {
-        if (deviceEligibleMask[index] === 0) continue;
+      for (const index of summarySeed.indices) {
         const entry = executionPlan.entries[index];
+        if (deviceEligibleMask[index] === 0) {
+          unmatchedForValue += entry.actionCount;
+          continue;
+        }
         const summaryResult = applyRuleToValueSummary(state, device, value, entry.rule);
-        if (!summaryResult.matched) continue;
-        counters.unmatchedActions -= summaryResult.actionCount;
+        if (!summaryResult.matched) {
+          unmatchedForValue += summaryResult.actionCount;
+          continue;
+        }
         counters.appliedActions += summaryResult.appliedChangedActions;
         if (entry.rule.layer === 'project-product') {
           counters.appliedProjectProductActions += summaryResult.appliedChangedActions;
         }
       }
+
+      counters.unmatchedActions += unmatchedForValue;
     }
   } else {
     const candidateScratch = createCandidateScratch(executionPlan.entries.length);

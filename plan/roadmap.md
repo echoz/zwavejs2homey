@@ -60,6 +60,7 @@
 - [x] Performance slice 20: compact 8-bucket summary seed model + per-selector cache to avoid wildcard expansion blow-up while keeping summary-path fast lookup
 - [x] Performance slice 21: bound summary selector-cache size with FIFO eviction to prevent unbounded memory growth
 - [x] Performance slice 22: remove summary-path concatenated selector key churn via nested-map bucket/cache indexing
+- [x] Performance slice 23: summary counter accounting rewrite to direct unmatched accumulation using cached per-selector action totals (no baseline-add/subtract loop)
 - [ ] Decide and document final ownership of generic fallback inference policy (currently leaning Homey adapter-owned)
 - [ ] Add second real catalog source adapter when a concrete source format is available
 
