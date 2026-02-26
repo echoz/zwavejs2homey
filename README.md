@@ -74,6 +74,18 @@ Compiled-artifact apply mode is now also supported for runtime-style validation:
 
 This emits a `compiled-homey-profiles/v1` artifact.
 
+### Live validation loop (build + apply + markdown summary)
+
+- `npm run compiler:validate-live -- --help`
+- `npm run compiler:validate-live -- --url ws://HOST:PORT --all-nodes --manifest-file rules/manifest.json`
+- `npm run compiler:validate-live -- --url ws://HOST:PORT --all-nodes --artifact-file /tmp/compiled-live.json --report-file /tmp/compiled-live.validation.md --top 10`
+
+This runs the canonical live validation loop in one command:
+
+- builds a compiled artifact from live nodes
+- reapplies that artifact against live nodes (runtime-style)
+- writes a markdown validation summary with outcomes/review reasons/top unmatched/suppressed signatures
+
 Using the canonical layered rules pipeline:
 
 - `rules/manifest.json`

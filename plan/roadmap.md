@@ -69,6 +69,7 @@
 - [x] Performance slice 29: add candidate apply paths that assume prevalidated device eligibility, removing redundant device/companion matcher checks inside hot rule-apply loops
 - [x] Performance slice 30: narrow candidate apply matcher checks to residual value predicates after selector gating (`propertyKey`/metadata/read-write)
 - [x] Post-review correctness fix: reject empty selector arrays in optimized matcher paths so malformed direct API rules remain `rule-not-matched` (never wildcard-applied)
+- [x] Runtime-validation ergonomics slice: add `compiler:validate-live` to run live build + compiled-artifact apply + markdown diagnostics in one command
 - [ ] Decide and document final ownership of generic fallback inference policy (currently leaning Homey adapter-owned)
 - [ ] Add second real catalog source adapter when a concrete source format is available
 

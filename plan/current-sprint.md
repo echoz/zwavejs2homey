@@ -232,6 +232,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - `matchesValueAfterSelectorGates` now explicitly rejects empty selector arrays (`commandClass`, `property`, `endpoint`) to preserve matcher semantics in assume-eligible fast paths
     - prevents malformed in-memory rules from being treated as wildcard matches by candidate gating when invoking `compileDevice` directly
     - added full+summary regression coverage asserting empty-selector matcher rules always emit `rule-not-matched` outcomes and never apply capabilities
+51. Completed live runtime-validation loop CLI slice:
+    - added `compiler:validate-live` (`tools/homey-compile-validate-live*.mjs`) to run build+apply validation in one command
+    - command now writes both the compiled artifact and a markdown validation report (outcomes, review reasons, top unmatched/suppressed signatures, node snapshot)
+    - reuses existing build + live inspect tooling with compiled-artifact apply mode to keep runtime-style validation behavior consistent
+    - added core-tool regression coverage for CLI parsing and end-to-end validation report generation
 
 ## Next Tasks
 

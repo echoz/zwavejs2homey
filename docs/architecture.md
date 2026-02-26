@@ -88,6 +88,7 @@ Current implemented foundation in `packages/compiler`:
   - `compiler:inspect-live` connects to a ZWJS instance, fetches node details, converts them to compiler device facts, and renders compiled profile results (including list view)
   - live inspection/build tooling skips controller-like nodes by default (override with `--include-controller-nodes` for diagnostics)
   - supports both compile-on-the-fly (rule authoring) and compiled-artifact apply mode (runtime-style validation)
+  - `compiler:validate-live` runs build + compiled-artifact apply in one pass and writes a markdown validation report (outcomes, review reasons, unmatched/suppressed hotspots)
 - Added compiler artifact build foundation:
   - `compiler:build` emits `compiled-homey-profiles/v1` from compiler device facts files or directly from a live ZWJS instance (`--url` + `--all-nodes`/`--node`) plus layered rules inputs
   - `rules/` directory skeleton established for real `ha-derived`, `project/generic`, and `project/product` rulesets
