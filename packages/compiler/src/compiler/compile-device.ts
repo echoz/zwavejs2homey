@@ -62,6 +62,7 @@ interface CompileRuleExecutionPlan {
   entries: CompileRuleExecutionEntry[];
   commandClassWildcardIndices: number[];
   byCommandClass: Map<number, number[]>;
+  summarySeedByCommandClass: Map<number, number[]>;
   propertyWildcardIndices: number[];
   byProperty: Map<string, number[]>;
   endpointWildcardIndices: number[];
@@ -73,7 +74,6 @@ interface CandidateScratch {
   commandClassMarks: Uint32Array;
   propertyMarks: Uint32Array;
   endpointMarks: Uint32Array;
-  visitedMarks: Uint32Array;
   stamp: number;
 }
 
@@ -101,6 +101,25 @@ function propertyTokenKey(value: string | number): string {
   return `${typeof value}:${String(value)}`;
 }
 
+function mergeSortedUniqueIndices(a: readonly number[], b: readonly number[]): number[] {
+  const merged: number[] = [];
+  let i = 0;
+  let j = 0;
+  let last = -1;
+  while (i < a.length || j < b.length) {
+    const nextA = i < a.length ? a[i] : Number.POSITIVE_INFINITY;
+    const nextB = j < b.length ? b[j] : Number.POSITIVE_INFINITY;
+    const next = nextA <= nextB ? nextA : nextB;
+    if (nextA <= nextB) i += 1;
+    if (nextB <= nextA) j += 1;
+    if (next !== last) {
+      merged.push(next);
+      last = next;
+    }
+  }
+  return merged;
+}
+
 function buildRuleExecutionPlan(rules: MappingRule[]): CompileRuleExecutionPlan {
   const sortedRules = [...rules].sort((a, b) => {
     const aRank = ruleLayerRank.get(a.layer) ?? Number.MAX_SAFE_INTEGER;
@@ -119,6 +138,7 @@ function buildRuleExecutionPlan(rules: MappingRule[]): CompileRuleExecutionPlan 
   }));
   const commandClassWildcardIndices: number[] = [];
   const byCommandClass = new Map<number, number[]>();
+  const summarySeedByCommandClass = new Map<number, number[]>();
   const propertyWildcardIndices: number[] = [];
   const byProperty = new Map<string, number[]>();
   const endpointWildcardIndices: number[] = [];
@@ -156,10 +176,18 @@ function buildRuleExecutionPlan(rules: MappingRule[]): CompileRuleExecutionPlan 
     }
   }
 
+  for (const [commandClass, exactIndices] of byCommandClass.entries()) {
+    summarySeedByCommandClass.set(
+      commandClass,
+      mergeSortedUniqueIndices(commandClassWildcardIndices, exactIndices),
+    );
+  }
+
   return {
     entries,
     commandClassWildcardIndices,
     byCommandClass,
+    summarySeedByCommandClass,
     propertyWildcardIndices,
     byProperty,
     endpointWildcardIndices,
@@ -182,7 +210,6 @@ function createCandidateScratch(length: number): CandidateScratch {
     commandClassMarks: new Uint32Array(length),
     propertyMarks: new Uint32Array(length),
     endpointMarks: new Uint32Array(length),
-    visitedMarks: new Uint32Array(length),
     stamp: 0,
   };
 }
@@ -192,7 +219,6 @@ function nextScratchStamp(scratch: CandidateScratch): number {
     scratch.commandClassMarks.fill(0);
     scratch.propertyMarks.fill(0);
     scratch.endpointMarks.fill(0);
-    scratch.visitedMarks.fill(0);
     scratch.stamp = 1;
     return scratch.stamp;
   }
@@ -320,31 +346,10 @@ export function compileDevice(
       counters.totalActions += executionPlan.totalActionCountPerValue;
       counters.unmatchedActions += executionPlan.totalActionCountPerValue;
 
-      const candidateCommandClassIndices = executionPlan.byCommandClass.get(
-        value.valueId.commandClass,
-      );
-      for (const index of executionPlan.commandClassWildcardIndices) {
-        if (candidateScratch.visitedMarks[index] === candidateStamp) continue;
-        candidateScratch.visitedMarks[index] = candidateStamp;
-        if (
-          deviceEligibleMask[index] === 0 ||
-          candidateScratch.propertyMarks[index] !== candidateStamp ||
-          candidateScratch.endpointMarks[index] !== candidateStamp
-        ) {
-          continue;
-        }
-        const entry = executionPlan.entries[index];
-        const summaryResult = applyRuleToValueSummary(state, device, value, entry.rule);
-        if (!summaryResult.matched) continue;
-        counters.unmatchedActions -= summaryResult.actionCount;
-        counters.appliedActions += summaryResult.appliedChangedActions;
-        if (entry.rule.layer === 'project-product') {
-          counters.appliedProjectProductActions += summaryResult.appliedChangedActions;
-        }
-      }
-      for (const index of candidateCommandClassIndices ?? []) {
-        if (candidateScratch.visitedMarks[index] === candidateStamp) continue;
-        candidateScratch.visitedMarks[index] = candidateStamp;
+      const summarySeedIndices =
+        executionPlan.summarySeedByCommandClass.get(value.valueId.commandClass) ??
+        executionPlan.commandClassWildcardIndices;
+      for (const index of summarySeedIndices) {
         if (
           deviceEligibleMask[index] === 0 ||
           candidateScratch.propertyMarks[index] !== candidateStamp ||

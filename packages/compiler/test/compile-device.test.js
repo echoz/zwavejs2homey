@@ -498,3 +498,44 @@ test('compileDevice report valueIds are immutable snapshots of input values', ()
   device.values[0].valueId.property = 'mutatedProperty';
   assert.equal(firstReported.valueId.property, 'currentValue');
 });
+
+test('compileDevice summary mode does not double-apply rules with duplicate commandClass tokens', () => {
+  const device = {
+    deviceKey: 'dev-summary-dup-cc-1',
+    values: [
+      {
+        valueId: { commandClass: 37, endpoint: 0, property: 'currentValue' },
+        metadata: { type: 'boolean', readable: true, writeable: false },
+      },
+    ],
+  };
+  const rules = [
+    {
+      ruleId: 'dup-cc-summary-rule',
+      layer: 'project-product',
+      value: {
+        commandClass: [37, 37],
+        property: ['currentValue'],
+      },
+      actions: [
+        {
+          type: 'capability',
+          mode: 'replace',
+          capabilityId: 'onoff',
+          inboundMapping: {
+            kind: 'value',
+            selector: { commandClass: 37, endpoint: 0, property: 'currentValue' },
+          },
+        },
+      ],
+    },
+  ];
+
+  const full = compiler.compileDevice(device, rules);
+  const summaryOnly = compiler.compileDevice(device, rules, { reportMode: 'summary' });
+
+  assert.deepEqual(summaryOnly.capabilities, full.capabilities);
+  assert.deepEqual(summaryOnly.report.summary, full.report.summary);
+  assert.equal(summaryOnly.report.summary.appliedActions, 1);
+  assert.equal(summaryOnly.report.summary.unmatchedActions, 0);
+});

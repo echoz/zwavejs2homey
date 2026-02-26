@@ -158,6 +158,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - `resolveCapabilityConflicts` now short-circuits immediately when no potential exclusive conflicts exist
     - preserves overlap semantics while avoiding conflict-bucket scans on devices/rulesets that never emit exclusive conflict metadata
     - added state-level regression coverage for fast-path flag transitions (no-conflict vs exclusive-conflict rule application)
+36. Completed seventeenth performance slice for summary candidate seed iteration:
+    - `compileDevice` execution plan now precomputes merged command-class candidate seed lists for summary-mode evaluation (`summarySeedByCommandClass`)
+    - summary mode now iterates a single precomputed seed list per value (wildcard + exact command-class indices) and removes per-value visited-mark dedupe tracking
+    - keeps deterministic execution and parity while reducing summary hot-loop branching/work
+    - added regression coverage for duplicate command-class matcher tokens to ensure summary mode does not double-apply rules
 
 ## Next Tasks
 
