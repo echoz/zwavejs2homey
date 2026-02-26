@@ -95,6 +95,7 @@ interface ActionSummaryCounters {
 const ruleLayerOrder = getRuleLayerOrder();
 const ruleLayerRank = new Map(ruleLayerOrder.map((layer, index) => [layer, index]));
 const sortedRulesCache = new WeakMap<readonly MappingRule[], SortedRulesCacheEntry>();
+const SUMMARY_SELECTOR_CACHE_MAX_ENTRIES = 1024;
 
 function pushIndex<K>(indexMap: Map<K, number[]>, key: K, index: number): void {
   const list = indexMap.get(key);
@@ -160,6 +161,12 @@ function resolveSummaryCandidateSeed(
   addIndices(plan.summaryBucketE.get(endpoint));
   addIndices(plan.summaryBucketAny);
 
+  if (plan.summarySelectorCache.size >= SUMMARY_SELECTOR_CACHE_MAX_ENTRIES) {
+    const oldestKey = plan.summarySelectorCache.keys().next().value as string | undefined;
+    if (oldestKey !== undefined) {
+      plan.summarySelectorCache.delete(oldestKey);
+    }
+  }
   plan.summarySelectorCache.set(cacheKey, merged);
   return merged;
 }

@@ -179,6 +179,10 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - summary runtime now resolves one cached seed per selector and executes candidate rules directly with device-eligibility gating
     - preserves deterministic ordering/parity while reducing summary plan-build memory blow-up from wildcard expansion
     - added regression coverage for repeated-selector wildcard parity behavior
+40. Completed twenty-first performance slice for selector-cache bounding:
+    - bounded `compileDevice` summary selector cache to a fixed maximum (`1024` entries) with FIFO eviction of oldest cached selector keys
+    - preserves selector-cache hit behavior while preventing unbounded cache growth on long heterogeneous runs
+    - added eviction-focused regression coverage using >1k unique selectors to validate summary/full parity under cache churn
 
 ## Next Tasks
 

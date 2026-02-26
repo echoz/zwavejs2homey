@@ -726,3 +726,33 @@ test('compileDevice summary mode preserves wildcard selector parity on repeated 
   assert.deepEqual(summaryOnly.report.summary, full.report.summary);
   assert.equal(summaryOnly.report.summary.appliedActions, 4);
 });
+
+test('compileDevice summary selector cache eviction preserves outputs', () => {
+  const device = {
+    deviceKey: 'dev-summary-cache-eviction-1',
+    values: Array.from({ length: 1100 }, (_, index) => ({
+      valueId: {
+        commandClass: 49,
+        endpoint: 0,
+        property: `sensor-${index}`,
+      },
+      metadata: { type: 'number', readable: true, writeable: false },
+    })),
+  };
+  const rules = [
+    {
+      ruleId: 'wildcard-ignore',
+      layer: 'ha-derived',
+      actions: [{ type: 'ignore-value' }],
+    },
+  ];
+
+  const full = compiler.compileDevice(device, rules);
+  const summaryOnly = compiler.compileDevice(device, rules, { reportMode: 'summary' });
+
+  assert.deepEqual(summaryOnly.capabilities, full.capabilities);
+  assert.deepEqual(summaryOnly.ignoredValues, full.ignoredValues);
+  assert.deepEqual(summaryOnly.report.summary, full.report.summary);
+  assert.equal(summaryOnly.report.summary.appliedActions, 1100);
+  assert.equal(summaryOnly.report.summary.unmatchedActions, 0);
+});

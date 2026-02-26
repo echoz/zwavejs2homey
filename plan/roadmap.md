@@ -58,6 +58,7 @@
 - [x] Performance slice 18: precomputed summary candidate seeds by command-class+property with endpoint-only runtime gating in summary mode
 - [x] Performance slice 19: precomputed summary candidate seeds by command-class+property+endpoint, removing summary-path candidate stamping
 - [x] Performance slice 20: compact 8-bucket summary seed model + per-selector cache to avoid wildcard expansion blow-up while keeping summary-path fast lookup
+- [x] Performance slice 21: bound summary selector-cache size with FIFO eviction to prevent unbounded memory growth
 - [ ] Decide and document final ownership of generic fallback inference policy (currently leaning Homey adapter-owned)
 - [ ] Add second real catalog source adapter when a concrete source format is available
 
