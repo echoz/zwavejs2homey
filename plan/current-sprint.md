@@ -228,6 +228,10 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - assume-eligible apply paths now use the narrowed matcher to avoid re-checking command-class/property/endpoint constraints already enforced by compile-time candidate selection
     - retained `matchesValue` semantics by delegating to the residual matcher after selector predicates, preserving existing behavior for non-optimized call sites
     - preserves compile parity while reducing redundant per-candidate predicate work in summary/full hot paths
+50. Completed post-review correctness fix for malformed selector arrays:
+    - `matchesValueAfterSelectorGates` now explicitly rejects empty selector arrays (`commandClass`, `property`, `endpoint`) to preserve matcher semantics in assume-eligible fast paths
+    - prevents malformed in-memory rules from being treated as wildcard matches by candidate gating when invoking `compileDevice` directly
+    - added full+summary regression coverage asserting empty-selector matcher rules always emit `rule-not-matched` outcomes and never apply capabilities
 
 ## Next Tasks
 

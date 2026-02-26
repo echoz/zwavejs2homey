@@ -69,11 +69,20 @@ function propertyKeyAsComparable(valueId: NormalizedZwaveValueId): string | numb
   return valueId.propertyKey ?? null;
 }
 
+function hasEmptySelectorArray(matcher: RuleValueMatcher): boolean {
+  return (
+    (matcher.commandClass !== undefined && matcher.commandClass.length === 0) ||
+    (matcher.endpoint !== undefined && matcher.endpoint.length === 0) ||
+    (matcher.property !== undefined && matcher.property.length === 0)
+  );
+}
+
 export function matchesValue(
   value: NormalizedZwaveValueFacts,
   matcher?: RuleValueMatcher,
 ): boolean {
   if (!matcher) return true;
+  if (hasEmptySelectorArray(matcher)) return false;
   if (!includesIfPresent(matcher.commandClass, value.valueId.commandClass)) return false;
   if (!includesIfPresent(matcher.endpoint, value.valueId.endpoint ?? 0)) return false;
   if (!includesIfPresent(matcher.property, value.valueId.property)) return false;
@@ -85,6 +94,7 @@ export function matchesValueAfterSelectorGates(
   matcher?: RuleValueMatcher,
 ): boolean {
   if (!matcher) return true;
+  if (hasEmptySelectorArray(matcher)) return false;
   const key = propertyKeyAsComparable(value.valueId);
   if (matcher.propertyKey && !matcher.propertyKey.includes(key)) return false;
   if (matcher.notPropertyKey && matcher.notPropertyKey.includes(key)) return false;

@@ -193,6 +193,55 @@ test('compileDevice candidate pruning preserves unmatched reporting for commandC
   );
 });
 
+test('compileDevice treats empty selector arrays as unmatched in full and summary modes', () => {
+  const device = {
+    deviceKey: 'dev-empty-selector-array-1',
+    values: [
+      {
+        valueId: { commandClass: 37, endpoint: 0, property: 'currentValue' },
+        metadata: { type: 'boolean', readable: true, writeable: false },
+      },
+    ],
+  };
+  const rules = [
+    {
+      ruleId: 'rule-empty-command-class',
+      layer: 'project-product',
+      value: { commandClass: [] },
+      actions: [{ type: 'capability', capabilityId: 'onoff' }],
+    },
+    {
+      ruleId: 'rule-empty-property',
+      layer: 'project-product',
+      value: { property: [] },
+      actions: [{ type: 'capability', capabilityId: 'measure_power' }],
+    },
+    {
+      ruleId: 'rule-empty-endpoint',
+      layer: 'project-product',
+      value: { endpoint: [] },
+      actions: [{ type: 'capability', capabilityId: 'alarm_generic' }],
+    },
+  ];
+
+  const full = compiler.compileDevice(device, rules);
+  const summaryOnly = compiler.compileDevice(device, rules, { reportMode: 'summary' });
+
+  assert.equal(full.capabilities.length, 0);
+  assert.equal(summaryOnly.capabilities.length, 0);
+  assert.equal(full.report.summary.appliedActions, 0);
+  assert.equal(summaryOnly.report.summary.appliedActions, 0);
+  assert.equal(full.report.summary.unmatchedActions, 3);
+  assert.equal(summaryOnly.report.summary.unmatchedActions, 3);
+  assert.deepEqual(summaryOnly.report.summary, full.report.summary);
+  assert.equal(
+    full.report.actions.every(
+      (action) => action.applied === false && action.reason === 'rule-not-matched',
+    ),
+    true,
+  );
+});
+
 test('compileDevice device-level gating preserves unmatched reporting for device/constraints mismatch', () => {
   const device = makeDevice();
   const rules = [
