@@ -48,6 +48,7 @@
 - [x] Performance slice 8: incremental summary counters in `compileDevice` to remove post-pass scans of report actions
 - [x] Performance slice 9: reuse per-value cloned/frozen `valueId` snapshots across emitted action records
 - [x] Performance slice 10: optional summary report mode in `compileDevice`/`compileProfilePlan` for bench-bulk runs, with counters preserving confidence + unmatched-ratio semantics
+- [x] Performance slice 11: summary-mode candidate-only execution path in `compileDevice` to avoid full rule scans while preserving full-mode parity
 - [ ] Decide and document final ownership of generic fallback inference policy (currently leaning Homey adapter-owned)
 - [ ] Add second real catalog source adapter when a concrete source format is available
 

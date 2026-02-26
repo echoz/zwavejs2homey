@@ -426,6 +426,16 @@ test('compileDevice summary report mode omits action records while preserving su
       value: { commandClass: [50], property: ['value'] },
       actions: [{ type: 'capability', capabilityId: 'measure_power' }],
     },
+    {
+      ruleId: 'property-key-mismatch',
+      layer: 'project-product',
+      value: {
+        commandClass: [50],
+        property: ['value'],
+        propertyKey: [1],
+      },
+      actions: [{ type: 'capability', capabilityId: 'alarm_generic' }],
+    },
   ];
 
   const full = compiler.compileDevice(device, rules);

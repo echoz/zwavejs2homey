@@ -128,6 +128,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - summary mode skips per-action report entry emission while retaining deterministic compile outputs and summary counters
     - added `summary.totalActions` + `summary.appliedProjectProductActions` so unmatched-ratio and confidence derivation stay correct without action arrays
     - `compiler:bench` now forces summary report mode and regression coverage verifies option wiring
+30. Completed eleventh performance slice for summary-mode candidate execution:
+    - `compileDevice` summary mode now baseline-counts unmatched/total action volume and executes `applyRuleToValue` only for candidate rules
+    - candidate execution is limited to command-class wildcard/exact seed sets and filtered by precomputed property/endpoint/device eligibility marks
+    - keeps summary parity with full mode while removing full rule-array scans in summary-only runs
+    - expanded compile-device regression coverage to include candidate-but-rule-not-matched parity (e.g. propertyKey mismatch)
 
 ## Next Tasks
 

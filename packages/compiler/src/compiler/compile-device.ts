@@ -66,12 +66,14 @@ interface CompileRuleExecutionPlan {
   byProperty: Map<string, number[]>;
   endpointWildcardIndices: number[];
   byEndpoint: Map<number, number[]>;
+  totalActionCountPerValue: number;
 }
 
 interface CandidateScratch {
   commandClassMarks: Uint32Array;
   propertyMarks: Uint32Array;
   endpointMarks: Uint32Array;
+  visitedMarks: Uint32Array;
   stamp: number;
 }
 
@@ -126,9 +128,11 @@ function buildRuleExecutionPlan(rules: MappingRule[]): CompileRuleExecutionPlan 
   const byProperty = new Map<string, number[]>();
   const endpointWildcardIndices: number[] = [];
   const byEndpoint = new Map<number, number[]>();
+  let totalActionCountPerValue = 0;
 
   for (const [index, entry] of entries.entries()) {
     const matcher = entry.rule.value;
+    totalActionCountPerValue += entry.unmatchedTemplates.length;
     const commandClasses = entry.rule.value?.commandClass;
     if (!commandClasses || commandClasses.length === 0) {
       commandClassWildcardIndices.push(index);
@@ -165,6 +169,7 @@ function buildRuleExecutionPlan(rules: MappingRule[]): CompileRuleExecutionPlan 
     byProperty,
     endpointWildcardIndices,
     byEndpoint,
+    totalActionCountPerValue,
   };
 }
 
@@ -182,6 +187,7 @@ function createCandidateScratch(length: number): CandidateScratch {
     commandClassMarks: new Uint32Array(length),
     propertyMarks: new Uint32Array(length),
     endpointMarks: new Uint32Array(length),
+    visitedMarks: new Uint32Array(length),
     stamp: 0,
   };
 }
@@ -191,6 +197,7 @@ function nextScratchStamp(scratch: CandidateScratch): number {
     scratch.commandClassMarks.fill(0);
     scratch.propertyMarks.fill(0);
     scratch.endpointMarks.fill(0);
+    scratch.visitedMarks.fill(0);
     scratch.stamp = 1;
     return scratch.stamp;
   }
@@ -285,6 +292,24 @@ function pushAppliedRuleResults(
   }
 }
 
+function updateCountersForSummaryOnlyResults(
+  entry: CompileRuleExecutionEntry,
+  results: AppliedRuleActionResult[],
+  counters: ActionSummaryCounters,
+): void {
+  for (const result of results) {
+    if (result.reason !== 'rule-not-matched') {
+      counters.unmatchedActions -= 1;
+    }
+    if (result.applied && result.changed !== false) {
+      counters.appliedActions += 1;
+      if (entry.rule.layer === 'project-product') {
+        counters.appliedProjectProductActions += 1;
+      }
+    }
+  }
+}
+
 function prepareValues(device: NormalizedZwaveDeviceFacts): PreparedValue[] {
   return device.values.map((value) => ({
     original: value,
@@ -333,6 +358,44 @@ export function compileDevice(
       candidateScratch,
       value.original.valueId,
     );
+    if (!includeActions) {
+      counters.totalActions += executionPlan.totalActionCountPerValue;
+      counters.unmatchedActions += executionPlan.totalActionCountPerValue;
+
+      const candidateCommandClassIndices = executionPlan.byCommandClass.get(
+        value.original.valueId.commandClass,
+      );
+      for (const index of executionPlan.commandClassWildcardIndices) {
+        if (candidateScratch.visitedMarks[index] === candidateStamp) continue;
+        candidateScratch.visitedMarks[index] = candidateStamp;
+        if (
+          deviceEligibleMask[index] === 0 ||
+          candidateScratch.propertyMarks[index] !== candidateStamp ||
+          candidateScratch.endpointMarks[index] !== candidateStamp
+        ) {
+          continue;
+        }
+        const entry = executionPlan.entries[index];
+        const results = applyRuleToValue(state, device, value.original, entry.rule);
+        updateCountersForSummaryOnlyResults(entry, results, counters);
+      }
+      for (const index of candidateCommandClassIndices ?? []) {
+        if (candidateScratch.visitedMarks[index] === candidateStamp) continue;
+        candidateScratch.visitedMarks[index] = candidateStamp;
+        if (
+          deviceEligibleMask[index] === 0 ||
+          candidateScratch.propertyMarks[index] !== candidateStamp ||
+          candidateScratch.endpointMarks[index] !== candidateStamp
+        ) {
+          continue;
+        }
+        const entry = executionPlan.entries[index];
+        const results = applyRuleToValue(state, device, value.original, entry.rule);
+        updateCountersForSummaryOnlyResults(entry, results, counters);
+      }
+      continue;
+    }
+
     for (const [index, entry] of executionPlan.entries.entries()) {
       if (
         deviceEligibleMask[index] === 0 ||
