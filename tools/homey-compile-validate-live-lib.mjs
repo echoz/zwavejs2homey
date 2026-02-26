@@ -42,6 +42,15 @@ function resolveFilePath(filePath) {
   return path.isAbsolute(filePath) ? filePath : path.resolve(filePath);
 }
 
+function parseOptionalNonNegativeInt(rawValue, flagName) {
+  if (rawValue === undefined) return undefined;
+  const parsed = Number.parseInt(rawValue, 10);
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    throw new Error(`Invalid ${flagName}: ${rawValue}`);
+  }
+  return parsed;
+}
+
 function isTechnicalCurationReason(reason) {
   return (
     typeof reason === 'string' &&
@@ -88,6 +97,10 @@ function topEntries(counter, top) {
       return a[0].localeCompare(b[0]);
     })
     .slice(0, top);
+}
+
+function mapToSortedObject(counter) {
+  return Object.fromEntries([...counter.entries()].sort((a, b) => a[0].localeCompare(b[0])));
 }
 
 function mapOutcomes(results) {
@@ -156,6 +169,7 @@ function summarizeValidationResults(results, top) {
     totalNodes: results.length,
     reviewNodes,
     outcomes: mapOutcomes(results),
+    reviewReasonCounts,
     topReasons: topEntries(reviewReasonCounts, top),
     topUnmatched: topEntries(unmatchedByRule, top),
     topSuppressed: topEntries(suppressedBySlot, top),
@@ -260,6 +274,93 @@ function buildDefaultReportPath(artifactFile) {
   return `${artifactFile}.validation.md`;
 }
 
+function evaluateValidationGates(command, summary) {
+  const violations = [];
+  const genericNodes = summary.outcomes.get('generic') ?? 0;
+  const emptyNodes = summary.outcomes.get('empty') ?? 0;
+
+  if (
+    command.maxReviewNodes !== undefined &&
+    Number.isInteger(command.maxReviewNodes) &&
+    summary.reviewNodes > command.maxReviewNodes
+  ) {
+    violations.push(
+      `review nodes ${summary.reviewNodes} exceeded max ${command.maxReviewNodes} (--max-review-nodes)`,
+    );
+  }
+  if (
+    command.maxGenericNodes !== undefined &&
+    Number.isInteger(command.maxGenericNodes) &&
+    genericNodes > command.maxGenericNodes
+  ) {
+    violations.push(
+      `generic outcome nodes ${genericNodes} exceeded max ${command.maxGenericNodes} (--max-generic-nodes)`,
+    );
+  }
+  if (
+    command.maxEmptyNodes !== undefined &&
+    Number.isInteger(command.maxEmptyNodes) &&
+    emptyNodes > command.maxEmptyNodes
+  ) {
+    violations.push(
+      `empty outcome nodes ${emptyNodes} exceeded max ${command.maxEmptyNodes} (--max-empty-nodes)`,
+    );
+  }
+  for (const reason of command.failOnReasons ?? []) {
+    const reasonCount = summary.reviewReasonCounts.get(reason) ?? 0;
+    if (reasonCount > 0) {
+      violations.push(
+        `reason "${reason}" found ${reasonCount} time(s) (--fail-on-reason ${reason})`,
+      );
+    }
+  }
+
+  return {
+    genericNodes,
+    emptyNodes,
+    passed: violations.length === 0,
+    violations,
+  };
+}
+
+function buildMachineSummary(command, summary, gateResult, generatedAtIso) {
+  return {
+    generatedAt: generatedAtIso,
+    source: {
+      url: command.url,
+      scope: command.allNodes ? 'all-nodes' : `node:${command.nodeId}`,
+      ruleInputMode: command.ruleInputMode,
+      manifestFile: command.manifestFile,
+      rulesFiles: command.rulesFiles,
+      artifactFile: command.artifactFile,
+      reportFile: command.reportFile,
+    },
+    counts: {
+      totalNodes: summary.totalNodes,
+      reviewNodes: summary.reviewNodes,
+      genericNodes: gateResult.genericNodes,
+      emptyNodes: gateResult.emptyNodes,
+      outcomes: mapToSortedObject(summary.outcomes),
+      reasons: mapToSortedObject(summary.reviewReasonCounts),
+    },
+    top: {
+      reviewReasons: summary.topReasons.map(([reason, count]) => ({ reason, count })),
+      unmatchedRules: summary.topUnmatched.map(([signature, count]) => ({ signature, count })),
+      suppressedSlots: summary.topSuppressed.map(([signature, count]) => ({ signature, count })),
+    },
+    gates: {
+      configured: {
+        maxReviewNodes: command.maxReviewNodes,
+        maxGenericNodes: command.maxGenericNodes,
+        maxEmptyNodes: command.maxEmptyNodes,
+        failOnReasons: command.failOnReasons,
+      },
+      passed: gateResult.passed,
+      violations: gateResult.violations,
+    },
+  };
+}
+
 export function getUsageText() {
   return [
     'Usage:',
@@ -272,6 +373,9 @@ export function getUsageText() {
     '                            [--include-controller-nodes]',
     '                            [--artifact-file </tmp/compiled-live.json>]',
     '                            [--report-file </tmp/compiled-live.validation.md>]',
+    '                            [--summary-json-file </tmp/compiled-live.summary.json>]',
+    '                            [--max-review-nodes N] [--max-generic-nodes N] [--max-empty-nodes N]',
+    '                            [--fail-on-reason <reason> ...]',
     '                            [--top N]',
   ].join('\n');
 }
@@ -342,6 +446,28 @@ export function parseCliArgs(argv, options = {}) {
     return { ok: false, error: `Invalid --top: ${topRaw}` };
   }
 
+  let maxReviewNodes;
+  let maxGenericNodes;
+  let maxEmptyNodes;
+  try {
+    maxReviewNodes = parseOptionalNonNegativeInt(
+      flags.get('--max-review-nodes'),
+      '--max-review-nodes',
+    );
+    maxGenericNodes = parseOptionalNonNegativeInt(
+      flags.get('--max-generic-nodes'),
+      '--max-generic-nodes',
+    );
+    maxEmptyNodes = parseOptionalNonNegativeInt(
+      flags.get('--max-empty-nodes'),
+      '--max-empty-nodes',
+    );
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    return { ok: false, error: reason };
+  }
+  const failOnReasons = collectRepeatedFlag(argv, '--fail-on-reason');
+
   const nowDate = options.nowDate ?? new Date();
   const artifactFile = resolveFilePath(
     flags.get('--artifact-file') ?? buildDefaultArtifactPath(nowDate),
@@ -349,6 +475,9 @@ export function parseCliArgs(argv, options = {}) {
   const reportFile = resolveFilePath(
     flags.get('--report-file') ?? buildDefaultReportPath(artifactFile),
   );
+  const summaryJsonFile = flags.get('--summary-json-file')
+    ? resolveFilePath(flags.get('--summary-json-file'))
+    : undefined;
 
   return {
     ok: true,
@@ -369,6 +498,11 @@ export function parseCliArgs(argv, options = {}) {
         : undefined,
       artifactFile,
       reportFile,
+      summaryJsonFile,
+      maxReviewNodes,
+      maxGenericNodes,
+      maxEmptyNodes,
+      failOnReasons,
       top,
     },
   };
@@ -443,14 +577,25 @@ export async function runValidateLiveCommand(command, io = console, deps = {}) {
   }
 
   const summary = summarizeValidationResults(results, command.top);
+  const gateResult = evaluateValidationGates(command, summary);
   const markdown = formatMarkdownReport(command, summary, generatedAtIso);
   fs.writeFileSync(command.reportFile, markdown, 'utf8');
+  const machineSummary = buildMachineSummary(command, summary, gateResult, generatedAtIso);
+  if (command.summaryJsonFile) {
+    fs.writeFileSync(command.summaryJsonFile, `${formatJsonPretty(machineSummary)}\n`, 'utf8');
+  }
 
   io.log(`Compiled artifact: ${command.artifactFile}`);
   io.log(`Validation report: ${command.reportFile}`);
+  if (command.summaryJsonFile) {
+    io.log(`Validation summary JSON: ${command.summaryJsonFile}`);
+  }
   io.log(`Nodes validated: ${summary.totalNodes}`);
   io.log(`Outcomes: ${formatOutcomeSummary(summary.outcomes)}`);
   io.log(`Needs review: ${summary.reviewNodes}`);
+  if (!gateResult.passed) {
+    throw new Error(`Validation gates failed:\n- ${gateResult.violations.join('\n- ')}`);
+  }
 
-  return { artifact, results, summary, markdown };
+  return { artifact, results, summary, markdown, gateResult, machineSummary };
 }

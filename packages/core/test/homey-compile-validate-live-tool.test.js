@@ -57,6 +57,36 @@ test('parseCliArgs validates required live inputs and rules source modes', async
   assert.equal(parsedExplicit.command.manifestFile, undefined);
   assert.equal(parsedExplicit.command.rulesFiles.length, 2);
   assert.equal(parsedExplicit.command.top, 7);
+  assert.equal(
+    parseCliArgs(['--url', 'ws://x', '--all-nodes', '--max-review-nodes', '-1']).ok,
+    false,
+  );
+  const parsedGates = parseCliArgs([
+    '--url',
+    'ws://x',
+    '--all-nodes',
+    '--summary-json-file',
+    '/tmp/live.summary.json',
+    '--max-review-nodes',
+    '4',
+    '--max-generic-nodes',
+    '2',
+    '--max-empty-nodes',
+    '0',
+    '--fail-on-reason',
+    'known-device-generic-fallback',
+    '--fail-on-reason',
+    'no-meaningful-mapping',
+  ]);
+  assert.equal(parsedGates.ok, true);
+  assert.equal(parsedGates.command.maxReviewNodes, 4);
+  assert.equal(parsedGates.command.maxGenericNodes, 2);
+  assert.equal(parsedGates.command.maxEmptyNodes, 0);
+  assert.deepEqual(parsedGates.command.failOnReasons, [
+    'known-device-generic-fallback',
+    'no-meaningful-mapping',
+  ]);
+  assert.match(parsedGates.command.summaryJsonFile, /live\.summary\.json$/);
 });
 
 test('runValidateLiveCommand writes artifact and markdown summary from live inspection output', async () => {
@@ -83,6 +113,11 @@ test('runValidateLiveCommand writes artifact and markdown summary from live insp
       catalogFile: undefined,
       artifactFile,
       reportFile,
+      summaryJsonFile: undefined,
+      maxReviewNodes: undefined,
+      maxGenericNodes: undefined,
+      maxEmptyNodes: undefined,
+      failOnReasons: [],
       top: 3,
     },
     { log: (line) => logs.push(line) },
@@ -176,4 +211,93 @@ test('runValidateLiveCommand writes artifact and markdown summary from live insp
   assert.equal(logs.length, 5);
   assert.match(logs[0], /Compiled artifact:/);
   assert.match(logs[1], /Validation report:/);
+});
+
+test('runValidateLiveCommand writes machine summary and fails when gates are exceeded', async () => {
+  const { runValidateLiveCommand } = await loadLib();
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zwjs2homey-validate-live-gates-'));
+  const artifactFile = path.join(tmpDir, 'compiled-live.json');
+  const reportFile = path.join(tmpDir, 'compiled-live.validation.md');
+  const summaryJsonFile = path.join(tmpDir, 'compiled-live.summary.json');
+  const logs = [];
+
+  await assert.rejects(
+    () =>
+      runValidateLiveCommand(
+        {
+          url: 'ws://x',
+          token: undefined,
+          schemaVersion: 0,
+          allNodes: true,
+          nodeId: undefined,
+          includeValues: 'summary',
+          maxValues: 100,
+          includeControllerNodes: false,
+          manifestFile: path.join(fixturesDir, 'rule-manifest-with-ha-generated.json'),
+          rulesFiles: [],
+          ruleInputMode: 'manifest-file',
+          catalogFile: undefined,
+          artifactFile,
+          reportFile,
+          summaryJsonFile,
+          maxReviewNodes: 0,
+          maxGenericNodes: 0,
+          maxEmptyNodes: 0,
+          failOnReasons: ['known-device-generic-fallback'],
+          top: 3,
+        },
+        { log: (line) => logs.push(line) },
+        {
+          nowDate: new Date('2026-02-26T00:00:00.000Z'),
+          buildCompiledProfilesArtifactImpl: async () => ({
+            schemaVersion: 'compiled-homey-profiles/v1',
+            generatedAt: '2026-02-26T00:00:00.000Z',
+            source: { buildProfile: 'manifest-file', ruleSources: [] },
+            entries: [],
+          }),
+          runLiveInspectCommandImpl: async (_command, io) => {
+            io.log(
+              JSON.stringify({
+                results: [
+                  {
+                    node: { nodeId: 7, name: 'Garage Sensor' },
+                    compiled: {
+                      profile: {
+                        classification: {
+                          homeyClass: 'sensor',
+                          confidence: 'generic',
+                          uncurated: true,
+                        },
+                      },
+                      report: {
+                        profileOutcome: 'generic',
+                        curationCandidates: {
+                          likelyNeedsReview: true,
+                          reasons: ['known-device-generic-fallback'],
+                        },
+                        byRule: [],
+                        bySuppressedSlot: [],
+                      },
+                    },
+                  },
+                ],
+              }),
+            );
+          },
+        },
+      ),
+    /Validation gates failed:/,
+  );
+
+  assert.equal(fs.existsSync(artifactFile), true);
+  assert.equal(fs.existsSync(reportFile), true);
+  assert.equal(fs.existsSync(summaryJsonFile), true);
+  const summaryJson = JSON.parse(fs.readFileSync(summaryJsonFile, 'utf8'));
+  assert.equal(summaryJson.gates.passed, false);
+  assert.equal(summaryJson.counts.reviewNodes, 1);
+  assert.equal(summaryJson.counts.genericNodes, 1);
+  assert.equal(summaryJson.counts.reasons['known-device-generic-fallback'], 1);
+  assert.equal(Array.isArray(summaryJson.gates.violations), true);
+  assert.equal(summaryJson.gates.violations.length >= 1, true);
+  assert.match(logs[2], /Validation summary JSON:/);
 });

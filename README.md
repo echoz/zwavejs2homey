@@ -79,12 +79,14 @@ This emits a `compiled-homey-profiles/v1` artifact.
 - `npm run compiler:validate-live -- --help`
 - `npm run compiler:validate-live -- --url ws://HOST:PORT --all-nodes --manifest-file rules/manifest.json`
 - `npm run compiler:validate-live -- --url ws://HOST:PORT --all-nodes --artifact-file /tmp/compiled-live.json --report-file /tmp/compiled-live.validation.md --top 10`
+- `npm run compiler:validate-live -- --url ws://HOST:PORT --all-nodes --summary-json-file /tmp/compiled-live.summary.json --max-review-nodes 5 --max-generic-nodes 2 --fail-on-reason known-device-generic-fallback`
 
 This runs the canonical live validation loop in one command:
 
 - builds a compiled artifact from live nodes
 - reapplies that artifact against live nodes (runtime-style)
 - writes a markdown validation summary with outcomes/review reasons/top unmatched/suppressed signatures
+- optionally enforces quality gates and exits non-zero (CI-friendly) via `--max-*` and `--fail-on-reason`
 
 Using the canonical layered rules pipeline:
 
