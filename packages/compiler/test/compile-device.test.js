@@ -405,7 +405,31 @@ test('compileDevice summary report mode omits action records while preserving su
       ruleId: 'ha-onoff',
       layer: 'ha-derived',
       value: { commandClass: [37], property: ['currentValue'] },
-      actions: [{ type: 'capability', capabilityId: 'onoff' }],
+      actions: [
+        {
+          type: 'capability',
+          capabilityId: 'onoff',
+          inboundMapping: {
+            kind: 'value',
+            selector: { commandClass: 37, endpoint: 0, property: 'currentValue' },
+          },
+        },
+      ],
+    },
+    {
+      ruleId: 'generic-onoff-duplicate-fill',
+      layer: 'project-generic',
+      value: { commandClass: [37], property: ['currentValue'] },
+      actions: [
+        {
+          type: 'capability',
+          capabilityId: 'onoff',
+          inboundMapping: {
+            kind: 'value',
+            selector: { commandClass: 37, endpoint: 0, property: 'currentValue' },
+          },
+        },
+      ],
     },
     {
       ruleId: 'product-driver',
@@ -444,7 +468,12 @@ test('compileDevice summary report mode omits action records while preserving su
   assert.equal(summaryOnly.report.actions.length, 0);
   assert.deepEqual(summaryOnly.capabilities, full.capabilities);
   assert.deepEqual(summaryOnly.deviceIdentity, full.deviceIdentity);
-  assert.deepEqual(summaryOnly.report.suppressedActions, full.report.suppressedActions);
+  assert.equal(full.report.suppressedActions.length > 0, true);
+  assert.equal(summaryOnly.report.suppressedActions.length, 0);
+  assert.equal(
+    summaryOnly.report.summary.suppressedFillActions,
+    full.report.summary.suppressedFillActions,
+  );
   assert.deepEqual(summaryOnly.report.summary, full.report.summary);
 });
 

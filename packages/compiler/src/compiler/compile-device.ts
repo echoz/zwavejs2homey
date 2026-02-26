@@ -321,7 +321,7 @@ export function compileDevice(
   options?: CompileDeviceOptions,
 ): CompileDeviceResult {
   const includeActions = options?.reportMode !== 'summary';
-  const state = createProfileBuildState();
+  const state = createProfileBuildState({ collectSuppressedActions: includeActions });
   const executionPlan = resolveRuleExecutionPlan(rules);
   const deviceEligibleMask = buildDeviceEligibleMask(device, executionPlan);
   const candidateScratch = createCandidateScratch(executionPlan.entries.length);
@@ -423,7 +423,7 @@ export function compileDevice(
         unmatchedActions: counters.unmatchedActions,
         totalActions: counters.totalActions,
         appliedProjectProductActions: counters.appliedProjectProductActions,
-        suppressedFillActions: state.suppressedActions.filter((a) => a.mode === 'fill').length,
+        suppressedFillActions: state.suppressedFillActionsCount,
         ignoredValues: state.ignoredValues.size,
       },
       ...(overlap.suppressedCapabilities.length > 0

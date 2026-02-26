@@ -34,6 +34,8 @@ export interface ProfileBuildStateCapability extends HomeyCapabilityPlan {
 export type RuleActionApplyOutcome = 'created' | 'updated' | 'replaced' | 'noop';
 
 export interface ProfileBuildState {
+  collectSuppressedActions: boolean;
+  suppressedFillActionsCount: number;
   appliedDeviceIdentityActions: Set<string>;
   deviceIdentity?: {
     homeyClass?: string;
@@ -60,8 +62,40 @@ export interface ProfileBuildState {
   }>;
 }
 
-export function createProfileBuildState(): ProfileBuildState {
+interface SuppressedActionRecord {
+  capabilityId?: string;
+  slot:
+    | 'deviceIdentity.homeyClass'
+    | 'deviceIdentity.driverTemplateId'
+    | 'capability'
+    | 'inboundMapping'
+    | 'outboundMapping'
+    | 'flags'
+    | 'conflict';
+  reason: 'occupied';
+  mode: RuleActionMode;
+  layer: ProvenanceRecord['layer'];
+  ruleId: string;
+}
+
+function recordSuppressedAction(
+  state: ProfileBuildState,
+  suppressed: SuppressedActionRecord,
+): void {
+  if (suppressed.mode === 'fill') {
+    state.suppressedFillActionsCount += 1;
+  }
+  if (state.collectSuppressedActions) {
+    state.suppressedActions.push(suppressed);
+  }
+}
+
+export function createProfileBuildState(options?: {
+  collectSuppressedActions?: boolean;
+}): ProfileBuildState {
   return {
+    collectSuppressedActions: options?.collectSuppressedActions ?? true,
+    suppressedFillActionsCount: 0,
     appliedDeviceIdentityActions: new Set(),
     deviceIdentity: undefined,
     capabilities: new Map(),
@@ -98,7 +132,7 @@ export function applyDeviceIdentityRuleAction(
       existing.homeyClass = action.homeyClass;
       changed = true;
     } else if (existing.homeyClass !== undefined && action.homeyClass !== undefined) {
-      state.suppressedActions.push({
+      recordSuppressedAction(state, {
         slot: 'deviceIdentity.homeyClass',
         reason: 'occupied',
         mode,
@@ -110,7 +144,7 @@ export function applyDeviceIdentityRuleAction(
       existing.driverTemplateId = action.driverTemplateId;
       changed = true;
     } else if (existing.driverTemplateId !== undefined && action.driverTemplateId !== undefined) {
-      state.suppressedActions.push({
+      recordSuppressedAction(state, {
         slot: 'deviceIdentity.driverTemplateId',
         reason: 'occupied',
         mode,
@@ -234,7 +268,7 @@ function pushSuppressed(
   mode: RuleActionMode,
   provenance: ProvenanceRecord,
 ): void {
-  state.suppressedActions.push({
+  recordSuppressedAction(state, {
     capabilityId: action.capabilityId,
     slot,
     reason: 'occupied',
@@ -469,7 +503,7 @@ export function resolveCapabilityConflicts(state: ProfileBuildState): {
         conflictKey,
         reason: `conflict-exclusive:${conflictKey}`,
       });
-      state.suppressedActions.push({
+      recordSuppressedAction(state, {
         capabilityId: loser.capabilityId,
         slot: 'conflict',
         reason: 'occupied',

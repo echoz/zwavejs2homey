@@ -138,6 +138,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - `compileDevice` summary mode now uses the summary apply path (full mode still emits detailed `report.actions`)
     - preserves matched/unmatched accounting semantics used by confidence + curation diagnostics
     - added apply-rule parity tests for summary/full changed-action accounting and unmatched no-mutation behavior
+32. Completed thirteenth performance slice for suppressed-action diagnostics gating:
+    - `createProfileBuildState` now supports `collectSuppressedActions` and tracks `suppressedFillActionsCount` independently
+    - summary-mode compiles disable suppressed-action record collection while keeping `summary.suppressedFillActions` semantics intact
+    - removed per-compile `suppressedActions.filter(mode===fill)` post-pass scan in favor of incremental counting
+    - expanded compile-device summary-mode tests to assert suppression-count parity with full mode when detailed suppression records are omitted
 
 ## Next Tasks
 
