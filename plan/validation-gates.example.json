@@ -1,0 +1,9 @@
+{
+  "maxReviewNodes": 5,
+  "maxGenericNodes": 2,
+  "maxEmptyNodes": 0,
+  "failOnReasons": ["known-device-unmapped"],
+  "artifactFile": "/tmp/compiled-live.json",
+  "reportFile": "/tmp/compiled-live.validation.md",
+  "summaryJsonFile": "/tmp/compiled-live.summary.json"
+}

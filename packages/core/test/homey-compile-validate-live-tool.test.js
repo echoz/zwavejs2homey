@@ -87,6 +87,95 @@ test('parseCliArgs validates required live inputs and rules source modes', async
     'no-meaningful-mapping',
   ]);
   assert.match(parsedGates.command.summaryJsonFile, /live\.summary\.json$/);
+
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zwjs2homey-validate-live-parse-'));
+  const gateProfileDir = path.join(tmpDir, 'gates');
+  fs.mkdirSync(path.join(gateProfileDir, 'output'), { recursive: true });
+  const gateProfileFile = path.join(gateProfileDir, 'profile.json');
+  fs.writeFileSync(
+    gateProfileFile,
+    JSON.stringify(
+      {
+        maxReviewNodes: 6,
+        maxGenericNodes: 3,
+        maxEmptyNodes: 1,
+        failOnReasons: ['known-device-unmapped'],
+        artifactFile: './output/artifact.json',
+        reportFile: './output/report.md',
+        summaryJsonFile: './output/summary.json',
+      },
+      null,
+      2,
+    ),
+    'utf8',
+  );
+
+  const parsedFromGateProfile = parseCliArgs(
+    ['--url', 'ws://x', '--all-nodes', '--gate-profile-file', gateProfileFile],
+    {
+      defaultManifestFile: path.join(fixturesDir, 'rule-manifest-with-ha-generated.json'),
+    },
+  );
+  assert.equal(parsedFromGateProfile.ok, true);
+  assert.equal(parsedFromGateProfile.command.gateProfileFile, gateProfileFile);
+  assert.equal(parsedFromGateProfile.command.maxReviewNodes, 6);
+  assert.equal(parsedFromGateProfile.command.maxGenericNodes, 3);
+  assert.equal(parsedFromGateProfile.command.maxEmptyNodes, 1);
+  assert.deepEqual(parsedFromGateProfile.command.failOnReasons, ['known-device-unmapped']);
+  assert.equal(
+    parsedFromGateProfile.command.artifactFile,
+    path.join(gateProfileDir, 'output', 'artifact.json'),
+  );
+  assert.equal(
+    parsedFromGateProfile.command.reportFile,
+    path.join(gateProfileDir, 'output', 'report.md'),
+  );
+  assert.equal(
+    parsedFromGateProfile.command.summaryJsonFile,
+    path.join(gateProfileDir, 'output', 'summary.json'),
+  );
+
+  const parsedGateProfileCliOverride = parseCliArgs(
+    [
+      '--url',
+      'ws://x',
+      '--all-nodes',
+      '--gate-profile-file',
+      gateProfileFile,
+      '--artifact-file',
+      '/tmp/override-artifact.json',
+      '--max-review-nodes',
+      '2',
+      '--fail-on-reason',
+      'known-device-generic-fallback',
+    ],
+    {
+      defaultManifestFile: path.join(fixturesDir, 'rule-manifest-with-ha-generated.json'),
+    },
+  );
+  assert.equal(parsedGateProfileCliOverride.ok, true);
+  assert.equal(parsedGateProfileCliOverride.command.maxReviewNodes, 2);
+  assert.equal(parsedGateProfileCliOverride.command.maxGenericNodes, 3);
+  assert.equal(parsedGateProfileCliOverride.command.maxEmptyNodes, 1);
+  assert.deepEqual(parsedGateProfileCliOverride.command.failOnReasons, [
+    'known-device-generic-fallback',
+  ]);
+  assert.equal(parsedGateProfileCliOverride.command.artifactFile, '/tmp/override-artifact.json');
+  assert.equal(
+    parsedGateProfileCliOverride.command.reportFile,
+    path.join(gateProfileDir, 'output', 'report.md'),
+  );
+
+  const badGateProfileFile = path.join(gateProfileDir, 'bad-profile.json');
+  fs.writeFileSync(badGateProfileFile, JSON.stringify({ unsupported: true }), 'utf8');
+  const badGateProfile = parseCliArgs(
+    ['--url', 'ws://x', '--all-nodes', '--gate-profile-file', badGateProfileFile],
+    {
+      defaultManifestFile: path.join(fixturesDir, 'rule-manifest-with-ha-generated.json'),
+    },
+  );
+  assert.equal(badGateProfile.ok, false);
+  assert.match(badGateProfile.error, /unsupported field "unsupported"/);
 });
 
 test('runValidateLiveCommand writes artifact and markdown summary from live inspection output', async () => {
@@ -240,6 +329,7 @@ test('runValidateLiveCommand writes machine summary and fails when gates are exc
           artifactFile,
           reportFile,
           summaryJsonFile,
+          gateProfileFile: '/tmp/gate-profile.json',
           maxReviewNodes: 0,
           maxGenericNodes: 0,
           maxEmptyNodes: 0,
@@ -294,6 +384,8 @@ test('runValidateLiveCommand writes machine summary and fails when gates are exc
   assert.equal(fs.existsSync(summaryJsonFile), true);
   const summaryJson = JSON.parse(fs.readFileSync(summaryJsonFile, 'utf8'));
   assert.equal(summaryJson.gates.passed, false);
+  assert.equal(summaryJson.source.gateProfileFile, '/tmp/gate-profile.json');
+  assert.equal(summaryJson.gates.configured.gateProfileFile, '/tmp/gate-profile.json');
   assert.equal(summaryJson.counts.reviewNodes, 1);
   assert.equal(summaryJson.counts.genericNodes, 1);
   assert.equal(summaryJson.counts.reasons['known-device-generic-fallback'], 1);

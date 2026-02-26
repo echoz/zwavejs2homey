@@ -51,6 +51,89 @@ function parseOptionalNonNegativeInt(rawValue, flagName) {
   return parsed;
 }
 
+function readJson(filePath) {
+  return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+}
+
+function loadGateProfile(gateProfileFile) {
+  const resolvedFilePath = resolveFilePath(gateProfileFile);
+  let raw;
+  try {
+    raw = readJson(resolvedFilePath);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to read gate profile file "${resolvedFilePath}": ${reason}`);
+  }
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    throw new Error(`Gate profile "${resolvedFilePath}" must be a JSON object`);
+  }
+
+  const allowedKeys = new Set([
+    'maxReviewNodes',
+    'maxGenericNodes',
+    'maxEmptyNodes',
+    'failOnReasons',
+    'artifactFile',
+    'reportFile',
+    'summaryJsonFile',
+  ]);
+  for (const key of Object.keys(raw)) {
+    if (!allowedKeys.has(key)) {
+      throw new Error(`Gate profile "${resolvedFilePath}" has unsupported field "${key}"`);
+    }
+  }
+
+  const profileDir = path.dirname(resolvedFilePath);
+  const resolveProfilePath = (value, fieldName) => {
+    if (value === undefined) return undefined;
+    if (typeof value !== 'string' || value.length === 0) {
+      throw new Error(
+        `Gate profile "${resolvedFilePath}" field "${fieldName}" must be a non-empty string`,
+      );
+    }
+    return path.isAbsolute(value) ? value : path.resolve(profileDir, value);
+  };
+
+  let maxReviewNodes;
+  let maxGenericNodes;
+  let maxEmptyNodes;
+  try {
+    maxReviewNodes = parseOptionalNonNegativeInt(raw.maxReviewNodes, 'gateProfile.maxReviewNodes');
+    maxGenericNodes = parseOptionalNonNegativeInt(
+      raw.maxGenericNodes,
+      'gateProfile.maxGenericNodes',
+    );
+    maxEmptyNodes = parseOptionalNonNegativeInt(raw.maxEmptyNodes, 'gateProfile.maxEmptyNodes');
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new Error(`Invalid gate profile "${resolvedFilePath}": ${reason}`);
+  }
+
+  let failOnReasons;
+  if (raw.failOnReasons !== undefined) {
+    if (
+      !Array.isArray(raw.failOnReasons) ||
+      !raw.failOnReasons.every((item) => typeof item === 'string' && item.length > 0)
+    ) {
+      throw new Error(
+        `Gate profile "${resolvedFilePath}" field "failOnReasons" must be an array of non-empty strings`,
+      );
+    }
+    failOnReasons = raw.failOnReasons;
+  }
+
+  return {
+    filePath: resolvedFilePath,
+    maxReviewNodes,
+    maxGenericNodes,
+    maxEmptyNodes,
+    failOnReasons,
+    artifactFile: resolveProfilePath(raw.artifactFile, 'artifactFile'),
+    reportFile: resolveProfilePath(raw.reportFile, 'reportFile'),
+    summaryJsonFile: resolveProfilePath(raw.summaryJsonFile, 'summaryJsonFile'),
+  };
+}
+
 function isTechnicalCurationReason(reason) {
   return (
     typeof reason === 'string' &&
@@ -334,6 +417,7 @@ function buildMachineSummary(command, summary, gateResult, generatedAtIso) {
       rulesFiles: command.rulesFiles,
       artifactFile: command.artifactFile,
       reportFile: command.reportFile,
+      gateProfileFile: command.gateProfileFile,
     },
     counts: {
       totalNodes: summary.totalNodes,
@@ -350,6 +434,7 @@ function buildMachineSummary(command, summary, gateResult, generatedAtIso) {
     },
     gates: {
       configured: {
+        gateProfileFile: command.gateProfileFile,
         maxReviewNodes: command.maxReviewNodes,
         maxGenericNodes: command.maxGenericNodes,
         maxEmptyNodes: command.maxEmptyNodes,
@@ -374,6 +459,7 @@ export function getUsageText() {
     '                            [--artifact-file </tmp/compiled-live.json>]',
     '                            [--report-file </tmp/compiled-live.validation.md>]',
     '                            [--summary-json-file </tmp/compiled-live.summary.json>]',
+    '                            [--gate-profile-file <validation-gates.json>]',
     '                            [--max-review-nodes N] [--max-generic-nodes N] [--max-empty-nodes N]',
     '                            [--fail-on-reason <reason> ...]',
     '                            [--top N]',
@@ -446,19 +532,33 @@ export function parseCliArgs(argv, options = {}) {
     return { ok: false, error: `Invalid --top: ${topRaw}` };
   }
 
-  let maxReviewNodes;
-  let maxGenericNodes;
-  let maxEmptyNodes;
+  let gateProfile;
+  const gateProfileFileFlag = flags.get('--gate-profile-file');
+  if (gateProfileFileFlag !== undefined) {
+    if (!gateProfileFileFlag || gateProfileFileFlag === 'true') {
+      return { ok: false, error: '--gate-profile-file requires a value' };
+    }
+    try {
+      gateProfile = loadGateProfile(gateProfileFileFlag);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      return { ok: false, error: reason };
+    }
+  }
+
+  let cliMaxReviewNodes;
+  let cliMaxGenericNodes;
+  let cliMaxEmptyNodes;
   try {
-    maxReviewNodes = parseOptionalNonNegativeInt(
+    cliMaxReviewNodes = parseOptionalNonNegativeInt(
       flags.get('--max-review-nodes'),
       '--max-review-nodes',
     );
-    maxGenericNodes = parseOptionalNonNegativeInt(
+    cliMaxGenericNodes = parseOptionalNonNegativeInt(
       flags.get('--max-generic-nodes'),
       '--max-generic-nodes',
     );
-    maxEmptyNodes = parseOptionalNonNegativeInt(
+    cliMaxEmptyNodes = parseOptionalNonNegativeInt(
       flags.get('--max-empty-nodes'),
       '--max-empty-nodes',
     );
@@ -466,18 +566,22 @@ export function parseCliArgs(argv, options = {}) {
     const reason = error instanceof Error ? error.message : String(error);
     return { ok: false, error: reason };
   }
-  const failOnReasons = collectRepeatedFlag(argv, '--fail-on-reason');
+  const maxReviewNodes = cliMaxReviewNodes ?? gateProfile?.maxReviewNodes;
+  const maxGenericNodes = cliMaxGenericNodes ?? gateProfile?.maxGenericNodes;
+  const maxEmptyNodes = cliMaxEmptyNodes ?? gateProfile?.maxEmptyNodes;
+  const cliFailOnReasons = collectRepeatedFlag(argv, '--fail-on-reason');
+  const failOnReasons =
+    cliFailOnReasons.length > 0 ? cliFailOnReasons : (gateProfile?.failOnReasons ?? []);
 
   const nowDate = options.nowDate ?? new Date();
   const artifactFile = resolveFilePath(
-    flags.get('--artifact-file') ?? buildDefaultArtifactPath(nowDate),
+    flags.get('--artifact-file') ?? gateProfile?.artifactFile ?? buildDefaultArtifactPath(nowDate),
   );
   const reportFile = resolveFilePath(
-    flags.get('--report-file') ?? buildDefaultReportPath(artifactFile),
+    flags.get('--report-file') ?? gateProfile?.reportFile ?? buildDefaultReportPath(artifactFile),
   );
-  const summaryJsonFile = flags.get('--summary-json-file')
-    ? resolveFilePath(flags.get('--summary-json-file'))
-    : undefined;
+  const summaryJsonFileRaw = flags.get('--summary-json-file') ?? gateProfile?.summaryJsonFile;
+  const summaryJsonFile = summaryJsonFileRaw ? resolveFilePath(summaryJsonFileRaw) : undefined;
 
   return {
     ok: true,
@@ -499,6 +603,7 @@ export function parseCliArgs(argv, options = {}) {
       artifactFile,
       reportFile,
       summaryJsonFile,
+      gateProfileFile: gateProfile?.filePath,
       maxReviewNodes,
       maxGenericNodes,
       maxEmptyNodes,

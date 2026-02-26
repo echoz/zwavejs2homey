@@ -72,6 +72,36 @@ npm run compiler:validate-live -- \
 
 When a gate is violated, command exits non-zero and prints each violation, but still writes artifact/report/summary files for triage.
 
+## Gate Profile File
+
+You can store gate/output settings in JSON and pass one flag:
+
+```bash
+npm run compiler:validate-live -- \
+  --url ws://HOST:PORT \
+  --all-nodes \
+  --manifest-file rules/manifest.json \
+  --gate-profile-file plan/validation-gates.example.json
+```
+
+Supported profile fields:
+
+- `maxReviewNodes`
+- `maxGenericNodes`
+- `maxEmptyNodes`
+- `failOnReasons` (array of strings)
+- `artifactFile`
+- `reportFile`
+- `summaryJsonFile`
+
+Precedence is deterministic:
+
+1. CLI flags win (`--max-review-nodes`, `--artifact-file`, etc.)
+2. `--gate-profile-file` values are used when CLI flags are not set
+3. Tool defaults are used when neither is provided
+
+`artifactFile`/`reportFile`/`summaryJsonFile` may be absolute or relative. Relative paths are resolved from the profile file directory.
+
 ## Suggested Workflow
 
 1. Keep one baseline summary JSON per network snapshot in `plan/` or `docs/`.

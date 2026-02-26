@@ -246,6 +246,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - added `docs/compiler-validation-gates.md` with baseline collection process, threshold calibration guidance, and practical gate examples
     - documented failure semantics and expected triage workflow when gates fail but artifacts/reports are still emitted
     - linked gate setup docs from README live-validation section and architecture/docs index for discoverability
+54. Completed runtime-validation gate profile slice:
+    - added `--gate-profile-file` to `compiler:validate-live` so gate and output settings can be loaded from JSON
+    - gate profile supports thresholds/reasons and output paths (`artifactFile`, `reportFile`, `summaryJsonFile`) with profile-relative path resolution
+    - established deterministic precedence: CLI flags override profile values; profile values override tool defaults
+    - expanded tool regression coverage for profile loading, CLI override behavior, and invalid profile validation
 
 ## Next Tasks
 
