@@ -85,6 +85,7 @@ interface CompileRuleExecutionPlan {
   summarySelectorCacheOrder: Array<[commandClass: number, propertyKey: string, endpoint: number]>;
   summarySelectorCacheOrderHead: number;
   summarySelectorCacheSize: number;
+  deviceEligibilityRuleIndices: number[];
   propertyWildcardIndices: number[];
   byProperty: Map<string, number[]>;
   endpointWildcardIndices: number[];
@@ -107,7 +108,7 @@ interface ActionSummaryCounters {
 }
 
 interface DeviceEligibility {
-  mask: Uint8Array;
+  ineligibleMask?: Uint8Array;
   hasIneligibleRules: boolean;
 }
 
@@ -293,7 +294,7 @@ function resolveSummaryCandidateSeed(
 function resolveEligibleSummaryCandidateSeed(
   plan: CompileRuleExecutionPlan,
   valueId: NormalizedZwaveValueId,
-  deviceEligibleMask: Uint8Array,
+  deviceIneligibleMask: Uint8Array,
   cache: Map<number, Map<string, Map<number, EligibleSummarySeedSelection>>>,
 ): EligibleSummarySeedSelection {
   const commandClass = valueId.commandClass;
@@ -306,7 +307,7 @@ function resolveEligibleSummaryCandidateSeed(
   const eligibleIndices: number[] = [];
   let eligibleActionCount = 0;
   for (const index of seed.indices) {
-    if (deviceEligibleMask[index] === 0) continue;
+    if (deviceIneligibleMask[index] === 1) continue;
     eligibleIndices.push(index);
     eligibleActionCount += plan.entries[index].actionCount;
   }
@@ -365,12 +366,21 @@ function buildRuleExecutionPlan(rules: MappingRule[]): CompileRuleExecutionPlan 
   const summarySelectorCacheOrder: Array<
     [commandClass: number, propertyKey: string, endpoint: number]
   > = [];
+  const deviceEligibilityRuleIndices: number[] = [];
   let summarySelectorCacheOrderHead = 0;
   let summarySelectorCacheSize = 0;
   let totalActionCountPerValue = 0;
 
   for (const [index, entry] of entries.entries()) {
     const matcher = entry.rule.value;
+    const constraints = entry.rule.constraints;
+    if (
+      entry.rule.device ||
+      (constraints?.requiredValues && constraints.requiredValues.length > 0) ||
+      (constraints?.absentValues && constraints.absentValues.length > 0)
+    ) {
+      deviceEligibilityRuleIndices.push(index);
+    }
     totalActionCountPerValue += entry.actionCount;
     const commandClasses = matcher?.commandClass;
     if (!commandClasses || commandClasses.length === 0) {
@@ -490,6 +500,7 @@ function buildRuleExecutionPlan(rules: MappingRule[]): CompileRuleExecutionPlan 
     summarySelectorCacheOrder,
     summarySelectorCacheOrderHead,
     summarySelectorCacheSize,
+    deviceEligibilityRuleIndices,
     propertyWildcardIndices,
     byProperty,
     endpointWildcardIndices,
@@ -613,19 +624,23 @@ function buildDeviceEligibility(
   device: NormalizedZwaveDeviceFacts,
   plan: CompileRuleExecutionPlan,
 ): DeviceEligibility {
-  const mask = new Uint8Array(plan.entries.length);
+  let ineligibleMask: Uint8Array | undefined;
   let hasIneligibleRules = false;
-  for (const [index, entry] of plan.entries.entries()) {
+  for (const index of plan.deviceEligibilityRuleIndices) {
+    const entry = plan.entries[index];
     const eligible =
       matchesDevice(device, entry.rule.device) &&
       matchesRuleCompanionConstraints(device, entry.rule);
-    mask[index] = eligible ? 1 : 0;
     if (!eligible) {
+      if (!ineligibleMask) {
+        ineligibleMask = new Uint8Array(plan.entries.length);
+      }
+      ineligibleMask[index] = 1;
       hasIneligibleRules = true;
     }
   }
   return {
-    mask,
+    ineligibleMask,
     hasIneligibleRules,
   };
 }
@@ -639,7 +654,6 @@ export function compileDevice(
   const state = createProfileBuildState({ collectSuppressedActions: includeActions });
   const executionPlan = resolveRuleExecutionPlan(rules);
   const deviceEligibility = buildDeviceEligibility(device, executionPlan);
-  const deviceEligibleMask = deviceEligibility.mask;
   const actions: CompileDeviceReportEntry[] = [];
   const counters: ActionSummaryCounters = {
     appliedActions: 0,
@@ -651,6 +665,10 @@ export function compileDevice(
   if (!includeActions) {
     counters.totalActions = executionPlan.totalActionCountPerValue * device.values.length;
     if (deviceEligibility.hasIneligibleRules) {
+      const deviceIneligibleMask = deviceEligibility.ineligibleMask;
+      if (!deviceIneligibleMask) {
+        throw new Error('device eligibility mask missing for ineligible-rule summary path');
+      }
       const eligibleSummarySelectorCache = new Map<
         number,
         Map<string, Map<number, EligibleSummarySeedSelection>>
@@ -659,7 +677,7 @@ export function compileDevice(
         const eligibleSummarySeed = resolveEligibleSummaryCandidateSeed(
           executionPlan,
           value.valueId,
-          deviceEligibleMask,
+          deviceIneligibleMask,
           eligibleSummarySelectorCache,
         );
         let unmatchedForValue =
@@ -707,20 +725,48 @@ export function compileDevice(
       // Reused across many emitted action records; frozen to prevent accidental cross-record mutation.
       Object.freeze({ ...value.valueId }),
     );
-    for (const [valueIndex, value] of device.values.entries()) {
-      const candidateStamp = markCandidatesForValue(executionPlan, candidateScratch, value.valueId);
-      const valueIdSnapshot = valueIdSnapshots[valueIndex];
-      for (const [index, entry] of executionPlan.entries.entries()) {
-        if (
-          deviceEligibleMask[index] === 0 ||
-          !isRuleCandidate(candidateScratch, index, candidateStamp)
-        ) {
-          pushUnmatchedActions(actions, entry, valueIdSnapshot, counters);
-          continue;
-        }
+    if (deviceEligibility.hasIneligibleRules) {
+      const deviceIneligibleMask = deviceEligibility.ineligibleMask;
+      if (!deviceIneligibleMask) {
+        throw new Error('device eligibility mask missing for ineligible-rule full-report path');
+      }
+      for (const [valueIndex, value] of device.values.entries()) {
+        const candidateStamp = markCandidatesForValue(
+          executionPlan,
+          candidateScratch,
+          value.valueId,
+        );
+        const valueIdSnapshot = valueIdSnapshots[valueIndex];
+        for (const [index, entry] of executionPlan.entries.entries()) {
+          if (
+            deviceIneligibleMask[index] === 1 ||
+            !isRuleCandidate(candidateScratch, index, candidateStamp)
+          ) {
+            pushUnmatchedActions(actions, entry, valueIdSnapshot, counters);
+            continue;
+          }
 
-        const results = applyRuleToValue(state, device, value, entry.rule);
-        pushAppliedRuleResults(actions, entry, valueIdSnapshot, results, counters);
+          const results = applyRuleToValue(state, device, value, entry.rule);
+          pushAppliedRuleResults(actions, entry, valueIdSnapshot, results, counters);
+        }
+      }
+    } else {
+      for (const [valueIndex, value] of device.values.entries()) {
+        const candidateStamp = markCandidatesForValue(
+          executionPlan,
+          candidateScratch,
+          value.valueId,
+        );
+        const valueIdSnapshot = valueIdSnapshots[valueIndex];
+        for (const [index, entry] of executionPlan.entries.entries()) {
+          if (!isRuleCandidate(candidateScratch, index, candidateStamp)) {
+            pushUnmatchedActions(actions, entry, valueIdSnapshot, counters);
+            continue;
+          }
+
+          const results = applyRuleToValue(state, device, value, entry.rule);
+          pushAppliedRuleResults(actions, entry, valueIdSnapshot, results, counters);
+        }
       }
     }
   }

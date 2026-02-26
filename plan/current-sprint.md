@@ -208,6 +208,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - all-eligible summary mode now skips compile-local eligible-seed filtering/cache construction and executes directly against base selector seeds
     - retained existing filtered path for mixed/ineligible rule sets; unmatched/applied counters remain parity-safe across both paths
     - added regression coverage that reuses a cached execution plan across eligible and ineligible devices and asserts full/summary parity
+46. Completed twenty-seventh performance slice for sparse device-eligibility evaluation:
+    - `compileDevice` execution plans now precompute `deviceEligibilityRuleIndices` so only rules with device/companion constraints are evaluated per device
+    - device eligibility is now represented as a sparse ineligible mask (`1` = ineligible), allocated only when at least one constrained rule fails
+    - summary/full compile paths now branch on `hasIneligibleRules` to skip per-rule eligibility checks entirely when all constrained rules pass
+    - preserves full/summary parity and avoids unnecessary matcher work for unconstrained rule-heavy rule sets
 
 ## Next Tasks
 
