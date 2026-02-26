@@ -143,6 +143,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - summary-mode compiles disable suppressed-action record collection while keeping `summary.suppressedFillActions` semantics intact
     - removed per-compile `suppressedActions.filter(mode===fill)` post-pass scan in favor of incremental counting
     - expanded compile-device summary-mode tests to assert suppression-count parity with full mode when detailed suppression records are omitted
+33. Completed fourteenth performance slice for profile-plan summary aggregation:
+    - `compileProfilePlanFromLoadedRuleSetManifest` now caches immutable `ruleSources` metadata per loaded manifest instance
+    - summary-mode profile-plan reports now skip grouped `byRule` / `bySuppressedSlot` aggregation and classification-provenance scans
+    - preserves output shape and curation semantics while avoiding unnecessary per-iteration aggregation work in bench/bulk summary runs
+    - added regression coverage for rule-source cache reuse + summary-mode grouping bypass behavior
 
 ## Next Tasks
 

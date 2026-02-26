@@ -112,6 +112,40 @@ test('compileProfilePlanFromLoadedRuleSetManifest flattens rules once per loaded
   assert.deepEqual(a.profile.classification, b.profile.classification);
 });
 
+test('compileProfilePlanFromLoadedRuleSetManifest caches rule source metadata per loaded manifest', () => {
+  const rulesFile = path.join(fixturesDir, 'rules-switch-meter.json');
+  const loaded = compiler.loadJsonRuleSetManifest([{ filePath: rulesFile }]);
+
+  const a = compiler.compileProfilePlanFromLoadedRuleSetManifest(device, loaded, {
+    homeyClass: 'socket',
+  });
+  const b = compiler.compileProfilePlanFromLoadedRuleSetManifest(device, loaded, {
+    homeyClass: 'socket',
+  });
+
+  assert.equal(a.ruleSources, b.ruleSources);
+  assert.equal(Object.isFrozen(a.ruleSources), true);
+  assert.equal(Object.isFrozen(a.ruleSources[0]), true);
+  assert.equal(Object.isFrozen(a.ruleSources[0].ruleIds), true);
+});
+
+test('compileProfilePlanFromLoadedRuleSetManifest summary mode skips heavy report groupings', () => {
+  const rulesFile = path.join(fixturesDir, 'rules-switch-meter-device-identity.json');
+  const loaded = compiler.loadJsonRuleSetManifest([{ filePath: rulesFile }]);
+
+  const full = compiler.compileProfilePlanFromLoadedRuleSetManifest(device, loaded);
+  const summary = compiler.compileProfilePlanFromLoadedRuleSetManifest(device, loaded, {
+    reportMode: 'summary',
+  });
+
+  assert.equal(full.report.byRule.length > 0, true);
+  assert.equal(summary.report.byRule.length, 0);
+  assert.equal(summary.report.bySuppressedSlot.length, 0);
+  assert.equal(summary.classificationProvenance, undefined);
+  assert.equal(summary.report.actions.length, 0);
+  assert.equal(summary.report.profileOutcome, 'curated');
+});
+
 test('compileProfilePlanFromRuleSetManifest groups suppressed fills and flags curation review', () => {
   const baseRules = path.join(fixturesDir, 'rules-switch-meter-device-identity.json');
   const extraGeneric = path.join(

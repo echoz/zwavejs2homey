@@ -14,6 +14,10 @@ import type { MappingRule } from '../rules/types';
 
 const TECHNICAL_CURATION_REASON_PREFIXES = ['suppressed-fill-actions:', 'high-unmatched-ratio:'];
 const loadedManifestRulesCache = new WeakMap<LoadedRuleSetManifest, MappingRule[]>();
+const loadedManifestRuleSourcesCache = new WeakMap<
+  LoadedRuleSetManifest,
+  ReadonlyArray<Readonly<RuleSourceMetadata>>
+>();
 
 function isTechnicalCurationReason(reason: string): boolean {
   return TECHNICAL_CURATION_REASON_PREFIXES.some((prefix) => reason.startsWith(prefix));
@@ -27,10 +31,28 @@ function resolveRulesForLoadedManifest(loaded: LoadedRuleSetManifest): MappingRu
   return resolved;
 }
 
+function resolveRuleSourcesForLoadedManifest(
+  loaded: LoadedRuleSetManifest,
+): ReadonlyArray<Readonly<RuleSourceMetadata>> {
+  const cached = loadedManifestRuleSourcesCache.get(loaded);
+  if (cached) return cached;
+  const resolved = Object.freeze(
+    loaded.entries.map((entry) =>
+      Object.freeze({
+        filePath: entry.filePath,
+        ruleCount: entry.rules.length,
+        ruleIds: Object.freeze(entry.rules.map((rule) => rule.ruleId)),
+      }),
+    ),
+  );
+  loadedManifestRuleSourcesCache.set(loaded, resolved);
+  return resolved;
+}
+
 export interface RuleSourceMetadata {
   filePath: string;
   ruleCount: number;
-  ruleIds: string[];
+  ruleIds: readonly string[];
 }
 
 export interface CompileProfilePlanFromFilesResult {
@@ -70,7 +92,7 @@ export interface CompileProfilePlanFromFilesResult {
     };
     diagnosticDeviceKey: string;
   };
-  ruleSources: RuleSourceMetadata[];
+  ruleSources: readonly RuleSourceMetadata[];
   classificationProvenance?: {
     layer?: string;
     ruleId?: string;
@@ -279,18 +301,22 @@ export function compileProfilePlanFromLoadedRuleSetManifest(
   options?: CompileProfilePlanOptions,
 ): CompileProfilePlanFromFilesResult {
   const rules = resolveRulesForLoadedManifest(loaded);
+  const ruleSources = resolveRuleSourcesForLoadedManifest(loaded);
   const { profile, report, catalogLookup } = compileProfilePlan(device, rules, options);
   const profileOutcome = deriveProfileOutcome(profile);
   const curationCandidates = deriveCurationCandidates(report, profile, catalogLookup);
   const diagnosticDeviceKey = deriveDiagnosticDeviceKey(device, catalogLookup);
+  const summaryMode = options?.reportMode === 'summary';
+  const byRule = summaryMode ? [] : groupReportByRule(report);
+  const bySuppressedSlot = summaryMode ? [] : groupSuppressedBySlot(report);
 
   return {
     profile,
     report: {
       ...report,
       profileOutcome,
-      byRule: groupReportByRule(report),
-      bySuppressedSlot: groupSuppressedBySlot(report),
+      byRule,
+      bySuppressedSlot,
       curationCandidates,
       catalogContext: catalogLookup?.matched
         ? {
@@ -312,12 +338,8 @@ export function compileProfilePlanFromLoadedRuleSetManifest(
       ),
       diagnosticDeviceKey,
     },
-    ruleSources: loaded.entries.map((entry) => ({
-      filePath: entry.filePath,
-      ruleCount: entry.rules.length,
-      ruleIds: entry.rules.map((rule) => rule.ruleId),
-    })),
-    classificationProvenance: deriveClassificationProvenance(report),
+    ruleSources,
+    classificationProvenance: summaryMode ? undefined : deriveClassificationProvenance(report),
     catalogLookup,
   };
 }

@@ -51,6 +51,7 @@
 - [x] Performance slice 11: summary-mode candidate-only execution path in `compileDevice` to avoid full rule scans while preserving full-mode parity
 - [x] Performance slice 12: summary-mode action-apply fast path (`applyRuleToValueSummary`) to avoid per-action result allocations in benchmark/bulk runs
 - [x] Performance slice 13: summary-mode suppressed-action collection gating with incremental `suppressedFillActions` counting
+- [x] Performance slice 14: profile-plan summary-path aggregation reduction (cached `ruleSources`, skip `byRule`/`bySuppressedSlot`/classification grouping in summary mode)
 - [ ] Decide and document final ownership of generic fallback inference policy (currently leaning Homey adapter-owned)
 - [ ] Add second real catalog source adapter when a concrete source format is available
 
