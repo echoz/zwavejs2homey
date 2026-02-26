@@ -580,3 +580,100 @@ test('compileDevice summary mode does not double-apply rules with duplicate prop
   assert.equal(summaryOnly.report.summary.appliedActions, 1);
   assert.equal(summaryOnly.report.summary.unmatchedActions, 0);
 });
+
+test('compileDevice summary mode does not double-apply rules with duplicate endpoint tokens', () => {
+  const device = {
+    deviceKey: 'dev-summary-dup-endpoint-1',
+    values: [
+      {
+        valueId: { commandClass: 37, endpoint: 1, property: 'currentValue' },
+        metadata: { type: 'boolean', readable: true, writeable: false },
+      },
+    ],
+  };
+  const rules = [
+    {
+      ruleId: 'dup-endpoint-summary-rule',
+      layer: 'project-product',
+      value: {
+        commandClass: [37],
+        endpoint: [1, 1],
+        property: ['currentValue'],
+      },
+      actions: [
+        {
+          type: 'capability',
+          mode: 'replace',
+          capabilityId: 'onoff',
+          inboundMapping: {
+            kind: 'value',
+            selector: { commandClass: 37, endpoint: 1, property: 'currentValue' },
+          },
+        },
+      ],
+    },
+  ];
+
+  const full = compiler.compileDevice(device, rules);
+  const summaryOnly = compiler.compileDevice(device, rules, { reportMode: 'summary' });
+
+  assert.deepEqual(summaryOnly.capabilities, full.capabilities);
+  assert.deepEqual(summaryOnly.report.summary, full.report.summary);
+  assert.equal(summaryOnly.report.summary.appliedActions, 1);
+  assert.equal(summaryOnly.report.summary.unmatchedActions, 0);
+});
+
+test('compileDevice summary mode preserves endpoint-specific and wildcard endpoint parity', () => {
+  const device = {
+    deviceKey: 'dev-summary-endpoint-parity-1',
+    values: [
+      {
+        valueId: { commandClass: 37, endpoint: 1, property: 'currentValue' },
+        metadata: { type: 'boolean', readable: true, writeable: false },
+      },
+      {
+        valueId: { commandClass: 37, endpoint: 2, property: 'currentValue' },
+        metadata: { type: 'boolean', readable: true, writeable: false },
+      },
+    ],
+  };
+  const rules = [
+    {
+      ruleId: 'endpoint-wildcard',
+      layer: 'ha-derived',
+      value: { commandClass: [37], property: ['currentValue'] },
+      actions: [
+        {
+          type: 'capability',
+          capabilityId: 'onoff',
+          inboundMapping: {
+            kind: 'value',
+            selector: { commandClass: 37, property: 'currentValue' },
+          },
+        },
+      ],
+    },
+    {
+      ruleId: 'endpoint-1-specific',
+      layer: 'project-product',
+      value: { commandClass: [37], endpoint: [1], property: ['currentValue'] },
+      actions: [
+        {
+          type: 'capability',
+          capabilityId: 'alarm_generic',
+          inboundMapping: {
+            kind: 'value',
+            selector: { commandClass: 37, endpoint: 1, property: 'currentValue' },
+          },
+        },
+      ],
+    },
+  ];
+
+  const full = compiler.compileDevice(device, rules);
+  const summaryOnly = compiler.compileDevice(device, rules, { reportMode: 'summary' });
+
+  assert.deepEqual(summaryOnly.capabilities, full.capabilities);
+  assert.deepEqual(summaryOnly.report.summary, full.report.summary);
+  assert.equal(summaryOnly.report.summary.appliedActions, 2);
+});

@@ -168,6 +168,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - summary mode now selects one precomputed seed set per value and only applies endpoint + device-eligibility gates before invoking `applyRuleToValueSummary`
     - removes property-dimension checks from the summary hot loop while preserving deterministic ordering/parity
     - added regression coverage for duplicate property matcher tokens to ensure summary mode does not double-apply rules
+38. Completed nineteenth performance slice for summary candidate endpoint specialization:
+    - `compileDevice` execution plan now precomputes summary candidate seeds by full selector `(commandClass, property, endpoint)` with wildcard expansion into known rule-domain tokens for parity-preserving fast lookup
+    - summary mode now resolves one precomputed selector seed per value and drops all candidate-mark stamping/gating on command-class/property/endpoint dimensions (device-eligibility gating remains)
+    - preserves deterministic parity across endpoint-specific and wildcard-endpoint rules while simplifying summary hot-loop logic
+    - added regression coverage for duplicate endpoint matcher tokens and endpoint-specific + wildcard parity behavior
 
 ## Next Tasks
 

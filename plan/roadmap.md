@@ -56,6 +56,7 @@
 - [x] Performance slice 16: conflict-resolution short-circuit when no exclusive conflict metadata is present in build state
 - [x] Performance slice 17: precomputed summary candidate seeds per command class (single-loop summary candidate iteration, no visited-mark dedupe)
 - [x] Performance slice 18: precomputed summary candidate seeds by command-class+property with endpoint-only runtime gating in summary mode
+- [x] Performance slice 19: precomputed summary candidate seeds by command-class+property+endpoint, removing summary-path candidate stamping
 - [ ] Decide and document final ownership of generic fallback inference policy (currently leaning Homey adapter-owned)
 - [ ] Add second real catalog source adapter when a concrete source format is available
 

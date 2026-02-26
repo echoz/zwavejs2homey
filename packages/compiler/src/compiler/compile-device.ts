@@ -62,10 +62,7 @@ interface CompileRuleExecutionPlan {
   entries: CompileRuleExecutionEntry[];
   commandClassWildcardIndices: number[];
   byCommandClass: Map<number, number[]>;
-  summarySeedByCommandClassProperty: Map<number, Map<string, number[]>>;
-  summarySeedByCommandClassAnyProperty: Map<number, number[]>;
-  summarySeedForUnknownCommandClassByProperty: Map<string, number[]>;
-  summarySeedForUnknownCommandClassAnyProperty: number[];
+  summarySeedBySelector: Map<string, number[]>;
   propertyWildcardIndices: number[];
   byProperty: Map<string, number[]>;
   endpointWildcardIndices: number[];
@@ -104,45 +101,40 @@ function propertyTokenKey(value: string | number): string {
   return `${typeof value}:${String(value)}`;
 }
 
-function mergeSortedUniqueIndices(a: readonly number[], b: readonly number[]): number[] {
-  const merged: number[] = [];
-  let i = 0;
-  let j = 0;
-  let last = -1;
-  while (i < a.length || j < b.length) {
-    const nextA = i < a.length ? a[i] : Number.POSITIVE_INFINITY;
-    const nextB = j < b.length ? b[j] : Number.POSITIVE_INFINITY;
-    const next = nextA <= nextB ? nextA : nextB;
-    if (nextA <= nextB) i += 1;
-    if (nextB <= nextA) j += 1;
-    if (next !== last) {
-      merged.push(next);
-      last = next;
-    }
-  }
-  return merged;
+function uniqueTokens<T>(tokens: readonly T[]): T[] {
+  return [...new Set(tokens)];
 }
 
-function intersectSortedUniqueIndices(a: readonly number[], b: readonly number[]): number[] {
-  const intersected: number[] = [];
-  let i = 0;
-  let j = 0;
-  while (i < a.length && j < b.length) {
-    const aValue = a[i];
-    const bValue = b[j];
-    if (aValue === bValue) {
-      intersected.push(aValue);
-      i += 1;
-      j += 1;
-      continue;
-    }
-    if (aValue < bValue) {
-      i += 1;
-      continue;
-    }
-    j += 1;
+function summarySelectorKey(
+  commandClass: number | null,
+  propertyKey: string | null,
+  endpoint: number | null,
+): string {
+  return `${commandClass ?? '*'}|${propertyKey ?? '*'}|${endpoint ?? '*'}`;
+}
+
+function resolveSummaryCandidateSeed(
+  plan: CompileRuleExecutionPlan,
+  valueId: NormalizedZwaveValueId,
+): number[] {
+  const commandClass = valueId.commandClass;
+  const property = propertyTokenKey(valueId.property);
+  const endpoint = valueId.endpoint ?? 0;
+  const keys = [
+    summarySelectorKey(commandClass, property, endpoint),
+    summarySelectorKey(commandClass, property, null),
+    summarySelectorKey(commandClass, null, endpoint),
+    summarySelectorKey(commandClass, null, null),
+    summarySelectorKey(null, property, endpoint),
+    summarySelectorKey(null, property, null),
+    summarySelectorKey(null, null, endpoint),
+    summarySelectorKey(null, null, null),
+  ];
+  for (const key of keys) {
+    const seed = plan.summarySeedBySelector.get(key);
+    if (seed) return seed;
   }
-  return intersected;
+  return [];
 }
 
 function buildRuleExecutionPlan(rules: MappingRule[]): CompileRuleExecutionPlan {
@@ -167,15 +159,13 @@ function buildRuleExecutionPlan(rules: MappingRule[]): CompileRuleExecutionPlan 
   const byProperty = new Map<string, number[]>();
   const endpointWildcardIndices: number[] = [];
   const byEndpoint = new Map<number, number[]>();
-  const summarySeedByCommandClassProperty = new Map<number, Map<string, number[]>>();
-  const summarySeedByCommandClassAnyProperty = new Map<number, number[]>();
-  const summarySeedForUnknownCommandClassByProperty = new Map<string, number[]>();
+  const summarySeedBySelector = new Map<string, number[]>();
   let totalActionCountPerValue = 0;
 
   for (const [index, entry] of entries.entries()) {
     const matcher = entry.rule.value;
     totalActionCountPerValue += entry.unmatchedTemplates.length;
-    const commandClasses = entry.rule.value?.commandClass;
+    const commandClasses = matcher?.commandClass;
     if (!commandClasses || commandClasses.length === 0) {
       commandClassWildcardIndices.push(index);
     } else {
@@ -203,55 +193,45 @@ function buildRuleExecutionPlan(rules: MappingRule[]): CompileRuleExecutionPlan 
     }
   }
 
-  const summaryPropertySeedByProperty = new Map<string, number[]>();
-  for (const [property, exactIndices] of byProperty.entries()) {
-    summaryPropertySeedByProperty.set(
-      property,
-      mergeSortedUniqueIndices(propertyWildcardIndices, exactIndices),
-    );
-  }
+  const knownCommandClasses = [...byCommandClass.keys()];
+  const knownProperties = [...byProperty.keys()];
+  const knownEndpoints = [...byEndpoint.keys()];
+  for (const [index, entry] of entries.entries()) {
+    const matcher = entry.rule.value;
+    const summaryCommandClasses: Array<number | null> = matcher?.commandClass
+      ? uniqueTokens(matcher.commandClass)
+      : [null, ...knownCommandClasses];
+    const summaryProperties: Array<string | null> = matcher?.property
+      ? uniqueTokens(matcher.property.map((property) => propertyTokenKey(property)))
+      : [null, ...knownProperties];
+    const summaryEndpoints: Array<number | null> = matcher?.endpoint
+      ? uniqueTokens(matcher.endpoint)
+      : [null, ...knownEndpoints];
 
-  const summarySeedForUnknownCommandClassAnyProperty = intersectSortedUniqueIndices(
-    commandClassWildcardIndices,
-    propertyWildcardIndices,
-  );
-  for (const [property, propertySeed] of summaryPropertySeedByProperty.entries()) {
-    const intersected = intersectSortedUniqueIndices(commandClassWildcardIndices, propertySeed);
-    if (intersected.length > 0) {
-      summarySeedForUnknownCommandClassByProperty.set(property, intersected);
-    }
-  }
-
-  for (const [commandClass, exactIndices] of byCommandClass.entries()) {
-    const summarySeedForCommandClass = mergeSortedUniqueIndices(
-      commandClassWildcardIndices,
-      exactIndices,
-    );
-    summarySeedByCommandClassAnyProperty.set(
-      commandClass,
-      intersectSortedUniqueIndices(summarySeedForCommandClass, propertyWildcardIndices),
-    );
-
-    const byPropertyForCommandClass = new Map<string, number[]>();
-    for (const [property, propertySeed] of summaryPropertySeedByProperty.entries()) {
-      const intersected = intersectSortedUniqueIndices(summarySeedForCommandClass, propertySeed);
-      if (intersected.length > 0) {
-        byPropertyForCommandClass.set(property, intersected);
+    for (const summaryCommandClass of summaryCommandClasses) {
+      for (const summaryProperty of summaryProperties) {
+        for (const summaryEndpoint of summaryEndpoints) {
+          pushIndex(
+            summarySeedBySelector,
+            summarySelectorKey(summaryCommandClass, summaryProperty, summaryEndpoint),
+            index,
+          );
+        }
       }
     }
-    if (byPropertyForCommandClass.size > 0) {
-      summarySeedByCommandClassProperty.set(commandClass, byPropertyForCommandClass);
-    }
+  }
+
+  for (const indices of summarySeedBySelector.values()) {
+    const deduped = uniqueTokens(indices);
+    indices.length = 0;
+    indices.push(...deduped);
   }
 
   return {
     entries,
     commandClassWildcardIndices,
     byCommandClass,
-    summarySeedByCommandClassProperty,
-    summarySeedByCommandClassAnyProperty,
-    summarySeedForUnknownCommandClassByProperty,
-    summarySeedForUnknownCommandClassAnyProperty,
+    summarySeedBySelector,
     propertyWildcardIndices,
     byProperty,
     endpointWildcardIndices,
@@ -318,17 +298,6 @@ function markCandidatesForValue(
   markIndices(scratch.endpointMarks, plan.endpointWildcardIndices, stamp);
   markIndices(scratch.endpointMarks, plan.byEndpoint.get(valueId.endpoint ?? 0) ?? [], stamp);
 
-  return stamp;
-}
-
-function markEndpointCandidatesForValue(
-  plan: CompileRuleExecutionPlan,
-  scratch: CandidateScratch,
-  valueId: NormalizedZwaveValueId,
-): number {
-  const stamp = nextScratchStamp(scratch);
-  markIndices(scratch.endpointMarks, plan.endpointWildcardIndices, stamp);
-  markIndices(scratch.endpointMarks, plan.byEndpoint.get(valueId.endpoint ?? 0) ?? [], stamp);
   return stamp;
 }
 
@@ -406,7 +375,6 @@ export function compileDevice(
   const state = createProfileBuildState({ collectSuppressedActions: includeActions });
   const executionPlan = resolveRuleExecutionPlan(rules);
   const deviceEligibleMask = buildDeviceEligibleMask(device, executionPlan);
-  const candidateScratch = createCandidateScratch(executionPlan.entries.length);
   const actions: CompileDeviceReportEntry[] = [];
   const counters: ActionSummaryCounters = {
     appliedActions: 0,
@@ -417,29 +385,12 @@ export function compileDevice(
 
   if (!includeActions) {
     for (const value of device.values) {
-      const candidateStamp = markEndpointCandidatesForValue(
-        executionPlan,
-        candidateScratch,
-        value.valueId,
-      );
       counters.totalActions += executionPlan.totalActionCountPerValue;
       counters.unmatchedActions += executionPlan.totalActionCountPerValue;
 
-      const propertyKey = propertyTokenKey(value.valueId.property);
-      const summarySeedIndices =
-        executionPlan.summarySeedByCommandClassProperty
-          .get(value.valueId.commandClass)
-          ?.get(propertyKey) ??
-        executionPlan.summarySeedByCommandClassAnyProperty.get(value.valueId.commandClass) ??
-        executionPlan.summarySeedForUnknownCommandClassByProperty.get(propertyKey) ??
-        executionPlan.summarySeedForUnknownCommandClassAnyProperty;
+      const summarySeedIndices = resolveSummaryCandidateSeed(executionPlan, value.valueId);
       for (const index of summarySeedIndices) {
-        if (
-          deviceEligibleMask[index] === 0 ||
-          candidateScratch.endpointMarks[index] !== candidateStamp
-        ) {
-          continue;
-        }
+        if (deviceEligibleMask[index] === 0) continue;
         const entry = executionPlan.entries[index];
         const summaryResult = applyRuleToValueSummary(state, device, value, entry.rule);
         if (!summaryResult.matched) continue;
@@ -451,6 +402,7 @@ export function compileDevice(
       }
     }
   } else {
+    const candidateScratch = createCandidateScratch(executionPlan.entries.length);
     const valueIdSnapshots = device.values.map((value) =>
       // Reused across many emitted action records; frozen to prevent accidental cross-record mutation.
       Object.freeze({ ...value.valueId }),
