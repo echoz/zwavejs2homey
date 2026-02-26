@@ -193,6 +193,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - `compileDevice` now precomputes per-rule action counts in execution entries and exposes per-selector cached seed action totals (`SummarySeedSelection.actionCount`)
     - kept total action accounting exact (`totalActionCountPerValue * valueCount`) while reducing per-value arithmetic churn in summary loops
     - added regression coverage for mixed matched/unmatched multi-action selector sets to lock full/summary counter parity
+43. Completed twenty-fourth performance slice for summary eligible-seed prefiltering:
+    - added compile-local eligible selector cache that filters summary candidate seeds through `deviceEligibleMask` once per selector and stores precomputed eligible action totals
+    - summary runtime now iterates only eligible rule indices (no per-rule eligibility branch in the hot loop)
+    - preserves direct unmatched accounting by combining non-candidate remainder with candidate non-match paths
+    - added regression coverage for device-ineligible multi-action rules to lock summary/full counter parity under ineligible-rule-heavy selectors
 
 ## Next Tasks
 

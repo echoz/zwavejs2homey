@@ -64,6 +64,11 @@ interface SummarySeedSelection {
   actionCount: number;
 }
 
+interface EligibleSummarySeedSelection {
+  indices: number[];
+  actionCount: number;
+}
+
 interface CompileRuleExecutionPlan {
   entries: CompileRuleExecutionEntry[];
   commandClassWildcardIndices: number[];
@@ -259,6 +264,46 @@ function resolveSummaryCandidateSeed(
   plan.summarySelectorCacheOrder.push([commandClass, property, endpoint]);
   plan.summarySelectorCacheSize += 1;
   return selection;
+}
+
+function resolveEligibleSummaryCandidateSeed(
+  plan: CompileRuleExecutionPlan,
+  valueId: NormalizedZwaveValueId,
+  deviceEligibleMask: Uint8Array,
+  cache: Map<number, Map<string, Map<number, EligibleSummarySeedSelection>>>,
+): EligibleSummarySeedSelection {
+  const commandClass = valueId.commandClass;
+  const property = propertyTokenKey(valueId.property);
+  const endpoint = valueId.endpoint ?? 0;
+  const cached = getMap3(cache, commandClass, property, endpoint);
+  if (cached) return cached;
+
+  const seed = resolveSummaryCandidateSeed(plan, valueId);
+  const eligibleIndices: number[] = [];
+  let eligibleActionCount = 0;
+  for (const index of seed.indices) {
+    if (deviceEligibleMask[index] === 0) continue;
+    eligibleIndices.push(index);
+    eligibleActionCount += plan.entries[index].actionCount;
+  }
+  const eligibleSeed: EligibleSummarySeedSelection = {
+    indices: eligibleIndices,
+    actionCount: eligibleActionCount,
+  };
+
+  const cacheByProperty = ensureMap2<number, string, Map<number, EligibleSummarySeedSelection>>(
+    cache,
+    commandClass,
+  );
+  const cacheByEndpoint =
+    cacheByProperty.get(property) ??
+    (() => {
+      const created = new Map<number, EligibleSummarySeedSelection>();
+      cacheByProperty.set(property, created);
+      return created;
+    })();
+  cacheByEndpoint.set(endpoint, eligibleSeed);
+  return eligibleSeed;
 }
 
 function buildRuleExecutionPlan(rules: MappingRule[]): CompileRuleExecutionPlan {
@@ -571,17 +616,23 @@ export function compileDevice(
   };
 
   if (!includeActions) {
+    const eligibleSummarySelectorCache = new Map<
+      number,
+      Map<string, Map<number, EligibleSummarySeedSelection>>
+    >();
     counters.totalActions = executionPlan.totalActionCountPerValue * device.values.length;
     for (const value of device.values) {
-      const summarySeed = resolveSummaryCandidateSeed(executionPlan, value.valueId);
-      let unmatchedForValue = executionPlan.totalActionCountPerValue - summarySeed.actionCount;
+      const eligibleSummarySeed = resolveEligibleSummaryCandidateSeed(
+        executionPlan,
+        value.valueId,
+        deviceEligibleMask,
+        eligibleSummarySelectorCache,
+      );
+      let unmatchedForValue =
+        executionPlan.totalActionCountPerValue - eligibleSummarySeed.actionCount;
 
-      for (const index of summarySeed.indices) {
+      for (const index of eligibleSummarySeed.indices) {
         const entry = executionPlan.entries[index];
-        if (deviceEligibleMask[index] === 0) {
-          unmatchedForValue += entry.actionCount;
-          continue;
-        }
         const summaryResult = applyRuleToValueSummary(state, device, value, entry.rule);
         if (!summaryResult.matched) {
           unmatchedForValue += summaryResult.actionCount;

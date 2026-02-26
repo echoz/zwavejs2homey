@@ -838,3 +838,52 @@ test('compileDevice summary mode preserves mixed matched/unmatched multi-action 
   assert.equal(summaryOnly.report.summary.unmatchedActions, 3);
   assert.equal(summaryOnly.report.summary.appliedActions, 5);
 });
+
+test('compileDevice summary mode preserves counters with device-ineligible multi-action rules', () => {
+  const device = {
+    deviceKey: 'dev-summary-ineligible-counter-parity-1',
+    manufacturerId: 29,
+    productType: 13313,
+    productId: 1,
+    values: [
+      {
+        valueId: { commandClass: 37, endpoint: 0, property: 'currentValue' },
+        metadata: { type: 'boolean', readable: true, writeable: false },
+      },
+      {
+        valueId: { commandClass: 37, endpoint: 0, property: 'targetValue' },
+        metadata: { type: 'boolean', readable: true, writeable: true },
+      },
+    ],
+  };
+  const rules = [
+    {
+      ruleId: 'ineligible-multi-action',
+      layer: 'project-product',
+      device: { manufacturerId: [999] },
+      value: { commandClass: [37], property: ['currentValue'] },
+      actions: [{ type: 'capability', capabilityId: 'alarm_generic' }, { type: 'ignore-value' }],
+    },
+    {
+      ruleId: 'current-onoff',
+      layer: 'ha-derived',
+      value: { commandClass: [37], property: ['currentValue'] },
+      actions: [{ type: 'capability', capabilityId: 'onoff' }],
+    },
+    {
+      ruleId: 'target-power',
+      layer: 'project-generic',
+      value: { commandClass: [37], property: ['targetValue'] },
+      actions: [{ type: 'capability', capabilityId: 'measure_power' }],
+    },
+  ];
+
+  const full = compiler.compileDevice(device, rules);
+  const summaryOnly = compiler.compileDevice(device, rules, { reportMode: 'summary' });
+
+  assert.deepEqual(summaryOnly.capabilities, full.capabilities);
+  assert.deepEqual(summaryOnly.report.summary, full.report.summary);
+  assert.equal(summaryOnly.report.summary.totalActions, 8);
+  assert.equal(summaryOnly.report.summary.unmatchedActions, 6);
+  assert.equal(summaryOnly.report.summary.appliedActions, 2);
+});
