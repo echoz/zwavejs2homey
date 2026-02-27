@@ -241,3 +241,25 @@ test('loadJsonRuleFile rejects unsupported fields after action-shorthand expansi
       /inboundMapping has unsupported field \"foo\"/i.test(error.message),
   );
 });
+
+test('loadJsonRuleFile rejects unsupported canonical selector fields in inbound mappings', () => {
+  const filePath = path.join(fixturesDir, 'rules-invalid-action-selector-extra-field.json');
+  assert.throws(
+    () => compiler.loadJsonRuleFile(filePath),
+    (error) =>
+      error &&
+      error.filePath === filePath &&
+      /inboundMapping selector has unsupported field \"unknownSelectorField\"/i.test(error.message),
+  );
+});
+
+test('loadJsonRuleFile rejects unsupported canonical target fields in outbound mappings', () => {
+  const filePath = path.join(fixturesDir, 'rules-invalid-action-target-extra-field.json');
+  assert.throws(
+    () => compiler.loadJsonRuleFile(filePath),
+    (error) =>
+      error &&
+      error.filePath === filePath &&
+      /outboundMapping target has unsupported field \"extraTargetField\"/i.test(error.message),
+  );
+});

@@ -19,6 +19,18 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
+interface ValueIdShape {
+  commandClass: number;
+  endpoint?: number;
+  property: string | number;
+  propertyKey?: string | number;
+}
+
+interface CommandTargetShape {
+  command: string;
+  argsTemplate?: Record<string, unknown>;
+}
+
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0;
 }
@@ -95,7 +107,7 @@ function normalizeStringNumberOrNullList(
   return undefined;
 }
 
-function isValidValueIdShape(value: unknown): boolean {
+function isValidValueIdShape(value: unknown): value is ValueIdShape {
   if (!isObject(value)) return false;
   if (typeof value.commandClass !== 'number') return false;
   if (!['string', 'number'].includes(typeof value.property)) return false;
@@ -106,7 +118,7 @@ function isValidValueIdShape(value: unknown): boolean {
   return true;
 }
 
-function isValidCommandTargetShape(value: unknown): boolean {
+function isValidCommandTargetShape(value: unknown): value is CommandTargetShape {
   if (!isObject(value)) return false;
   if (!isNonEmptyString(value.command)) return false;
   if (value.argsTemplate !== undefined && !isObject(value.argsTemplate)) return false;
@@ -116,6 +128,96 @@ function isValidCommandTargetShape(value: unknown): boolean {
 function isValidInboundWatcherShape(value: unknown): boolean {
   if (isValidValueIdShape(value)) return true;
   return isObject(value) && isNonEmptyString(value.eventType);
+}
+
+function assertNoUnsupportedFields(
+  value: object,
+  allowedKeys: ReadonlySet<string>,
+  fieldPath: string,
+  filePath: string,
+  ruleId: string,
+  actionIndex: number,
+): void {
+  for (const key of Object.keys(value)) {
+    if (!allowedKeys.has(key)) {
+      throw new RuleFileLoadError(
+        `Rule "${ruleId}" capability action ${actionIndex} ${fieldPath} has unsupported field "${key}"`,
+        filePath,
+      );
+    }
+  }
+}
+
+function validateEventSelectorShape(
+  value: unknown,
+  filePath: string,
+  ruleId: string,
+  actionIndex: number,
+  fieldPath: string,
+): void {
+  if (!isObject(value) || !isNonEmptyString(value.eventType)) {
+    throw new RuleFileLoadError(
+      `Rule "${ruleId}" capability action ${actionIndex} ${fieldPath}.eventType must be a non-empty string`,
+      filePath,
+    );
+  }
+
+  assertNoUnsupportedFields(
+    value,
+    new Set(['eventType']),
+    fieldPath,
+    filePath,
+    ruleId,
+    actionIndex,
+  );
+}
+
+function validateValueIdShapeStrict(
+  value: unknown,
+  filePath: string,
+  ruleId: string,
+  actionIndex: number,
+  fieldPath: string,
+): void {
+  if (!isValidValueIdShape(value)) {
+    throw new RuleFileLoadError(
+      `Rule "${ruleId}" capability action ${actionIndex} ${fieldPath} must be a value-id shape`,
+      filePath,
+    );
+  }
+
+  assertNoUnsupportedFields(
+    value,
+    new Set(['commandClass', 'endpoint', 'property', 'propertyKey']),
+    fieldPath,
+    filePath,
+    ruleId,
+    actionIndex,
+  );
+}
+
+function validateCommandTargetShapeStrict(
+  value: unknown,
+  filePath: string,
+  ruleId: string,
+  actionIndex: number,
+  fieldPath: string,
+): void {
+  if (!isValidCommandTargetShape(value)) {
+    throw new RuleFileLoadError(
+      `Rule "${ruleId}" capability action ${actionIndex} ${fieldPath} must be a command target shape`,
+      filePath,
+    );
+  }
+
+  assertNoUnsupportedFields(
+    value,
+    new Set(['command', 'argsTemplate']),
+    fieldPath,
+    filePath,
+    ruleId,
+    actionIndex,
+  );
 }
 
 function validateCapabilityInboundMappingShape(
@@ -157,13 +259,23 @@ function validateCapabilityInboundMappingShape(
     );
   }
 
-  if (
-    mapping.kind === 'event' &&
-    (!isObject(mapping.selector) || !isNonEmptyString(mapping.selector.eventType))
-  ) {
-    throw new RuleFileLoadError(
-      `Rule "${ruleId}" capability action ${actionIndex} inboundMapping selector.eventType must be a non-empty string when kind is "event"`,
+  if (mapping.kind === 'value') {
+    validateValueIdShapeStrict(
+      mapping.selector,
       filePath,
+      ruleId,
+      actionIndex,
+      'inboundMapping selector',
+    );
+  }
+
+  if (mapping.kind === 'event') {
+    validateEventSelectorShape(
+      mapping.selector,
+      filePath,
+      ruleId,
+      actionIndex,
+      'inboundMapping selector',
     );
   }
 
@@ -188,11 +300,21 @@ function validateCapabilityInboundMappingShape(
         filePath,
       );
     }
-    if (!mapping.watchers.every(isValidInboundWatcherShape)) {
-      throw new RuleFileLoadError(
-        `Rule "${ruleId}" capability action ${actionIndex} inboundMapping.watchers must contain value-id or eventType watcher shapes`,
-        filePath,
-      );
+    for (let watcherIndex = 0; watcherIndex < mapping.watchers.length; watcherIndex += 1) {
+      const watcher = mapping.watchers[watcherIndex];
+      if (!isValidInboundWatcherShape(watcher)) {
+        throw new RuleFileLoadError(
+          `Rule "${ruleId}" capability action ${actionIndex} inboundMapping.watchers must contain value-id or eventType watcher shapes`,
+          filePath,
+        );
+      }
+
+      const watcherPath = `inboundMapping.watchers[${watcherIndex}]`;
+      if (isValidValueIdShape(watcher)) {
+        validateValueIdShapeStrict(watcher, filePath, ruleId, actionIndex, watcherPath);
+      } else {
+        validateEventSelectorShape(watcher, filePath, ruleId, actionIndex, watcherPath);
+      }
     }
   }
 }
@@ -248,22 +370,39 @@ function validateCapabilityOutboundMappingShape(
     );
   }
 
-  if (mapping.kind === 'set_value' && !isValidValueIdShape(mapping.target)) {
-    throw new RuleFileLoadError(
-      `Rule "${ruleId}" capability action ${actionIndex} outboundMapping target must be a value-id shape when kind is "set_value"`,
+  if (mapping.kind === 'set_value') {
+    validateValueIdShapeStrict(
+      mapping.target,
       filePath,
+      ruleId,
+      actionIndex,
+      'outboundMapping target',
     );
   }
 
-  if (
-    (mapping.kind === 'invoke_cc_api' || mapping.kind === 'zwjs_command') &&
-    !isValidValueIdShape(mapping.target) &&
-    !isValidCommandTargetShape(mapping.target)
-  ) {
-    throw new RuleFileLoadError(
-      `Rule "${ruleId}" capability action ${actionIndex} outboundMapping target must be a value-id shape or command target`,
-      filePath,
-    );
+  if (mapping.kind === 'invoke_cc_api' || mapping.kind === 'zwjs_command') {
+    if (isValidValueIdShape(mapping.target)) {
+      validateValueIdShapeStrict(
+        mapping.target,
+        filePath,
+        ruleId,
+        actionIndex,
+        'outboundMapping target',
+      );
+    } else if (isValidCommandTargetShape(mapping.target)) {
+      validateCommandTargetShapeStrict(
+        mapping.target,
+        filePath,
+        ruleId,
+        actionIndex,
+        'outboundMapping target',
+      );
+    } else {
+      throw new RuleFileLoadError(
+        `Rule "${ruleId}" capability action ${actionIndex} outboundMapping target must be a value-id shape or command target`,
+        filePath,
+      );
+    }
   }
 
   if (mapping.transformRef !== undefined && !isNonEmptyString(mapping.transformRef)) {
@@ -798,11 +937,24 @@ function validateRuleActionShape(
   }
 
   if (action.type === 'ignore-value') {
-    if (action.valueId !== undefined && !isValidValueIdShape(action.valueId)) {
-      throw new RuleFileLoadError(
-        `Rule "${ruleId}" ignore-value action ${actionIndex} has invalid valueId shape`,
-        filePath,
-      );
+    if (action.valueId !== undefined) {
+      try {
+        validateValueIdShapeStrict(
+          action.valueId,
+          filePath,
+          ruleId,
+          actionIndex,
+          'ignore-value valueId',
+        );
+      } catch (error) {
+        if (error instanceof RuleFileLoadError) {
+          throw new RuleFileLoadError(
+            `Rule "${ruleId}" ignore-value action ${actionIndex} has invalid valueId shape`,
+            filePath,
+          );
+        }
+        throw error;
+      }
     }
     return;
   }

@@ -179,6 +179,8 @@ Authoring ergonomics:
   - `inboundMapping` `{ eventType: "..." }` -> `{ kind: "event", selector: ... }`
   - `outboundMapping` `{ command: "..." }` -> `{ kind: "zwjs_command", target: ... }`
   - `device-identity.driverId` alias -> `driverTemplateId`
+- canonical mapping payloads are strict:
+  - unknown nested fields in `selector`/`target`/watchers are rejected at load-time
 
 ## Documentation Sync Contract
 

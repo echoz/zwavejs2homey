@@ -413,6 +413,12 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - ran no-context authoring exercise from docs for product+generic rules; resulting ergonomics updates:
       - refreshed `CONTRIBUTING.md` minimal example to use new shorthand and alias forms
       - added explicit shorthand/alias expansion notes for newcomer clarity
+90. Completed DSL review hardening follow-up for nested canonical mapping shapes:
+    - capability inbound/outbound canonical `selector`/`target` payloads now reject unknown nested fields
+    - inbound watcher entries now validate strict value-id/event selector shapes
+    - strict nested-shape validation also applied to `ignore-value.valueId`
+    - added fixture-backed regression coverage for unsupported canonical selector/target fields
+    - updated grammar/readme docs to make strict nested mapping semantics explicit
 
 ## Next Tasks
 

@@ -183,6 +183,11 @@ Examples:
 
 This expansion is deterministic and compile-time only.
 
+Mapping payloads are strict after expansion:
+
+- canonical `selector`, `target`, and watcher value-id/event objects reject unknown fields at load time
+- this catches nested-structure typos (for example `propertykey` vs `propertyKey`) before compile/apply
+
 ## Layer Vocabulary and Authoring Context
 
 Layer remains part of canonical rule semantics and diagnostics.

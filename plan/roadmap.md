@@ -105,6 +105,7 @@
 - [x] Decide manifest-layer single-source-of-truth policy (no per-rule layer in manifest-scoped compile-time files; ADR 0008)
 - [x] Decide full migration policy for product authoring format (`project-product` uses `product-rules/v1` only; ADR 0009)
 - [x] DSL simplification slice 2: add explicit action-level defaults/shorthands with canonical expansion (no runtime inference)
+- [x] DSL hardening follow-up: strict unknown-field rejection for canonical mapping selector/target/watcher nested shapes
 - [ ] Add second real catalog source adapter when a concrete source format is available
 
 ## Phase 4: Homey Adapter MVP (Next Major Area)

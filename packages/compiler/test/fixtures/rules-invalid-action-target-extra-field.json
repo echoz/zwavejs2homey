@@ -1,0 +1,19 @@
+[
+  {
+    "ruleId": "invalid-action-target-extra-field",
+    "layer": "project-product",
+    "actions": [
+      {
+        "type": "capability",
+        "capabilityId": "button.reset",
+        "outboundMapping": {
+          "kind": "zwjs_command",
+          "target": {
+            "command": "zwavejs/node/reset",
+            "extraTargetField": "nope"
+          }
+        }
+      }
+    ]
+  }
+]

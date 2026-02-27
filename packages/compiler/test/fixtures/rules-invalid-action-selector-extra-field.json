@@ -1,0 +1,20 @@
+[
+  {
+    "ruleId": "invalid-action-selector-extra-field",
+    "layer": "project-product",
+    "actions": [
+      {
+        "type": "capability",
+        "capabilityId": "onoff",
+        "inboundMapping": {
+          "kind": "value",
+          "selector": {
+            "commandClass": 37,
+            "property": "currentValue",
+            "unknownSelectorField": true
+          }
+        }
+      }
+    ]
+  }
+]
