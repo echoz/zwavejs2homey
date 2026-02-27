@@ -153,6 +153,13 @@ export function parseCliArgs(argv) {
   }
 
   const signature = flags.get('--signature');
+  if (signature !== undefined && !/^\d+:\d+:\d+$/.test(signature)) {
+    return {
+      ok: false,
+      error:
+        '--signature must be a product triple in decimal format: <manufacturerId:productType:productId>',
+    };
+  }
   const backlogFile = flags.get('--backlog-file');
   const fromBacklogFile = flags.get('--from-backlog-file');
   const toBacklogFile = flags.get('--to-backlog-file');

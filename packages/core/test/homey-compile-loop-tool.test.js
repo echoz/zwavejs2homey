@@ -10,6 +10,7 @@ test('compiler loop parseCliArgs validates signature source and loop options', a
 
   assert.equal(parseCliArgs([]).ok, false);
   assert.equal(parseCliArgs(['--signature', '29:66:2', '--backlog-file', 'x.json']).ok, false);
+  assert.equal(parseCliArgs(['--signature', 'bad-signature']).ok, false);
   assert.equal(parseCliArgs(['--from-backlog-file', 'a.json']).ok, false);
   assert.equal(
     parseCliArgs([

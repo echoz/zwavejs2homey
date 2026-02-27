@@ -1060,6 +1060,33 @@ function formatNextResult(result, format) {
   const commands = result.commands ?? {};
   const selectionHeader = `${selected.signature} (rank ${selected.rank}, review ${selected.reviewNodeCount}, generic ${selected.genericNodeCount}, empty ${selected.emptyNodeCount})`;
 
+  if (format === 'list') {
+    const rows = [
+      ['Selection mode', result.selectionMode],
+      ['Fallback mode', result.fallbackMode],
+      ['Fallback used', result.fallbackUsed ? 'yes' : 'no'],
+      ['Source backlog', result.sourceFilePath],
+      ['From backlog', result.fromFilePath ?? ''],
+      ['To backlog', result.toFilePath ?? ''],
+      ['Diff filter', result.filter ?? ''],
+      ['Candidate count', result.candidateCount],
+      ['Pick', result.pick],
+      ['Selected', selectionHeader],
+      ['Top reason', selected.topReason || '-'],
+      [
+        'Diff',
+        diff
+          ? `status=${diff.status}, direction=${diff.direction}, reviewΔ=${formatSignedDelta(diff.delta?.reviewNodeCount ?? 0)}, genericΔ=${formatSignedDelta(diff.delta?.genericNodeCount ?? 0)}, emptyΔ=${formatSignedDelta(diff.delta?.emptyNodeCount ?? 0)}`
+          : '',
+      ],
+      ['Scaffold rule', commands.scaffold ?? ''],
+      ['Inspect live', commands.inspectLive ?? ''],
+      ['Validate live', commands.validateLive ?? ''],
+      ['Iteration loop', commands.loop ?? ''],
+    ];
+    return renderTable(['Field', 'Value'], rows);
+  }
+
   if (format === 'markdown') {
     return [
       '# Next Curation Target',
