@@ -184,6 +184,10 @@ Working style used in this repo:
 
 This attribution is included to make the development process explicit and auditable, not to replace normal code ownership/review standards.
 
+## Contributing
+
+See `CONTRIBUTING.md` for code + rule/profile contribution workflow, evidence expectations, and PR checklist.
+
 ## Current Boundary Decisions
 
 - Compiler owns:

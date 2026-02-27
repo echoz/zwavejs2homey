@@ -7,3 +7,6 @@ docs/external
 co.lazylabs.zwavejs2homey/node_modules
 co.lazylabs.zwavejs2homey/build
 co.lazylabs.zwavejs2homey/.homeybuild
+
+# Local live-validation artifacts (large, environment-specific)
+plan/baselines
