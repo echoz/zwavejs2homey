@@ -324,6 +324,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - diff mode defaults to `--only worsened` and supports fallback-to-summary selection (`--fallback summary|none`)
     - output includes copy/paste scaffold + inspect-live + validate-live command hints derived from backlog source metadata
     - expanded backlog-tool regression coverage for `next` parse validation, diff/fallback selection behavior, and human-readable output
+70. Completed signature loop wrapper slice:
+    - added `compiler:loop` to run one signature end-to-end (optional backlog-driven selection, targeted inspect, then targeted validate)
+    - wrapper forwards non-loop flags into inspect/validate parsers and defaults to `rules/manifest.json` when no rules source flags are provided
+    - supports explicit signature mode or backlog-driven mode (`--backlog-file` or `--from-backlog-file` + `--to-backlog-file`) with `--only`/`--fallback`/`--pick`
+    - added loop-tool regression coverage for parse validation, explicit-signature execution, backlog-selection execution, and output formats
 
 ## Next Tasks
 

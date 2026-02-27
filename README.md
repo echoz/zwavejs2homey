@@ -98,6 +98,8 @@ This emits a `compiled-homey-profiles/v1` artifact.
 - `npm run compiler:backlog -- scaffold --input-file /tmp/compiled-live.curation-backlog.json --signature 29:66:2 --format json-pretty`
 - `npm run compiler:backlog -- next --from-file /tmp/baseline.curation-backlog.json --to-file /tmp/current.curation-backlog.json --only worsened --format summary`
 - `npm run compiler:backlog -- next --input-file /tmp/current.curation-backlog.json --pick 1 --format markdown`
+- `npm run compiler:loop -- --url ws://HOST:PORT --all-nodes --manifest-file rules/manifest.json --signature 29:66:2`
+- `npm run compiler:loop -- --url ws://HOST:PORT --all-nodes --from-backlog-file /tmp/baseline.curation-backlog.json --to-backlog-file /tmp/current.curation-backlog.json --only worsened`
 
 This runs the canonical live validation loop in one command:
 
@@ -123,6 +125,7 @@ This runs the canonical live validation loop in one command:
 - `compiler:baseline --emit-curation-backlog` also writes baseline/recheck curation backlog artifacts (and redacted variants under `--redact-share`)
 - `compiler:backlog` consumes backlog artifacts for ranked triage (`summary`), regression analysis (`diff`), and starter product-rule snippet generation (`scaffold`)
 - `compiler:backlog next` picks the next signature to curate (diff-first or summary mode) and prints copy/paste scaffold+inspect+validate commands
+- `compiler:loop` runs one signature end-to-end (optional backlog-driven signature selection, targeted inspect, then targeted validate)
 
 Gate setup guide: `docs/compiler-validation-gates.md`
 
