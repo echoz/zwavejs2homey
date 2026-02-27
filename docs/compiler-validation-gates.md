@@ -206,3 +206,7 @@ Default behavior:
 1. Keep one baseline summary JSON per network snapshot in `plan/` or `docs/`.
 2. Update thresholds only when network composition or mapping policy changes.
 3. Treat threshold changes as reviewed config changes, not routine edits.
+4. Use backlog consumers to prioritize curation work:
+   - `npm run compiler:backlog -- summary --input-file /tmp/compiled-live.curation-backlog.json --format list`
+   - `npm run compiler:backlog -- diff --from-file /tmp/baseline.curation-backlog.json --to-file /tmp/current.curation-backlog.json --only worsened --format markdown`
+   - `npm run compiler:backlog -- scaffold --input-file /tmp/compiled-live.curation-backlog.json --signature <manufacturer:productType:productId> --format json-pretty`

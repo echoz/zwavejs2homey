@@ -98,6 +98,7 @@ Current implemented foundation in `packages/compiler`:
     - baseline snapshot helper (`--save-baseline-summary-json-file`) to refresh baseline artifacts from the current run
     - artifact retention policy (`--artifact-retention delete-on-pass`) to avoid keeping large generated compiled files after successful runs
     - curation backlog artifact (`--curation-backlog-json-file`) to rank per-signature rule-authoring priorities from live validation output
+    - backlog consumer CLI (`compiler:backlog`) for triage listing, baseline/current backlog diffs, and starter product-rule scaffolds
     - redacted-share outputs (`--redact-share`, `--redacted-report-file`, `--redacted-summary-json-file`, `--redacted-curation-backlog-json-file`) for PR-safe diagnostics
     - baseline workflow wrapper (`compiler:baseline`) to run capture + zero-delta recheck in one command (including redacted-share + backlog parity via `--redact-share` and `--emit-curation-backlog`)
     - baseline-enabled markdown reports include delta sections for fast human triage

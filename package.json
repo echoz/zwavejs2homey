@@ -17,6 +17,7 @@
     "compiler:inspect-live": "node tools/homey-compile-inspect-live.mjs",
     "compiler:validate-live": "node tools/homey-compile-validate-live.mjs",
     "compiler:baseline": "node tools/homey-compile-baseline.mjs",
+    "compiler:backlog": "node tools/homey-compile-backlog.mjs",
     "compiler:build": "node tools/homey-compile-build.mjs",
     "compiler:bench": "node tools/homey-compile-bench.mjs",
     "ha-import:extract": "node tools/ha-import-extract.mjs",

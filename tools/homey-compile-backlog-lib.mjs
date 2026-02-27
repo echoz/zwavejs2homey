@@ -1,0 +1,702 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import {
+  formatJsonCompact,
+  formatJsonPretty,
+  formatNdjson,
+  isSupportedDiagnosticFormat,
+} from './output-format-lib.mjs';
+
+const DIFF_ONLY_FILTERS = new Set([
+  'all',
+  'worsened',
+  'improved',
+  'neutral',
+  'added',
+  'removed',
+  'changed',
+  'unchanged',
+]);
+
+function parseFlagMap(argv) {
+  const flags = new Map();
+  const positionals = [];
+  for (let i = 0; i < argv.length; i += 1) {
+    const token = argv[i];
+    if (!token.startsWith('--')) {
+      positionals.push(token);
+      continue;
+    }
+    const [key, inline] = token.split('=', 2);
+    if (inline !== undefined) {
+      flags.set(key, inline);
+      continue;
+    }
+    const next = argv[i + 1];
+    if (next && !next.startsWith('--')) {
+      flags.set(key, next);
+      i += 1;
+    } else {
+      flags.set(key, 'true');
+    }
+  }
+  return { flags, positionals };
+}
+
+function readJsonFile(filePath, label) {
+  const resolved = path.isAbsolute(filePath) ? filePath : path.resolve(filePath);
+  let raw;
+  try {
+    raw = JSON.parse(fs.readFileSync(resolved, 'utf8'));
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to read ${label} "${resolved}": ${reason}`);
+  }
+  return { filePath: resolved, raw };
+}
+
+function loadBacklogArtifact(filePath, label) {
+  const loaded = readJsonFile(filePath, label);
+  if (!loaded.raw || typeof loaded.raw !== 'object' || Array.isArray(loaded.raw)) {
+    throw new Error(`${label} "${loaded.filePath}" must be a JSON object`);
+  }
+  if (loaded.raw.schemaVersion !== 'curation-backlog/v1') {
+    throw new Error(
+      `${label} "${loaded.filePath}" schemaVersion must be "curation-backlog/v1" (received: ${String(loaded.raw.schemaVersion)})`,
+    );
+  }
+  if (!Array.isArray(loaded.raw.entries)) {
+    throw new Error(`${label} "${loaded.filePath}" must include an "entries" array`);
+  }
+  return loaded;
+}
+
+function parsePositiveInt(rawValue, flagName, defaultValue) {
+  const value = rawValue ?? String(defaultValue);
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    throw new Error(`${flagName} must be a positive integer (received: ${String(value)})`);
+  }
+  return parsed;
+}
+
+function normalizeCount(value) {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 0) return 0;
+  return parsed;
+}
+
+function normalizeNumber(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function countMapToSortedEntries(rawCounts) {
+  if (!rawCounts || typeof rawCounts !== 'object' || Array.isArray(rawCounts)) return [];
+  return Object.entries(rawCounts)
+    .map(([key, value]) => [key, normalizeCount(value)])
+    .sort((a, b) => {
+      if (a[1] !== b[1]) return b[1] - a[1];
+      return a[0].localeCompare(b[0]);
+    });
+}
+
+function topReason(actionableReasonCounts) {
+  const sorted = countMapToSortedEntries(actionableReasonCounts);
+  return sorted[0]?.[0] ?? '';
+}
+
+function normalizeBacklogEntry(rawEntry, index) {
+  const entry =
+    rawEntry && typeof rawEntry === 'object' && !Array.isArray(rawEntry) ? rawEntry : {};
+  const rank = Number.isInteger(Number(entry.rank)) ? Number(entry.rank) : index + 1;
+  const signature =
+    typeof entry.signature === 'string' && entry.signature.length > 0
+      ? entry.signature
+      : `unknown:${index + 1}`;
+  const pressure =
+    entry.pressure && typeof entry.pressure === 'object' && !Array.isArray(entry.pressure)
+      ? entry.pressure
+      : {};
+  return {
+    ...entry,
+    rank,
+    signature,
+    nodeCount: normalizeCount(entry.nodeCount),
+    reviewNodeCount: normalizeCount(entry.reviewNodeCount),
+    genericNodeCount: normalizeCount(entry.genericNodeCount),
+    emptyNodeCount: normalizeCount(entry.emptyNodeCount),
+    pressure: {
+      suppressedFillActionsTotal: normalizeCount(pressure.suppressedFillActionsTotal),
+      unmatchedActionsTotal: normalizeCount(pressure.unmatchedActionsTotal),
+      appliedActionsTotal: normalizeCount(pressure.appliedActionsTotal),
+      unmatchedRatio: normalizeNumber(pressure.unmatchedRatio),
+      highUnmatchedRatioSignalCount: normalizeCount(pressure.highUnmatchedRatioSignalCount),
+    },
+  };
+}
+
+function sortBacklogEntries(entries) {
+  return [...entries].sort((a, b) => {
+    if (a.rank !== b.rank) return a.rank - b.rank;
+    if (a.reviewNodeCount !== b.reviewNodeCount) return b.reviewNodeCount - a.reviewNodeCount;
+    if (a.genericNodeCount !== b.genericNodeCount) return b.genericNodeCount - a.genericNodeCount;
+    if (a.emptyNodeCount !== b.emptyNodeCount) return b.emptyNodeCount - a.emptyNodeCount;
+    if (a.nodeCount !== b.nodeCount) return b.nodeCount - a.nodeCount;
+    return a.signature.localeCompare(b.signature);
+  });
+}
+
+function renderTable(headers, rows) {
+  const widths = headers.map((header, index) =>
+    Math.max(header.length, ...rows.map((row) => String(row[index] ?? '').length)),
+  );
+  const renderRow = (row) =>
+    row
+      .map((cell, index) => String(cell ?? '').padEnd(widths[index], ' '))
+      .join('  ')
+      .trimEnd();
+  return [
+    renderRow(headers),
+    renderRow(widths.map((w) => '-'.repeat(w))),
+    ...rows.map(renderRow),
+  ].join('\n');
+}
+
+function formatSignedDelta(value) {
+  if (!Number.isFinite(value)) return '';
+  if (value > 0) return `+${value}`;
+  return String(value);
+}
+
+function renderMarkdownTable(headers, rows) {
+  const headerLine = `| ${headers.join(' | ')} |`;
+  const divider = `| ${headers.map(() => '---').join(' | ')} |`;
+  const body = rows.map((row) => `| ${row.map((cell) => String(cell ?? '')).join(' | ')} |`);
+  return [headerLine, divider, ...body].join('\n');
+}
+
+function summarizeBacklog(artifact, command, filePath) {
+  const entries = sortBacklogEntries(artifact.entries.map(normalizeBacklogEntry));
+  const top = entries.slice(0, command.top);
+  const counts =
+    artifact.counts && typeof artifact.counts === 'object' && !Array.isArray(artifact.counts)
+      ? artifact.counts
+      : {};
+  const totalNodes = normalizeCount(counts.totalNodes);
+  const reviewNodes = normalizeCount(counts.reviewNodes);
+  return {
+    kind: 'summary',
+    filePath,
+    generatedAt: artifact.generatedAt ?? null,
+    totals: {
+      signatures: entries.length,
+      totalNodes,
+      reviewNodes,
+    },
+    topLimit: command.top,
+    entries: top,
+  };
+}
+
+function metricFromEntry(entry) {
+  if (!entry) {
+    return {
+      nodeCount: 0,
+      reviewNodeCount: 0,
+      genericNodeCount: 0,
+      emptyNodeCount: 0,
+    };
+  }
+  return {
+    nodeCount: normalizeCount(entry.nodeCount),
+    reviewNodeCount: normalizeCount(entry.reviewNodeCount),
+    genericNodeCount: normalizeCount(entry.genericNodeCount),
+    emptyNodeCount: normalizeCount(entry.emptyNodeCount),
+  };
+}
+
+function diffDirection(status, before, after, delta) {
+  if (status === 'added') {
+    return after.reviewNodeCount > 0 || after.genericNodeCount > 0 || after.emptyNodeCount > 0
+      ? 'worsened'
+      : 'neutral';
+  }
+  if (status === 'removed') {
+    return before.reviewNodeCount > 0 || before.genericNodeCount > 0 || before.emptyNodeCount > 0
+      ? 'improved'
+      : 'neutral';
+  }
+  if (delta.reviewNodeCount > 0 || delta.genericNodeCount > 0 || delta.emptyNodeCount > 0) {
+    return 'worsened';
+  }
+  if (delta.reviewNodeCount < 0 || delta.genericNodeCount < 0 || delta.emptyNodeCount < 0) {
+    return 'improved';
+  }
+  return 'neutral';
+}
+
+function includeDiffEntry(entry, only) {
+  if (!only || only === 'all') return true;
+  if (only === 'worsened' || only === 'improved' || only === 'neutral') {
+    return entry.direction === only;
+  }
+  return entry.status === only;
+}
+
+function buildBacklogDiff(fromArtifact, toArtifact, command, filePathFrom, filePathTo) {
+  const fromEntries = sortBacklogEntries(fromArtifact.entries.map(normalizeBacklogEntry));
+  const toEntries = sortBacklogEntries(toArtifact.entries.map(normalizeBacklogEntry));
+  const fromBySignature = new Map(fromEntries.map((entry) => [entry.signature, entry]));
+  const toBySignature = new Map(toEntries.map((entry) => [entry.signature, entry]));
+  const signatures = [...new Set([...fromBySignature.keys(), ...toBySignature.keys()])].sort();
+
+  const entries = signatures.map((signature) => {
+    const beforeEntry = fromBySignature.get(signature);
+    const afterEntry = toBySignature.get(signature);
+    const before = metricFromEntry(beforeEntry);
+    const after = metricFromEntry(afterEntry);
+    const delta = {
+      nodeCount: after.nodeCount - before.nodeCount,
+      reviewNodeCount: after.reviewNodeCount - before.reviewNodeCount,
+      genericNodeCount: after.genericNodeCount - before.genericNodeCount,
+      emptyNodeCount: after.emptyNodeCount - before.emptyNodeCount,
+    };
+    const status = beforeEntry
+      ? afterEntry
+        ? delta.nodeCount === 0 &&
+          delta.reviewNodeCount === 0 &&
+          delta.genericNodeCount === 0 &&
+          delta.emptyNodeCount === 0
+          ? 'unchanged'
+          : 'changed'
+        : 'removed'
+      : 'added';
+    const direction = diffDirection(status, before, after, delta);
+    return {
+      signature,
+      status,
+      direction,
+      before,
+      after,
+      delta,
+      topReasonBefore: topReason(beforeEntry?.actionableReasonCounts),
+      topReasonAfter: topReason(afterEntry?.actionableReasonCounts),
+    };
+  });
+
+  const filtered = entries.filter((entry) => includeDiffEntry(entry, command.only));
+  const directionOrder = { worsened: 0, neutral: 1, improved: 2 };
+  filtered.sort((a, b) => {
+    const byDirection = directionOrder[a.direction] - directionOrder[b.direction];
+    if (byDirection !== 0) return byDirection;
+    if (a.delta.reviewNodeCount !== b.delta.reviewNodeCount) {
+      return b.delta.reviewNodeCount - a.delta.reviewNodeCount;
+    }
+    if (a.delta.genericNodeCount !== b.delta.genericNodeCount) {
+      return b.delta.genericNodeCount - a.delta.genericNodeCount;
+    }
+    if (a.delta.emptyNodeCount !== b.delta.emptyNodeCount) {
+      return b.delta.emptyNodeCount - a.delta.emptyNodeCount;
+    }
+    return a.signature.localeCompare(b.signature);
+  });
+
+  const top = filtered.slice(0, command.top);
+  const statusCounts = {
+    added: filtered.filter((entry) => entry.status === 'added').length,
+    removed: filtered.filter((entry) => entry.status === 'removed').length,
+    changed: filtered.filter((entry) => entry.status === 'changed').length,
+    unchanged: filtered.filter((entry) => entry.status === 'unchanged').length,
+  };
+  const directionCounts = {
+    worsened: filtered.filter((entry) => entry.direction === 'worsened').length,
+    improved: filtered.filter((entry) => entry.direction === 'improved').length,
+    neutral: filtered.filter((entry) => entry.direction === 'neutral').length,
+  };
+
+  return {
+    kind: 'diff',
+    fromFilePath: filePathFrom,
+    toFilePath: filePathTo,
+    topLimit: command.top,
+    filter: command.only ?? 'changed',
+    totals: {
+      signaturesCompared: signatures.length,
+      entriesAfterFilter: filtered.length,
+      statusCounts,
+      directionCounts,
+    },
+    entries: top,
+  };
+}
+
+function parseSignatureTriple(signature) {
+  const match = /^(\d+):(\d+):(\d+)$/.exec(signature);
+  if (!match) return null;
+  return {
+    manufacturerId: Number(match[1]),
+    productType: Number(match[2]),
+    productId: Number(match[3]),
+  };
+}
+
+function buildScaffoldResult(artifact, command, filePath, nowDate) {
+  const entries = artifact.entries.map(normalizeBacklogEntry);
+  const entry = entries.find((candidate) => candidate.signature === command.signature);
+  if (!entry) {
+    throw new Error(`Signature "${command.signature}" not found in backlog: ${filePath}`);
+  }
+  const triple = parseSignatureTriple(entry.signature);
+  if (!triple) {
+    throw new Error(
+      `Signature "${entry.signature}" is not a numeric product triple (expected manufacturer:productType:productId)`,
+    );
+  }
+
+  const safeSignature = entry.signature.replace(/:/g, '-');
+  const inferredHomeyClass =
+    command.homeyClass ??
+    (Array.isArray(entry.sampleNodes) && entry.sampleNodes[0]?.homeyClass) ??
+    'other';
+  const driverTemplateId =
+    command.driverTemplateId ?? `${command.ruleIdPrefix}-${safeSignature}`.toLowerCase();
+  const ruleId = `${command.ruleIdPrefix}-${safeSignature}-identity`.toLowerCase();
+  const rule = {
+    ruleId,
+    layer: 'project-product',
+    device: {
+      manufacturerId: [triple.manufacturerId],
+      productType: [triple.productType],
+      productId: [triple.productId],
+    },
+    value: {
+      readable: true,
+    },
+    actions: [
+      {
+        type: 'device-identity',
+        mode: 'replace',
+        homeyClass: inferredHomeyClass,
+        driverTemplateId,
+      },
+    ],
+  };
+
+  return {
+    kind: 'scaffold',
+    backlogFilePath: filePath,
+    signature: entry.signature,
+    generatedAt: nowDate.toISOString(),
+    entry: {
+      rank: entry.rank,
+      nodeCount: entry.nodeCount,
+      reviewNodeCount: entry.reviewNodeCount,
+      genericNodeCount: entry.genericNodeCount,
+      emptyNodeCount: entry.emptyNodeCount,
+      topReason: topReason(entry.actionableReasonCounts),
+    },
+    fileHint: `rules/project/product/${command.ruleIdPrefix}-${safeSignature}.json`,
+    templateRules: [rule],
+  };
+}
+
+export function getUsageText() {
+  return [
+    'Usage:',
+    '  homey-compile-backlog summary --input-file <curation-backlog.json>',
+    '                               [--top N]',
+    '                               [--format list|summary|markdown|json|json-pretty|json-compact|ndjson]',
+    '',
+    '  homey-compile-backlog diff --from-file <baseline-backlog.json> --to-file <current-backlog.json>',
+    '                            [--only all|worsened|improved|neutral|added|removed|changed|unchanged]',
+    '                            [--top N]',
+    '                            [--format summary|markdown|json|json-pretty|json-compact|ndjson]',
+    '',
+    '  homey-compile-backlog scaffold --input-file <curation-backlog.json> --signature <manufacturer:productType:productId>',
+    '                                [--rule-id-prefix product]',
+    '                                [--driver-template-id product-template-id]',
+    '                                [--homey-class socket]',
+    '                                [--format summary|markdown|json|json-pretty|json-compact]',
+  ].join('\n');
+}
+
+export function parseCliArgs(argv) {
+  if (argv.includes('--help') || argv.includes('-h')) return { ok: false, error: getUsageText() };
+  const { flags, positionals } = parseFlagMap(argv);
+  const subcommand = positionals[0];
+  if (!subcommand) return { ok: false, error: getUsageText() };
+  if (!['summary', 'diff', 'scaffold'].includes(subcommand)) {
+    return { ok: false, error: `Unsupported backlog subcommand: ${subcommand}` };
+  }
+
+  const format = flags.get('--format') ?? (subcommand === 'summary' ? 'list' : 'summary');
+  const supportsList = subcommand === 'summary';
+  const supportsNdjson = subcommand !== 'scaffold';
+  if (
+    !(
+      (supportsList && format === 'list') ||
+      (isSupportedDiagnosticFormat(format) && (supportsNdjson || format !== 'ndjson'))
+    )
+  ) {
+    return { ok: false, error: `Unsupported format for ${subcommand}: ${format}` };
+  }
+
+  let top;
+  try {
+    top = parsePositiveInt(flags.get('--top'), '--top', subcommand === 'summary' ? 15 : 25);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    return { ok: false, error: reason };
+  }
+
+  if (subcommand === 'summary') {
+    const inputFile = flags.get('--input-file');
+    if (!inputFile) return { ok: false, error: '--input-file is required for summary' };
+    return {
+      ok: true,
+      command: {
+        subcommand,
+        inputFile,
+        top,
+        format,
+      },
+    };
+  }
+
+  if (subcommand === 'diff') {
+    const fromFile = flags.get('--from-file');
+    const toFile = flags.get('--to-file');
+    if (!fromFile) return { ok: false, error: '--from-file is required for diff' };
+    if (!toFile) return { ok: false, error: '--to-file is required for diff' };
+    const only = flags.get('--only') ?? 'changed';
+    if (!DIFF_ONLY_FILTERS.has(only)) {
+      return { ok: false, error: `Unsupported --only for diff: ${only}` };
+    }
+    return {
+      ok: true,
+      command: {
+        subcommand,
+        fromFile,
+        toFile,
+        only,
+        top,
+        format,
+      },
+    };
+  }
+
+  const inputFile = flags.get('--input-file');
+  const signature = flags.get('--signature');
+  if (!inputFile) return { ok: false, error: '--input-file is required for scaffold' };
+  if (!signature) return { ok: false, error: '--signature is required for scaffold' };
+  return {
+    ok: true,
+    command: {
+      subcommand,
+      inputFile,
+      signature,
+      ruleIdPrefix: flags.get('--rule-id-prefix') ?? 'product',
+      driverTemplateId: flags.get('--driver-template-id'),
+      homeyClass: flags.get('--homey-class'),
+      format,
+    },
+  };
+}
+
+function formatSummaryResult(result, format) {
+  if (format === 'json' || format === 'json-pretty') return formatJsonPretty(result);
+  if (format === 'json-compact') return formatJsonCompact(result);
+  if (format === 'ndjson') {
+    return formatNdjson([
+      {
+        type: 'backlogSummary',
+        filePath: result.filePath,
+        totals: result.totals,
+      },
+      ...result.entries.map((entry) => ({ type: 'backlogEntry', entry })),
+    ]);
+  }
+
+  const rows = result.entries.map((entry) => [
+    entry.rank,
+    entry.signature,
+    entry.nodeCount,
+    entry.reviewNodeCount,
+    entry.genericNodeCount,
+    entry.emptyNodeCount,
+    topReason(entry.actionableReasonCounts),
+    `${entry.pressure.suppressedFillActionsTotal}/${entry.pressure.unmatchedActionsTotal}`,
+  ]);
+
+  if (format === 'markdown') {
+    return [
+      '# Curation Backlog',
+      '',
+      `- Backlog file: ${result.filePath}`,
+      `- Generated at: ${result.generatedAt ?? ''}`,
+      `- Signatures: ${result.totals.signatures}`,
+      `- Nodes: ${result.totals.totalNodes}`,
+      `- Review nodes: ${result.totals.reviewNodes}`,
+      `- Showing top: ${result.entries.length} (limit ${result.topLimit})`,
+      '',
+      renderMarkdownTable(
+        ['Rank', 'Signature', 'Nodes', 'Review', 'Generic', 'Empty', 'Top reason', 'Sup/Unmatched'],
+        rows,
+      ),
+      '',
+    ].join('\n');
+  }
+
+  if (format === 'list') {
+    return renderTable(
+      ['Rank', 'Signature', 'Nodes', 'Review', 'Generic', 'Empty', 'Top reason', 'Sup/Unmatched'],
+      rows,
+    );
+  }
+
+  return [
+    `Backlog file: ${result.filePath}`,
+    `Generated at: ${result.generatedAt ?? ''}`,
+    `Signatures: ${result.totals.signatures}`,
+    `Nodes: ${result.totals.totalNodes}`,
+    `Review nodes: ${result.totals.reviewNodes}`,
+    `Showing top: ${result.entries.length} (limit ${result.topLimit})`,
+    '',
+    ...result.entries.map(
+      (entry) =>
+        `${entry.rank}. ${entry.signature} review=${entry.reviewNodeCount} generic=${entry.genericNodeCount} empty=${entry.emptyNodeCount} reason=${topReason(entry.actionableReasonCounts) || '-'}`,
+    ),
+  ].join('\n');
+}
+
+function formatDiffResult(result, format) {
+  if (format === 'json' || format === 'json-pretty') return formatJsonPretty(result);
+  if (format === 'json-compact') return formatJsonCompact(result);
+  if (format === 'ndjson') {
+    return formatNdjson([
+      {
+        type: 'backlogDiffSummary',
+        fromFilePath: result.fromFilePath,
+        toFilePath: result.toFilePath,
+        totals: result.totals,
+        filter: result.filter,
+      },
+      ...result.entries.map((entry) => ({ type: 'backlogDiff', entry })),
+    ]);
+  }
+
+  const rows = result.entries.map((entry) => [
+    entry.signature,
+    entry.status,
+    entry.direction,
+    formatSignedDelta(entry.delta.reviewNodeCount),
+    formatSignedDelta(entry.delta.genericNodeCount),
+    formatSignedDelta(entry.delta.emptyNodeCount),
+    formatSignedDelta(entry.delta.nodeCount),
+    entry.topReasonAfter || entry.topReasonBefore || '',
+  ]);
+
+  if (format === 'markdown') {
+    return [
+      '# Curation Backlog Diff',
+      '',
+      `- From: ${result.fromFilePath}`,
+      `- To: ${result.toFilePath}`,
+      `- Filter: ${result.filter}`,
+      `- Signatures compared: ${result.totals.signaturesCompared}`,
+      `- Diff entries: ${result.totals.entriesAfterFilter}`,
+      `- Worsened: ${result.totals.directionCounts.worsened}, Improved: ${result.totals.directionCounts.improved}, Neutral: ${result.totals.directionCounts.neutral}`,
+      '',
+      renderMarkdownTable(
+        [
+          'Signature',
+          'Status',
+          'Direction',
+          'Review Δ',
+          'Generic Δ',
+          'Empty Δ',
+          'Nodes Δ',
+          'Top reason',
+        ],
+        rows,
+      ),
+      '',
+    ].join('\n');
+  }
+
+  return [
+    `From: ${result.fromFilePath}`,
+    `To: ${result.toFilePath}`,
+    `Filter: ${result.filter}`,
+    `Signatures compared: ${result.totals.signaturesCompared}`,
+    `Diff entries: ${result.totals.entriesAfterFilter}`,
+    `Worsened: ${result.totals.directionCounts.worsened}, Improved: ${result.totals.directionCounts.improved}, Neutral: ${result.totals.directionCounts.neutral}`,
+    '',
+    renderTable(
+      ['Signature', 'Status', 'Direction', 'Review Δ', 'Generic Δ', 'Empty Δ', 'Nodes Δ', 'Reason'],
+      rows,
+    ),
+  ].join('\n');
+}
+
+function formatScaffoldResult(result, format) {
+  if (format === 'json' || format === 'json-pretty') return formatJsonPretty(result);
+  if (format === 'json-compact') return formatJsonCompact(result);
+  const rulesJson = formatJsonPretty(result.templateRules);
+
+  if (format === 'markdown') {
+    return [
+      '# Product Rule Scaffold',
+      '',
+      `- Backlog file: ${result.backlogFilePath}`,
+      `- Signature: ${result.signature}`,
+      `- File hint: ${result.fileHint}`,
+      `- Backlog rank: ${result.entry.rank}`,
+      `- Review nodes: ${result.entry.reviewNodeCount}`,
+      '',
+      '```json',
+      rulesJson,
+      '```',
+      '',
+    ].join('\n');
+  }
+
+  return [
+    `Backlog file: ${result.backlogFilePath}`,
+    `Signature: ${result.signature}`,
+    `File hint: ${result.fileHint}`,
+    `Backlog rank: ${result.entry.rank}`,
+    `Review nodes: ${result.entry.reviewNodeCount}`,
+    '',
+    rulesJson,
+  ].join('\n');
+}
+
+export function runBacklogCommand(command, options = {}) {
+  if (command.subcommand === 'summary') {
+    const loaded = loadBacklogArtifact(command.inputFile, 'backlog file');
+    return summarizeBacklog(loaded.raw, command, loaded.filePath);
+  }
+  if (command.subcommand === 'diff') {
+    const fromLoaded = loadBacklogArtifact(command.fromFile, 'from backlog file');
+    const toLoaded = loadBacklogArtifact(command.toFile, 'to backlog file');
+    return buildBacklogDiff(
+      fromLoaded.raw,
+      toLoaded.raw,
+      command,
+      fromLoaded.filePath,
+      toLoaded.filePath,
+    );
+  }
+  const loaded = loadBacklogArtifact(command.inputFile, 'backlog file');
+  const nowDate = options.nowDate ?? new Date();
+  return buildScaffoldResult(loaded.raw, command, loaded.filePath, nowDate);
+}
+
+export function formatBacklogOutput(result, format) {
+  if (result.kind === 'summary') return formatSummaryResult(result, format);
+  if (result.kind === 'diff') return formatDiffResult(result, format);
+  if (result.kind === 'scaffold') return formatScaffoldResult(result, format);
+  return formatJsonPretty(result);
+}

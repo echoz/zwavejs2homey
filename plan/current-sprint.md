@@ -309,6 +309,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - added stage-specific backlog path overrides (`--baseline-curation-backlog-json-file`, `--recheck-curation-backlog-json-file`)
     - added stage-specific redacted backlog path overrides (`--baseline-redacted-curation-backlog-json-file`, `--recheck-redacted-curation-backlog-json-file`)
     - baseline wrapper now forwards backlog flags into both internal `compiler:validate-live` stages with deterministic default backlog/redacted-backlog paths
+67. Completed backlog-consumer CLI slice:
+    - added `compiler:backlog` CLI with `summary`, `diff`, and `scaffold` subcommands for backlog triage workflows
+    - summary command supports ranked list/markdown/json/ndjson outputs for quick curation prioritization
+    - diff command compares baseline/current backlog artifacts with status+direction deltas (`worsened`, `improved`, `neutral`) and filter support
+    - scaffold command emits starter `project-product` identity-rule snippets for a selected product-triple signature
 
 ## Next Tasks
 
