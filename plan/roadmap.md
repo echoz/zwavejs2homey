@@ -1,5 +1,11 @@
 # Roadmap
 
+## Current Focus (Active)
+
+- [ ] Finish remaining Phase 3 compiler backlog (`DSL simplification slice 2` + final review/fix pass)
+- [ ] Implement ZWJS Explorer + Curation TUI MVP slices 1-6 (`plan/tui-explorer-curation-spec.md`)
+- [ ] Hold new Homey adapter design/implementation slices until compiler + TUI checkpoint is complete
+
 ## Phase 1: Foundation (Completed)
 
 - [x] Bootstrap Homey app project

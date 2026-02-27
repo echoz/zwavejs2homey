@@ -7,7 +7,10 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 ## In Progress
 
-- Compiler-first completion push: real rules pipeline + compiled artifact workflow + live ZWJS validation
+- Compiler + TUI completion push:
+  - finish remaining compiler phase-3 backlog items
+  - implement ZWJS Explorer + Curation TUI MVP slices
+  - pause new Homey adapter design decisions until compiler + TUI milestones are complete
 
 ## Recently Completed
 
@@ -397,13 +400,19 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 ## Next Tasks
 
-1. Run canonical `compiler:build` pipeline against larger live node sets and review profile outcomes + curation diagnostics
-2. Continue widening HA-derived rules coverage and selector semantics against live nodes
-3. Tune remaining high-suppression/high-unmatched curated profiles (e.g. keep useful capabilities and suppress noisy ones where policy is clear)
-4. Use `compiler:inspect-live --compiled-file ...` to validate compiled artifacts on real ZWJS data
-5. Keep project-generic rules minimal/provisional; generic fallback inference policy is adapter-owned (ADR 0004)
-6. Defer Homey adapter implementation until compiler runtime-validation readiness milestone is reached
-7. Continue DSL simplification with deterministic action defaults/shorthands where behavior remains explicit and statically expanded
+1. Complete remaining compiler backlog for phase-3 readiness:
+   - DSL simplification slice 2 (action-level defaults/shorthands with deterministic canonical expansion)
+   - final compiler code-review pass + fixes + green checks
+2. Start TUI implementation against `plan/tui-explorer-curation-spec.md`:
+   - Slice 1: app shell + connect + node list/detail (read-only)
+   - Slice 2: signature workspace + compiled profile inspect view
+3. Continue TUI slices 3-6 after Slice 1/2 stabilization:
+   - scaffold preview/write
+   - targeted validate action + result panels
+   - optional backlog panel
+   - manifest helper + run log polish
+4. Keep project-generic rules minimal/provisional; generic fallback inference policy remains adapter-owned (ADR 0004)
+5. Keep Homey adapter implementation/design frozen until compiler + TUI completion checkpoint
 
 ## Risks / Unknowns
 
