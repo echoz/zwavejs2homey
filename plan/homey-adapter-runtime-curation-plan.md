@@ -11,6 +11,8 @@ Related ADRs:
 - `docs/decisions/0006-homey-adapter-runtime-rule-order.md`
 - `docs/decisions/0007-product-and-curation-single-target-bundles.md`
 - `docs/decisions/0010-homey-adapter-curation-storage-v1.md`
+- `docs/decisions/0011-homey-curation-model-v1-materialized-overrides.md`
+- `docs/decisions/0012-homey-curation-execution-via-runtime-rule-lowering.md`
 
 Compiler remains responsible for:
 
@@ -20,15 +22,16 @@ Compiler remains responsible for:
 
 Homey adapter becomes responsible for:
 
-- curation schema (runtime patch format)
-- patch storage
-- patch application semantics
+- curation schema (runtime override format)
+- curation storage
+- override-to-rule lowering semantics
+- runtime curation apply semantics
 - curation UX/workflow
 
 ## Goals (v1)
 
 - Let users correct mappings in the Homey app without rebuilding compiler outputs
-- Keep runtime behavior deterministic (patches apply to explicit targets only)
+- Keep runtime behavior deterministic (curation applies to explicit targets only)
 - Preserve auditability (what changed, why, when)
 - Maintain a strict compiler/adapter boundary
 - Support both:
@@ -40,7 +43,7 @@ Homey adapter becomes responsible for:
 - User-authored rule DSL in Homey UI
 - Runtime inference/scoring engine
 - Arbitrary code/transforms in curation
-- Compiler-side patch application
+- Compiler-side curation application
 - Full curation UI polish (basic workflow first)
 
 ## Ownership Boundary (Decision Locked)
@@ -54,32 +57,32 @@ Homey adapter becomes responsible for:
 ### Homey Adapter (new)
 
 - Defines runtime curation schema
-- Stores patch sets
-- Applies patches to compiled profiles before runtime execution
+- Stores curation override sets
+- Lowers overrides to runtime rules and executes runtime curation against compiled profiles
 - Surfaces curation diagnostics to users/admins
-- Handles migration/versioning of adapter-owned patch schema
+- Handles migration/versioning of adapter-owned curation schema
 
 ## Runtime Curation Model (v1)
 
-### Patching Strategy
+### Apply Strategy
 
-Patch the compiled profile (not raw Z-Wave facts, not rules).
+Apply curation to compiled profiles (not raw Z-Wave facts).
 
 Runtime flow:
 
 1. Load compiled profile
 2. Apply adapter generic inference (`fill`-oriented cleanup)
-3. Apply curation patches (final authority)
+3. Apply curation overrides/rules (final authority)
 4. Execute final profile
 
-### Patch Targeting (device selection)
+### Targeting (device selection)
 
-Each patch targets one device by:
+Each curation entry targets one device by:
 
 - `catalogId` (preferred when available)
 - or `diagnosticDeviceKey` (fallback for unknown devices)
 
-### Allowed Patch Scope (v1)
+### Allowed Curation Scope (v1)
 
 #### Device-level
 
@@ -100,91 +103,101 @@ Each patch targets one device by:
 
 ### Explicitly Out of Scope (v1)
 
-- patching provenance internals directly
-- patching arbitrary nested fields by JSONPath
+- overriding provenance internals directly
+- arbitrary nested writes by JSONPath
 - changing compiler confidence flags directly
-- patching rule layer semantics
+- overriding rule layer semantics
 
-## Patch Schema (Adapter-owned, v1)
+## Curation Data Model (Adapter-owned, v1 direction)
 
-Use a versioned JSON format in the Homey adapter.
+Use a versioned JSON format in the Homey adapter with materialized per-target overrides.
 
-### Top-level
+Decision locked:
 
-- `schemaVersion` (e.g. `homey-runtime-curation/v1`)
+- materialized override state per target is the v1 direction
+- exact stored field contract is deferred until adapter implementation
+- do not lock operation-log patch shape at compiler phase
+
+### Top-level (conceptual)
+
+- `schemaVersion` (e.g. `homey-curation/v1`)
 - `updatedAt`
-- `patches[]`
+- `entries[]`
 
-### Patch
+### Entry (conceptual)
 
-- `patchId`
 - `targetDevice`
   - `catalogId?`
   - `diagnosticDeviceKey?`
-- `operations[]`
+- `overrides`
 - `note?`
 - `updatedAt?`
 
-### Operations
+### Override scope (conceptual)
 
-Allowed ops:
+Use structured override domains (not arbitrary JSON pointer writes):
 
-- `replace`
-- `add`
-- `remove`
-- `disable`
+- device classification/identity fields
+- capability mapping/flags fields
+- controlled collection add/remove intents (`capabilities`, `subscriptions`, `ignoredValues`)
 
-Operation shape:
+## Override-to-Rule Lowering Contract (v1)
 
-- `op`
-- `target`
-- `value?` (required for `replace`/`add`, disallowed for `disable`, optional for `remove`)
+Decision locked:
 
-### Target model (structured, not string paths)
+- persisted curation in Homey settings is materialized overrides
+- adapter lowers overrides to an in-memory runtime curation ruleset
+- lowered runtime curation rules run after generic runtime rules (curation wins)
+- lowered rules are derived execution artifacts and are not persisted as source-of-truth state
 
-Use structured targets (not raw JSON pointers) for safety:
+Lowering mapping (conceptual):
 
-- `device.classification.homeyClass`
-- `device.classification.driverTemplateId`
-- `capability:{capabilityId}.inboundMapping`
-- `capability:{capabilityId}.outboundMapping`
-- `capability:{capabilityId}.flags`
-- `profile.capabilities`
-- `profile.subscriptions`
-- `profile.ignoredValues`
+- `overrides.deviceIdentity.homeyClass` -> `device-identity` action (`replace`)
+- `overrides.deviceIdentity.driverTemplateId` -> `device-identity` action (`replace`)
+- `overrides.capabilities.{id}.inboundMapping` -> capability inbound mapping action (`replace`)
+- `overrides.capabilities.{id}.outboundMapping` -> capability outbound mapping action (`replace`)
+- `overrides.capabilities.{id}.flags` -> capability flags action (`replace`)
+- collection add/remove intents -> capability/subscription/ignored-value collection actions
 
-## Patch Apply Helper (Adapter module)
+Determinism requirements:
+
+- stable lowering output for the same curation input
+- stable rule IDs derived from target + override path
+- invalid override fields are skipped and surfaced in diagnostics
+
+## Curation Apply Helper (Adapter module)
 
 ### Responsibility
 
 Pure function (or near-pure helper) in the Homey adapter layer:
 
-- input: compiled profile + matching patch set
-- output: patched profile + application report
+- input: compiled profile + matching curation entry set
+- output: overridden profile + application report
 
 ### Behavior (v1)
 
-- Apply patches in deterministic order:
-  - patch order in storage
-  - operation order within patch
-- Validate targets before mutation
-- Record skipped operations (missing capability, invalid target, duplicate add, etc.)
+- Apply curation entries in deterministic order
+- Lower entries into runtime curation rules
+- Execute lowered rules via shared rules engine semantics
+- Validate override targets before/while lowering
+- Record skipped/invalid override fields (missing capability, invalid target domain, duplicate add/remove intent, etc.)
 - Preserve provenance by adding user-curation provenance records / supersedes references (adapter-defined)
 - Never mutate original compiled profile in place
 
 ### Return type (conceptual)
 
 - `profile`
-- `appliedOps[]`
-- `skippedOps[]`
+- `loweredRules[]` (optional diagnostics shape)
+- `appliedOverrides[]`
+- `skippedOverrides[]`
 - `errors[]`
 - `provenanceUpdates[]` (or embedded only)
 
 ### Error posture
 
-- Invalid stored patch schema -> reject patch set and log clearly
-- Valid patch op but non-applicable target -> skip + report (not fatal)
-- Fatal apply bug -> fail safe (use unpatched compiled profile + log)
+- Invalid stored curation schema -> reject curation set and log clearly
+- Valid entry but non-applicable target/field -> skip + report (not fatal)
+- Fatal apply bug -> fail safe (use base compiled profile + log)
 
 ## Persistence Model (v1)
 
@@ -194,8 +207,8 @@ Decision locked:
 
 Store:
 
-- versioned full patch set JSON (for example key `curation.v1` + schema version)
-- optional metadata per patch (author, last edited UI version)
+- versioned full curation set JSON (for example key `curation.v1` + schema version)
+- optional metadata per entry (author, last edited UI version)
 
 Optional later:
 
@@ -204,10 +217,10 @@ Optional later:
 
 ### Migration
 
-- Patch schema is versioned
+- Curation schema is versioned
 - storage is accessed through an adapter interface (`loadCuration`, `saveCuration`) to allow backend migration in future versions
 - Adapter owns migrations (e.g. `v1 -> v2`)
-- Compiler version upgrades should not require patch rewrites unless compiled profile target fields change
+- Compiler version upgrades should not require curation rewrites unless compiled profile target fields change
 
 ## Adapter Integration Flow (Runtime)
 
@@ -217,18 +230,19 @@ Optional later:
 - `catalogId` if available
 - else `diagnosticDeviceKey`
 
-3. Load matching curation patches from Homey storage
-4. Validate patch schema
-5. Apply patch helper
-6. Use patched profile for:
+3. Load matching curation overrides from Homey storage
+4. Validate curation schema
+5. Lower overrides -> runtime curation rules
+6. Execute rules engine in runtime order (generic first, curation second)
+7. Use resulting runtime profile for:
 
 - inbound updates (ZWJS -> Homey)
 - outbound commands (Homey -> ZWJS)
 
-7. Surface curation diagnostics in logs/UI if:
+8. Surface curation diagnostics in logs/UI if:
 
-- skipped ops
-- invalid patch set
+- skipped override fields
+- invalid curation set
 - target mismatch after compiler profile changes
 
 ## Diagnostics & UX (v1 Minimal)
@@ -236,16 +250,16 @@ Optional later:
 ### Must-have diagnostics
 
 - “Curation applied” summary per device
-- skipped op reasons
-- invalid patch schema errors
+- skipped override reasons
+- invalid curation schema errors
 - target not found warnings
 
 ### Nice-to-have (later)
 
 - preview diff before apply
 - “reset curation for device”
-- export/import patch set
-- patch provenance timeline
+- export/import curation set
+- curation provenance timeline
 
 No seed generator needed in v1.
 
@@ -253,23 +267,22 @@ No seed generator needed in v1.
 
 ### 1) Schema validation tests
 
-- valid patch set accepted
-- invalid op/target/value combos rejected
+- valid curation set accepted
+- invalid override target/value combos rejected
 - missing target device identity rejected
 
-### 2) Apply helper tests (core)
+### 2) Lowering + apply helper tests (core)
 
 - replace device class/template
 - replace capability inbound/outbound mapping
 - replace capability flags
 - add/remove profile collection entries
-- disable mapping/flag semantics
-- missing capability target -> skipped op
+- missing capability target -> skipped override
 
 ### 3) Determinism tests
 
-- patch ordering produces stable result
-- repeated apply on same input patch set yields same result
+- lowering from same curation input produces stable runtime rules
+- repeated apply on same input curation set yields same result
 - original compiled profile object remains unchanged
 
 ### 4) Provenance tests
@@ -279,49 +292,48 @@ No seed generator needed in v1.
 
 ### 5) Integration tests (adapter-level)
 
-- patched profile actually changes runtime mapping behavior
+- curated runtime profile actually changes runtime mapping behavior
 - outbound mapping correction affects command execution target
-- invalid patch set falls back safely to unpatched profile
+- invalid curation set falls back safely to base compiled profile
 
 ## Acceptance Criteria (v1)
 
-- Adapter-owned patch schema is versioned and documented
-- Patch validation exists with clear errors
-- Patch apply helper exists and is unit-tested
-- Adapter applies patches before executing compiled profiles
-- Skipped/failing patch operations are observable in diagnostics
-- Compiler remains unchanged in responsibility (no patch apply logic in compiler package)
+- Adapter-owned curation schema is versioned and documented
+- Curation validation exists with clear errors
+- Override-to-rule lowering + apply helper exist and are unit-tested
+- Adapter applies curation (via runtime lowering) before executing compiled profiles
+- Skipped/failing curation fields are observable in diagnostics
+- Compiler remains unchanged in responsibility (no runtime curation apply logic in compiler package)
 - Docs and roadmap reflect compiler/adapter boundary clearly
 
 ## Implementation Phases (for adapter curation)
 
 ### Phase A — Schema + Validation
 
-- Define `homey-runtime-curation/v1` schema/types
+- Define `homey-curation/v1` schema/types
 - Implement validator
 - Unit tests for valid/invalid schemas
 
-### Phase B — Patch Apply Helper (Core)
+### Phase B — Override Lowering + Apply Helper (Core)
 
-- Implement pure apply helper for replace ops on device/capability slots
-- Add apply report (`applied/skipped/errors`)
+- Implement deterministic override-to-rule lowering
+- Implement apply helper/report (`applied/skipped/errors`)
 - Unit tests
 
-### Phase C — Collection Ops + Disable Semantics
+### Phase C — Collection Overrides
 
 - Add `add/remove` for profile collections
-- Define and implement `disable` behavior clearly
 - Unit tests for edge cases
 
 ### Phase D — Homey Storage Integration
 
-- Persist patch set in Homey settings/storage
+- Persist curation set in Homey settings/storage
 - Load/validate/apply at adapter runtime
 - Safe fallback behavior + diagnostics
 
 ### Phase E — Minimal Curation Admin Flow
 
-- Basic internal/admin-facing way to inspect and edit patches (CLI/log/manual JSON first if needed)
+- Basic internal/admin-facing way to inspect and edit curation entries (CLI/log/manual JSON first if needed)
 - Optional UI later
 
 ## Repo Placement (recommended)
@@ -330,8 +342,9 @@ Since this is adapter-owned:
 
 - `co.lazylabs.zwavejs2homey/src/curation/` (or similar inside app package)
   - `types.ts`
-  - `validate-patch.ts`
-  - `apply-patch.ts`
+  - `validate-curation.ts`
+  - `lower-curation-to-rules.ts`
+  - `apply-curation.ts`
   - `storage.ts`
   - `tests/` (or app test folder)
 
@@ -343,13 +356,13 @@ But v1 should stay close to the Homey app.
 
 ## Risks / Tradeoffs
 
-- If patch scope is too broad, runtime curation becomes a second rule engine
-- If patch scope is too narrow, users can’t fix real issues without compiler changes
-- Compiler profile schema changes may require adapter patch migrations
+- If override scope is too broad, runtime curation becomes a second rule engine
+- If override scope is too narrow, users can’t fix real issues without compiler changes
+- Compiler profile schema changes may require adapter curation migrations
 - Provenance handling can get messy if not defined early (keep it simple in v1)
 
 ## Recommended First Slice (immediately actionable)
 
-1. Add adapter curation types + schema validation (`homey-runtime-curation/v1`)
+1. Add adapter curation types + schema validation (`homey-curation/v1`)
 2. Unit tests for schema validation only
 3. Update plans/docs to reference this adapter plan as the owner of runtime curation

@@ -241,8 +241,10 @@ See `CONTRIBUTING.md` for code + rule/profile contribution workflow, evidence ex
   - provenance and diagnostics
 - Homey adapter owns:
   - runtime curation behavior
-  - patch storage/application semantics
+  - curation storage/application semantics
   - v1 persistence backend: `this.homey.settings` with versioned curation payloads
+  - v1 curation model direction: materialized per-target overrides (final schema fields deferred to adapter implementation phase)
+  - v1 execution direction: lower overrides into in-memory runtime rules and execute through shared rules-engine semantics
   - runtime execution of compiled inbound/outbound mappings
 
 ## Where to look next

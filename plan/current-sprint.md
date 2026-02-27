@@ -374,6 +374,10 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - selected `this.homey.settings` as the single persistence backend for adapter curation deltas
     - documented versioned payload policy (`curation.v1`) and adapter-owned migration expectation
     - recorded backend abstraction expectation (`loadCuration`/`saveCuration`) for future backend swap without apply-logic churn
+83. Locked Homey adapter curation execution direction for v1:
+    - curation source-of-truth remains persisted materialized overrides
+    - adapter lowers overrides into in-memory runtime curation rules at runtime
+    - runtime execution reuses rules engine semantics (generic first, curation second)
 
 ## Next Tasks
 

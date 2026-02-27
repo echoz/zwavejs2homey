@@ -107,9 +107,10 @@
 - [ ] Define first supported Homey device/capability vertical slice using compiled profiles
 - [x] Draft unified ZWJS Explorer + Curation TUI MVP spec (`plan/tui-explorer-curation-spec.md`)
 - [x] Lock adapter curation persistence v1 policy: `this.homey.settings` + versioned payloads (`docs/decisions/0010-homey-adapter-curation-storage-v1.md`)
+- [x] Lock adapter curation execution direction: persist materialized overrides, lower to runtime rules, execute with shared engine order semantics (`docs/decisions/0012-homey-curation-execution-via-runtime-rule-lowering.md`)
 - [ ] Implement adapter execution of inbound/outbound mappings
 - [ ] Device lifecycle/sync (discovery, create/update, mapping diagnostics)
-- [ ] User curation patch application in Homey runtime
+- [ ] User curation application in Homey runtime
 
 ## Phase 5: Reliability + UX
 
