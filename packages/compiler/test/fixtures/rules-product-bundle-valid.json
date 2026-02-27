@@ -1,0 +1,52 @@
+{
+  "schemaVersion": "product-rules/v1",
+  "name": "Leviton DZ15S",
+  "target": {
+    "manufacturerId": 29,
+    "productType": 13313,
+    "productId": 1
+  },
+  "rules": [
+    {
+      "ruleId": "product-switch-identity",
+      "value": {
+        "commandClass": 37,
+        "property": "currentValue",
+        "readable": true
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "mode": "replace",
+          "homeyClass": "socket",
+          "driverTemplateId": "product-leviton-switch"
+        },
+        {
+          "type": "capability",
+          "mode": "replace",
+          "capabilityId": "onoff",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 37,
+              "endpoint": 0,
+              "property": "currentValue"
+            }
+          },
+          "outboundMapping": {
+            "kind": "set_value",
+            "target": {
+              "commandClass": 37,
+              "endpoint": 0,
+              "property": "targetValue"
+            }
+          },
+          "flags": {
+            "readable": true,
+            "writeable": true
+          }
+        }
+      ]
+    }
+  ]
+}

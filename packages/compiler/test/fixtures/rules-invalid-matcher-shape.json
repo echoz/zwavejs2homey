@@ -3,17 +3,17 @@
     "ruleId": "invalid-matcher-shape",
     "layer": "project-product",
     "device": {
-      "deviceClassGeneric": "Multilevel Switch"
+      "deviceClassGeneric": [123]
     },
     "value": {
-      "commandClass": 38,
+      "commandClass": "38",
       "property": ["currentValue"]
     },
     "constraints": {
       "requiredValues": [
         {
           "commandClass": [38],
-          "property": "targetValue"
+          "property": { "name": "targetValue" }
         }
       ]
     },

@@ -6,7 +6,11 @@ const fs = require('node:fs') as {
 
 import type { MappingRule } from '../rules/types';
 import { loadHaDerivedGeneratedRuleArtifact } from '../importers/ha/generated-rule-artifact';
-import { RuleFileLoadError, validateJsonRuleArray } from './rule-validation';
+import {
+  RuleFileLoadError,
+  validateJsonRuleArray,
+  validateJsonRuleArrayWithOptions,
+} from './rule-validation';
 import { getRuleLayerOrder } from './layer-semantics';
 
 export class RuleSetLoadError extends Error {
@@ -37,7 +41,139 @@ export interface LoadedRuleSetManifest {
   duplicateRuleIds: string[];
 }
 
-export function loadJsonRuleFile(filePath: string): MappingRule[] {
+interface ProductRulesBundleV1Target {
+  manufacturerId: number;
+  productType: number;
+  productId: number;
+}
+
+interface ProductRulesBundleV1 {
+  schemaVersion: 'product-rules/v1';
+  name?: string;
+  target: ProductRulesBundleV1Target;
+  rules: unknown[];
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function parseProductRulesBundleV1(
+  parsed: unknown,
+  filePath: string,
+  options?: {
+    declaredLayer?: MappingRule['layer'];
+  },
+): MappingRule[] {
+  if (!isObject(parsed)) {
+    throw new RuleFileLoadError('product-rules/v1 file must be a JSON object', filePath);
+  }
+
+  if (options?.declaredLayer && options.declaredLayer !== 'project-product') {
+    throw new RuleFileLoadError(
+      `product-rules/v1 file can only be loaded with manifest layer "project-product" (got "${options.declaredLayer}")`,
+      filePath,
+    );
+  }
+
+  const allowedTopLevelKeys = new Set(['schemaVersion', 'name', 'target', 'rules']);
+  for (const key of Object.keys(parsed)) {
+    if (!allowedTopLevelKeys.has(key)) {
+      throw new RuleFileLoadError(
+        `product-rules/v1 file has unsupported top-level field "${key}"`,
+        filePath,
+      );
+    }
+  }
+
+  if (parsed.schemaVersion !== 'product-rules/v1') {
+    throw new RuleFileLoadError('schemaVersion must be "product-rules/v1"', filePath);
+  }
+  if (
+    parsed.name !== undefined &&
+    (typeof parsed.name !== 'string' || parsed.name.trim().length === 0)
+  ) {
+    throw new RuleFileLoadError(
+      'product-rules/v1 name must be a non-empty string when provided',
+      filePath,
+    );
+  }
+
+  const target = parsed.target;
+  if (!isObject(target)) {
+    throw new RuleFileLoadError('product-rules/v1 target must be an object', filePath);
+  }
+  for (const key of Object.keys(target)) {
+    if (!['manufacturerId', 'productType', 'productId'].includes(key)) {
+      throw new RuleFileLoadError(
+        `product-rules/v1 target has unsupported field "${key}"`,
+        filePath,
+      );
+    }
+  }
+
+  const hasValidTargetId = (value: unknown): value is number =>
+    typeof value === 'number' && Number.isInteger(value) && value >= 0;
+
+  if (!hasValidTargetId(target.manufacturerId)) {
+    throw new RuleFileLoadError(
+      'product-rules/v1 target.manufacturerId must be a non-negative integer',
+      filePath,
+    );
+  }
+  if (!hasValidTargetId(target.productType)) {
+    throw new RuleFileLoadError(
+      'product-rules/v1 target.productType must be a non-negative integer',
+      filePath,
+    );
+  }
+  if (!hasValidTargetId(target.productId)) {
+    throw new RuleFileLoadError(
+      'product-rules/v1 target.productId must be a non-negative integer',
+      filePath,
+    );
+  }
+
+  if (!Array.isArray(parsed.rules)) {
+    throw new RuleFileLoadError('product-rules/v1 rules must be an array', filePath);
+  }
+
+  const expandedRules = parsed.rules.map((rule, index) => {
+    if (!isObject(rule)) {
+      throw new RuleFileLoadError(`product-rules/v1 rules[${index}] must be an object`, filePath);
+    }
+    if (rule.layer !== undefined) {
+      throw new RuleFileLoadError(
+        `product-rules/v1 rules[${index}] must not define layer`,
+        filePath,
+      );
+    }
+    if (rule.device !== undefined) {
+      throw new RuleFileLoadError(
+        `product-rules/v1 rules[${index}] must not define device`,
+        filePath,
+      );
+    }
+    return {
+      ...rule,
+      layer: 'project-product',
+      device: {
+        manufacturerId: [target.manufacturerId],
+        productType: [target.productType],
+        productId: [target.productId],
+      },
+    };
+  });
+
+  return validateJsonRuleArray(expandedRules, filePath);
+}
+
+export function loadJsonRuleFile(
+  filePath: string,
+  options?: {
+    declaredLayer?: MappingRule['layer'];
+  },
+): MappingRule[] {
   let parsed: unknown;
   try {
     parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
@@ -46,6 +182,22 @@ export function loadJsonRuleFile(filePath: string): MappingRule[] {
     throw new RuleFileLoadError(`Failed to read or parse JSON rule file: ${message}`, filePath);
   }
 
+  if (isObject(parsed) && parsed.schemaVersion === 'product-rules/v1') {
+    return parseProductRulesBundleV1(parsed, filePath, options);
+  }
+
+  if (options?.declaredLayer === 'project-product') {
+    throw new RuleFileLoadError(
+      'Manifest layer "project-product" requires schemaVersion "product-rules/v1" bundle files',
+      filePath,
+    );
+  }
+
+  if (options?.declaredLayer) {
+    return validateJsonRuleArrayWithOptions(parsed, filePath, {
+      declaredLayer: options.declaredLayer,
+    });
+  }
   return validateJsonRuleArray(parsed, filePath);
 }
 
@@ -108,7 +260,9 @@ export function loadJsonRuleSetManifest(entries: RuleSetManifestEntry[]): Loaded
     rules:
       entry.kind === 'ha-derived-generated'
         ? loadHaDerivedGeneratedRuleArtifact(entry.filePath).rules
-        : loadJsonRuleFile(entry.filePath),
+        : loadJsonRuleFile(entry.filePath, {
+            declaredLayer: entry.layer,
+          }),
   }));
 
   const ruleIdCounts = new Map<string, number>();

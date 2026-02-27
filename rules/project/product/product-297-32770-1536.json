@@ -1,0 +1,57 @@
+{
+  "schemaVersion": "product-rules/v1",
+  "target": {
+    "manufacturerId": 297,
+    "productType": 32770,
+    "productId": 1536
+  },
+  "rules": [
+    {
+      "ruleId": "product-yale-yrd226-class-and-lock",
+      "value": {
+        "commandClass": [98],
+        "property": ["currentMode"],
+        "metadataType": ["number"],
+        "readable": true
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "mode": "replace",
+          "homeyClass": "lock",
+          "driverTemplateId": "product-yale-lock"
+        },
+        {
+          "type": "capability",
+          "mode": "replace",
+          "capabilityId": "locked",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 98,
+              "endpoint": 0,
+              "property": "currentMode"
+            }
+          },
+          "flags": {
+            "allowMulti": true
+          }
+        },
+        {
+          "type": "capability",
+          "mode": "replace",
+          "capabilityId": "enum_select",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 98,
+              "endpoint": 0,
+              "property": "currentMode"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "name": "Yale YRD226"
+}

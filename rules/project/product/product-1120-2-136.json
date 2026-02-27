@@ -1,0 +1,150 @@
+{
+  "schemaVersion": "product-rules/v1",
+  "target": {
+    "manufacturerId": 1120,
+    "productType": 2,
+    "productId": 136
+  },
+  "rules": [
+    {
+      "ruleId": "product-shelly-wave-plug-us-class-onoff",
+      "value": {
+        "commandClass": [37],
+        "property": ["currentValue"],
+        "readable": true
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "mode": "replace",
+          "homeyClass": "socket",
+          "driverTemplateId": "product-shelly-wave-plug-us"
+        },
+        {
+          "type": "capability",
+          "mode": "replace",
+          "capabilityId": "onoff",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 37,
+              "endpoint": 0,
+              "property": "currentValue"
+            }
+          },
+          "outboundMapping": {
+            "kind": "set_value",
+            "target": {
+              "commandClass": 37,
+              "endpoint": 0,
+              "property": "targetValue"
+            }
+          },
+          "flags": {
+            "readable": true,
+            "writeable": true
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "product-shelly-wave-plug-us-meter-power",
+      "value": {
+        "commandClass": [50],
+        "property": ["value"],
+        "propertyKey": [66049],
+        "readable": true
+      },
+      "actions": [
+        {
+          "type": "capability",
+          "capabilityId": "measure_power",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 50,
+              "endpoint": 0,
+              "property": "value",
+              "propertyKey": 66049
+            }
+          },
+          "flags": {
+            "readable": true,
+            "writeable": false
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "product-shelly-wave-plug-us-meter-energy",
+      "value": {
+        "commandClass": [50],
+        "property": ["value"],
+        "propertyKey": [65537],
+        "readable": true
+      },
+      "actions": [
+        {
+          "type": "capability",
+          "capabilityId": "meter_power",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 50,
+              "endpoint": 0,
+              "property": "value",
+              "propertyKey": 65537
+            }
+          },
+          "flags": {
+            "readable": true,
+            "writeable": false
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "product-shelly-wave-plug-us-remove-meter-reset-button",
+      "value": {
+        "commandClass": [50],
+        "property": ["reset"],
+        "metadataType": ["boolean"]
+      },
+      "actions": [
+        {
+          "type": "remove-capability",
+          "capabilityId": "button_action"
+        }
+      ]
+    },
+    {
+      "ruleId": "product-shelly-wave-plug-us-remove-notification-generic",
+      "value": {
+        "commandClass": [113],
+        "property": ["alarmType"],
+        "metadataType": ["number"]
+      },
+      "actions": [
+        {
+          "type": "remove-capability",
+          "capabilityId": "measure_generic"
+        }
+      ]
+    },
+    {
+      "ruleId": "product-shelly-wave-plug-us-remove-meter-generic",
+      "value": {
+        "commandClass": [50],
+        "property": ["value"],
+        "metadataType": ["number"]
+      },
+      "actions": [
+        {
+          "type": "remove-capability",
+          "capabilityId": "measure_generic"
+        }
+      ]
+    }
+  ],
+  "name": "Shelly Wave Plug US"
+}

@@ -681,12 +681,6 @@ function buildScaffoldResult(artifact, command, filePath, nowDate) {
   const ruleId = `${command.ruleIdPrefix}-${safeSignature}-identity`.toLowerCase();
   const rule = {
     ruleId,
-    layer: 'project-product',
-    device: {
-      manufacturerId: [triple.manufacturerId],
-      productType: [triple.productType],
-      productId: [triple.productId],
-    },
     value: {
       readable: true,
     },
@@ -698,6 +692,16 @@ function buildScaffoldResult(artifact, command, filePath, nowDate) {
         driverTemplateId,
       },
     ],
+  };
+  const templateBundle = {
+    schemaVersion: 'product-rules/v1',
+    ...(command.productName ? { name: command.productName } : {}),
+    target: {
+      manufacturerId: triple.manufacturerId,
+      productType: triple.productType,
+      productId: triple.productId,
+    },
+    rules: [rule],
   };
 
   return {
@@ -713,8 +717,8 @@ function buildScaffoldResult(artifact, command, filePath, nowDate) {
       emptyNodeCount: entry.emptyNodeCount,
       topReason: topReason(entry.actionableReasonCounts),
     },
-    fileHint: `rules/project/product/${command.ruleIdPrefix}-${safeSignature}.json`,
-    templateRules: [rule],
+    fileHint: `rules/project/product/product-${safeSignature}.json`,
+    templateBundle,
   };
 }
 
@@ -732,6 +736,7 @@ export function getUsageText() {
     '',
     '  homey-compile-backlog scaffold --input-file <curation-backlog.json> --signature <manufacturer:productType:productId>',
     '                                [--rule-id-prefix product]',
+    '                                [--product-name "Vendor Model"]',
     '                                [--driver-template-id product-template-id]',
     '                                [--homey-class socket]',
     '                                [--format summary|markdown|json|json-pretty|json-compact]',
@@ -912,6 +917,7 @@ export function parseCliArgs(argv) {
       inputFile,
       signature,
       ruleIdPrefix: flags.get('--rule-id-prefix') ?? 'product',
+      productName: flags.get('--product-name'),
       driverTemplateId: flags.get('--driver-template-id'),
       homeyClass: flags.get('--homey-class'),
       format,
@@ -1058,7 +1064,7 @@ function formatDiffResult(result, format) {
 function formatScaffoldResult(result, format) {
   if (format === 'json' || format === 'json-pretty') return formatJsonPretty(result);
   if (format === 'json-compact') return formatJsonCompact(result);
-  const rulesJson = formatJsonPretty(result.templateRules);
+  const bundleJson = formatJsonPretty(result.templateBundle);
 
   if (format === 'markdown') {
     return [
@@ -1071,7 +1077,7 @@ function formatScaffoldResult(result, format) {
       `- Review nodes: ${result.entry.reviewNodeCount}`,
       '',
       '```json',
-      rulesJson,
+      bundleJson,
       '```',
       '',
     ].join('\n');
@@ -1084,7 +1090,7 @@ function formatScaffoldResult(result, format) {
     `Backlog rank: ${result.entry.rank}`,
     `Review nodes: ${result.entry.reviewNodeCount}`,
     '',
-    rulesJson,
+    bundleJson,
   ].join('\n');
 }
 

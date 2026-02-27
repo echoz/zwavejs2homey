@@ -1,7 +1,6 @@
 [
   {
     "ruleId": "generic-device-class-fill",
-    "layer": "project-generic",
     "value": { "commandClass": [37], "property": ["currentValue"] },
     "actions": [
       {

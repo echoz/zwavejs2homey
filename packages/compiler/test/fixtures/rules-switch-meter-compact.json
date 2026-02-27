@@ -1,0 +1,66 @@
+[
+  {
+    "ruleId": "compact-onoff",
+    "layer": "ha-derived",
+    "value": { "commandClass": 37, "property": "currentValue", "endpoint": 0 },
+    "actions": [
+      {
+        "type": "capability",
+        "capabilityId": "onoff",
+        "inboundMapping": {
+          "kind": "value",
+          "selector": { "commandClass": 37, "endpoint": 0, "property": "currentValue" }
+        }
+      }
+    ]
+  },
+  {
+    "ruleId": "compact-product-identity",
+    "layer": "project-product",
+    "device": {
+      "manufacturerId": 29,
+      "productType": 13313,
+      "productId": 1,
+      "deviceClassGeneric": "Multilevel Switch"
+    },
+    "value": {
+      "commandClass": 38,
+      "property": "currentValue",
+      "propertyKey": null,
+      "metadataType": "number"
+    },
+    "constraints": {
+      "requiredValues": [
+        { "commandClass": 112, "property": "firmwareVersion", "propertyKey": null }
+      ]
+    },
+    "actions": [{ "type": "device-identity", "homeyClass": "light" }]
+  },
+  {
+    "ruleId": "compact-generic-meter-power",
+    "layer": "project-generic",
+    "value": {
+      "commandClass": 50,
+      "property": "value",
+      "propertyKey": 66049,
+      "notPropertyKey": null,
+      "readable": true,
+      "writeable": false
+    },
+    "actions": [
+      {
+        "type": "capability",
+        "capabilityId": "measure_power",
+        "inboundMapping": {
+          "kind": "value",
+          "selector": {
+            "commandClass": 50,
+            "endpoint": 0,
+            "property": "value",
+            "propertyKey": 66049
+          }
+        }
+      }
+    ]
+  }
+]

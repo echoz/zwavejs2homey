@@ -60,6 +60,7 @@ Manifest-scoped compile-time files use context-owned semantics:
 
 - `product-rules/v1` single-target bundle
 - one bundle/file per product triple
+- optional bundle `name` for human-readable product description
 - bundle target is inherited by all contained rules
 - per-rule target override is not allowed
 

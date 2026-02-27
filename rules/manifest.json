@@ -5,7 +5,31 @@
     "layer": "ha-derived"
   },
   {
-    "filePath": "project/product/live-network-overrides.json",
+    "filePath": "project/product/product-1120-2-136.json",
+    "layer": "project-product"
+  },
+  {
+    "filePath": "project/product/product-622-17235-23089.json",
+    "layer": "project-product"
+  },
+  {
+    "filePath": "project/product/product-29-12801-1.json",
+    "layer": "project-product"
+  },
+  {
+    "filePath": "project/product/product-29-65-2.json",
+    "layer": "project-product"
+  },
+  {
+    "filePath": "project/product/product-29-13313-1.json",
+    "layer": "project-product"
+  },
+  {
+    "filePath": "project/product/product-29-66-2.json",
+    "layer": "project-product"
+  },
+  {
+    "filePath": "project/product/product-297-32770-1536.json",
     "layer": "project-product"
   },
   {

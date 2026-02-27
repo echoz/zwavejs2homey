@@ -4,12 +4,20 @@ Product-specific compiler rules live here.
 
 These rules are layered after `ha-derived` and can use `fill`, `augment`, or explicit `replace` semantics.
 
-Current state:
+Authoring format:
 
-- `live-network-overrides.json`
-  - `1120:2:136` (Shelly Wave Plug US): class/onoff normalization + meter power/energy mappings + suppression of noisy HA-derived `button_action`/`measure_generic`
-  - `622:17235:23089` (Springs Window Fashions CSZ1): class/cover position normalization + battery capability preference
-  - `29:12801:1` (Leviton DZ6HD): curated dimmer class/mapping normalization (`homeyClass=light`, `capability=dim`)
-  - `29:65:2` (Leviton ZW6HD): curated dimmer class/mapping normalization (`homeyClass=light`, `capability=dim`)
-  - `29:13313:1` (Leviton DZ15S) + `29:66:2` (Leviton ZW15S): curated switch class/mapping normalization (`homeyClass=socket`, `capability=onoff`)
-  - `297:32770:1536` (Yale YRD226 family): curated lock class/mapping normalization (`homeyClass=lock`, `capabilities=locked, enum_select`)
+- `product-rules/v1` single-target bundles
+- one file per product triple
+- optional top-level `name` provides human-readable product label
+- bundle `target` owns product matching context
+- per-rule `layer`/`device` fields are not part of bundle authoring
+
+Current files:
+
+- `product-1120-2-136.json` (Shelly Wave Plug US)
+- `product-622-17235-23089.json` (Springs Window Fashions CSZ1)
+- `product-29-12801-1.json` (Leviton DZ6HD)
+- `product-29-65-2.json` (Leviton ZW6HD)
+- `product-29-13313-1.json` (Leviton DZ15S)
+- `product-29-66-2.json` (Leviton ZW15S)
+- `product-297-32770-1536.json` (Yale YRD226 family)

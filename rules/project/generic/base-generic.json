@@ -1,7 +1,6 @@
 [
   {
     "ruleId": "generic-switch-binary-onoff",
-    "layer": "project-generic",
     "value": {
       "commandClass": [37],
       "property": ["currentValue"],
@@ -41,7 +40,6 @@
   },
   {
     "ruleId": "generic-switch-multilevel-dim",
-    "layer": "project-generic",
     "value": {
       "commandClass": [38],
       "property": ["currentValue"],
@@ -87,7 +85,6 @@
   },
   {
     "ruleId": "generic-battery-level",
-    "layer": "project-generic",
     "value": {
       "commandClass": [128],
       "property": ["level"],

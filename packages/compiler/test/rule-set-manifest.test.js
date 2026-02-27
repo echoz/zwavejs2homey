@@ -21,6 +21,15 @@ test('loadJsonRuleSetManifest resolves layer metadata for single-layer files', (
   assert.equal(loaded.entries[0].resolvedLayer, 'project-generic');
 });
 
+test('loadJsonRuleSetManifest injects declared layer for no-layer rule files', () => {
+  const rulesFile = path.join(fixturesDir, 'rules-switch-meter-generic-no-layer.json');
+  const loaded = compiler.loadJsonRuleSetManifest([
+    { filePath: rulesFile, layer: 'project-generic' },
+  ]);
+  assert.equal(loaded.entries[0].resolvedLayer, 'project-generic');
+  assert.equal(loaded.entries[0].rules[0].layer, 'project-generic');
+});
+
 test('loadJsonRuleSetManifest rejects empty manifest entries', () => {
   assert.throws(() => compiler.loadJsonRuleSetManifest([]), /at least one entry/i);
 });
@@ -34,12 +43,34 @@ test('loadJsonRuleSetManifest rejects duplicate ruleIds across files', () => {
   );
 });
 
-test('loadJsonRuleSetManifest rejects layer mismatch when declared in manifest', () => {
-  const rulesFile = path.join(fixturesDir, 'rules-switch-meter.json');
+test('loadJsonRuleSetManifest rejects per-rule layer when manifest declares layer', () => {
+  const rulesFile = path.join(fixturesDir, 'rules-switch-meter-generic-onoff-fill.json');
   assert.throws(
     () => compiler.loadJsonRuleSetManifest([{ filePath: rulesFile, layer: 'project-generic' }]),
-    /manifest declares/,
+    /must not define layer when manifest declares/i,
   );
+});
+
+test('loadJsonRuleSetManifest rejects non-bundle file for project-product layer', () => {
+  const rulesFile = path.join(fixturesDir, 'rules-switch-meter.json');
+  assert.throws(
+    () => compiler.loadJsonRuleSetManifest([{ filePath: rulesFile, layer: 'project-product' }]),
+    /requires schemaVersion "product-rules\/v1" bundle files/i,
+  );
+});
+
+test('loadJsonRuleSetManifest accepts product-rules/v1 file for project-product layer', () => {
+  const rulesFile = path.join(fixturesDir, 'rules-product-bundle-valid.json');
+  const loaded = compiler.loadJsonRuleSetManifest([
+    { filePath: rulesFile, layer: 'project-product' },
+  ]);
+  assert.equal(loaded.entries[0].resolvedLayer, 'project-product');
+  assert.equal(loaded.entries[0].rules[0].layer, 'project-product');
+  assert.deepEqual(loaded.entries[0].rules[0].device, {
+    manufacturerId: [29],
+    productType: [13313],
+    productId: [1],
+  });
 });
 
 test('loadJsonRuleSetManifest rejects duplicate manifest file paths', () => {
@@ -51,7 +82,7 @@ test('loadJsonRuleSetManifest rejects duplicate manifest file paths', () => {
 });
 
 test('loadJsonRuleSetManifest rejects out-of-order declared layers', () => {
-  const genericFile = path.join(fixturesDir, 'rules-switch-meter-generic-onoff-fill.json');
+  const genericFile = path.join(fixturesDir, 'rules-switch-meter-generic-no-layer.json');
   const haGeneratedFile = path.join(fixturesDir, 'ha-derived-rules-v1.json');
   assert.throws(
     () =>

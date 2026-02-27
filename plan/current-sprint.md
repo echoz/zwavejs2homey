@@ -363,6 +363,10 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 79. Locked full migration decision for product-rule format:
     - `project-product` compile-time authoring migrates fully to `product-rules/v1` single-target bundles
     - no legacy raw-array product rule authoring path remains as a canonical supported format
+80. Migrated live product overrides to `product-rules/v1` per-target bundles:
+    - replaced `rules/project/product/live-network-overrides.json` with one bundle file per product triple
+    - updated `rules/manifest.json` to enumerate all per-target product bundle files
+    - updated compiler rule loading/validation to enforce manifest-owned layer, product bundle requirements, and bundle target inheritance
 
 ## Next Tasks
 

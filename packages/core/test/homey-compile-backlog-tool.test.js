@@ -269,6 +269,7 @@ test('backlog scaffold command generates a project-product rule template for a s
       inputFile,
       signature: '29:66:2',
       ruleIdPrefix: 'product',
+      productName: 'Leviton ZW15S',
       driverTemplateId: 'product-leviton-switch',
       homeyClass: 'socket',
       format: 'summary',
@@ -277,11 +278,17 @@ test('backlog scaffold command generates a project-product rule template for a s
   );
 
   assert.equal(result.kind, 'scaffold');
-  assert.equal(result.templateRules.length, 1);
-  assert.equal(result.templateRules[0].device.manufacturerId[0], 29);
-  assert.equal(result.templateRules[0].device.productType[0], 66);
-  assert.equal(result.templateRules[0].device.productId[0], 2);
-  assert.equal(result.templateRules[0].actions[0].driverTemplateId, 'product-leviton-switch');
+  assert.equal(result.templateBundle.schemaVersion, 'product-rules/v1');
+  assert.equal(result.templateBundle.name, 'Leviton ZW15S');
+  assert.equal(result.templateBundle.target.manufacturerId, 29);
+  assert.equal(result.templateBundle.target.productType, 66);
+  assert.equal(result.templateBundle.target.productId, 2);
+  assert.equal(result.templateBundle.rules.length, 1);
+  assert.equal(
+    result.templateBundle.rules[0].actions[0].driverTemplateId,
+    'product-leviton-switch',
+  );
+  assert.equal(result.fileHint, 'rules/project/product/product-29-66-2.json');
   assert.match(formatBacklogOutput(result, 'summary'), /File hint:/);
   assert.match(formatBacklogOutput(result, 'markdown'), /# Product Rule Scaffold/);
   assert.doesNotThrow(() => JSON.parse(formatBacklogOutput(result, 'json')));

@@ -11,6 +11,10 @@ export class RuleFileLoadError extends Error {
   }
 }
 
+export interface RuleValidationOptions {
+  declaredLayer?: MappingRule['layer'];
+}
+
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
@@ -47,6 +51,48 @@ function isArrayOfStringNumberOrNull(value: unknown): value is Array<string | nu
     value.length > 0 &&
     value.every((item) => item === null || typeof item === 'string' || typeof item === 'number')
   );
+}
+
+function normalizeNumberList(value: unknown): number[] | undefined {
+  if (typeof value === 'number') {
+    return [value];
+  }
+  if (isArrayOfNumbers(value)) {
+    return value;
+  }
+  return undefined;
+}
+
+function normalizeNonEmptyStringList(value: unknown): string[] | undefined {
+  if (isNonEmptyString(value)) {
+    return [value];
+  }
+  if (isArrayOfNonEmptyStrings(value)) {
+    return value;
+  }
+  return undefined;
+}
+
+function normalizeStringOrNumberList(value: unknown): Array<string | number> | undefined {
+  if (typeof value === 'string' || typeof value === 'number') {
+    return [value];
+  }
+  if (isArrayOfStringOrNumber(value)) {
+    return value;
+  }
+  return undefined;
+}
+
+function normalizeStringNumberOrNullList(
+  value: unknown,
+): Array<string | number | null> | undefined {
+  if (value === null || typeof value === 'string' || typeof value === 'number') {
+    return [value];
+  }
+  if (isArrayOfStringNumberOrNull(value)) {
+    return value;
+  }
+  return undefined;
 }
 
 function isValidValueIdShape(value: unknown): boolean {
@@ -90,12 +136,15 @@ function validateDeviceMatcherShape(
 
   for (const key of ['manufacturerId', 'productType', 'productId'] as const) {
     const value = device[key];
-    if (value !== undefined && !isArrayOfNumbers(value)) {
+    if (value === undefined) continue;
+    const normalized = normalizeNumberList(value);
+    if (!normalized) {
       throw new RuleFileLoadError(
-        `Rule "${ruleId}" device.${key} must be a non-empty number array`,
+        `Rule "${ruleId}" device.${key} must be a number or non-empty number array`,
         filePath,
       );
     }
+    device[key] = normalized;
   }
 
   if (device.firmwareVersionRange !== undefined) {
@@ -130,12 +179,15 @@ function validateDeviceMatcherShape(
 
   for (const key of ['deviceClassGeneric', 'deviceClassSpecific'] as const) {
     const value = device[key];
-    if (value !== undefined && !isArrayOfNonEmptyStrings(value)) {
+    if (value === undefined) continue;
+    const normalized = normalizeNonEmptyStringList(value);
+    if (!normalized) {
       throw new RuleFileLoadError(
-        `Rule "${ruleId}" device.${key} must be a non-empty string array`,
+        `Rule "${ruleId}" device.${key} must be a string or non-empty string array`,
         filePath,
       );
     }
+    device[key] = normalized;
   }
 }
 
@@ -168,44 +220,65 @@ function validateValueMatcherShape(
     }
   }
 
-  if (matcher.commandClass !== undefined && !isArrayOfNumbers(matcher.commandClass)) {
-    throw new RuleFileLoadError(
-      `Rule "${ruleId}" ${label}.commandClass must be a non-empty number array`,
-      filePath,
-    );
+  if (matcher.commandClass !== undefined) {
+    const normalized = normalizeNumberList(matcher.commandClass);
+    if (!normalized) {
+      throw new RuleFileLoadError(
+        `Rule "${ruleId}" ${label}.commandClass must be a number or non-empty number array`,
+        filePath,
+      );
+    }
+    matcher.commandClass = normalized;
   }
-  if (matcher.endpoint !== undefined && !isArrayOfNumbers(matcher.endpoint)) {
-    throw new RuleFileLoadError(
-      `Rule "${ruleId}" ${label}.endpoint must be a non-empty number array`,
-      filePath,
-    );
+  if (matcher.endpoint !== undefined) {
+    const normalized = normalizeNumberList(matcher.endpoint);
+    if (!normalized) {
+      throw new RuleFileLoadError(
+        `Rule "${ruleId}" ${label}.endpoint must be a number or non-empty number array`,
+        filePath,
+      );
+    }
+    matcher.endpoint = normalized;
   }
-  if (matcher.property !== undefined && !isArrayOfStringOrNumber(matcher.property)) {
-    throw new RuleFileLoadError(
-      `Rule "${ruleId}" ${label}.property must be a non-empty string/number array`,
-      filePath,
-    );
+  if (matcher.property !== undefined) {
+    const normalized = normalizeStringOrNumberList(matcher.property);
+    if (!normalized) {
+      throw new RuleFileLoadError(
+        `Rule "${ruleId}" ${label}.property must be a string/number or non-empty string/number array`,
+        filePath,
+      );
+    }
+    matcher.property = normalized;
   }
-  if (matcher.propertyKey !== undefined && !isArrayOfStringNumberOrNull(matcher.propertyKey)) {
-    throw new RuleFileLoadError(
-      `Rule "${ruleId}" ${label}.propertyKey must be a non-empty string/number/null array`,
-      filePath,
-    );
+  if (matcher.propertyKey !== undefined) {
+    const normalized = normalizeStringNumberOrNullList(matcher.propertyKey);
+    if (!normalized) {
+      throw new RuleFileLoadError(
+        `Rule "${ruleId}" ${label}.propertyKey must be a string/number/null or non-empty string/number/null array`,
+        filePath,
+      );
+    }
+    matcher.propertyKey = normalized;
   }
-  if (
-    matcher.notPropertyKey !== undefined &&
-    !isArrayOfStringNumberOrNull(matcher.notPropertyKey)
-  ) {
-    throw new RuleFileLoadError(
-      `Rule "${ruleId}" ${label}.notPropertyKey must be a non-empty string/number/null array`,
-      filePath,
-    );
+  if (matcher.notPropertyKey !== undefined) {
+    const normalized = normalizeStringNumberOrNullList(matcher.notPropertyKey);
+    if (!normalized) {
+      throw new RuleFileLoadError(
+        `Rule "${ruleId}" ${label}.notPropertyKey must be a string/number/null or non-empty string/number/null array`,
+        filePath,
+      );
+    }
+    matcher.notPropertyKey = normalized;
   }
-  if (matcher.metadataType !== undefined && !isArrayOfNonEmptyStrings(matcher.metadataType)) {
-    throw new RuleFileLoadError(
-      `Rule "${ruleId}" ${label}.metadataType must be a non-empty string array`,
-      filePath,
-    );
+  if (matcher.metadataType !== undefined) {
+    const normalized = normalizeNonEmptyStringList(matcher.metadataType);
+    if (!normalized) {
+      throw new RuleFileLoadError(
+        `Rule "${ruleId}" ${label}.metadataType must be a string or non-empty string array`,
+        filePath,
+      );
+    }
+    matcher.metadataType = normalized;
   }
   if (matcher.readable !== undefined && typeof matcher.readable !== 'boolean') {
     throw new RuleFileLoadError(`Rule "${ruleId}" ${label}.readable must be a boolean`, filePath);
@@ -376,12 +449,25 @@ function validateRuleShape(
   rule: unknown,
   filePath: string,
   index: number,
+  options?: RuleValidationOptions,
 ): asserts rule is MappingRule {
   if (!isObject(rule)) {
     throw new RuleFileLoadError(`Rule at index ${index} must be an object`, filePath);
   }
   if (typeof rule.ruleId !== 'string' || rule.ruleId.length === 0) {
     throw new RuleFileLoadError(`Rule at index ${index} is missing a valid ruleId`, filePath);
+  }
+  const declaredLayer = options?.declaredLayer;
+  if (declaredLayer) {
+    if (rule.layer !== undefined) {
+      throw new RuleFileLoadError(
+        `Rule "${String(rule.ruleId)}" must not define layer when manifest declares "${declaredLayer}"`,
+        filePath,
+      );
+    }
+    rule.layer = declaredLayer;
+  } else if (rule.layer === undefined) {
+    throw new RuleFileLoadError(`Rule "${String(rule.ruleId)}" is missing layer`, filePath);
   }
   if (
     rule.layer !== 'ha-derived' &&
@@ -415,5 +501,18 @@ export function validateJsonRuleArray(value: unknown, filePath: string): Mapping
   }
 
   value.forEach((rule, index) => validateRuleShape(rule, filePath, index));
+  return value as MappingRule[];
+}
+
+export function validateJsonRuleArrayWithOptions(
+  value: unknown,
+  filePath: string,
+  options?: RuleValidationOptions,
+): MappingRule[] {
+  if (!Array.isArray(value)) {
+    throw new RuleFileLoadError('Rule file must contain a JSON array of rules', filePath);
+  }
+
+  value.forEach((rule, index) => validateRuleShape(rule, filePath, index, options));
   return value as MappingRule[];
 }

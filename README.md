@@ -95,7 +95,7 @@ This emits a `compiled-homey-profiles/v1` artifact.
 - `npm run compiler:baseline -- --url ws://HOST:PORT --all-nodes --manifest-file rules/manifest.json --emit-curation-backlog --redact-share`
 - `npm run compiler:backlog -- summary --input-file /tmp/compiled-live.curation-backlog.json --format list`
 - `npm run compiler:backlog -- diff --from-file /tmp/baseline.curation-backlog.json --to-file /tmp/current.curation-backlog.json --only worsened --format markdown`
-- `npm run compiler:backlog -- scaffold --input-file /tmp/compiled-live.curation-backlog.json --signature 29:66:2 --format json-pretty`
+- `npm run compiler:backlog -- scaffold --input-file /tmp/compiled-live.curation-backlog.json --signature 29:66:2 --product-name "Leviton ZW15S" --format json-pretty`
 - `npm run compiler:backlog -- next --from-file /tmp/baseline.curation-backlog.json --to-file /tmp/current.curation-backlog.json --only worsened --format summary`
 - `npm run compiler:backlog -- next --from-file /tmp/baseline.curation-backlog.json --to-file /tmp/current.curation-backlog.json --only worsened --candidate-policy curation --format summary`
 - `npm run compiler:backlog -- next --input-file /tmp/current.curation-backlog.json --pick 1 --format markdown`

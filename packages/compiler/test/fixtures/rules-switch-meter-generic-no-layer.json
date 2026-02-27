@@ -1,0 +1,36 @@
+[
+  {
+    "ruleId": "generic-onoff-no-layer",
+    "value": {
+      "commandClass": 37,
+      "property": "currentValue",
+      "readable": true
+    },
+    "actions": [
+      {
+        "type": "capability",
+        "capabilityId": "onoff",
+        "inboundMapping": {
+          "kind": "value",
+          "selector": {
+            "commandClass": 37,
+            "endpoint": 0,
+            "property": "currentValue"
+          }
+        },
+        "outboundMapping": {
+          "kind": "set_value",
+          "target": {
+            "commandClass": 37,
+            "endpoint": 0,
+            "property": "targetValue"
+          }
+        },
+        "flags": {
+          "readable": true,
+          "writeable": true
+        }
+      }
+    ]
+  }
+]

@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "product-rules/v1",
+  "target": {
+    "manufacturerId": 29,
+    "productType": 13313,
+    "productId": 1
+  },
+  "rules": [
+    {
+      "ruleId": "invalid-product-bundle-device",
+      "device": {
+        "manufacturerId": [29],
+        "productType": [13313],
+        "productId": [1]
+      },
+      "value": {
+        "commandClass": 37,
+        "property": "currentValue"
+      },
+      "actions": [
+        {
+          "type": "capability",
+          "capabilityId": "onoff"
+        }
+      ]
+    }
+  ]
+}

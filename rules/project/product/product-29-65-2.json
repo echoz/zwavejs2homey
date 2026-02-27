@@ -1,0 +1,63 @@
+{
+  "schemaVersion": "product-rules/v1",
+  "target": {
+    "manufacturerId": 29,
+    "productType": 65,
+    "productId": 2
+  },
+  "rules": [
+    {
+      "ruleId": "product-leviton-zw6hd-class-and-dim",
+      "value": {
+        "commandClass": [38],
+        "property": ["currentValue"],
+        "readable": true
+      },
+      "actions": [
+        {
+          "type": "device-identity",
+          "mode": "replace",
+          "homeyClass": "light",
+          "driverTemplateId": "product-leviton-dimmer"
+        },
+        {
+          "type": "capability",
+          "mode": "replace",
+          "capabilityId": "dim",
+          "conflict": {
+            "key": "cover.position_control",
+            "mode": "exclusive",
+            "priority": 100
+          },
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 38,
+              "endpoint": 0,
+              "property": "currentValue"
+            },
+            "transformRef": "zwave_level_0_99_to_homey_dim"
+          },
+          "outboundMapping": {
+            "kind": "set_value",
+            "target": {
+              "commandClass": 38,
+              "endpoint": 0,
+              "property": "targetValue"
+            },
+            "transformRef": "homey_dim_to_zwave_level_0_99",
+            "validation": {
+              "min": 0,
+              "max": 1
+            }
+          },
+          "flags": {
+            "readable": true,
+            "writeable": true
+          }
+        }
+      ]
+    }
+  ],
+  "name": "Leviton ZW6HD"
+}

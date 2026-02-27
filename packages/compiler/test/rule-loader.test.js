@@ -14,6 +14,97 @@ test('loadJsonRuleFile loads valid rule arrays', () => {
   assert.equal(rules[0].ruleId, 'ha-onoff');
 });
 
+test('loadJsonRuleFile expands compact scalar matcher syntax to canonical arrays', () => {
+  const filePath = path.join(fixturesDir, 'rules-switch-meter-compact.json');
+  const rules = compiler.loadJsonRuleFile(filePath);
+
+  assert.deepEqual(rules[0].value.commandClass, [37]);
+  assert.deepEqual(rules[0].value.property, ['currentValue']);
+  assert.deepEqual(rules[0].value.endpoint, [0]);
+
+  assert.deepEqual(rules[1].device.manufacturerId, [29]);
+  assert.deepEqual(rules[1].device.productType, [13313]);
+  assert.deepEqual(rules[1].device.productId, [1]);
+  assert.deepEqual(rules[1].device.deviceClassGeneric, ['Multilevel Switch']);
+  assert.deepEqual(rules[1].value.propertyKey, [null]);
+  assert.deepEqual(rules[1].value.metadataType, ['number']);
+  assert.deepEqual(rules[1].constraints.requiredValues[0].commandClass, [112]);
+  assert.deepEqual(rules[1].constraints.requiredValues[0].property, ['firmwareVersion']);
+  assert.deepEqual(rules[1].constraints.requiredValues[0].propertyKey, [null]);
+
+  assert.deepEqual(rules[2].value.propertyKey, [66049]);
+  assert.deepEqual(rules[2].value.notPropertyKey, [null]);
+});
+
+test('loadJsonRuleFile injects manifest-declared layer for no-layer rule files', () => {
+  const filePath = path.join(fixturesDir, 'rules-switch-meter-generic-no-layer.json');
+  const rules = compiler.loadJsonRuleFile(filePath, { declaredLayer: 'project-generic' });
+  assert.equal(rules.length, 1);
+  assert.equal(rules[0].layer, 'project-generic');
+});
+
+test('loadJsonRuleFile rejects per-rule layer when manifest declares layer', () => {
+  const filePath = path.join(fixturesDir, 'rules-switch-meter-generic-onoff-fill.json');
+  assert.throws(
+    () => compiler.loadJsonRuleFile(filePath, { declaredLayer: 'project-generic' }),
+    (error) =>
+      error &&
+      error.filePath === filePath &&
+      /must not define layer when manifest declares/i.test(error.message),
+  );
+});
+
+test('loadJsonRuleFile requires product-rules/v1 for manifest project-product files', () => {
+  const filePath = path.join(fixturesDir, 'rules-switch-meter.json');
+  assert.throws(
+    () => compiler.loadJsonRuleFile(filePath, { declaredLayer: 'project-product' }),
+    (error) =>
+      error &&
+      error.filePath === filePath &&
+      /requires schemaVersion \"product-rules\/v1\" bundle files/i.test(error.message),
+  );
+});
+
+test('loadJsonRuleFile loads product-rules/v1 bundles and expands target into device matcher', () => {
+  const filePath = path.join(fixturesDir, 'rules-product-bundle-valid.json');
+  const rules = compiler.loadJsonRuleFile(filePath);
+  assert.equal(rules.length, 1);
+  assert.equal(rules[0].layer, 'project-product');
+  assert.deepEqual(rules[0].device, {
+    manufacturerId: [29],
+    productType: [13313],
+    productId: [1],
+  });
+});
+
+test('loadJsonRuleFile rejects product-rules/v1 bundle rules with explicit layer', () => {
+  const filePath = path.join(fixturesDir, 'rules-product-bundle-invalid-rule-layer.json');
+  assert.throws(
+    () => compiler.loadJsonRuleFile(filePath),
+    (error) => error && error.filePath === filePath && /must not define layer/i.test(error.message),
+  );
+});
+
+test('loadJsonRuleFile rejects product-rules/v1 bundle rules with explicit device', () => {
+  const filePath = path.join(fixturesDir, 'rules-product-bundle-invalid-rule-device.json');
+  assert.throws(
+    () => compiler.loadJsonRuleFile(filePath),
+    (error) =>
+      error && error.filePath === filePath && /must not define device/i.test(error.message),
+  );
+});
+
+test('loadJsonRuleFile rejects invalid product-rules/v1 bundle name values', () => {
+  const filePath = path.join(fixturesDir, 'rules-product-bundle-invalid-name.json');
+  assert.throws(
+    () => compiler.loadJsonRuleFile(filePath),
+    (error) =>
+      error &&
+      error.filePath === filePath &&
+      /name must be a non-empty string/i.test(error.message),
+  );
+});
+
 test('loadJsonRuleFile rejects invalid rule shapes with file context', () => {
   const filePath = path.join(fixturesDir, 'rules-invalid-shape.json');
   assert.throws(

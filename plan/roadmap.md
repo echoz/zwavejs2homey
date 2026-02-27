@@ -33,7 +33,7 @@
 - [x] Live ZWJS validation path can apply compiled profiles artifact (not on-the-fly compile)
 - [x] Live compiler build/inspect defaults skip controller-like nodes to focus device-profile validation
 - [x] Rule-owned same-selector conflict resolution (`conflict.key/mode/priority`) with deterministic overlap suppression diagnostics
-- [x] First project-product overrides from live validation (`rules/project/product/live-network-overrides.json`) for identified device triples
+- [x] First project-product overrides from live validation for identified device triples (initially in `live-network-overrides.json`, now migrated to `product-rules/v1` per-target bundles)
 - [x] Product-layer capability de-noising action (`remove-capability`) for targeted suppression of noisy inferred capabilities
 - [x] Curate current live-node signatures into product overrides (live validation snapshot on February 25, 2026: `Outcomes: curated=33`)
 - [x] Humanize compiler review diagnostics: actionable review reasons in list output + expanded technical diagnostics in summary/markdown
