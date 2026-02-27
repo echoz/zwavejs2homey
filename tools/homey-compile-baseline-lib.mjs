@@ -48,6 +48,29 @@ function parseOptionalNonNegativeInt(rawValue, flagName) {
   return parsed;
 }
 
+function parsePathFlag(flags, flagName) {
+  const rawValue = flags.get(flagName);
+  if (rawValue === undefined) return undefined;
+  if (!rawValue || rawValue === 'true') {
+    throw new Error(`${flagName} requires a value`);
+  }
+  return resolveFilePath(rawValue);
+}
+
+function makeRedactedReportPath(reportFile) {
+  if (!reportFile) return undefined;
+  if (reportFile.endsWith('.md')) return reportFile.replace(/\.md$/, '.redacted.md');
+  return `${reportFile}.redacted.md`;
+}
+
+function makeRedactedSummaryPath(summaryJsonFile) {
+  if (!summaryJsonFile) return undefined;
+  if (summaryJsonFile.endsWith('.json')) {
+    return summaryJsonFile.replace(/\.json$/, '.redacted.json');
+  }
+  return `${summaryJsonFile}.redacted.json`;
+}
+
 export function getUsageText() {
   return [
     'Usage:',
@@ -60,6 +83,11 @@ export function getUsageText() {
     '                        [--output-dir <plan/baselines>]',
     '                        [--stamp <YYYY-MM-DD>]',
     '                        [--artifact-retention keep|delete-on-pass]',
+    '                        [--redact-share]',
+    '                        [--baseline-redacted-report-file <baseline.validation.redacted.md>]',
+    '                        [--baseline-redacted-summary-json-file <baseline.summary.redacted.json>]',
+    '                        [--recheck-redacted-report-file <recheck.validation.redacted.md>]',
+    '                        [--recheck-redacted-summary-json-file <recheck.summary.redacted.json>]',
     '                        [--gate-profile-file <validation-gates.json>]',
     '                        [--max-review-delta N] [--max-generic-delta N] [--max-empty-delta N]',
     '                        [--fail-on-reason-delta <reason>:<delta> ...]',
@@ -160,6 +188,45 @@ export function parseCliArgs(argv, options = {}) {
     };
   }
 
+  const redactShare = flags.has('--redact-share');
+  let baselineRedactedReportFile;
+  let baselineRedactedSummaryJsonFile;
+  let recheckRedactedReportFile;
+  let recheckRedactedSummaryJsonFile;
+  try {
+    baselineRedactedReportFile = parsePathFlag(flags, '--baseline-redacted-report-file');
+    baselineRedactedSummaryJsonFile = parsePathFlag(flags, '--baseline-redacted-summary-json-file');
+    recheckRedactedReportFile = parsePathFlag(flags, '--recheck-redacted-report-file');
+    recheckRedactedSummaryJsonFile = parsePathFlag(flags, '--recheck-redacted-summary-json-file');
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    return { ok: false, error: reason };
+  }
+
+  if (
+    !redactShare &&
+    (baselineRedactedReportFile ||
+      baselineRedactedSummaryJsonFile ||
+      recheckRedactedReportFile ||
+      recheckRedactedSummaryJsonFile)
+  ) {
+    return {
+      ok: false,
+      error:
+        'Redacted path flags require --redact-share (--baseline-redacted-report-file / --baseline-redacted-summary-json-file / --recheck-redacted-report-file / --recheck-redacted-summary-json-file)',
+    };
+  }
+  if (
+    flags.has('--skip-recheck') &&
+    (recheckRedactedReportFile !== undefined || recheckRedactedSummaryJsonFile !== undefined)
+  ) {
+    return {
+      ok: false,
+      error:
+        '--recheck-redacted-report-file/--recheck-redacted-summary-json-file cannot be used with --skip-recheck',
+    };
+  }
+
   return {
     ok: true,
     command: {
@@ -182,6 +249,11 @@ export function parseCliArgs(argv, options = {}) {
       outputDir,
       stamp,
       artifactRetention,
+      redactShare,
+      baselineRedactedReportFile,
+      baselineRedactedSummaryJsonFile,
+      recheckRedactedReportFile,
+      recheckRedactedSummaryJsonFile,
       maxReviewDelta,
       maxGenericDelta,
       maxEmptyDelta,
@@ -235,6 +307,21 @@ export async function runBaselineWorkflowCommand(command, io = console, deps = {
     recheckCompiled: `${prefix}.recheck.compiled.json`,
     recheckReport: `${prefix}.recheck.validation.md`,
     recheckSummary: `${prefix}.recheck.summary.json`,
+    baselineRedactedReport: command.redactShare
+      ? (command.baselineRedactedReportFile ?? makeRedactedReportPath(`${prefix}.validation.md`))
+      : undefined,
+    baselineRedactedSummary: command.redactShare
+      ? (command.baselineRedactedSummaryJsonFile ??
+        makeRedactedSummaryPath(`${prefix}.summary.json`))
+      : undefined,
+    recheckRedactedReport: command.redactShare
+      ? (command.recheckRedactedReportFile ??
+        makeRedactedReportPath(`${prefix}.recheck.validation.md`))
+      : undefined,
+    recheckRedactedSummary: command.redactShare
+      ? (command.recheckRedactedSummaryJsonFile ??
+        makeRedactedSummaryPath(`${prefix}.recheck.summary.json`))
+      : undefined,
   };
 
   const common = buildCommonValidateArgs(command);
@@ -251,6 +338,15 @@ export async function runBaselineWorkflowCommand(command, io = console, deps = {
     '--artifact-retention',
     command.artifactRetention,
   ];
+  if (command.redactShare) {
+    baselineArgs.push('--redact-share');
+    if (paths.baselineRedactedReport) {
+      baselineArgs.push('--redacted-report-file', paths.baselineRedactedReport);
+    }
+    if (paths.baselineRedactedSummary) {
+      baselineArgs.push('--redacted-summary-json-file', paths.baselineRedactedSummary);
+    }
+  }
 
   io.log(`Baseline workflow stamp: ${command.stamp}`);
   io.log(`Output dir: ${command.outputDir}`);
@@ -283,6 +379,15 @@ export async function runBaselineWorkflowCommand(command, io = console, deps = {
       '--artifact-retention',
       command.artifactRetention,
     ];
+    if (command.redactShare) {
+      recheckArgs.push('--redact-share');
+      if (paths.recheckRedactedReport) {
+        recheckArgs.push('--redacted-report-file', paths.recheckRedactedReport);
+      }
+      if (paths.recheckRedactedSummary) {
+        recheckArgs.push('--redacted-summary-json-file', paths.recheckRedactedSummary);
+      }
+    }
     if (command.gateProfileFile) {
       recheckArgs.push('--gate-profile-file', command.gateProfileFile);
     }
@@ -300,6 +405,18 @@ export async function runBaselineWorkflowCommand(command, io = console, deps = {
   }
 
   io.log(`Baseline summary: ${paths.baselineSnapshot}`);
+  if (command.redactShare && paths.baselineRedactedReport) {
+    io.log(`Baseline redacted report: ${paths.baselineRedactedReport}`);
+  }
+  if (command.redactShare && paths.baselineRedactedSummary) {
+    io.log(`Baseline redacted summary: ${paths.baselineRedactedSummary}`);
+  }
   if (!command.skipRecheck) io.log(`Recheck summary: ${paths.recheckSummary}`);
+  if (!command.skipRecheck && command.redactShare && paths.recheckRedactedReport) {
+    io.log(`Recheck redacted report: ${paths.recheckRedactedReport}`);
+  }
+  if (!command.skipRecheck && command.redactShare && paths.recheckRedactedSummary) {
+    io.log(`Recheck redacted summary: ${paths.recheckRedactedSummary}`);
+  }
   return { paths, baselineResult, recheckResult };
 }

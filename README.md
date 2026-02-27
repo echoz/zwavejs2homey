@@ -88,6 +88,7 @@ This emits a `compiled-homey-profiles/v1` artifact.
 - `npm run compiler:validate-live -- --url ws://HOST:PORT --all-nodes --save-baseline-summary-json-file /tmp/compiled-live.baseline.summary.json --artifact-retention delete-on-pass`
 - `npm run compiler:validate-live -- --url ws://HOST:PORT --all-nodes --summary-json-file /tmp/compiled-live.summary.json --redact-share`
 - `npm run compiler:baseline -- --url ws://HOST:PORT --all-nodes --manifest-file rules/manifest.json`
+- `npm run compiler:baseline -- --url ws://HOST:PORT --all-nodes --manifest-file rules/manifest.json --redact-share`
 
 This runs the canonical live validation loop in one command:
 
@@ -106,6 +107,7 @@ This runs the canonical live validation loop in one command:
 - `--redact-share` writes PR-safe artifacts (`*.redacted.md`, `*.redacted.json`) with URL/path/node identity redaction
 - redacted output paths can also be set explicitly via `--redacted-report-file` and `--redacted-summary-json-file`
 - `compiler:baseline` orchestrates baseline capture + immediate recheck in one command and writes timestamped artifacts under `plan/baselines/` by default
+- `compiler:baseline --redact-share` emits redacted baseline/recheck markdown+summary artifacts in the same run (with optional stage-specific redacted path overrides)
 
 Gate setup guide: `docs/compiler-validation-gates.md`
 

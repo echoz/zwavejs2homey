@@ -294,6 +294,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - redacted markdown hides URL/path/node identifiers while preserving diagnostics structure for review
     - redacted machine summary JSON now emits sanitized source/config paths and URL-safe metadata (`redaction.mode=share`)
     - gate profiles now support redaction output fields (`redactShare`, `redactedReportFile`, `redactedSummaryJsonFile`) with normal CLI precedence
+64. Completed baseline-workflow redacted-share parity slice:
+    - extended `compiler:baseline` with `--redact-share` so baseline capture and recheck can emit share-safe artifacts in one run
+    - added stage-specific redacted output overrides (`--baseline-redacted-report-file`, `--baseline-redacted-summary-json-file`, `--recheck-redacted-report-file`, `--recheck-redacted-summary-json-file`)
+    - baseline wrapper now forwards redaction flags into both internal `compiler:validate-live` stages with deterministic default redacted paths
+    - added parse/orchestration regression coverage for redaction wiring and invalid flag combinations
 
 ## Next Tasks
 

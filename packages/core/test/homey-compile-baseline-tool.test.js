@@ -44,6 +44,11 @@ test('parseCliArgs validates baseline workflow inputs', async () => {
   assert.equal(parsed.command.maxReviewDelta, 0);
   assert.equal(parsed.command.maxGenericDelta, 0);
   assert.equal(parsed.command.maxEmptyDelta, 0);
+  assert.equal(parsed.command.redactShare, false);
+  assert.equal(parsed.command.baselineRedactedReportFile, undefined);
+  assert.equal(parsed.command.baselineRedactedSummaryJsonFile, undefined);
+  assert.equal(parsed.command.recheckRedactedReportFile, undefined);
+  assert.equal(parsed.command.recheckRedactedSummaryJsonFile, undefined);
   assert.equal(parsed.command.skipRecheck, false);
   assert.equal(parsed.command.outputDir.endsWith(path.join('plan', 'baselines')), true);
 
@@ -78,6 +83,53 @@ test('parseCliArgs validates baseline workflow inputs', async () => {
   assert.equal(parsedExplicit.command.maxEmptyDelta, 0);
   assert.deepEqual(parsedExplicit.command.failOnReasonDeltaSpecs, ['known-device-unmapped:0']);
   assert.equal(parsedExplicit.command.skipRecheck, true);
+
+  const parsedRedaction = parseCliArgs([
+    '--url',
+    'ws://x',
+    '--all-nodes',
+    '--redact-share',
+    '--baseline-redacted-report-file',
+    '/tmp/base.redacted.md',
+    '--baseline-redacted-summary-json-file',
+    '/tmp/base.redacted.json',
+    '--recheck-redacted-report-file',
+    '/tmp/recheck.redacted.md',
+    '--recheck-redacted-summary-json-file',
+    '/tmp/recheck.redacted.json',
+  ]);
+  assert.equal(parsedRedaction.ok, true);
+  assert.equal(parsedRedaction.command.redactShare, true);
+  assert.equal(parsedRedaction.command.baselineRedactedReportFile, '/tmp/base.redacted.md');
+  assert.equal(parsedRedaction.command.baselineRedactedSummaryJsonFile, '/tmp/base.redacted.json');
+  assert.equal(parsedRedaction.command.recheckRedactedReportFile, '/tmp/recheck.redacted.md');
+  assert.equal(
+    parsedRedaction.command.recheckRedactedSummaryJsonFile,
+    '/tmp/recheck.redacted.json',
+  );
+
+  assert.equal(
+    parseCliArgs([
+      '--url',
+      'ws://x',
+      '--all-nodes',
+      '--baseline-redacted-report-file',
+      '/tmp/base.redacted.md',
+    ]).ok,
+    false,
+  );
+  assert.equal(
+    parseCliArgs([
+      '--url',
+      'ws://x',
+      '--all-nodes',
+      '--skip-recheck',
+      '--redact-share',
+      '--recheck-redacted-report-file',
+      '/tmp/recheck.redacted.md',
+    ]).ok,
+    false,
+  );
 });
 
 test('runBaselineWorkflowCommand orchestrates baseline capture and recheck', async () => {
@@ -104,6 +156,11 @@ test('runBaselineWorkflowCommand orchestrates baseline capture and recheck', asy
       outputDir: tmpDir,
       stamp: '2026-02-27',
       artifactRetention: 'delete-on-pass',
+      redactShare: false,
+      baselineRedactedReportFile: undefined,
+      baselineRedactedSummaryJsonFile: undefined,
+      recheckRedactedReportFile: undefined,
+      recheckRedactedSummaryJsonFile: undefined,
       maxReviewDelta: 0,
       maxGenericDelta: 0,
       maxEmptyDelta: 0,
@@ -156,6 +213,65 @@ test('runBaselineWorkflowCommand orchestrates baseline capture and recheck', asy
   );
 });
 
+test('runBaselineWorkflowCommand passes redacted output args to validate-live stages', async () => {
+  const { runBaselineWorkflowCommand } = await loadLib();
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zwjs2homey-baseline-redact-'));
+  const parseCalls = [];
+
+  await runBaselineWorkflowCommand(
+    {
+      url: 'ws://x',
+      token: undefined,
+      schemaVersion: 0,
+      allNodes: true,
+      nodeId: undefined,
+      includeValues: 'summary',
+      maxValues: 100,
+      includeControllerNodes: false,
+      manifestFile: '/tmp/manifest.json',
+      rulesFiles: [],
+      catalogFile: undefined,
+      gateProfileFile: undefined,
+      outputDir: tmpDir,
+      stamp: '2026-02-27',
+      artifactRetention: 'delete-on-pass',
+      redactShare: true,
+      baselineRedactedReportFile: undefined,
+      baselineRedactedSummaryJsonFile: undefined,
+      recheckRedactedReportFile: '/tmp/recheck-custom.redacted.md',
+      recheckRedactedSummaryJsonFile: '/tmp/recheck-custom.redacted.json',
+      maxReviewDelta: 0,
+      maxGenericDelta: 0,
+      maxEmptyDelta: 0,
+      failOnReasonDeltaSpecs: [],
+      top: 5,
+      skipRecheck: false,
+      printEffectiveGates: false,
+    },
+    { log: () => {} },
+    {
+      parseValidateLiveCliImpl: (argv) => {
+        parseCalls.push(argv);
+        return { ok: true, command: {} };
+      },
+      runValidateLiveCommandImpl: async () => ({ gateResult: { passed: true } }),
+    },
+  );
+
+  assert.equal(parseCalls.length, 2);
+  assert.equal(parseCalls[0].includes('--redact-share'), true);
+  assert.equal(parseCalls[0].includes('--redacted-report-file'), true);
+  assert.equal(parseCalls[0].includes('--redacted-summary-json-file'), true);
+  assert.equal(
+    parseCalls[0].includes(path.join(tmpDir, '2026-02-27.validation.redacted.md')),
+    true,
+  );
+  assert.equal(parseCalls[0].includes(path.join(tmpDir, '2026-02-27.summary.redacted.json')), true);
+  assert.equal(parseCalls[1].includes('--redact-share'), true);
+  assert.equal(parseCalls[1].includes('/tmp/recheck-custom.redacted.md'), true);
+  assert.equal(parseCalls[1].includes('/tmp/recheck-custom.redacted.json'), true);
+});
+
 test('runBaselineWorkflowCommand supports skip-recheck', async () => {
   const { runBaselineWorkflowCommand } = await loadLib();
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zwjs2homey-baseline-skip-'));
@@ -178,6 +294,11 @@ test('runBaselineWorkflowCommand supports skip-recheck', async () => {
       outputDir: tmpDir,
       stamp: 's',
       artifactRetention: 'delete-on-pass',
+      redactShare: false,
+      baselineRedactedReportFile: undefined,
+      baselineRedactedSummaryJsonFile: undefined,
+      recheckRedactedReportFile: undefined,
+      recheckRedactedSummaryJsonFile: undefined,
       maxReviewDelta: 0,
       maxGenericDelta: 0,
       maxEmptyDelta: 0,
