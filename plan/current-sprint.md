@@ -7,10 +7,10 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 ## In Progress
 
-- Compiler + TUI completion push:
+- Phase 4 TUI completion push (before Homey adapter implementation):
   - finish remaining compiler phase-3 backlog items
   - implement ZWJS Explorer + Curation TUI MVP slices
-  - pause new Homey adapter design decisions until compiler + TUI milestones are complete
+  - pause new Homey adapter design decisions until Phase 4 milestones are complete
 
 ## Recently Completed
 
@@ -445,6 +445,8 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 - Homey compiler architecture and phase progress:
   - `plan/homey-translation-compiler-plan.md`
+- TUI implementation plan (phase 4):
+  - `plan/tui-implementation-plan.md`
 - Current system architecture overview:
   - `docs/architecture.md`
 - Documentation sync contract (readme/plan/docs update expectations):

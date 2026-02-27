@@ -3,8 +3,8 @@
 ## Current Focus (Active)
 
 - [x] Finish remaining Phase 3 compiler backlog (`DSL simplification slice 2` + final review/fix pass)
-- [ ] Implement ZWJS Explorer + Curation TUI MVP slices 1-6 (`plan/tui-explorer-curation-spec.md`)
-- [ ] Hold new Homey adapter design/implementation slices until compiler + TUI checkpoint is complete
+- [ ] Implement Phase 4 ZWJS Explorer + Curation TUI MVP slices 1-6 (`plan/tui-explorer-curation-spec.md`, `plan/tui-implementation-plan.md`)
+- [ ] Hold new Homey adapter design/implementation slices until Phase 4 checkpoint is complete
 
 ## Phase 1: Foundation (Completed)
 
@@ -108,11 +108,21 @@
 - [x] DSL hardening follow-up: strict unknown-field rejection for canonical mapping selector/target/watcher nested shapes
 - [ ] Add second real catalog source adapter when a concrete source format is available
 
-## Phase 4: Homey Adapter MVP (Next Major Area)
+## Phase 4: ZWJS Explorer + Curation TUI (In Progress)
+
+- [x] Draft unified ZWJS Explorer + Curation TUI MVP spec (`plan/tui-explorer-curation-spec.md`)
+- [ ] Implement TUI slice 1: app shell + connect + node list/detail (read-only)
+- [ ] Implement TUI slice 2: signature workspace + compiled inspect view
+- [ ] Implement TUI slice 3: scaffold preview + guarded write flow
+- [ ] Implement TUI slice 4: targeted validate action + result panels
+- [ ] Implement TUI slice 5: optional backlog panel + next-target picker
+- [ ] Implement TUI slice 6: manifest helper + run-log polish
+- [ ] Keep Homey adapter implementation frozen until TUI checkpoint completion
+
+## Phase 5: Homey Adapter MVP (Next Major Area)
 
 - [ ] Start only after compiler runtime-validation readiness milestone is met
 - [ ] Define first supported Homey device/capability vertical slice using compiled profiles
-- [x] Draft unified ZWJS Explorer + Curation TUI MVP spec (`plan/tui-explorer-curation-spec.md`)
 - [x] Lock adapter curation persistence v1 policy: `this.homey.settings` + versioned payloads (`docs/decisions/0010-homey-adapter-curation-storage-v1.md`)
 - [x] Lock adapter curation execution direction: persist materialized overrides, lower to runtime rules, execute with shared engine order semantics (`docs/decisions/0012-homey-curation-execution-via-runtime-rule-lowering.md`)
 - [x] Lock adapter precedence/update direction: instance-scoped curation (`homeyDeviceId`) overrides baseline by default; baseline improvements are surfaced as user-adopted recommendations (`docs/decisions/0013-homey-device-instance-curation-precedence-v1.md`)
@@ -123,7 +133,7 @@
 - [ ] Device lifecycle/sync (discovery, create/update, mapping diagnostics)
 - [ ] User curation application in Homey runtime
 
-## Phase 5: Reliability + UX
+## Phase 6: Reliability + UX
 
 - [ ] Non-production operational validation runs (zniffer/firmware) with captured fixtures
 - [ ] Settings/diagnostics UI for compiler/profile inspection and curation

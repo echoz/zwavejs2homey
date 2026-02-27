@@ -137,6 +137,28 @@ Current implemented foundation in `packages/compiler`:
 Reference plan:
 
 - `plan/homey-translation-compiler-plan.md`
+- `plan/tui-implementation-plan.md`
+
+## Phase 4 TUI Architecture (Planned)
+
+The ZWJS Explorer + Curation TUI is a workflow layer that sits above existing compiler/ZWJS tooling.
+
+Layering contract:
+
+1. view: terminal rendering and input only
+2. presenter: UI business logic, state transitions, view-model mapping
+3. application service: typed use-case wrappers over existing libs/tools
+4. core/tooling: existing compiler/ZWJS domain logic
+
+Data flow:
+
+- intent -> presenter -> application service -> core/tooling -> presenter -> view-model -> view
+
+Guardrails:
+
+- no ZWJS mutation behavior in MVP
+- no compiler semantics changes from TUI work
+- Homey adapter implementation remains paused until Phase 4 is complete
 
 ## Runtime Flow (Target)
 
