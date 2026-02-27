@@ -319,6 +319,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - live inspection now skips non-matching nodes before compile/apply, enabling focused triage on a single product signature
     - live validation passes signature filter through to runtime apply/gate/backlog outputs and annotates report/source metadata
     - expanded parse/runtime regression coverage for signature flag validation, summary-input incompatibility, and inspect/validate wiring
+69. Completed backlog next-target helper slice:
+    - added `compiler:backlog next` with summary mode (`--input-file`) and diff mode (`--from-file` + `--to-file`) to select the next signature for curation work
+    - diff mode defaults to `--only worsened` and supports fallback-to-summary selection (`--fallback summary|none`)
+    - output includes copy/paste scaffold + inspect-live + validate-live command hints derived from backlog source metadata
+    - expanded backlog-tool regression coverage for `next` parse validation, diff/fallback selection behavior, and human-readable output
 
 ## Next Tasks
 

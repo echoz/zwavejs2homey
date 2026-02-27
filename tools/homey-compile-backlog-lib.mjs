@@ -17,6 +17,15 @@ const DIFF_ONLY_FILTERS = new Set([
   'changed',
   'unchanged',
 ]);
+const NEXT_FALLBACK_MODES = new Set(['summary', 'none']);
+const NEXT_FORMATS = new Set([
+  'summary',
+  'list',
+  'markdown',
+  'json',
+  'json-pretty',
+  'json-compact',
+]);
 
 function parseFlagMap(argv) {
   const flags = new Map();
@@ -331,6 +340,277 @@ function buildBacklogDiff(fromArtifact, toArtifact, command, filePathFrom, fileP
   };
 }
 
+function isNextActionableEntry(entry) {
+  if (!entry) return false;
+  if (entry.reviewNodeCount > 0) return true;
+  if (entry.genericNodeCount > 0) return true;
+  if (entry.emptyNodeCount > 0) return true;
+  if (topReason(entry.actionableReasonCounts).length > 0) return true;
+  const pressure =
+    entry.pressure && typeof entry.pressure === 'object' && !Array.isArray(entry.pressure)
+      ? entry.pressure
+      : {};
+  return (
+    normalizeCount(pressure.suppressedFillActionsTotal) > 0 ||
+    normalizeCount(pressure.unmatchedActionsTotal) > 0
+  );
+}
+
+function pickNextEntry(entries, command) {
+  const actionable = entries.filter(isNextActionableEntry);
+  if (actionable.length === 0) {
+    return { candidateCount: 0, selectedEntry: null };
+  }
+  const index = command.pick - 1;
+  if (index >= actionable.length) {
+    throw new Error(`--pick ${command.pick} is out of range (candidates: ${actionable.length})`);
+  }
+  return { candidateCount: actionable.length, selectedEntry: actionable[index] };
+}
+
+function isUsableSourcePath(value) {
+  return typeof value === 'string' && value.length > 0 && !value.includes('REDACTED');
+}
+
+function resolveSourceUrl(source) {
+  const raw = source && typeof source === 'object' ? source.url : undefined;
+  if (typeof raw === 'string' && /^wss?:\/\//.test(raw) && !raw.includes('REDACTED')) {
+    return raw;
+  }
+  return 'ws://HOST:PORT';
+}
+
+function buildSourceScopeArgs(source) {
+  const scope = source && typeof source === 'object' ? source.scope : undefined;
+  if (scope === 'all-nodes') return ['--all-nodes'];
+  if (typeof scope === 'string') {
+    const match = /^node:(\d+)$/.exec(scope);
+    if (match) return ['--node', match[1]];
+  }
+  return ['--all-nodes'];
+}
+
+function buildSourceRuleInputArgs(source) {
+  const mode = source && typeof source === 'object' ? source.ruleInputMode : undefined;
+  const manifestFile = isUsableSourcePath(source?.manifestFile) ? source.manifestFile : undefined;
+  const rulesFiles = Array.isArray(source?.rulesFiles)
+    ? source.rulesFiles.filter(isUsableSourcePath)
+    : [];
+  const compiledFile = isUsableSourcePath(source?.compiledFile) ? source.compiledFile : undefined;
+
+  if ((mode === 'manifest-file' || mode === 'default-manifest') && manifestFile) {
+    return ['--manifest-file', manifestFile];
+  }
+  if (mode === 'rules-files' && rulesFiles.length > 0) {
+    return rulesFiles.flatMap((filePath) => ['--rules-file', filePath]);
+  }
+  if (mode === 'compiled-file' && compiledFile) {
+    return ['--compiled-file', compiledFile];
+  }
+  if (manifestFile) return ['--manifest-file', manifestFile];
+  if (rulesFiles.length > 0) {
+    return rulesFiles.flatMap((filePath) => ['--rules-file', filePath]);
+  }
+  if (compiledFile) return ['--compiled-file', compiledFile];
+  return ['--manifest-file', path.join('rules', 'manifest.json')];
+}
+
+function shellQuote(rawArg) {
+  const arg = String(rawArg ?? '');
+  if (/^[A-Za-z0-9_./:@=,+-]+$/.test(arg)) return arg;
+  return `'${arg.replace(/'/g, `'\\''`)}'`;
+}
+
+function renderCommand(args) {
+  return args.map((arg) => shellQuote(arg)).join(' ');
+}
+
+function buildNextCommandHints(signature, backlogFilePath, source) {
+  const url = resolveSourceUrl(source);
+  const scopeArgs = buildSourceScopeArgs(source);
+  const ruleInputArgs = buildSourceRuleInputArgs(source);
+
+  return {
+    scaffold: renderCommand([
+      'npm',
+      'run',
+      'compiler:backlog',
+      '--',
+      'scaffold',
+      '--input-file',
+      backlogFilePath,
+      '--signature',
+      signature,
+      '--format',
+      'json-pretty',
+    ]),
+    inspectLive: renderCommand([
+      'npm',
+      'run',
+      'compiler:inspect-live',
+      '--',
+      '--url',
+      url,
+      ...scopeArgs,
+      ...ruleInputArgs,
+      '--signature',
+      signature,
+      '--format',
+      'list',
+    ]),
+    validateLive: renderCommand([
+      'npm',
+      'run',
+      'compiler:validate-live',
+      '--',
+      '--url',
+      url,
+      ...scopeArgs,
+      ...ruleInputArgs,
+      '--signature',
+      signature,
+    ]),
+  };
+}
+
+function buildNextResultFromEntry({
+  selectedEntry,
+  command,
+  sourceFilePath,
+  source,
+  selectionMode,
+  fallbackUsed,
+  diffEntry,
+  fromFilePath,
+  toFilePath,
+}) {
+  return {
+    kind: 'next',
+    selectionMode,
+    fallbackUsed,
+    fallbackMode: command.fallback,
+    fromFilePath: fromFilePath ?? null,
+    toFilePath: toFilePath ?? null,
+    sourceFilePath,
+    filter: command.only ?? null,
+    pick: command.pick,
+    selected: {
+      signature: selectedEntry.signature,
+      rank: selectedEntry.rank,
+      nodeCount: selectedEntry.nodeCount,
+      reviewNodeCount: selectedEntry.reviewNodeCount,
+      genericNodeCount: selectedEntry.genericNodeCount,
+      emptyNodeCount: selectedEntry.emptyNodeCount,
+      topReason: topReason(selectedEntry.actionableReasonCounts),
+      pressure: selectedEntry.pressure,
+    },
+    diff: diffEntry
+      ? {
+          status: diffEntry.status,
+          direction: diffEntry.direction,
+          delta: diffEntry.delta,
+        }
+      : null,
+    commands: buildNextCommandHints(selectedEntry.signature, sourceFilePath, source),
+  };
+}
+
+function buildNextFromSummary(artifact, command, filePath) {
+  const entries = sortBacklogEntries(artifact.entries.map(normalizeBacklogEntry));
+  const pick = pickNextEntry(entries, command);
+  if (!pick.selectedEntry) {
+    throw new Error(`No actionable signatures found in backlog: ${filePath}`);
+  }
+  return {
+    ...buildNextResultFromEntry({
+      selectedEntry: pick.selectedEntry,
+      command,
+      sourceFilePath: filePath,
+      source: artifact.source,
+      selectionMode: 'summary',
+      fallbackUsed: false,
+    }),
+    candidateCount: pick.candidateCount,
+  };
+}
+
+function entryMapBySignature(artifact) {
+  return new Map(
+    sortBacklogEntries(artifact.entries.map(normalizeBacklogEntry)).map((entry) => [
+      entry.signature,
+      entry,
+    ]),
+  );
+}
+
+function buildNextFromDiff(fromArtifact, toArtifact, command, fromFilePath, toFilePath) {
+  const diff = buildBacklogDiff(
+    fromArtifact,
+    toArtifact,
+    { ...command, top: Number.MAX_SAFE_INTEGER },
+    fromFilePath,
+    toFilePath,
+  );
+  const toBySignature = entryMapBySignature(toArtifact);
+  const fromBySignature = entryMapBySignature(fromArtifact);
+  const pickIndex = command.pick - 1;
+
+  if (diff.entries.length > 0) {
+    if (pickIndex >= diff.entries.length) {
+      throw new Error(
+        `--pick ${command.pick} is out of range (candidates: ${diff.entries.length})`,
+      );
+    }
+    const diffEntry = diff.entries[pickIndex];
+    const selectedEntry =
+      toBySignature.get(diffEntry.signature) ?? fromBySignature.get(diffEntry.signature);
+    if (!selectedEntry) {
+      throw new Error(`No backlog entry found for signature "${diffEntry.signature}"`);
+    }
+    const sourceFilePath = toBySignature.has(diffEntry.signature) ? toFilePath : fromFilePath;
+    const source = toBySignature.has(diffEntry.signature) ? toArtifact.source : fromArtifact.source;
+    return {
+      ...buildNextResultFromEntry({
+        selectedEntry,
+        command,
+        sourceFilePath,
+        source,
+        selectionMode: 'diff',
+        fallbackUsed: false,
+        diffEntry,
+        fromFilePath,
+        toFilePath,
+      }),
+      candidateCount: diff.entries.length,
+    };
+  }
+
+  if (command.fallback === 'none') {
+    throw new Error(
+      `No diff candidates found for --only ${command.only} and --fallback none (from: ${fromFilePath}, to: ${toFilePath})`,
+    );
+  }
+
+  const summaryEntries = sortBacklogEntries(toArtifact.entries.map(normalizeBacklogEntry));
+  const pick = pickNextEntry(summaryEntries, command);
+  if (!pick.selectedEntry) {
+    throw new Error(`No actionable signatures found in fallback summary backlog: ${toFilePath}`);
+  }
+  return {
+    ...buildNextResultFromEntry({
+      selectedEntry: pick.selectedEntry,
+      command,
+      sourceFilePath: toFilePath,
+      source: toArtifact.source,
+      selectionMode: 'fallback-summary',
+      fallbackUsed: true,
+      fromFilePath,
+      toFilePath,
+    }),
+    candidateCount: pick.candidateCount,
+  };
+}
+
 function parseSignatureTriple(signature) {
   const match = /^(\d+):(\d+):(\d+)$/.exec(signature);
   if (!match) return null;
@@ -418,6 +698,16 @@ export function getUsageText() {
     '                                [--driver-template-id product-template-id]',
     '                                [--homey-class socket]',
     '                                [--format summary|markdown|json|json-pretty|json-compact]',
+    '',
+    '  homey-compile-backlog next --input-file <curation-backlog.json>',
+    '                            [--pick N]',
+    '                            [--format summary|list|markdown|json|json-pretty|json-compact]',
+    '',
+    '  homey-compile-backlog next --from-file <baseline-backlog.json> --to-file <current-backlog.json>',
+    '                            [--only worsened|improved|neutral|added|removed|changed|unchanged|all]',
+    '                            [--fallback summary|none]',
+    '                            [--pick N]',
+    '                            [--format summary|list|markdown|json|json-pretty|json-compact]',
   ].join('\n');
 }
 
@@ -426,8 +716,85 @@ export function parseCliArgs(argv) {
   const { flags, positionals } = parseFlagMap(argv);
   const subcommand = positionals[0];
   if (!subcommand) return { ok: false, error: getUsageText() };
-  if (!['summary', 'diff', 'scaffold'].includes(subcommand)) {
+  if (!['summary', 'diff', 'scaffold', 'next'].includes(subcommand)) {
     return { ok: false, error: `Unsupported backlog subcommand: ${subcommand}` };
+  }
+
+  if (subcommand === 'next') {
+    const format = flags.get('--format') ?? 'summary';
+    if (
+      !NEXT_FORMATS.has(format) &&
+      !(isSupportedDiagnosticFormat(format) && format !== 'ndjson')
+    ) {
+      return { ok: false, error: `Unsupported format for next: ${format}` };
+    }
+
+    let pick;
+    try {
+      pick = parsePositiveInt(flags.get('--pick'), '--pick', 1);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      return { ok: false, error: reason };
+    }
+
+    const inputFile = flags.get('--input-file');
+    const fromFile = flags.get('--from-file');
+    const toFile = flags.get('--to-file');
+    if (inputFile && (fromFile || toFile)) {
+      return {
+        ok: false,
+        error: 'Use either --input-file or --from-file/--to-file for next, not both',
+      };
+    }
+    if (inputFile) {
+      if (flags.has('--only')) {
+        return { ok: false, error: '--only is only supported for diff-based next mode' };
+      }
+      if (flags.has('--fallback')) {
+        return { ok: false, error: '--fallback is only supported for diff-based next mode' };
+      }
+      return {
+        ok: true,
+        command: {
+          subcommand,
+          mode: 'summary',
+          inputFile,
+          pick,
+          format,
+        },
+      };
+    }
+
+    if (!fromFile || !toFile) {
+      return {
+        ok: false,
+        error: 'Provide --input-file or both --from-file and --to-file for next',
+      };
+    }
+    const only = flags.get('--only') ?? 'worsened';
+    if (!DIFF_ONLY_FILTERS.has(only)) {
+      return { ok: false, error: `Unsupported --only for next diff mode: ${only}` };
+    }
+    const fallback = flags.get('--fallback') ?? 'summary';
+    if (!NEXT_FALLBACK_MODES.has(fallback)) {
+      return {
+        ok: false,
+        error: `Unsupported --fallback for next: ${fallback} (expected summary|none)`,
+      };
+    }
+    return {
+      ok: true,
+      command: {
+        subcommand,
+        mode: 'diff',
+        fromFile,
+        toFile,
+        only,
+        fallback,
+        pick,
+        format,
+      },
+    };
   }
 
   const format = flags.get('--format') ?? (subcommand === 'summary' ? 'list' : 'summary');
@@ -673,6 +1040,69 @@ function formatScaffoldResult(result, format) {
   ].join('\n');
 }
 
+function formatNextResult(result, format) {
+  if (format === 'json' || format === 'json-pretty') return formatJsonPretty(result);
+  if (format === 'json-compact') return formatJsonCompact(result);
+  const selected = result.selected ?? {};
+  const diff = result.diff ?? null;
+  const commands = result.commands ?? {};
+  const selectionHeader = `${selected.signature} (rank ${selected.rank}, review ${selected.reviewNodeCount}, generic ${selected.genericNodeCount}, empty ${selected.emptyNodeCount})`;
+
+  if (format === 'markdown') {
+    return [
+      '# Next Curation Target',
+      '',
+      `- Selection mode: ${result.selectionMode}`,
+      `- Fallback mode: ${result.fallbackMode}`,
+      `- Fallback used: ${result.fallbackUsed ? 'yes' : 'no'}`,
+      `- Source backlog: ${result.sourceFilePath}`,
+      result.fromFilePath ? `- From backlog: ${result.fromFilePath}` : null,
+      result.toFilePath ? `- To backlog: ${result.toFilePath}` : null,
+      result.filter ? `- Diff filter: ${result.filter}` : null,
+      `- Candidate count: ${result.candidateCount}`,
+      `- Pick: ${result.pick}`,
+      `- Selected: ${selectionHeader}`,
+      `- Top reason: ${selected.topReason || '-'}`,
+      diff
+        ? `- Diff: status=${diff.status}, direction=${diff.direction}, reviewΔ=${formatSignedDelta(diff.delta?.reviewNodeCount ?? 0)}, genericΔ=${formatSignedDelta(diff.delta?.genericNodeCount ?? 0)}, emptyΔ=${formatSignedDelta(diff.delta?.emptyNodeCount ?? 0)}`
+        : null,
+      '',
+      '## Suggested Commands',
+      '',
+      `- Scaffold rule: \`${commands.scaffold ?? ''}\``,
+      `- Inspect live: \`${commands.inspectLive ?? ''}\``,
+      `- Validate live: \`${commands.validateLive ?? ''}\``,
+      '',
+    ]
+      .filter((line) => line !== null)
+      .join('\n');
+  }
+
+  return [
+    `Selection mode: ${result.selectionMode}`,
+    `Fallback mode: ${result.fallbackMode}`,
+    `Fallback used: ${result.fallbackUsed ? 'yes' : 'no'}`,
+    `Source backlog: ${result.sourceFilePath}`,
+    result.fromFilePath ? `From backlog: ${result.fromFilePath}` : null,
+    result.toFilePath ? `To backlog: ${result.toFilePath}` : null,
+    result.filter ? `Diff filter: ${result.filter}` : null,
+    `Candidate count: ${result.candidateCount}`,
+    `Pick: ${result.pick}`,
+    `Selected: ${selectionHeader}`,
+    `Top reason: ${selected.topReason || '-'}`,
+    diff
+      ? `Diff: status=${diff.status}, direction=${diff.direction}, reviewΔ=${formatSignedDelta(diff.delta?.reviewNodeCount ?? 0)}, genericΔ=${formatSignedDelta(diff.delta?.genericNodeCount ?? 0)}, emptyΔ=${formatSignedDelta(diff.delta?.emptyNodeCount ?? 0)}`
+      : null,
+    '',
+    'Suggested commands:',
+    `  Scaffold rule: ${commands.scaffold ?? ''}`,
+    `  Inspect live: ${commands.inspectLive ?? ''}`,
+    `  Validate live: ${commands.validateLive ?? ''}`,
+  ]
+    .filter((line) => line !== null)
+    .join('\n');
+}
+
 export function runBacklogCommand(command, options = {}) {
   if (command.subcommand === 'summary') {
     const loaded = loadBacklogArtifact(command.inputFile, 'backlog file');
@@ -689,6 +1119,21 @@ export function runBacklogCommand(command, options = {}) {
       toLoaded.filePath,
     );
   }
+  if (command.subcommand === 'next') {
+    if (command.mode === 'summary') {
+      const loaded = loadBacklogArtifact(command.inputFile, 'backlog file');
+      return buildNextFromSummary(loaded.raw, command, loaded.filePath);
+    }
+    const fromLoaded = loadBacklogArtifact(command.fromFile, 'from backlog file');
+    const toLoaded = loadBacklogArtifact(command.toFile, 'to backlog file');
+    return buildNextFromDiff(
+      fromLoaded.raw,
+      toLoaded.raw,
+      command,
+      fromLoaded.filePath,
+      toLoaded.filePath,
+    );
+  }
   const loaded = loadBacklogArtifact(command.inputFile, 'backlog file');
   const nowDate = options.nowDate ?? new Date();
   return buildScaffoldResult(loaded.raw, command, loaded.filePath, nowDate);
@@ -698,5 +1143,6 @@ export function formatBacklogOutput(result, format) {
   if (result.kind === 'summary') return formatSummaryResult(result, format);
   if (result.kind === 'diff') return formatDiffResult(result, format);
   if (result.kind === 'scaffold') return formatScaffoldResult(result, format);
+  if (result.kind === 'next') return formatNextResult(result, format);
   return formatJsonPretty(result);
 }

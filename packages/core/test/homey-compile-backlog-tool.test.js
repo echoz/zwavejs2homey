@@ -108,6 +108,33 @@ test('backlog parseCliArgs validates subcommands, formats, and required flags', 
     ]).ok,
     false,
   );
+  assert.equal(
+    parseCliArgs(['next', '--input-file', 'x.json', '--pick', '2', '--format', 'markdown']).ok,
+    true,
+  );
+  assert.equal(
+    parseCliArgs([
+      'next',
+      '--from-file',
+      'a.json',
+      '--to-file',
+      'b.json',
+      '--only',
+      'worsened',
+      '--fallback',
+      'summary',
+    ]).ok,
+    true,
+  );
+  assert.equal(
+    parseCliArgs(['next', '--input-file', 'x.json', '--from-file', 'a.json', '--to-file', 'b.json'])
+      .ok,
+    false,
+  );
+  assert.equal(
+    parseCliArgs(['next', '--from-file', 'a.json', '--to-file', 'b.json', '--fallback', 'bad']).ok,
+    false,
+  );
 });
 
 test('backlog summary command renders list/markdown/json/ndjson outputs', async () => {
@@ -255,5 +282,135 @@ test('backlog scaffold command generates a project-product rule template for a s
         format: 'summary',
       }),
     /not found/i,
+  );
+});
+
+test('backlog next summary mode selects actionable signature and prints command hints', async () => {
+  const { runBacklogCommand, formatBacklogOutput } = await loadLib();
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zwjs2homey-backlog-next-summary-'));
+  const inputFile = path.join(tmpDir, 'backlog.json');
+  writeBacklogFile(inputFile, [
+    makeBacklogEntry({
+      rank: 1,
+      signature: '1:1:1',
+      reviewNodeCount: 0,
+      genericNodeCount: 0,
+      emptyNodeCount: 0,
+      actionableReasonCounts: {},
+      pressure: {
+        suppressedFillActionsTotal: 0,
+        unmatchedActionsTotal: 0,
+        appliedActionsTotal: 4,
+        unmatchedRatio: 0,
+        highUnmatchedRatioSignalCount: 0,
+      },
+    }),
+    makeBacklogEntry({
+      rank: 2,
+      signature: '29:66:2',
+      reviewNodeCount: 2,
+      genericNodeCount: 2,
+      actionableReasonCounts: { 'known-device-unmapped': 2 },
+    }),
+  ]);
+
+  const result = runBacklogCommand({
+    subcommand: 'next',
+    mode: 'summary',
+    inputFile,
+    pick: 1,
+    format: 'summary',
+  });
+
+  assert.equal(result.kind, 'next');
+  assert.equal(result.selectionMode, 'summary');
+  assert.equal(result.selected.signature, '29:66:2');
+  assert.equal(result.candidateCount, 1);
+  assert.match(result.commands.scaffold, /compiler:backlog -- scaffold/);
+  assert.match(result.commands.inspectLive, /compiler:inspect-live -- --url/);
+  assert.match(result.commands.validateLive, /compiler:validate-live -- --url/);
+  assert.match(formatBacklogOutput(result, 'summary'), /Selected: 29:66:2/);
+  assert.match(formatBacklogOutput(result, 'markdown'), /# Next Curation Target/);
+});
+
+test('backlog next diff mode prefers diff candidates and falls back to summary when diff is empty', async () => {
+  const { runBacklogCommand } = await loadLib();
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zwjs2homey-backlog-next-diff-'));
+  const fromFile = path.join(tmpDir, 'from.json');
+  const toFile = path.join(tmpDir, 'to.json');
+  const toNoDiffFile = path.join(tmpDir, 'to-no-diff.json');
+
+  writeBacklogFile(fromFile, [
+    makeBacklogEntry({
+      rank: 1,
+      signature: '29:66:2',
+      reviewNodeCount: 1,
+      genericNodeCount: 1,
+      nodeCount: 2,
+    }),
+  ]);
+  writeBacklogFile(toFile, [
+    makeBacklogEntry({
+      rank: 1,
+      signature: '29:66:2',
+      reviewNodeCount: 3,
+      genericNodeCount: 2,
+      nodeCount: 2,
+      actionableReasonCounts: { 'known-device-unmapped': 3 },
+    }),
+  ]);
+  writeBacklogFile(toNoDiffFile, [
+    makeBacklogEntry({
+      rank: 1,
+      signature: '29:66:2',
+      reviewNodeCount: 1,
+      genericNodeCount: 1,
+      nodeCount: 2,
+      actionableReasonCounts: { 'known-device-unmapped': 1 },
+    }),
+  ]);
+
+  const diffResult = runBacklogCommand({
+    subcommand: 'next',
+    mode: 'diff',
+    fromFile,
+    toFile,
+    only: 'worsened',
+    fallback: 'summary',
+    pick: 1,
+    format: 'summary',
+  });
+  assert.equal(diffResult.selectionMode, 'diff');
+  assert.equal(diffResult.fallbackUsed, false);
+  assert.equal(diffResult.diff.status, 'changed');
+  assert.equal(diffResult.selected.signature, '29:66:2');
+
+  const fallbackResult = runBacklogCommand({
+    subcommand: 'next',
+    mode: 'diff',
+    fromFile,
+    toFile: toNoDiffFile,
+    only: 'worsened',
+    fallback: 'summary',
+    pick: 1,
+    format: 'summary',
+  });
+  assert.equal(fallbackResult.selectionMode, 'fallback-summary');
+  assert.equal(fallbackResult.fallbackUsed, true);
+  assert.equal(fallbackResult.selected.signature, '29:66:2');
+
+  assert.throws(
+    () =>
+      runBacklogCommand({
+        subcommand: 'next',
+        mode: 'diff',
+        fromFile,
+        toFile: toNoDiffFile,
+        only: 'worsened',
+        fallback: 'none',
+        pick: 1,
+        format: 'summary',
+      }),
+    /No diff candidates found/i,
   );
 });
