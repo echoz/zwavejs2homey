@@ -97,6 +97,7 @@ This runs the canonical live validation loop in one command:
 - `--compiled-file` reuses an existing compiled artifact and skips the build phase
 - `--input-summary-json-file` re-evaluates gates from an existing summary JSON (offline gate tuning; no ZWJS connection)
 - regression deltas are supported with `--baseline-summary-json-file`, `--max-*-delta`, and `--fail-on-reason-delta <reason>:<delta>`
+- when baseline is configured, markdown reports include baseline/delta tables for quick human triage
 
 Gate setup guide: `docs/compiler-validation-gates.md`
 

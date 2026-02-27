@@ -95,6 +95,7 @@ Current implemented foundation in `packages/compiler`:
     - compiled-artifact reuse (`--compiled-file`) to skip build
     - offline summary replay (`--input-summary-json-file`) for gate-only rechecks
     - baseline regression deltas (`--baseline-summary-json-file`, `--max-*-delta`, `--fail-on-reason-delta`)
+    - baseline-enabled markdown reports include delta sections for fast human triage
   - gate calibration/setup playbook lives in `docs/compiler-validation-gates.md`
 - Added compiler artifact build foundation:
   - `compiler:build` emits `compiled-homey-profiles/v1` from compiler device facts files or directly from a live ZWJS instance (`--url` + `--all-nodes`/`--node`) plus layered rules inputs

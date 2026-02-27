@@ -426,6 +426,11 @@ function formatDeltaSummary(deltas) {
   return `review=${deltas.reviewNodes}, generic=${deltas.genericNodes}, empty=${deltas.emptyNodes}`;
 }
 
+function formatSignedDelta(value) {
+  if (typeof value !== 'number' || Number.isNaN(value)) return '';
+  return value > 0 ? `+${value}` : String(value);
+}
+
 function describeRuleSource(command) {
   if (command.ruleInputMode === 'compiled-file') {
     return `compiled-file (${command.compiledFile})`;
@@ -439,7 +444,7 @@ function describeRuleSource(command) {
   return `rules-files (${command.rulesFiles.join(', ')})`;
 }
 
-function formatMarkdownReport(command, summary, generatedAtIso) {
+function formatMarkdownReport(command, summary, generatedAtIso, gateResult) {
   const outcomeRows = [...summary.outcomes.entries()]
     .sort((a, b) => a[0].localeCompare(b[0]))
     .map(([outcome, count]) => [outcome, count]);
@@ -467,6 +472,35 @@ function formatMarkdownReport(command, summary, generatedAtIso) {
         ])
       : [['(none)', '', '', '', '', '']];
 
+  const baselineRows = gateResult?.deltas
+    ? [
+        [
+          'reviewNodes',
+          gateResult?.baseline?.reviewNodes ?? '',
+          summary.reviewNodes,
+          formatSignedDelta(gateResult.deltas.reviewNodes),
+        ],
+        [
+          'genericNodes',
+          gateResult?.baseline?.genericNodes ?? '',
+          gateResult.genericNodes,
+          formatSignedDelta(gateResult.deltas.genericNodes),
+        ],
+        [
+          'emptyNodes',
+          gateResult?.baseline?.emptyNodes ?? '',
+          gateResult.emptyNodes,
+          formatSignedDelta(gateResult.deltas.emptyNodes),
+        ],
+      ]
+    : [];
+  const reasonDeltaRows =
+    gateResult?.deltas && gateResult?.deltas.reasonDeltas
+      ? Object.entries(gateResult.deltas.reasonDeltas)
+          .sort((a, b) => a[0].localeCompare(b[0]))
+          .map(([reason, delta]) => [reason, formatSignedDelta(delta)])
+      : [];
+
   return [
     '# Live Compiler Validation',
     '',
@@ -475,6 +509,9 @@ function formatMarkdownReport(command, summary, generatedAtIso) {
     `- Scope: ${command.allNodes ? 'all-nodes' : `node ${command.nodeId}`}`,
     `- Rule source: ${describeRuleSource(command)}`,
     `- Compiled artifact: ${command.artifactFile}`,
+    ...(command.baselineSummaryJsonFile
+      ? [`- Baseline summary: ${command.baselineSummaryJsonFile}`]
+      : []),
     `- Nodes validated: ${summary.totalNodes}`,
     `- Nodes needing review: ${summary.reviewNodes}`,
     '',
@@ -494,6 +531,17 @@ function formatMarkdownReport(command, summary, generatedAtIso) {
     '',
     renderTable(['Layer:Rule:Slot', 'Suppressed Actions'], suppressedRows),
     '',
+    ...(baselineRows.length > 0
+      ? [
+          '## Baseline Delta',
+          '',
+          renderTable(['Metric', 'Baseline', 'Current', 'Delta'], baselineRows),
+          '',
+        ]
+      : []),
+    ...(reasonDeltaRows.length > 0
+      ? ['## Reason Deltas', '', renderTable(['Reason', 'Delta'], reasonDeltaRows), '']
+      : []),
     '## Node Snapshot',
     '',
     renderTable(['Node', 'Name', 'Class', 'Outcome', 'Confidence', 'Review'], nodeRows),
@@ -1214,7 +1262,7 @@ export async function runValidateLiveCommand(command, io = console, deps = {}) {
 
   const summary = summarizeValidationResults(results, commandWithBaseline.top);
   const gateResult = evaluateValidationGates(commandWithBaseline, summary);
-  const markdown = formatMarkdownReport(commandWithBaseline, summary, generatedAtIso);
+  const markdown = formatMarkdownReport(commandWithBaseline, summary, generatedAtIso, gateResult);
   fs.writeFileSync(commandWithBaseline.reportFile, markdown, 'utf8');
   const machineSummary = buildMachineSummary(
     commandWithBaseline,

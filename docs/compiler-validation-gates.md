@@ -141,6 +141,11 @@ npm run compiler:validate-live -- \
 
 Delta gates fail only when current counts increase above baseline by more than the configured delta.
 
+When baseline mode is enabled for live/compiled validation runs, markdown output also includes:
+
+- `Baseline Delta` table (review/generic/empty baseline vs current vs delta)
+- `Reason Deltas` table for configured reason-delta checks
+
 For fully offline gate tuning (no ZWJS connection), replay gates from an existing summary JSON:
 
 ```bash

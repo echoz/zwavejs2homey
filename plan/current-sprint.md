@@ -270,6 +270,10 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - added delta-gate controls: `--max-review-delta`, `--max-generic-delta`, `--max-empty-delta`, and `--fail-on-reason-delta <reason>:<delta>`
     - gate profile schema now supports baseline/delta config (`max*Delta`, `failOnReasonDeltas`, `baselineSummaryJsonFile`) with CLI override precedence preserved
     - machine summary JSON now includes baseline counts and computed deltas; CLI logs now print baseline source + delta snapshot when enabled
+59. Completed baseline markdown diagnostics slice:
+    - live/compiled validation markdown reports now include `Baseline Delta` and `Reason Deltas` sections when baseline mode is active
+    - report header now includes baseline summary source for traceability
+    - expanded tool regression coverage to assert baseline-delta markdown output shape
 
 ## Next Tasks
 

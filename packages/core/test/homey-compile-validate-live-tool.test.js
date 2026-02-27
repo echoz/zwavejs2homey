@@ -769,6 +769,11 @@ test('runValidateLiveCommand writes machine summary and fails when gates are exc
   assert.equal(fs.existsSync(artifactFile), true);
   assert.equal(fs.existsSync(reportFile), true);
   assert.equal(fs.existsSync(summaryJsonFile), true);
+  const markdown = fs.readFileSync(reportFile, 'utf8');
+  assert.match(markdown, /## Baseline Delta/);
+  assert.match(markdown, /\| reviewNodes \| 0 \| 1 \| \+1 \|/);
+  assert.match(markdown, /## Reason Deltas/);
+  assert.match(markdown, /\| known-device-generic-fallback \| \+1 \|/);
   const summaryJson = JSON.parse(fs.readFileSync(summaryJsonFile, 'utf8'));
   assert.equal(summaryJson.gates.passed, false);
   assert.equal(summaryJson.source.gateProfileFile, '/tmp/gate-profile.json');
