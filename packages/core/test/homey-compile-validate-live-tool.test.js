@@ -60,7 +60,19 @@ test('parseCliArgs validates required live inputs and rules source modes', async
   assert.equal(parsedExplicit.command.rulesFiles.length, 2);
   assert.equal(parsedExplicit.command.top, 7);
   assert.equal(parsedExplicit.command.artifactRetention, 'delete-on-pass');
+  assert.equal(parsedExplicit.command.signature, undefined);
   assert.equal(parsedExplicit.command.printEffectiveGates, false);
+
+  const parsedSignature = parseCliArgs([
+    '--url',
+    'ws://x',
+    '--all-nodes',
+    '--signature',
+    '29:66:2',
+  ]);
+  assert.equal(parsedSignature.ok, true);
+  assert.equal(parsedSignature.command.signature, '29:66:2');
+  assert.equal(parseCliArgs(['--url', 'ws://x', '--all-nodes', '--signature', 'bad']).ok, false);
 
   const parsedRedactShare = parseCliArgs([
     '--url',
@@ -208,6 +220,15 @@ test('parseCliArgs validates required live inputs and rules source modes', async
       '/tmp/compiled-live.summary.json',
       '--url',
       'ws://x',
+    ]).ok,
+    false,
+  );
+  assert.equal(
+    parseCliArgs([
+      '--input-summary-json-file',
+      '/tmp/compiled-live.summary.json',
+      '--signature',
+      '29:66:2',
     ]).ok,
     false,
   );
@@ -439,6 +460,7 @@ test('runValidateLiveCommand writes artifact and markdown summary from live insp
       includeValues: 'summary',
       maxValues: 100,
       includeControllerNodes: false,
+      signature: '29:66:2',
       manifestFile: path.join(fixturesDir, 'rule-manifest-with-ha-generated.json'),
       rulesFiles: [],
       ruleInputMode: 'manifest-file',
@@ -527,6 +549,7 @@ test('runValidateLiveCommand writes artifact and markdown summary from live insp
   assert.equal(fs.existsSync(reportFile), true);
   assert.equal(inspectCommand.compiledFile, artifactFile);
   assert.equal(inspectCommand.format, 'json-compact');
+  assert.equal(inspectCommand.signature, '29:66:2');
 
   const artifact = JSON.parse(fs.readFileSync(artifactFile, 'utf8'));
   assert.equal(artifact.schemaVersion, 'compiled-homey-profiles/v1');
@@ -534,6 +557,7 @@ test('runValidateLiveCommand writes artifact and markdown summary from live insp
   const markdown = fs.readFileSync(reportFile, 'utf8');
   assert.match(markdown, /# Live Compiler Validation/);
   assert.match(markdown, /Nodes validated: 2/);
+  assert.match(markdown, /Signature filter: 29:66:2/);
   assert.match(markdown, /known-device-generic-fallback/);
   assert.match(markdown, /project-product:rule-b/);
   assert.match(markdown, /project-product:rule-b:inboundMapping/);
@@ -1054,6 +1078,7 @@ test('runValidateLiveCommand prints effective gates when requested', async () =>
   assert.match(logs[0], /Effective gates:/);
   const effectiveJson = JSON.parse(logs[0].split('Effective gates:\n', 2)[1]);
   assert.equal(effectiveJson.gateProfileFile, '/tmp/gates.json');
+  assert.equal(effectiveJson.signature, null);
   assert.equal(effectiveJson.thresholds.maxReviewNodes, 5);
   assert.equal(effectiveJson.thresholds.maxGenericNodes, 2);
   assert.equal(effectiveJson.thresholds.maxEmptyNodes, 0);

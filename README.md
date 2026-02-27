@@ -60,6 +60,7 @@ The project is intentionally split into layers:
 
 - `npm run compiler:inspect-live -- --help`
 - `npm run compiler:inspect-live -- --url ws://HOST:PORT --all-nodes --manifest-file <manifest.json> --format list`
+- `npm run compiler:inspect-live -- --url ws://HOST:PORT --all-nodes --manifest-file <manifest.json> --signature 29:66:2 --format list`
 
 Compiled-artifact apply mode is now also supported for runtime-style validation:
 
@@ -88,6 +89,7 @@ This emits a `compiled-homey-profiles/v1` artifact.
 - `npm run compiler:validate-live -- --url ws://HOST:PORT --all-nodes --save-baseline-summary-json-file /tmp/compiled-live.baseline.summary.json --artifact-retention delete-on-pass`
 - `npm run compiler:validate-live -- --url ws://HOST:PORT --all-nodes --summary-json-file /tmp/compiled-live.summary.json --redact-share`
 - `npm run compiler:validate-live -- --url ws://HOST:PORT --all-nodes --curation-backlog-json-file /tmp/compiled-live.curation-backlog.json --redact-share`
+- `npm run compiler:validate-live -- --url ws://HOST:PORT --all-nodes --signature 29:66:2 --manifest-file rules/manifest.json --curation-backlog-json-file /tmp/compiled-live.curation-backlog.json`
 - `npm run compiler:baseline -- --url ws://HOST:PORT --all-nodes --manifest-file rules/manifest.json`
 - `npm run compiler:baseline -- --url ws://HOST:PORT --all-nodes --manifest-file rules/manifest.json --redact-share`
 - `npm run compiler:baseline -- --url ws://HOST:PORT --all-nodes --manifest-file rules/manifest.json --emit-curation-backlog --redact-share`
@@ -105,6 +107,7 @@ This runs the canonical live validation loop in one command:
 - `--print-effective-gates` prints the merged gate/output config (after CLI/profile/default precedence) before execution
 - `--compiled-file` reuses an existing compiled artifact and skips the build phase
 - `--input-summary-json-file` re-evaluates gates from an existing summary JSON (offline gate tuning; no ZWJS connection)
+- `--signature <manufacturerId:productType:productId>` scopes live inspect/validate runs to a single product signature for tight curation iteration
 - regression deltas are supported with `--baseline-summary-json-file`, `--max-*-delta`, and `--fail-on-reason-delta <reason>:<delta>`
 - when baseline is configured, markdown reports include baseline/delta tables for quick human triage
 - `--save-baseline-summary-json-file` writes the current machine summary in baseline-friendly form so refreshing baseline snapshots is one command

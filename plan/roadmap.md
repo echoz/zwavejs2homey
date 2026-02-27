@@ -86,6 +86,7 @@
 - [x] Runtime-validation curation-backlog slice: add `--curation-backlog-json-file` (+ redacted variant) to produce ranked per-signature curation queues from live validation runs
 - [x] Runtime-validation baseline-wrapper backlog parity slice: add `compiler:baseline --emit-curation-backlog` and stage-specific backlog path overrides (including redacted variants)
 - [x] Runtime-validation backlog consumer slice: add `compiler:backlog` (`summary`/`diff`/`scaffold`) to turn backlog artifacts into prioritized curation work queues
+- [x] Runtime-validation signature-targeted loop slice: add `--signature` filtering to `compiler:inspect-live` and `compiler:validate-live` for focused per-product iteration
 - [ ] Decide and document final ownership of generic fallback inference policy (currently leaning Homey adapter-owned)
 - [ ] Add second real catalog source adapter when a concrete source format is available
 

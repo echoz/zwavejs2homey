@@ -314,6 +314,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - summary command supports ranked list/markdown/json/ndjson outputs for quick curation prioritization
     - diff command compares baseline/current backlog artifacts with status+direction deltas (`worsened`, `improved`, `neutral`) and filter support
     - scaffold command emits starter `project-product` identity-rule snippets for a selected product-triple signature
+68. Completed signature-targeted validation loop slice:
+    - added `--signature <manufacturerId:productType:productId>` filter support to `compiler:inspect-live` and `compiler:validate-live`
+    - live inspection now skips non-matching nodes before compile/apply, enabling focused triage on a single product signature
+    - live validation passes signature filter through to runtime apply/gate/backlog outputs and annotates report/source metadata
+    - expanded parse/runtime regression coverage for signature flag validation, summary-input incompatibility, and inspect/validate wiring
 
 ## Next Tasks
 

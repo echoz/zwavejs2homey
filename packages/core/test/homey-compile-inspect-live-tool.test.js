@@ -47,6 +47,22 @@ test('parseCliArgs validates live inspect required inputs and formats', async ()
     ]).ok,
     false,
   );
+  const parsedSignature = parseCliArgs([
+    '--url',
+    'ws://x',
+    '--all-nodes',
+    '--rules-file',
+    'r.json',
+    '--signature',
+    '29:66:2',
+  ]);
+  assert.equal(parsedSignature.ok, true);
+  assert.equal(parsedSignature.command.signature, '29:66:2');
+  assert.equal(
+    parseCliArgs(['--url', 'ws://x', '--all-nodes', '--rules-file', 'r.json', '--signature', 'bad'])
+      .ok,
+    false,
+  );
 
   const parsed = parseCliArgs([
     '--url',
@@ -61,6 +77,7 @@ test('parseCliArgs validates live inspect required inputs and formats', async ()
   assert.equal(parsed.ok, true);
   assert.equal(parsed.command.nodeId, 5);
   assert.equal(parsed.command.includeValues, 'full');
+  assert.equal(parsed.command.signature, undefined);
 });
 
 test('normalizeCompilerDeviceFactsFromZwjsDetail converts zwjs-inspect node detail', async () => {
@@ -225,6 +242,7 @@ test('runLiveInspectCommand preloads rules once and reuses loaded ruleset across
       includeValues: 'summary',
       maxValues: 10,
       includeControllerNodes: false,
+      signature: undefined,
       focus: 'all',
       top: 3,
       show: 'none',
@@ -301,6 +319,7 @@ test('runLiveInspectCommand list output hides technical-only review reasons', as
       includeValues: 'summary',
       maxValues: 10,
       includeControllerNodes: false,
+      signature: undefined,
       focus: 'all',
       top: 3,
       show: 'none',
@@ -367,6 +386,7 @@ test('runLiveInspectCommand skips controller-like nodes by default', async () =>
       includeValues: 'summary',
       maxValues: 10,
       includeControllerNodes: false,
+      signature: undefined,
       focus: 'all',
       top: 3,
       show: 'none',
@@ -494,6 +514,7 @@ test('runLiveInspectCommand applies precompiled artifact when --compiled-file is
       schemaVersion: 0,
       includeValues: 'summary',
       maxValues: 10,
+      signature: undefined,
       focus: 'all',
       top: 3,
       show: 'none',
@@ -545,6 +566,7 @@ test('runLiveInspectCommand summary explain includes conflict suppression detail
       schemaVersion: 0,
       includeValues: 'summary',
       maxValues: 10,
+      signature: undefined,
       focus: 'all',
       top: 3,
       show: 'all',
@@ -617,4 +639,82 @@ test('runLiveInspectCommand summary explain includes conflict suppression detail
   assert.match(logs[0], /Conflict suppression detail:/);
   assert.match(logs[0], /Explain: onoff/);
   assert.match(logs[0], /Conflict wins: 1/);
+});
+
+test('runLiveInspectCommand can filter nodes by product signature', async () => {
+  const { runLiveInspectCommand } = await loadLib();
+  const logs = [];
+  await runLiveInspectCommand(
+    {
+      url: 'ws://x',
+      allNodes: true,
+      nodeId: undefined,
+      manifestFile: undefined,
+      rulesFiles: [path.join(fixturesDir, 'rules-switch-meter.json')],
+      catalogFile: undefined,
+      format: 'list',
+      schemaVersion: 0,
+      includeValues: 'summary',
+      maxValues: 10,
+      includeControllerNodes: false,
+      signature: '29:66:2',
+      focus: 'all',
+      top: 3,
+      show: 'none',
+      explainAll: false,
+      explainOnly: false,
+      homeyClass: undefined,
+      driverTemplateId: undefined,
+    },
+    { log: (line) => logs.push(line) },
+    {
+      connectAndInitializeImpl: async () => ({ stop: async () => {} }),
+      fetchNodesListImpl: async () => [
+        { nodeId: 5, name: 'Kitchen Switch' },
+        { nodeId: 9, name: 'Porch Sensor' },
+      ],
+      fetchNodeDetailsImpl: async (_client, nodeId) =>
+        nodeId === 5
+          ? {
+              nodeId: 5,
+              state: {
+                name: 'Kitchen Switch',
+                manufacturerId: '0x001d',
+                productType: '0x0042',
+                productId: '0x0002',
+              },
+              values: [],
+            }
+          : {
+              nodeId: 9,
+              state: {
+                name: 'Porch Sensor',
+                manufacturerId: '0x0002',
+                productType: '0x0001',
+                productId: '0x0001',
+              },
+              values: [],
+            },
+      compileProfilePlanFromRuleSetManifestImpl: () => ({
+        profile: {
+          profileId: 'p1',
+          classification: { homeyClass: 'socket', confidence: 'generic', uncurated: true },
+          capabilities: [],
+          ignoredValues: [],
+        },
+        report: {
+          profileOutcome: 'generic',
+          summary: { appliedActions: 1, unmatchedActions: 0, suppressedFillActions: 0 },
+          byRule: [],
+          bySuppressedSlot: [],
+          curationCandidates: { likelyNeedsReview: false, reasons: [] },
+          diagnosticDeviceKey: 'zwjs-live:001d-0042-0002',
+        },
+        ruleSources: [],
+      }),
+    },
+  );
+  assert.equal(logs.length, 1);
+  assert.match(logs[0], /Kitchen Switch/);
+  assert.doesNotMatch(logs[0], /Porch Sensor/);
 });

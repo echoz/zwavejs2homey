@@ -700,6 +700,7 @@ function buildCurationBacklog(results, command, generatedAtIso) {
     source: {
       url: command.url,
       scope: command.allNodes ? 'all-nodes' : `node:${command.nodeId}`,
+      signature: command.signature,
       ruleInputMode: command.ruleInputMode,
       manifestFile: command.manifestFile,
       rulesFiles: command.rulesFiles,
@@ -888,6 +889,7 @@ function formatMarkdownReport(command, summary, generatedAtIso, gateResult, opti
     `- Generated at: ${generatedAtIso}`,
     `- ZWJS URL: ${urlValue}`,
     `- Scope: ${scopeValue}`,
+    ...(command.signature ? [`- Signature filter: ${command.signature}`] : []),
     `- Rule source: ${describeRuleSource(command, { redacted })}`,
     `- Compiled artifact: ${pathFormatter(command.artifactFile)}`,
     ...(redacted ? ['- Redaction: share-safe (URL, paths, and node identifiers anonymized)'] : []),
@@ -1060,6 +1062,7 @@ function evaluateValidationGates(command, summary) {
 
 function buildConfiguredGateSection(command) {
   return {
+    signature: command.signature,
     gateProfileFile: command.gateProfileFile,
     baselineSummaryJsonFile: command.baselineSummaryJsonFile,
     artifactRetention: command.artifactRetention,
@@ -1089,6 +1092,7 @@ function buildEffectiveGateConfig(command) {
     mode,
     inputSummaryJsonFile: command.inputSummaryJsonFile ?? null,
     gateProfileFile: command.gateProfileFile ?? null,
+    signature: command.signature ?? null,
     baselineSummaryJsonFile: command.baselineSummaryJsonFile ?? null,
     thresholds: {
       maxReviewNodes: command.maxReviewNodes ?? null,
@@ -1123,6 +1127,7 @@ function buildMachineSummary(command, summary, gateResult, generatedAtIso) {
     source: {
       url: command.url,
       scope: command.allNodes ? 'all-nodes' : `node:${command.nodeId}`,
+      signature: command.signature,
       ruleInputMode: command.ruleInputMode,
       inputSummaryJsonFile: command.inputSummaryJsonFile,
       baselineSummaryJsonFile: command.baselineSummaryJsonFile,
@@ -1172,6 +1177,7 @@ function buildMachineSummaryFromInput(command, input, gateResult, generatedAtIso
     generatedAt: generatedAtIso,
     source: {
       ...source,
+      signature: command.signature,
       inputSummaryJsonFile: command.inputSummaryJsonFile,
       baselineSummaryJsonFile: command.baselineSummaryJsonFile,
       gateProfileFile: command.gateProfileFile,
@@ -1202,6 +1208,7 @@ export function getUsageText() {
     '                            [--token ...] [--schema-version 0]',
     '                            [--include-values none|summary|full] [--max-values N]',
     '                            [--include-controller-nodes]',
+    '                            [--signature <manufacturerId:productType:productId>]',
     '                            [--artifact-file </tmp/compiled-live.json>]',
     '                            [--artifact-retention keep|delete-on-pass]',
     '                            [--report-file </tmp/compiled-live.validation.md>]',
@@ -1274,6 +1281,7 @@ export function parseCliArgs(argv, options = {}) {
       '--include-values',
       '--max-values',
       '--include-controller-nodes',
+      '--signature',
       '--artifact-file',
       '--report-file',
       '--curation-backlog-json-file',
@@ -1373,6 +1381,7 @@ export function parseCliArgs(argv, options = {}) {
   let catalogFile;
   let token;
   let includeControllerNodes = false;
+  let signature;
   if (!summaryInputMode) {
     includeValues = flags.get('--include-values') ?? (allNodes ? 'summary' : 'full');
     if (!['none', 'summary', 'full'].includes(includeValues)) {
@@ -1399,6 +1408,14 @@ export function parseCliArgs(argv, options = {}) {
 
     token = flags.get('--token');
     includeControllerNodes = flags.has('--include-controller-nodes');
+    signature = flags.get('--signature');
+    if (signature !== undefined && !/^\d+:\d+:\d+$/.test(signature)) {
+      return {
+        ok: false,
+        error:
+          '--signature must be a product triple in decimal format: <manufacturerId:productType:productId>',
+      };
+    }
     catalogFile = flags.get('--catalog-file')
       ? resolveFilePath(flags.get('--catalog-file'))
       : undefined;
@@ -1599,6 +1616,7 @@ export function parseCliArgs(argv, options = {}) {
       includeValues,
       maxValues,
       includeControllerNodes,
+      signature,
       manifestFile,
       rulesFiles,
       ruleInputMode,
@@ -1771,6 +1789,7 @@ export async function runValidateLiveCommand(command, io = console, deps = {}) {
       includeValues: commandWithBaseline.includeValues,
       maxValues: commandWithBaseline.maxValues,
       includeControllerNodes: commandWithBaseline.includeControllerNodes,
+      signature: commandWithBaseline.signature,
       focus: 'all',
       top: commandWithBaseline.top,
       show: 'none',

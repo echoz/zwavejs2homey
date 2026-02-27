@@ -167,6 +167,7 @@ Optional:
 - add `--baseline-summary-json-file /tmp/compiled-live.baseline.summary.json` and any `--max-*-delta` / `--fail-on-reason-delta` gates for offline regression checks
 - add `--save-baseline-summary-json-file /tmp/compiled-live.baseline.summary.json` to save the current run as a new baseline snapshot
 - add `--artifact-retention delete-on-pass` to auto-delete generated compiled artifacts when validation passes
+- add `--signature <manufacturerId:productType:productId>` to focus validation and gate checks on a single product signature
 - add `--redact-share` to emit PR-safe markdown/summary artifacts with URL/path/node-identity redaction
 - use `--redacted-report-file` / `--redacted-summary-json-file` / `--redacted-curation-backlog-json-file` to control where redacted outputs are written
 - add `--curation-backlog-json-file /tmp/compiled-live.curation-backlog.json` to write a ranked per-signature curation queue for rule authoring

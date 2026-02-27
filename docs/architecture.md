@@ -86,6 +86,7 @@ Current implemented foundation in `packages/compiler`:
   - catalog-aware curation hints, explicit `unknownDeviceReport`, and stable diagnostic device keys
 - Added live compile inspection tooling:
   - `compiler:inspect-live` connects to a ZWJS instance, fetches node details, converts them to compiler device facts, and renders compiled profile results (including list view)
+  - supports signature-targeted loops via `--signature <manufacturerId:productType:productId>` to focus curation on one product family at a time
   - live inspection/build tooling skips controller-like nodes by default (override with `--include-controller-nodes` for diagnostics)
   - supports both compile-on-the-fly (rule authoring) and compiled-artifact apply mode (runtime-style validation)
   - `compiler:validate-live` runs build + compiled-artifact apply in one pass and writes a markdown validation report (outcomes, review reasons, unmatched/suppressed hotspots)

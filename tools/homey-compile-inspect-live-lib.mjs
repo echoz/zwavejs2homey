@@ -87,6 +87,7 @@ export function getUsageText() {
     '                           [--schema-version 0] [--token ...]',
     '                           [--include-values none|summary|full] [--max-values N]',
     '                           [--include-controller-nodes]',
+    '                           [--signature <manufacturerId:productType:productId>]',
     '                           [--focus ...] [--top N] [--show ...] [--explain <cap>] [--explain-all] [--explain-only]',
   ].join('\n');
 }
@@ -175,6 +176,15 @@ export function parseCliArgs(argv) {
     };
   }
 
+  const signature = flags.get('--signature');
+  if (signature !== undefined && !/^\d+:\d+:\d+$/.test(signature)) {
+    return {
+      ok: false,
+      error:
+        '--signature must be a product triple in decimal format: <manufacturerId:productType:productId>',
+    };
+  }
+
   return {
     ok: true,
     command: {
@@ -191,6 +201,7 @@ export function parseCliArgs(argv) {
       includeValues,
       maxValues,
       includeControllerNodes: flags.has('--include-controller-nodes'),
+      signature,
       focus,
       top,
       show,
@@ -293,6 +304,11 @@ function selectCompiledEntryForDevice(deviceFacts, artifactIndex) {
     return artifactIndex.byNodeId.get(deviceFacts.nodeId);
   }
   return null;
+}
+
+function matchesSignatureFilter(deviceFacts, signature) {
+  if (!signature) return true;
+  return productTripleKey(deviceFacts) === signature;
 }
 
 function formatBool(value) {
@@ -440,6 +456,9 @@ export async function runLiveInspectCommand(command, io = console, deps = {}) {
         continue;
       }
       const deviceFacts = normalizeCompilerDeviceFactsFromZwjsDetail(detail);
+      if (!matchesSignatureFilter(deviceFacts, command.signature)) {
+        continue;
+      }
       const compiledBase = compiledArtifactIndex
         ? (selectCompiledEntryForDevice(deviceFacts, compiledArtifactIndex)?.compiled ??
           buildNoCompiledProfileResult(deviceFacts))
