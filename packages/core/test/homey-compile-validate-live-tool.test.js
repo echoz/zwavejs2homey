@@ -73,6 +73,30 @@ test('parseCliArgs validates required live inputs and rules source modes', async
   assert.equal(parsedCompiledFile.command.compiledFile, '/tmp/compiled.json');
   assert.equal(parsedCompiledFile.command.artifactFile, '/tmp/compiled.json');
 
+  const parsedSummaryInput = parseCliArgs([
+    '--input-summary-json-file',
+    '/tmp/compiled-live.summary.json',
+    '--max-review-nodes',
+    '3',
+  ]);
+  assert.equal(parsedSummaryInput.ok, true);
+  assert.equal(parsedSummaryInput.command.ruleInputMode, 'summary-input');
+  assert.equal(parsedSummaryInput.command.inputSummaryJsonFile, '/tmp/compiled-live.summary.json');
+  assert.equal(parsedSummaryInput.command.url, undefined);
+  assert.equal(parsedSummaryInput.command.artifactFile, undefined);
+  assert.equal(parsedSummaryInput.command.reportFile, undefined);
+  assert.equal(parsedSummaryInput.command.maxReviewNodes, 3);
+
+  assert.equal(
+    parseCliArgs([
+      '--input-summary-json-file',
+      '/tmp/compiled-live.summary.json',
+      '--url',
+      'ws://x',
+    ]).ok,
+    false,
+  );
+
   assert.equal(
     parseCliArgs([
       '--url',
@@ -413,6 +437,83 @@ test('runValidateLiveCommand can validate using an existing compiled file', asyn
   assert.equal(result.artifact.schemaVersion, 'compiled-homey-profiles/v1');
   assert.equal(fs.existsSync(reportFile), true);
   assert.match(logs[0], /Using compiled artifact:/);
+});
+
+test('runValidateLiveCommand can evaluate gates from an existing summary JSON file', async () => {
+  const { runValidateLiveCommand } = await loadLib();
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zwjs2homey-validate-live-summary-'));
+  const inputSummaryJsonFile = path.join(tmpDir, 'compiled-live.summary.json');
+  const outputSummaryJsonFile = path.join(tmpDir, 'compiled-live.summary.recheck.json');
+  const logs = [];
+  let buildCalled = false;
+  let inspectCalled = false;
+
+  fs.writeFileSync(
+    inputSummaryJsonFile,
+    JSON.stringify(
+      {
+        generatedAt: '2026-02-26T00:00:00.000Z',
+        source: { url: 'ws://x', scope: 'all-nodes' },
+        counts: {
+          totalNodes: 4,
+          reviewNodes: 2,
+          genericNodes: 1,
+          emptyNodes: 0,
+          outcomes: { curated: 3, generic: 1, empty: 0 },
+          reasons: { 'known-device-generic-fallback': 1 },
+        },
+        gates: {
+          configured: { maxReviewNodes: 99, failOnReasons: [] },
+          passed: true,
+          violations: [],
+        },
+      },
+      null,
+      2,
+    ),
+    'utf8',
+  );
+
+  const result = await runValidateLiveCommand(
+    {
+      ruleInputMode: 'summary-input',
+      inputSummaryJsonFile,
+      summaryJsonFile: outputSummaryJsonFile,
+      gateProfileFile: '/tmp/gates.json',
+      maxReviewNodes: 2,
+      maxGenericNodes: 1,
+      maxEmptyNodes: 0,
+      failOnReasons: ['known-device-unmapped'],
+      printEffectiveGates: false,
+      top: 5,
+    },
+    { log: (line) => logs.push(line) },
+    {
+      nowDate: new Date('2026-02-26T00:00:00.000Z'),
+      buildCompiledProfilesArtifactImpl: async () => {
+        buildCalled = true;
+        throw new Error('build should not be called');
+      },
+      runLiveInspectCommandImpl: async () => {
+        inspectCalled = true;
+      },
+    },
+  );
+
+  assert.equal(buildCalled, false);
+  assert.equal(inspectCalled, false);
+  assert.equal(result.summary.totalNodes, 4);
+  assert.equal(result.gateResult.passed, true);
+  assert.equal(fs.existsSync(outputSummaryJsonFile), true);
+
+  const outputSummary = JSON.parse(fs.readFileSync(outputSummaryJsonFile, 'utf8'));
+  assert.equal(outputSummary.source.inputSummaryJsonFile, inputSummaryJsonFile);
+  assert.equal(outputSummary.gates.configured.maxReviewNodes, 2);
+  assert.equal(outputSummary.gates.passed, true);
+
+  assert.match(logs[0], /Input summary JSON:/);
+  assert.match(logs[1], /Validation summary JSON:/);
+  assert.equal(logs.length, 5);
 });
 
 test('runValidateLiveCommand prints effective gates when requested', async () => {

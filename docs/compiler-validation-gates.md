@@ -121,6 +121,19 @@ npm run compiler:validate-live -- \
   --print-effective-gates
 ```
 
+For fully offline gate tuning (no ZWJS connection), replay gates from an existing summary JSON:
+
+```bash
+npm run compiler:validate-live -- \
+  --input-summary-json-file /tmp/compiled-live.summary.json \
+  --gate-profile-file plan/validation-gates.example.json \
+  --print-effective-gates
+```
+
+Optional:
+
+- add `--summary-json-file /tmp/compiled-live.summary.recheck.json` to write a refreshed summary with updated gate results
+
 ## Suggested Workflow
 
 1. Keep one baseline summary JSON per network snapshot in `plan/` or `docs/`.

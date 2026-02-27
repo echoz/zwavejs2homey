@@ -83,6 +83,7 @@ This emits a `compiled-homey-profiles/v1` artifact.
 - `npm run compiler:validate-live -- --url ws://HOST:PORT --all-nodes --manifest-file rules/manifest.json --gate-profile-file plan/validation-gates.example.json`
 - `npm run compiler:validate-live -- --url ws://HOST:PORT --all-nodes --gate-profile-file plan/validation-gates.example.json --print-effective-gates`
 - `npm run compiler:validate-live -- --url ws://HOST:PORT --all-nodes --compiled-file /tmp/compiled-live.json --report-file /tmp/compiled-live.validation.md`
+- `npm run compiler:validate-live -- --input-summary-json-file /tmp/compiled-live.summary.json --gate-profile-file plan/validation-gates.example.json --print-effective-gates`
 
 This runs the canonical live validation loop in one command:
 
@@ -93,6 +94,7 @@ This runs the canonical live validation loop in one command:
 - gate/output settings can be loaded from `--gate-profile-file` (CLI flags override profile values)
 - `--print-effective-gates` prints the merged gate/output config (after CLI/profile/default precedence) before execution
 - `--compiled-file` reuses an existing compiled artifact and skips the build phase
+- `--input-summary-json-file` re-evaluates gates from an existing summary JSON (offline gate tuning; no ZWJS connection)
 
 Gate setup guide: `docs/compiler-validation-gates.md`
 

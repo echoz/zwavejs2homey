@@ -260,6 +260,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - parser now enforces clear mode boundaries (`--compiled-file` cannot be combined with rules-source flags or `--artifact-file`)
     - runtime now reads the provided compiled artifact and runs apply/gate/report flow unchanged, with explicit "Using compiled artifact" logging
     - expanded tool regression coverage for parse mode selection/conflict validation and build-skip runtime behavior
+57. Completed runtime-validation offline summary replay slice:
+    - added `--input-summary-json-file` mode to `compiler:validate-live` to re-evaluate gates from an existing summary artifact without any live ZWJS/build/apply work
+    - summary-input mode now enforces explicit flag boundaries (disallows live/build flags) to keep offline behavior deterministic
+    - runtime now loads summary counts/reason histograms, evaluates configured gates, and can optionally write refreshed summary JSON via `--summary-json-file`
+    - expanded tool regression coverage for summary-input parsing and offline gate-evaluation execution path
 
 ## Next Tasks
 

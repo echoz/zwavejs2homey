@@ -38,6 +38,10 @@ function collectRepeatedFlag(argv, flagName) {
   return values;
 }
 
+function hasFlagOccurrence(argv, flagName) {
+  return argv.some((token) => token === flagName || token.startsWith(`${flagName}=`));
+}
+
 function resolveFilePath(filePath) {
   return path.isAbsolute(filePath) ? filePath : path.resolve(filePath);
 }
@@ -53,6 +57,74 @@ function parseOptionalNonNegativeInt(rawValue, flagName) {
 
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+}
+
+function parseNonNegativeIntValue(rawValue, fieldName) {
+  const parsed = Number(rawValue);
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    throw new Error(`Field "${fieldName}" must be a non-negative integer`);
+  }
+  return parsed;
+}
+
+function parseCounterMap(raw, fieldName, options = {}) {
+  const { required = false } = options;
+  if (raw === undefined) {
+    if (required) {
+      throw new Error(`Field "${fieldName}" is required`);
+    }
+    return new Map();
+  }
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    throw new Error(`Field "${fieldName}" must be an object`);
+  }
+  const result = new Map();
+  for (const [key, value] of Object.entries(raw)) {
+    const parsed = Number(value);
+    if (!Number.isInteger(parsed) || parsed < 0) {
+      throw new Error(`Field "${fieldName}.${key}" must be a non-negative integer`);
+    }
+    result.set(key, parsed);
+  }
+  return result;
+}
+
+function loadSummaryGateInput(inputSummaryJsonFile) {
+  const resolvedFilePath = resolveFilePath(inputSummaryJsonFile);
+  let raw;
+  try {
+    raw = readJson(resolvedFilePath);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to read input summary JSON file "${resolvedFilePath}": ${reason}`);
+  }
+
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    throw new Error(`Input summary JSON "${resolvedFilePath}" must be a JSON object`);
+  }
+  const counts = raw.counts;
+  if (!counts || typeof counts !== 'object' || Array.isArray(counts)) {
+    throw new Error(`Input summary JSON "${resolvedFilePath}" must include object field "counts"`);
+  }
+
+  const outcomes = parseCounterMap(counts.outcomes, 'counts.outcomes', { required: true });
+  const reviewReasonCounts = parseCounterMap(counts.reasons, 'counts.reasons');
+  const reviewNodes = parseNonNegativeIntValue(counts.reviewNodes, 'counts.reviewNodes');
+  const totalNodes =
+    counts.totalNodes === undefined
+      ? [...outcomes.values()].reduce((sum, value) => sum + value, 0)
+      : parseNonNegativeIntValue(counts.totalNodes, 'counts.totalNodes');
+
+  return {
+    filePath: resolvedFilePath,
+    machineSummary: raw,
+    summary: {
+      totalNodes,
+      reviewNodes,
+      outcomes,
+      reviewReasonCounts,
+    },
+  };
 }
 
 function loadGateProfile(gateProfileFile) {
@@ -410,7 +482,14 @@ function evaluateValidationGates(command, summary) {
 }
 
 function buildEffectiveGateConfig(command) {
+  const mode = command.inputSummaryJsonFile
+    ? 'input-summary'
+    : command.compiledFile
+      ? 'compiled-file'
+      : 'live-build';
   return {
+    mode,
+    inputSummaryJsonFile: command.inputSummaryJsonFile ?? null,
     gateProfileFile: command.gateProfileFile ?? null,
     thresholds: {
       maxReviewNodes: command.maxReviewNodes ?? null,
@@ -419,8 +498,8 @@ function buildEffectiveGateConfig(command) {
     },
     failOnReasons: command.failOnReasons ?? [],
     outputs: {
-      artifactFile: command.artifactFile,
-      reportFile: command.reportFile,
+      artifactFile: command.artifactFile ?? null,
+      reportFile: command.reportFile ?? null,
       summaryJsonFile: command.summaryJsonFile ?? null,
     },
   };
@@ -433,6 +512,7 @@ function buildMachineSummary(command, summary, gateResult, generatedAtIso) {
       url: command.url,
       scope: command.allNodes ? 'all-nodes' : `node:${command.nodeId}`,
       ruleInputMode: command.ruleInputMode,
+      inputSummaryJsonFile: command.inputSummaryJsonFile,
       manifestFile: command.manifestFile,
       rulesFiles: command.rulesFiles,
       compiledFile: command.compiledFile,
@@ -467,6 +547,34 @@ function buildMachineSummary(command, summary, gateResult, generatedAtIso) {
   };
 }
 
+function buildMachineSummaryFromInput(command, input, gateResult, generatedAtIso) {
+  const source =
+    input?.source && typeof input.source === 'object' && !Array.isArray(input.source)
+      ? input.source
+      : {};
+  const configured = {
+    gateProfileFile: command.gateProfileFile,
+    maxReviewNodes: command.maxReviewNodes,
+    maxGenericNodes: command.maxGenericNodes,
+    maxEmptyNodes: command.maxEmptyNodes,
+    failOnReasons: command.failOnReasons,
+  };
+  return {
+    ...input,
+    generatedAt: generatedAtIso,
+    source: {
+      ...source,
+      inputSummaryJsonFile: command.inputSummaryJsonFile,
+      gateProfileFile: command.gateProfileFile,
+    },
+    gates: {
+      configured,
+      passed: gateResult.passed,
+      violations: gateResult.violations,
+    },
+  };
+}
+
 export function getUsageText() {
   return [
     'Usage:',
@@ -486,6 +594,13 @@ export function getUsageText() {
     '                            [--fail-on-reason <reason> ...]',
     '                            [--print-effective-gates]',
     '                            [--top N]',
+    '',
+    '  homey-compile-validate-live --input-summary-json-file </tmp/compiled-live.summary.json>',
+    '                            [--gate-profile-file <validation-gates.json>]',
+    '                            [--max-review-nodes N] [--max-generic-nodes N] [--max-empty-nodes N]',
+    '                            [--fail-on-reason <reason> ...]',
+    '                            [--summary-json-file </tmp/compiled-live.summary.recheck.json>]',
+    '                            [--print-effective-gates]',
   ].join('\n');
 }
 
@@ -493,91 +608,158 @@ export function parseCliArgs(argv, options = {}) {
   if (argv.includes('--help') || argv.includes('-h')) return { ok: false, error: getUsageText() };
 
   const flags = parseFlagMap(argv);
-  const url = flags.get('--url');
-  if (!url) return { ok: false, error: '--url is required' };
-
-  const allNodes = flags.has('--all-nodes');
-  const nodeRaw = flags.get('--node');
-  if (!allNodes && nodeRaw === undefined) {
-    return { ok: false, error: 'Provide --all-nodes or --node <id>' };
-  }
-  if (allNodes && nodeRaw !== undefined) {
-    return { ok: false, error: 'Use either --all-nodes or --node, not both' };
-  }
-  const nodeId = nodeRaw === undefined ? undefined : Number.parseInt(nodeRaw, 10);
-  if (nodeRaw !== undefined && !Number.isInteger(nodeId)) {
-    return { ok: false, error: `Invalid --node: ${nodeRaw}` };
-  }
-
-  const compiledFileFlag = flags.get('--compiled-file');
-  let compiledFile;
-  if (compiledFileFlag !== undefined) {
-    if (!compiledFileFlag || compiledFileFlag === 'true') {
-      return { ok: false, error: '--compiled-file requires a value' };
+  const inputSummaryJsonFileFlag = flags.get('--input-summary-json-file');
+  let inputSummaryJsonFile;
+  if (inputSummaryJsonFileFlag !== undefined) {
+    if (!inputSummaryJsonFileFlag || inputSummaryJsonFileFlag === 'true') {
+      return { ok: false, error: '--input-summary-json-file requires a value' };
     }
-    compiledFile = resolveFilePath(compiledFileFlag);
+    inputSummaryJsonFile = resolveFilePath(inputSummaryJsonFileFlag);
   }
-  if (compiledFile && flags.get('--artifact-file') !== undefined) {
-    return { ok: false, error: 'Use either --compiled-file or --artifact-file, not both' };
+  const summaryInputMode = inputSummaryJsonFile !== undefined;
+
+  if (summaryInputMode) {
+    const unsupportedFlags = [
+      '--url',
+      '--all-nodes',
+      '--node',
+      '--manifest-file',
+      '--rules-file',
+      '--compiled-file',
+      '--catalog-file',
+      '--token',
+      '--schema-version',
+      '--include-values',
+      '--max-values',
+      '--include-controller-nodes',
+      '--artifact-file',
+      '--report-file',
+      '--top',
+    ];
+    const unsupported = unsupportedFlags.find((flagName) => hasFlagOccurrence(argv, flagName));
+    if (unsupported) {
+      return {
+        ok: false,
+        error: `--input-summary-json-file cannot be combined with ${unsupported}`,
+      };
+    }
+  }
+
+  let url;
+  let allNodes = false;
+  let nodeId;
+  if (!summaryInputMode) {
+    url = flags.get('--url');
+    if (!url) return { ok: false, error: '--url is required' };
+
+    allNodes = flags.has('--all-nodes');
+    const nodeRaw = flags.get('--node');
+    if (!allNodes && nodeRaw === undefined) {
+      return { ok: false, error: 'Provide --all-nodes or --node <id>' };
+    }
+    if (allNodes && nodeRaw !== undefined) {
+      return { ok: false, error: 'Use either --all-nodes or --node, not both' };
+    }
+    nodeId = nodeRaw === undefined ? undefined : Number.parseInt(nodeRaw, 10);
+    if (nodeRaw !== undefined && !Number.isInteger(nodeId)) {
+      return { ok: false, error: `Invalid --node: ${nodeRaw}` };
+    }
+  }
+
+  let compiledFile;
+  if (!summaryInputMode) {
+    const compiledFileFlag = flags.get('--compiled-file');
+    if (compiledFileFlag !== undefined) {
+      if (!compiledFileFlag || compiledFileFlag === 'true') {
+        return { ok: false, error: '--compiled-file requires a value' };
+      }
+      compiledFile = resolveFilePath(compiledFileFlag);
+    }
+    if (compiledFile && flags.get('--artifact-file') !== undefined) {
+      return { ok: false, error: 'Use either --compiled-file or --artifact-file, not both' };
+    }
   }
 
   const manifestFlag = flags.get('--manifest-file');
-  const rulesFiles = collectRepeatedFlag(argv, '--rules-file');
-  if (compiledFile && (manifestFlag || rulesFiles.length > 0)) {
-    return {
-      ok: false,
-      error: 'Use either --compiled-file or rules source flags (--manifest-file/--rules-file)',
-    };
-  }
-  if (manifestFlag && rulesFiles.length > 0) {
-    return { ok: false, error: 'Use either --manifest-file or --rules-file, not both' };
-  }
-
-  const defaultManifestFile = resolveFilePath(
-    options.defaultManifestFile ?? DEFAULT_RULE_MANIFEST_FILE,
-  );
+  const rulesFileFlags = collectRepeatedFlag(argv, '--rules-file');
   let manifestFile;
+  let rulesFiles = [];
   let ruleInputMode;
-  if (compiledFile) {
-    manifestFile = undefined;
-    ruleInputMode = 'compiled-file';
+  if (summaryInputMode) {
+    ruleInputMode = 'summary-input';
   } else {
-    manifestFile = manifestFlag ? resolveFilePath(manifestFlag) : undefined;
-    ruleInputMode = manifestFlag ? 'manifest-file' : 'rules-files';
-    if (!manifestFile && rulesFiles.length === 0) {
-      if (!fs.existsSync(defaultManifestFile)) {
-        return {
-          ok: false,
-          error:
-            `No rules source provided and default manifest not found: ${defaultManifestFile}. ` +
-            'Provide --manifest-file or at least one --rules-file',
-        };
-      }
-      manifestFile = defaultManifestFile;
-      ruleInputMode = 'default-manifest';
+    if (compiledFile && (manifestFlag || rulesFileFlags.length > 0)) {
+      return {
+        ok: false,
+        error: 'Use either --compiled-file or rules source flags (--manifest-file/--rules-file)',
+      };
     }
+    if (manifestFlag && rulesFileFlags.length > 0) {
+      return { ok: false, error: 'Use either --manifest-file or --rules-file, not both' };
+    }
+
+    const defaultManifestFile = resolveFilePath(
+      options.defaultManifestFile ?? DEFAULT_RULE_MANIFEST_FILE,
+    );
+    if (compiledFile) {
+      ruleInputMode = 'compiled-file';
+    } else {
+      manifestFile = manifestFlag ? resolveFilePath(manifestFlag) : undefined;
+      ruleInputMode = manifestFlag ? 'manifest-file' : 'rules-files';
+      if (!manifestFile && rulesFileFlags.length === 0) {
+        if (!fs.existsSync(defaultManifestFile)) {
+          return {
+            ok: false,
+            error:
+              `No rules source provided and default manifest not found: ${defaultManifestFile}. ` +
+              'Provide --manifest-file or at least one --rules-file',
+          };
+        }
+        manifestFile = defaultManifestFile;
+        ruleInputMode = 'default-manifest';
+      }
+    }
+    rulesFiles = rulesFileFlags.map((filePath) => resolveFilePath(filePath));
   }
 
-  const includeValues = flags.get('--include-values') ?? (allNodes ? 'summary' : 'full');
-  if (!['none', 'summary', 'full'].includes(includeValues)) {
-    return { ok: false, error: `Unsupported --include-values: ${includeValues}` };
-  }
-  const maxValuesRaw = flags.get('--max-values') ?? (allNodes ? '100' : '200');
-  const maxValues = Number(maxValuesRaw);
-  if (!Number.isInteger(maxValues) || maxValues < 1) {
-    return { ok: false, error: `Invalid --max-values: ${maxValuesRaw}` };
-  }
+  let includeValues;
+  let maxValues;
+  let schemaVersion;
+  let top = 5;
+  let catalogFile;
+  let token;
+  let includeControllerNodes = false;
+  if (!summaryInputMode) {
+    includeValues = flags.get('--include-values') ?? (allNodes ? 'summary' : 'full');
+    if (!['none', 'summary', 'full'].includes(includeValues)) {
+      return { ok: false, error: `Unsupported --include-values: ${includeValues}` };
+    }
 
-  const schemaVersionRaw = flags.get('--schema-version') ?? '0';
-  const schemaVersion = Number(schemaVersionRaw);
-  if (!Number.isInteger(schemaVersion) || schemaVersion < 0) {
-    return { ok: false, error: `Invalid --schema-version: ${schemaVersionRaw}` };
-  }
+    const maxValuesRaw = flags.get('--max-values') ?? (allNodes ? '100' : '200');
+    maxValues = Number(maxValuesRaw);
+    if (!Number.isInteger(maxValues) || maxValues < 1) {
+      return { ok: false, error: `Invalid --max-values: ${maxValuesRaw}` };
+    }
 
-  const topRaw = flags.get('--top') ?? '5';
-  const top = Number.parseInt(topRaw, 10);
-  if (!Number.isInteger(top) || top < 1) {
-    return { ok: false, error: `Invalid --top: ${topRaw}` };
+    const schemaVersionRaw = flags.get('--schema-version') ?? '0';
+    schemaVersion = Number(schemaVersionRaw);
+    if (!Number.isInteger(schemaVersion) || schemaVersion < 0) {
+      return { ok: false, error: `Invalid --schema-version: ${schemaVersionRaw}` };
+    }
+
+    const topRaw = flags.get('--top') ?? '5';
+    top = Number.parseInt(topRaw, 10);
+    if (!Number.isInteger(top) || top < 1) {
+      return { ok: false, error: `Invalid --top: ${topRaw}` };
+    }
+
+    token = flags.get('--token');
+    includeControllerNodes = flags.has('--include-controller-nodes');
+    catalogFile = flags.get('--catalog-file')
+      ? resolveFilePath(flags.get('--catalog-file'))
+      : undefined;
+  } else {
+    schemaVersion = 0;
   }
 
   let gateProfile;
@@ -621,16 +803,20 @@ export function parseCliArgs(argv, options = {}) {
   const failOnReasons =
     cliFailOnReasons.length > 0 ? cliFailOnReasons : (gateProfile?.failOnReasons ?? []);
 
+  let artifactFile;
+  let reportFile;
   const nowDate = options.nowDate ?? new Date();
-  const artifactFile = resolveFilePath(
-    compiledFile ??
-      flags.get('--artifact-file') ??
-      gateProfile?.artifactFile ??
-      buildDefaultArtifactPath(nowDate),
-  );
-  const reportFile = resolveFilePath(
-    flags.get('--report-file') ?? gateProfile?.reportFile ?? buildDefaultReportPath(artifactFile),
-  );
+  if (!summaryInputMode) {
+    artifactFile = resolveFilePath(
+      compiledFile ??
+        flags.get('--artifact-file') ??
+        gateProfile?.artifactFile ??
+        buildDefaultArtifactPath(nowDate),
+    );
+    reportFile = resolveFilePath(
+      flags.get('--report-file') ?? gateProfile?.reportFile ?? buildDefaultReportPath(artifactFile),
+    );
+  }
   const summaryJsonFileRaw = flags.get('--summary-json-file') ?? gateProfile?.summaryJsonFile;
   const summaryJsonFile = summaryJsonFileRaw ? resolveFilePath(summaryJsonFileRaw) : undefined;
 
@@ -638,20 +824,19 @@ export function parseCliArgs(argv, options = {}) {
     ok: true,
     command: {
       url,
-      token: flags.get('--token'),
+      token,
       schemaVersion,
       allNodes,
       nodeId,
       includeValues,
       maxValues,
-      includeControllerNodes: flags.has('--include-controller-nodes'),
+      includeControllerNodes,
       manifestFile,
-      rulesFiles: rulesFiles.map((filePath) => resolveFilePath(filePath)),
+      rulesFiles,
       ruleInputMode,
       compiledFile,
-      catalogFile: flags.get('--catalog-file')
-        ? resolveFilePath(flags.get('--catalog-file'))
-        : undefined,
+      inputSummaryJsonFile,
+      catalogFile,
       artifactFile,
       reportFile,
       summaryJsonFile,
@@ -674,6 +859,41 @@ export async function runValidateLiveCommand(command, io = console, deps = {}) {
 
   if (command.printEffectiveGates) {
     io.log(`Effective gates:\n${formatJsonPretty(buildEffectiveGateConfig(command))}`);
+  }
+
+  if (command.inputSummaryJsonFile) {
+    const loaded = loadSummaryGateInput(command.inputSummaryJsonFile);
+    const summary = loaded.summary;
+    const gateResult = evaluateValidationGates(command, summary);
+    const machineSummary = buildMachineSummaryFromInput(
+      command,
+      loaded.machineSummary,
+      gateResult,
+      generatedAtIso,
+    );
+    if (command.summaryJsonFile) {
+      fs.writeFileSync(command.summaryJsonFile, `${formatJsonPretty(machineSummary)}\n`, 'utf8');
+    }
+
+    io.log(`Input summary JSON: ${loaded.filePath}`);
+    if (command.summaryJsonFile) {
+      io.log(`Validation summary JSON: ${command.summaryJsonFile}`);
+    }
+    io.log(`Nodes validated: ${summary.totalNodes}`);
+    io.log(`Outcomes: ${formatOutcomeSummary(summary.outcomes)}`);
+    io.log(`Needs review: ${summary.reviewNodes}`);
+    if (!gateResult.passed) {
+      throw new Error(`Validation gates failed:\n- ${gateResult.violations.join('\n- ')}`);
+    }
+
+    return {
+      artifact: undefined,
+      results: undefined,
+      summary,
+      markdown: undefined,
+      gateResult,
+      machineSummary,
+    };
   }
 
   let artifact;
