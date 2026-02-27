@@ -91,7 +91,8 @@
 - [x] Runtime-validation signature-loop wrapper slice: add `compiler:loop` to run backlog selection + targeted inspect + targeted validate in one command
 - [x] Runtime-validation loop/backlog hardening slice: add `compiler:loop --dry-run` and backlog-next loop command hints for faster safe iteration setup
 - [x] Runtime-validation backlog candidate-policy slice: add `--candidate-policy curation|pressure` so next-target selection defaults to curation work and can opt into technical-pressure tuning
-- [ ] Decide and document final ownership of generic fallback inference policy (currently leaning Homey adapter-owned)
+- [x] Decide and document final ownership of generic fallback inference policy (Homey adapter-owned; see ADR 0004)
+- [ ] Simplify rule authoring DSL with deterministic defaults + canonical expansion (progressive disclosure without runtime inference)
 - [ ] Add second real catalog source adapter when a concrete source format is available
 
 ## Phase 4: Homey Adapter MVP (Next Major Area)

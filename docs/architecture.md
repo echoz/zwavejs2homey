@@ -110,13 +110,14 @@ Current implemented foundation in `packages/compiler`:
   - `rules/` directory skeleton established for real `ha-derived`, `project/generic`, and `project/product` rulesets
   - canonical layered manifest now lives at `rules/manifest.json`
   - HA-derived generated rules and an initial project-generic ruleset are now checked in
-  - current direction: keep compiler generic rules minimal/provisional and move Homey-specific fallback inference policy into the Homey adapter
+  - policy decision: keep compiler generic rules minimal/provisional; generic fallback inference ownership is in the Homey adapter (ADR 0004)
   - compiler now applies a small HA-derived overlap suppression policy for same-selector conflicts (initially focused on curtain/multilevel duplicates and generic `number_value` shadowing)
 - Catalog/curation workflow decision:
   - no curation-seed artifact for now; rule/patch authoring remains schema-first using compiler diagnostics and stable device identifiers
 - Runtime curation boundary decision:
   - compiler does not own curation patch schema/apply semantics
   - Homey adapter owns runtime curation behavior and may define patch semantics to fit adapter needs
+  - decisions are recorded in `docs/decisions/0002-compiler-adapter-boundary.md`, `docs/decisions/0003-defer-curation-seed-artifact.md`, and `docs/decisions/0004-generic-fallback-ownership.md`
 - Sequencing decision:
   - complete the compiler runtime-validation pipeline first (real HA-derived + project rulesets, compiled profiles export, live ZWJS validation using compiled artifacts)
   - defer Homey adapter implementation until compiled profiles can be validated end-to-end outside Homey

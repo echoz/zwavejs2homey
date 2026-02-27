@@ -16,6 +16,7 @@ This repo has two major contribution paths:
 - Keep docs and plans in sync when behavior changes:
   - `README.md`
   - `docs/architecture.md`
+  - `docs/decisions/` (add/update ADRs for boundary/policy decisions)
   - `plan/current-sprint.md`
   - `plan/roadmap.md`
 

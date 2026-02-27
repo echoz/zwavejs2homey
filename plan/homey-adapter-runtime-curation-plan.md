@@ -4,6 +4,11 @@
 
 Design and implement a Homey adapter-owned runtime curation system that applies user corrections to compiled Homey device profiles at runtime, without changing compiler responsibilities.
 
+Related ADRs:
+
+- `docs/decisions/0002-compiler-adapter-boundary.md`
+- `docs/decisions/0004-generic-fallback-ownership.md`
+
 Compiler remains responsible for:
 
 - compiled profile JSON

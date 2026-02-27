@@ -9,4 +9,4 @@ Suggested contents:
 - integration-notes.md
 - homey-sdk-notes.md
 - zwavejs-interop.md
-- decisions/ (ADR-style records)
+- decisions/ (ADR-style records; start with `docs/decisions/README.md`)

@@ -346,8 +346,9 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 2. Continue widening HA-derived rules coverage and selector semantics against live nodes
 3. Tune remaining high-suppression/high-unmatched curated profiles (e.g. keep useful capabilities and suppress noisy ones where policy is clear)
 4. Use `compiler:inspect-live --compiled-file ...` to validate compiled artifacts on real ZWJS data
-5. Keep project-generic rules minimal/provisional; likely move generic fallback inference policy into the Homey adapter
+5. Keep project-generic rules minimal/provisional; generic fallback inference policy is adapter-owned (ADR 0004)
 6. Defer Homey adapter implementation until compiler runtime-validation readiness milestone is reached
+7. Define DSL simplification pass (deterministic defaults + canonical rule expansion) to reduce authoring complexity without adding runtime dynamism
 
 ## Risks / Unknowns
 
@@ -355,7 +356,7 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 - Compiler performance may degrade as HA-derived + project rules + catalog-aware diagnostics scale up
 - Risk of overloading compiler behavior with catalog heuristics before precedence policy is explicitly designed
 - Risk of boundary drift if runtime curation semantics are reintroduced into compiler package
-- Risk of delaying adapter work if generic fallback inference policy remains split between compiler and adapter
+- Risk of boundary drift if compiler-side generic rules grow beyond provisional static coverage and blur adapter-owned fallback policy
 
 ## Notes
 
