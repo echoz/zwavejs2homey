@@ -43,6 +43,22 @@ test('parseShellCommand parses backlog/scaffold/log commands', () => {
     ok: true,
     command: { type: 'scaffold-write', filePath: 'out.json', force: true },
   });
+  assert.deepEqual(
+    parseShellCommand('manifest add product-29-66-2.json --manifest rules/manifest.json --force'),
+    {
+      ok: true,
+      command: {
+        type: 'manifest-add',
+        filePath: 'product-29-66-2.json',
+        manifestFile: 'rules/manifest.json',
+        force: true,
+      },
+    },
+  );
+  assert.deepEqual(parseShellCommand('status'), {
+    ok: true,
+    command: { type: 'status' },
+  });
   assert.deepEqual(parseShellCommand('log --limit 15'), {
     ok: true,
     command: { type: 'log', limit: 15 },

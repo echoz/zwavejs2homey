@@ -4,6 +4,7 @@ import type {
   NodeSummary,
   ScaffoldDraft,
   SignatureInspectSummary,
+  StatusSnapshot,
   ValidationSummary,
 } from '../model/types';
 
@@ -44,6 +45,8 @@ export function renderShellHelp(): string {
     '  backlog pick [rank]                     Select signature from loaded backlog',
     '  scaffold preview [--product-name "..."] Preview scaffold draft from backlog',
     '  scaffold write [filePath] [--force]     Write scaffold draft file',
+    '  manifest add [filePath] [--manifest <file>] [--force]  Add product rule to manifest',
+    '  status                                  Show current workspace snapshot',
     '  log [--limit N]                         Show run log',
     '  help                  Show this help',
     '  quit                  Exit',
@@ -211,4 +214,27 @@ export function renderRunLog(
   return lines
     .map((entry) => `[${entry.timestamp}] ${entry.level.toUpperCase()} ${entry.message}`)
     .join('\n');
+}
+
+export function renderManifestResult(result: {
+  manifestFile: string;
+  entryFilePath: string;
+  updated: boolean;
+}): string {
+  return [
+    `Manifest: ${result.manifestFile}`,
+    `Entry: ${result.entryFilePath}`,
+    `Updated: ${result.updated ? 'yes' : 'no (already present)'}`,
+  ].join('\n');
+}
+
+export function renderStatusSnapshot(status: StatusSnapshot): string {
+  return [
+    `Connection: ${status.connectionState}`,
+    `Selected node: ${status.selectedNodeId ?? '-'}`,
+    `Selected signature: ${status.selectedSignature ?? '-'}`,
+    `Cached nodes: ${status.cachedNodeCount}`,
+    `Backlog file: ${status.backlogFile ?? '-'}`,
+    `Scaffold draft: ${status.scaffoldFileHint ?? '-'}`,
+  ].join('\n');
 }

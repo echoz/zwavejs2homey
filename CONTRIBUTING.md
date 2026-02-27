@@ -158,6 +158,7 @@ TUI workflow shortcuts (inside `compiler:tui`):
 - `inspect` and `validate`
 - `backlog load <file>`, `backlog pick [rank]`
 - `scaffold preview` then `scaffold write <filePath> --force`
+- `manifest add <filePath> --force` to register the product rule in `rules/manifest.json`
 
 ### 3) Edit Rules in the Correct Layer
 

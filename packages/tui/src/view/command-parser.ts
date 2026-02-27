@@ -12,6 +12,8 @@ export type ShellCommand =
   | { type: 'backlog-pick'; rank?: number }
   | { type: 'scaffold-preview'; productName?: string }
   | { type: 'scaffold-write'; filePath?: string; force: boolean }
+  | { type: 'manifest-add'; manifestFile?: string; filePath?: string; force: boolean }
+  | { type: 'status' }
   | { type: 'log'; limit: number }
   | { type: 'quit' };
 
@@ -159,6 +161,25 @@ export function parseShellCommand(
         };
       }
       return { ok: false, error: 'scaffold requires subcommand: preview|write' };
+    }
+    if (name === 'manifest') {
+      const sub = rest[0];
+      if (sub === 'add') {
+        const filePath = rest.find((token, index) => index > 0 && !token.startsWith('--'));
+        return {
+          ok: true,
+          command: {
+            type: 'manifest-add',
+            manifestFile: parseFlagValue(rest.slice(1), '--manifest'),
+            filePath,
+            force: parseFlagExists(rest, '--force'),
+          },
+        };
+      }
+      return { ok: false, error: 'manifest requires subcommand: add' };
+    }
+    if (name === 'status') {
+      return { ok: true, command: { type: 'status' } };
     }
     if (name === 'log') {
       const limitRaw = parseFlagValue(rest, '--limit');

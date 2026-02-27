@@ -38,6 +38,8 @@ test('runApp executes interactive command flow through presenter/coordinator', a
     'backlog pick 1',
     'scaffold preview --product-name TestProduct',
     'scaffold write test-output.json --force',
+    'manifest add test-output.json --manifest rules/manifest.json --force',
+    'status',
     'log --limit 5',
     'quit',
   ];
@@ -145,6 +147,10 @@ test('runApp executes interactive command flow through presenter/coordinator', a
       assert.equal(options.confirm, true);
       return `/abs/${filePath}`;
     },
+    addProductRuleToManifest(manifestFile, filePath, options) {
+      assert.equal(options.confirm, true);
+      return { manifestFile, entryFilePath: filePath, updated: true };
+    },
   };
 
   const logs = [];
@@ -182,6 +188,14 @@ test('runApp executes interactive command flow through presenter/coordinator', a
   );
   assert.equal(
     logs.some((line) => line.includes('Scaffold written: /abs/test-output.json')),
+    true,
+  );
+  assert.equal(
+    logs.some((line) => line.includes('Manifest: rules/manifest.json')),
+    true,
+  );
+  assert.equal(
+    logs.some((line) => line.includes('Connection: ready')),
     true,
   );
 });

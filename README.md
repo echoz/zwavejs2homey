@@ -72,6 +72,8 @@ Interactive commands:
 - `backlog pick [rank]`
 - `scaffold preview [--product-name "..."]`
 - `scaffold write [filePath] --force`
+- `manifest add [filePath] [--manifest <file>] --force`
+- `status`
 - `log [--limit N]`
 - `help`
 - `quit`

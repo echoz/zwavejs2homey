@@ -44,6 +44,15 @@ export interface TuiCoordinator {
     draft: ScaffoldDraft,
     options?: { confirm?: boolean },
   ): string;
+  addProductRuleToManifest(
+    manifestFile: string,
+    filePath: string,
+    options?: { confirm?: boolean },
+  ): {
+    manifestFile: string;
+    entryFilePath: string;
+    updated: boolean;
+  };
 }
 
 interface CoordinatorDeps {
@@ -126,5 +135,20 @@ export class TuiCoordinatorImpl implements TuiCoordinator {
     }
     this.fileService.writeJsonFile(filePath, draft.bundle);
     return this.fileService.resolveAllowedProductRulePath(filePath);
+  }
+
+  addProductRuleToManifest(
+    manifestFile: string,
+    filePath: string,
+    options: { confirm?: boolean } = {},
+  ): {
+    manifestFile: string;
+    entryFilePath: string;
+    updated: boolean;
+  } {
+    if (options.confirm !== true) {
+      throw new Error('Manifest update not confirmed. Re-run with explicit confirmation.');
+    }
+    return this.fileService.addProductRuleToManifest(manifestFile, filePath);
   }
 }

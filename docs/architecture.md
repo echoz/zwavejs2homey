@@ -164,10 +164,12 @@ Guardrails:
 Current implemented slices:
 
 - Slices 1-5 delivered in `packages/tui`:
+- Slices 1-6 delivered in `packages/tui`:
   - read-only connect/list/show explorer flow
   - signature selection/derivation + inspect/validate actions
   - backlog load/pick workflow
   - scaffold preview + guarded write flow
+  - manifest helper for product rule registration
   - interactive shell command loop (`npm run compiler:tui`) with run-log view
   - presenter/coordinator/service layering with package-local regression tests
 

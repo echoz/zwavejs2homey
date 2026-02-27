@@ -439,16 +439,23 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - scaffold writes are path-guarded to `rules/project/product/*` and require explicit confirmation (`--force`)
     - added run-log command (`log [--limit N]`) and per-command error handling so interactive sessions continue after failures
     - expanded TUI tests for coordinator delegation, command parsing, and presenter/app signature-curation flows
+93. Completed Phase 4 TUI slice 6 (manifest helper + run-log polish):
+    - added manifest helper command:
+      - `manifest add [filePath] [--manifest <file>] --force`
+    - manifest writes are confirmed and path-guarded through workspace file service
+    - manifest helper deduplicates existing entries and enforces layer consistency for product entries
+    - added workspace status snapshot command (`status`) for fast iteration context
+    - expanded tests for manifest confirmation/delegation and status/command parsing coverage
 
 ## Next Tasks
 
-1. Continue Phase 4 TUI implementation against `plan/tui-explorer-curation-spec.md`:
-   - Slice 6: manifest helper + additional run-log polish
+1. Run live playtesting pass against your ZWJS instance and capture UX feedback:
+   - verify inspect/validate/scaffold/manifest loop speed and error ergonomics
 2. Add light UX polish pass for discoverability:
    - add a compact status snapshot command (selected node/signature/backlog/scaffold draft)
    - improve shell help with common end-to-end flow examples
 3. Keep project-generic rules minimal/provisional; generic fallback inference policy remains adapter-owned (ADR 0004)
-4. Keep Homey adapter implementation/design frozen until compiler + TUI completion checkpoint
+4. Decide whether to start Homey adapter implementation now that Phase 4 TUI MVP is complete
 
 ## Risks / Unknowns
 

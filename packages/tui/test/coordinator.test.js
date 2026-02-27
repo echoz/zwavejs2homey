@@ -50,6 +50,13 @@ test('TuiCoordinatorImpl delegates to layered services and enforces write confir
     writeJsonFile(filePath, payload) {
       writes.push({ filePath, payload });
     },
+    addProductRuleToManifest(manifestFile, filePath) {
+      return {
+        manifestFile: `/abs/${manifestFile}`,
+        entryFilePath: filePath,
+        updated: true,
+      };
+    },
   };
 
   const coordinator = new TuiCoordinatorImpl({ explorerService, curationService, fileService });
@@ -78,6 +85,14 @@ test('TuiCoordinatorImpl delegates to layered services and enforces write confir
   );
   const written = coordinator.writeScaffoldDraft('x.json', draft, { confirm: true });
   assert.equal(written, '/abs/x.json');
+  assert.throws(
+    () => coordinator.addProductRuleToManifest('rules/manifest.json', 'x.json', { confirm: false }),
+    /Manifest update not confirmed/i,
+  );
+  const manifest = coordinator.addProductRuleToManifest('rules/manifest.json', 'x.json', {
+    confirm: true,
+  });
+  assert.equal(manifest.entryFilePath, 'x.json');
   assert.equal(writes.length, 1);
   await coordinator.disconnect();
 });

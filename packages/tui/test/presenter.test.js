@@ -67,6 +67,9 @@ function createCoordinator(overrides = {}) {
     writeScaffoldDraft(filePath) {
       return filePath;
     },
+    addProductRuleToManifest(_manifestFile, filePath) {
+      return { manifestFile: '/tmp/manifest.json', entryFilePath: filePath, updated: true };
+    },
     ...overrides,
   };
 }
@@ -158,11 +161,17 @@ test('ExplorerPresenter can derive signature, inspect and validate selected sign
 
 test('ExplorerPresenter backlog + scaffold draft + write flow', async () => {
   const writes = [];
+  const manifests = [];
   const coordinator = createCoordinator({
     writeScaffoldDraft(filePath, _draft, options) {
       assert.equal(options.confirm, true);
       writes.push(filePath);
       return `/abs/${filePath}`;
+    },
+    addProductRuleToManifest(manifestFile, filePath, options) {
+      assert.equal(options.confirm, true);
+      manifests.push({ manifestFile, filePath });
+      return { manifestFile, entryFilePath: filePath, updated: true };
     },
   });
   const presenter = new ExplorerPresenter(coordinator);
@@ -174,5 +183,14 @@ test('ExplorerPresenter backlog + scaffold draft + write flow', async () => {
   assert.equal(draft.signature, '29:66:2');
   const written = presenter.writeScaffoldDraft(undefined, { confirm: true });
   assert.equal(written, '/abs/product-29-66-2.json');
+  const manifestResult = presenter.addDraftToManifest({
+    manifestFile: 'rules/manifest.json',
+    confirm: true,
+  });
+  assert.equal(manifestResult.updated, true);
+  const status = presenter.getStatusSnapshot();
+  assert.equal(status.selectedSignature, '29:66:2');
+  assert.equal(status.scaffoldFileHint, 'product-29-66-2.json');
   assert.equal(writes.length, 1);
+  assert.equal(manifests.length, 1);
 });

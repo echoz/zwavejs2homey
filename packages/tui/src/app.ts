@@ -14,7 +14,9 @@ import {
   renderScaffoldDraft,
   renderShellHelp,
   renderSignatureSelected,
+  renderStatusSnapshot,
   renderValidationSummary,
+  renderManifestResult,
 } from './view/formatting';
 
 function parseFlagMap(argv: string[]): { flags: Map<string, string>; positionals: string[] } {
@@ -68,6 +70,7 @@ export function getUsageText(): string {
     '  signature [<m:p:id>] [--from-node <id>] | inspect | validate',
     '  backlog load <file> [--top N] | backlog show | backlog pick [rank]',
     '  scaffold preview [--product-name "..."] | scaffold write [filePath] --force',
+    '  manifest add [filePath] [--manifest <file>] --force | status',
     '  log [--limit N] | help | quit',
   ].join('\n');
 }
@@ -273,6 +276,19 @@ export async function runApp(
             confirm: command.force,
           });
           io.log(`Scaffold written: ${writtenPath}`);
+          continue;
+        }
+        if (command.type === 'manifest-add') {
+          const result = presenter.addDraftToManifest({
+            filePath: command.filePath,
+            manifestFile: command.manifestFile,
+            confirm: command.force,
+          });
+          io.log(renderManifestResult(result));
+          continue;
+        }
+        if (command.type === 'status') {
+          io.log(renderStatusSnapshot(presenter.getStatusSnapshot()));
           continue;
         }
         if (command.type === 'log') {

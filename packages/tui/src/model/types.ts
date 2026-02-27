@@ -125,3 +125,12 @@ export interface AppState {
   lastError?: string;
   runLog: RunLogEntry[];
 }
+
+export interface StatusSnapshot {
+  connectionState: ConnectionState;
+  selectedNodeId?: number;
+  selectedSignature?: string;
+  cachedNodeCount: number;
+  backlogFile?: string;
+  scaffoldFileHint?: string;
+}

@@ -3,7 +3,7 @@
 ## Current Focus (Active)
 
 - [x] Finish remaining Phase 3 compiler backlog (`DSL simplification slice 2` + final review/fix pass)
-- [ ] Complete remaining Phase 4 TUI MVP work (slice 6 polish + manifest helper) (`plan/tui-explorer-curation-spec.md`, `plan/tui-implementation-plan.md`)
+- [x] Complete Phase 4 TUI MVP slices 1-6 (`plan/tui-explorer-curation-spec.md`, `plan/tui-implementation-plan.md`)
 - [ ] Hold new Homey adapter design/implementation slices until Phase 4 checkpoint is complete
 
 ## Phase 1: Foundation (Completed)
@@ -116,7 +116,7 @@
 - [x] Implement TUI slice 3: scaffold preview + guarded write flow
 - [x] Implement TUI slice 4: targeted validate action + result panels
 - [x] Implement TUI slice 5: optional backlog panel + next-target picker
-- [ ] Implement TUI slice 6: manifest helper + run-log polish
+- [x] Implement TUI slice 6: manifest helper + run-log polish
 - [ ] Keep Homey adapter implementation frozen until TUI checkpoint completion
 
 ## Phase 5: Homey Adapter MVP (Next Major Area)

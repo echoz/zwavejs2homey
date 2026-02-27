@@ -76,7 +76,7 @@ Single in-memory state with these top-level sections:
 - [x] Slice 3: scaffold preview + guarded write flow
 - [x] Slice 4: targeted validate action + result panels
 - [x] Slice 5: optional backlog panel + next-target picker
-- [ ] Slice 6: manifest helper + run-log polish
+- [x] Slice 6: manifest helper + run-log polish
 
 ## Package and Module Layout
 

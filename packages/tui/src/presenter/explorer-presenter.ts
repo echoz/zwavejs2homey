@@ -6,6 +6,7 @@ import type {
   ScaffoldDraft,
   SessionConfig,
   SignatureInspectSummary,
+  StatusSnapshot,
   ValidationSummary,
 } from '../model/types';
 import type { TuiCoordinator } from '../coordinator/tui-coordinator';
@@ -257,6 +258,44 @@ export class ExplorerPresenter {
       this.logError(`Scaffold write failed: ${message}`);
       throw error;
     }
+  }
+
+  addDraftToManifest(
+    options: { manifestFile?: string; filePath?: string; confirm?: boolean } = {},
+  ): { manifestFile: string; entryFilePath: string; updated: boolean } {
+    const draft = this.state.scaffoldDraft;
+    if (!draft) {
+      throw new Error('No scaffold draft prepared. Run "scaffold preview" first.');
+    }
+    const manifestFile = options.manifestFile ?? 'rules/manifest.json';
+    const filePath = options.filePath ?? draft.fileHint;
+    try {
+      const result = this.coordinator.addProductRuleToManifest(manifestFile, filePath, {
+        confirm: options.confirm,
+      });
+      if (result.updated) {
+        this.logInfo(`Added ${result.entryFilePath} to manifest`);
+      } else {
+        this.logInfo(`Manifest already contains ${result.entryFilePath}`);
+      }
+      return result;
+    } catch (error) {
+      const message = toErrorMessage(error);
+      this.state.lastError = message;
+      this.logError(`Manifest update failed: ${message}`);
+      throw error;
+    }
+  }
+
+  getStatusSnapshot(): StatusSnapshot {
+    return {
+      connectionState: this.state.connectionState,
+      selectedNodeId: this.state.explorer.selectedNodeId,
+      selectedSignature: this.state.selectedSignature,
+      cachedNodeCount: this.state.explorer.items.length,
+      backlogFile: this.state.backlogSummary?.filePath,
+      scaffoldFileHint: this.state.scaffoldDraft?.fileHint,
+    };
   }
 
   getRunLog(limit = 30): AppState['runLog'] {
