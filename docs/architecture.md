@@ -139,7 +139,7 @@ Reference plan:
 - `plan/homey-translation-compiler-plan.md`
 - `plan/tui-implementation-plan.md`
 
-## Phase 4 TUI Architecture (Planned)
+## Phase 4 TUI Architecture (In Progress)
 
 The ZWJS Explorer + Curation TUI is a workflow layer that sits above existing compiler/ZWJS tooling.
 
@@ -159,6 +159,13 @@ Guardrails:
 - no ZWJS mutation behavior in MVP
 - no compiler semantics changes from TUI work
 - Homey adapter implementation remains paused until Phase 4 is complete
+
+Current implemented slice:
+
+- Slice 1 delivered in `packages/tui`:
+  - read-only connect/list/show explorer flow
+  - interactive shell command loop (`npm run compiler:tui`)
+  - presenter/service layering with package-local regression tests
 
 ## Runtime Flow (Target)
 

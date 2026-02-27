@@ -1,0 +1,20 @@
+{
+  "name": "@zwavejs2homey/tui",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/cli.js",
+  "types": "dist/cli.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build && node --test test/*.test.js"
+  },
+  "dependencies": {
+    "@zwavejs2homey/core": "0.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

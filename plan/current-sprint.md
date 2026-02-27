@@ -419,13 +419,19 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - strict nested-shape validation also applied to `ignore-value.valueId`
     - added fixture-backed regression coverage for unsupported canonical selector/target fields
     - updated grammar/readme docs to make strict nested mapping semantics explicit
+91. Completed Phase 4 TUI slice 1 (app shell + connect + node list/detail, read-only):
+    - introduced `@zwavejs2homey/tui` package with view/presenter/service layering
+    - added read-only ZWJS explorer service adapter over core client (`connect`, `listNodes`, `getNodeDetail`, `disconnect`)
+    - added presenter state transitions and run-log tracking for connect/refresh/show workflows
+    - added interactive shell command loop via `npm run compiler:tui` (`list`, `refresh`, `show <nodeId>`, `help`, `quit`)
+    - added slice-1 tests (presenter transitions, service adapter behavior, and app smoke path)
+    - folded TUI package tests/build into root workspace quality gates (`npm run check`)
 
 ## Next Tasks
 
-1. Start TUI implementation against `plan/tui-explorer-curation-spec.md`:
-   - Slice 1: app shell + connect + node list/detail (read-only)
+1. Continue Phase 4 TUI implementation against `plan/tui-explorer-curation-spec.md`:
    - Slice 2: signature workspace + compiled profile inspect view
-2. Continue TUI slices 3-6 after Slice 1/2 stabilization:
+2. Continue TUI slices 3-6 after Slice 2 stabilization:
    - scaffold preview/write
    - targeted validate action + result panels
    - optional backlog panel

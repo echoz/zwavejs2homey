@@ -148,6 +148,7 @@ Useful commands:
 ```bash
 npm run zwjs:inspect -- nodes list --url ws://HOST:PORT --format table
 npm run zwjs:inspect -- nodes show <nodeId> --url ws://HOST:PORT --format json --include-values full
+npm run compiler:tui -- --url ws://HOST:PORT --include-values summary
 npm run compiler:inspect-live -- --url ws://HOST:PORT --all-nodes --manifest-file rules/manifest.json --format list
 ```
 
