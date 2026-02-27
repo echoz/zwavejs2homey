@@ -15,6 +15,7 @@ Related ADRs:
 - `docs/decisions/0012-homey-curation-execution-via-runtime-rule-lowering.md`
 - `docs/decisions/0013-homey-device-instance-curation-precedence-v1.md`
 - `docs/decisions/0014-homey-baseline-recommendation-detection-v1.md`
+- `docs/decisions/0015-homey-baseline-hash-canonical-projection-v1.md`
 
 Compiler remains responsible for:
 
@@ -276,11 +277,17 @@ To decide whether to show "new recommended profile available", keep per-device b
 
 - `pipelineFingerprint` (from compiled artifact source metadata when available)
 - `baselineProfileHash` (`sha256` of canonical baseline profile projection)
+- `projectionVersion` (starts at `1`)
 
 Canonical baseline projection should include mapping semantics used at runtime:
 
-- classification identity
-- capabilities + mappings + flags
+- `classification.homeyClass`
+- `classification.driverTemplateId`
+- capabilities + mappings + flags:
+  - `capabilityId`
+  - `inboundMapping`
+  - `outboundMapping`
+  - `flags`
 - subscriptions
 - ignored values
 
@@ -288,6 +295,23 @@ Canonical projection should exclude volatile/report-only fields:
 
 - timestamps
 - validation/report diagnostics
+- provenance/provenance-history metadata
+- confidence/uncurated labels
+
+Canonicalization rules:
+
+- sort `capabilities` by `capabilityId`
+- sort object keys lexicographically
+- remove `undefined` fields
+- preserve explicit `null`
+- use one fixed v1 value-id normalization policy (for example endpoint defaulting) consistently
+
+Marker payload (conceptual):
+
+- `projectionVersion`
+- `pipelineFingerprint?`
+- `baselineProfileHash`
+- `updatedAt`
 
 Detection flow:
 
@@ -296,6 +320,7 @@ Detection flow:
 3. If `baselineProfileHash` changed: recommendation available.
 4. If hash unchanged: no recommendation prompt, even if `pipelineFingerprint` differs.
 5. If marker missing (legacy entry): backfill marker and skip prompt on that first backfill pass.
+6. If `projectionVersion` changed: recompute/backfill marker for the new version and skip prompt on that migration pass.
 
 ## Diagnostics & UX (v1 Minimal)
 
@@ -354,6 +379,8 @@ No seed generator needed in v1.
 - changed canonical baseline profile hash triggers recommendation-available status
 - unchanged canonical hash does not trigger recommendation even when `pipelineFingerprint` changes
 - missing stored marker backfills without raising recommendation on first backfill pass
+- semantically-equivalent profile key-order differences produce identical hash
+- projection-version migration backfills marker without recommendation prompt on that migration pass
 
 ## Acceptance Criteria (v1)
 
@@ -364,6 +391,7 @@ No seed generator needed in v1.
 - Skipped/failing curation fields are observable in diagnostics
 - Device-instance curation precedence over baseline updates is enforced by default
 - Recommendation prompts are driven by baseline marker/hash detection rules
+- Canonical baseline hash projection contract is implemented and versioned
 - Compiler remains unchanged in responsibility (no runtime curation apply logic in compiler package)
 - Docs and roadmap reflect compiler/adapter boundary clearly
 
@@ -394,10 +422,12 @@ No seed generator needed in v1.
 
 ### Phase E — Baseline Marker + Recommendation Detection
 
-- Implement canonical baseline projection + hash helper
+- Implement canonical baseline projection + canonicalization helper
+- Implement `baselineProfileHash` computation (`sha256` over canonical JSON)
+- Version marker contract (`projectionVersion`)
 - Persist marker metadata per `homeyDeviceId`
 - Compute recommendation-available status on baseline refresh
-- Backfill missing markers without first-run prompt spam
+- Backfill missing/version-mismatched markers without first-run prompt spam
 
 ### Phase F — Minimal Curation Admin Flow
 

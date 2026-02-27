@@ -386,6 +386,10 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - store per-device baseline markers (`pipelineFingerprint` + canonical baseline profile hash)
     - recommendation prompts are based on canonical hash changes, not timestamp-only artifact churn
     - missing legacy markers are backfilled without raising prompt on first backfill pass
+86. Locked canonical baseline hash projection contract for v1:
+    - defined exact semantic field whitelist for hash projection (classification identity, capabilities mapping surface, subscriptions, ignored values)
+    - defined explicit canonicalization rules (capability sort, key sort, undefined-drop, null-preserve, stable value-id normalization policy)
+    - versioned marker contract (`projectionVersion`) with no-prompt backfill on projection-version migrations
 
 ## Next Tasks
 

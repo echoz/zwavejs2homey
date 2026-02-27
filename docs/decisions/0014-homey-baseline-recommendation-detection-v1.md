@@ -29,6 +29,8 @@ Canonical baseline profile projection (v1 direction):
   - generated timestamps
   - diagnostics/report-only metadata
 
+The concrete canonical projection/canonicalization contract is defined in `docs/decisions/0015-homey-baseline-hash-canonical-projection-v1.md`.
+
 Recommendation detection on refresh:
 
 1. Recompute marker for current recommended baseline.

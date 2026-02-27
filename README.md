@@ -247,6 +247,7 @@ See `CONTRIBUTING.md` for code + rule/profile contribution workflow, evidence ex
   - v1 execution direction: lower overrides into in-memory runtime rules and execute through shared rules-engine semantics
   - v1 precedence direction: per-device (`homeyDeviceId`) curation overrides stay authoritative; new baseline recommendations are surfaced for explicit user adoption
   - v1 recommendation detection: per-device baseline markers compare canonical baseline profile hashes (with `pipelineFingerprint` metadata) to decide when to prompt
+  - v1 baseline hash contract: explicit canonical projection + canonicalization rules + `projectionVersion` marker field
   - runtime execution of compiled inbound/outbound mappings
 
 ## Where to look next
