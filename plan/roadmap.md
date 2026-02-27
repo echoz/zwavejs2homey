@@ -111,6 +111,7 @@
 - [x] Lock adapter precedence/update direction: instance-scoped curation (`homeyDeviceId`) overrides baseline by default; baseline improvements are surfaced as user-adopted recommendations (`docs/decisions/0013-homey-device-instance-curation-precedence-v1.md`)
 - [x] Lock recommendation detection policy: per-device baseline markers use canonical baseline profile hash changes to trigger recommendation prompts (`docs/decisions/0014-homey-baseline-recommendation-detection-v1.md`)
 - [x] Lock canonical baseline hash projection contract: explicit field whitelist/canonicalization/versioning for recommendation markers (`docs/decisions/0015-homey-baseline-hash-canonical-projection-v1.md`)
+- [x] Lock concrete `curation.v1` stored schema contract (entry map by `homeyDeviceId`, baseline marker embedding, strict schema validation semantics) (`docs/decisions/0016-homey-curation-v1-storage-schema.md`)
 - [ ] Implement adapter execution of inbound/outbound mappings
 - [ ] Device lifecycle/sync (discovery, create/update, mapping diagnostics)
 - [ ] User curation application in Homey runtime

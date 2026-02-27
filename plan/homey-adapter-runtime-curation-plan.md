@@ -16,6 +16,7 @@ Related ADRs:
 - `docs/decisions/0013-homey-device-instance-curation-precedence-v1.md`
 - `docs/decisions/0014-homey-baseline-recommendation-detection-v1.md`
 - `docs/decisions/0015-homey-baseline-hash-canonical-projection-v1.md`
+- `docs/decisions/0016-homey-curation-v1-storage-schema.md`
 
 Compiler remains responsible for:
 
@@ -116,39 +117,62 @@ Compiler identity fields (`catalogId`/`diagnosticDeviceKey`) remain baseline ide
 - changing compiler confidence flags directly
 - overriding rule layer semantics
 
-## Curation Data Model (Adapter-owned, v1 direction)
+## Curation Data Model (`curation.v1` Stored Contract)
 
-Use a versioned JSON format in the Homey adapter with materialized per-target overrides.
+Use a versioned JSON document in Homey settings key `curation.v1`.
 
 Decision locked:
 
-- materialized override state per target is the v1 direction
-- exact stored field contract is deferred until adapter implementation
-- do not lock operation-log patch shape at compiler phase
+- materialized override state per device instance is the persisted source-of-truth
+- concrete stored schema is now locked (not deferred)
+- operation-log patch shape is not used as persisted primary model
 
-### Top-level (conceptual)
+### Top-level (concrete)
 
-- `schemaVersion` (e.g. `homey-curation/v1`)
-- `updatedAt`
-- `entries[]`
+- `schemaVersion`: `homey-curation/v1`
+- `updatedAt`: ISO timestamp
+- `entries`: object map keyed by `homeyDeviceId`
 
-### Entry (conceptual)
+### Entry (concrete)
 
-- `targetDevice`
-  - `homeyDeviceId`
+- `targetDevice`:
+  - `homeyDeviceId` (required; must equal map key)
   - `catalogId?` (metadata/context)
   - `diagnosticDeviceKey?` (metadata/context)
+- `baselineMarker`:
+  - `projectionVersion` (required)
+  - `pipelineFingerprint?`
+  - `baselineProfileHash` (required)
+  - `updatedAt` (required)
 - `overrides`
 - `note?`
-- `updatedAt?`
+- `updatedAt` (required)
 
-### Override scope (conceptual)
+### Override scope (concrete)
 
 Use structured override domains (not arbitrary JSON pointer writes):
 
-- device classification/identity fields
-- capability mapping/flags fields
-- controlled collection add/remove intents (`capabilities`, `subscriptions`, `ignoredValues`)
+- `overrides.deviceIdentity`:
+  - `homeyClass?`
+  - `driverTemplateId?`
+- `overrides.capabilities.{capabilityId}`:
+  - `inboundMapping?`
+  - `outboundMapping?`
+  - `flags?`
+- `overrides.collections`:
+  - `capabilitiesAdd[]`
+  - `capabilitiesRemove[]`
+  - `subscriptionsAdd[]`
+  - `subscriptionsRemove[]`
+  - `ignoredValuesAdd[]`
+  - `ignoredValuesRemove[]`
+
+### Validation rules (concrete)
+
+- strict schema: unknown fields rejected
+- `targetDevice.homeyDeviceId` must match map key
+- collection arrays are deterministically deduped
+- same element cannot appear in both add/remove arrays in one collection pair
 
 ## Override-to-Rule Lowering Contract (v1)
 
@@ -217,6 +241,7 @@ Decision locked:
 Store:
 
 - versioned full curation set JSON (for example key `curation.v1` + schema version)
+- per-entry baseline marker metadata (`projectionVersion`, `pipelineFingerprint?`, `baselineProfileHash`, `updatedAt`)
 - optional metadata per entry (author, last edited UI version)
 
 Optional later:
@@ -347,6 +372,9 @@ No seed generator needed in v1.
 - valid curation set accepted
 - invalid override target/value combos rejected
 - missing target device identity rejected
+- unknown fields rejected (strict schema)
+- entry key vs `targetDevice.homeyDeviceId` mismatch rejected
+- add/remove overlap in same collection pair rejected
 
 ### 2) Lowering + apply helper tests (core)
 
@@ -385,6 +413,7 @@ No seed generator needed in v1.
 ## Acceptance Criteria (v1)
 
 - Adapter-owned curation schema is versioned and documented
+- Concrete `curation.v1` stored schema contract is implemented (map-by-`homeyDeviceId`, baseline marker embedding, strict validation)
 - Curation validation exists with clear errors
 - Override-to-rule lowering + apply helper exist and are unit-tested
 - Adapter applies curation (via runtime lowering) before executing compiled profiles
@@ -399,7 +428,7 @@ No seed generator needed in v1.
 
 ### Phase A — Schema + Validation
 
-- Define `homey-curation/v1` schema/types
+- Define `homey-curation/v1` schema/types (including `entries` map contract and `baselineMarker`)
 - Implement validator
 - Unit tests for valid/invalid schemas
 

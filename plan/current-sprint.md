@@ -390,6 +390,10 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - defined exact semantic field whitelist for hash projection (classification identity, capabilities mapping surface, subscriptions, ignored values)
     - defined explicit canonicalization rules (capability sort, key sort, undefined-drop, null-preserve, stable value-id normalization policy)
     - versioned marker contract (`projectionVersion`) with no-prompt backfill on projection-version migrations
+87. Locked concrete `curation.v1` stored schema contract for v1:
+    - top-level storage key/value shape (`schemaVersion`, `updatedAt`, `entries` map keyed by `homeyDeviceId`)
+    - entry contract includes `targetDevice`, `baselineMarker`, `overrides`, optional note/metadata
+    - strict validation rules (unknown-field reject, key/target match, add/remove overlap reject, deterministic dedupe)
 
 ## Next Tasks
 

@@ -10,9 +10,9 @@ The adapter needs a runtime curation model for applying user corrections to comp
 Two candidate approaches:
 
 - operation-log patches (ordered `add`/`remove`/`replace` operations)
-- materialized per-target overrides (final desired values by target)
+- materialized per-device-target overrides (final desired values by target)
 
-Detailed schema and UI coupling are still phase-4 concerns and should be decided while implementing the Homey adapter.
+At this decision point, detailed schema and UI coupling were intentionally deferred.
 
 ## Decision
 
@@ -20,9 +20,10 @@ Lock only the v1 model direction now:
 
 - adapter runtime curation is represented as materialized override state per device target
 - adapter applies overrides onto compiled profiles deterministically at runtime
-- exact stored JSON field shape is deferred to Homey adapter implementation phase
+- exact stored JSON field shape was deferred at this step and later locked in ADR 0016
 
 Target key selection and precedence/update behavior are defined separately in `docs/decisions/0013-homey-device-instance-curation-precedence-v1.md`.
+Concrete persisted v1 schema is defined in `docs/decisions/0016-homey-curation-v1-storage-schema.md`.
 
 Not selected for v1 baseline:
 
@@ -39,4 +40,3 @@ Positive:
 Tradeoffs:
 
 - less low-level change-history fidelity in the persisted shape
-- exact schema contract remains open until adapter implementation starts
