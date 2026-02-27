@@ -304,6 +304,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - backlog entries aggregate review/generic/empty pressure, actionable review reasons, unmatched/suppressed counts, and sample nodes
     - added redaction parity for backlog artifacts (`--redacted-curation-backlog-json-file`) with automatic default pathing under `--redact-share`
     - expanded parse/runtime regression coverage for backlog flag wiring, gate-profile fields, and redacted backlog output behavior
+66. Completed baseline-workflow curation-backlog parity slice:
+    - extended `compiler:baseline` with `--emit-curation-backlog` to emit baseline/recheck backlog artifacts in one workflow
+    - added stage-specific backlog path overrides (`--baseline-curation-backlog-json-file`, `--recheck-curation-backlog-json-file`)
+    - added stage-specific redacted backlog path overrides (`--baseline-redacted-curation-backlog-json-file`, `--recheck-redacted-curation-backlog-json-file`)
+    - baseline wrapper now forwards backlog flags into both internal `compiler:validate-live` stages with deterministic default backlog/redacted-backlog paths
 
 ## Next Tasks
 

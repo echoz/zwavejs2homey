@@ -189,11 +189,17 @@ Default behavior:
 - runs recheck against that baseline with strict zero deltas (`max * delta = 0`)
 - defaults artifact retention to `delete-on-pass` to avoid large compiled-file buildup
 - supports `--redact-share` to emit baseline/recheck redacted markdown/summary outputs in one workflow
+- supports `--emit-curation-backlog` to emit baseline/recheck curation backlog JSON artifacts in one workflow
 - supports stage-specific redacted output overrides:
   - `--baseline-redacted-report-file`
   - `--baseline-redacted-summary-json-file`
+  - `--baseline-redacted-curation-backlog-json-file`
   - `--recheck-redacted-report-file`
   - `--recheck-redacted-summary-json-file`
+  - `--recheck-redacted-curation-backlog-json-file`
+- supports stage-specific backlog output overrides:
+  - `--baseline-curation-backlog-json-file`
+  - `--recheck-curation-backlog-json-file`
 
 ## Suggested Workflow
 

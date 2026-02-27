@@ -90,6 +90,7 @@ This emits a `compiled-homey-profiles/v1` artifact.
 - `npm run compiler:validate-live -- --url ws://HOST:PORT --all-nodes --curation-backlog-json-file /tmp/compiled-live.curation-backlog.json --redact-share`
 - `npm run compiler:baseline -- --url ws://HOST:PORT --all-nodes --manifest-file rules/manifest.json`
 - `npm run compiler:baseline -- --url ws://HOST:PORT --all-nodes --manifest-file rules/manifest.json --redact-share`
+- `npm run compiler:baseline -- --url ws://HOST:PORT --all-nodes --manifest-file rules/manifest.json --emit-curation-backlog --redact-share`
 
 This runs the canonical live validation loop in one command:
 
@@ -111,6 +112,7 @@ This runs the canonical live validation loop in one command:
 - when backlog output is enabled with `--redact-share`, a redacted backlog file is also emitted (default `*.redacted.json`, overridable via `--redacted-curation-backlog-json-file`)
 - `compiler:baseline` orchestrates baseline capture + immediate recheck in one command and writes timestamped artifacts under `plan/baselines/` by default
 - `compiler:baseline --redact-share` emits redacted baseline/recheck markdown+summary artifacts in the same run (with optional stage-specific redacted path overrides)
+- `compiler:baseline --emit-curation-backlog` also writes baseline/recheck curation backlog artifacts (and redacted variants under `--redact-share`)
 
 Gate setup guide: `docs/compiler-validation-gates.md`
 

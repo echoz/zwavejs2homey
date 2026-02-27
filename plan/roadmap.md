@@ -84,6 +84,7 @@
 - [x] Runtime-validation redacted-share slice: add `--redact-share` + explicit redacted output flags for PR-safe markdown/summary artifacts
 - [x] Runtime-validation baseline-wrapper redaction parity slice: add `compiler:baseline --redact-share` and stage-specific redacted output path overrides
 - [x] Runtime-validation curation-backlog slice: add `--curation-backlog-json-file` (+ redacted variant) to produce ranked per-signature curation queues from live validation runs
+- [x] Runtime-validation baseline-wrapper backlog parity slice: add `compiler:baseline --emit-curation-backlog` and stage-specific backlog path overrides (including redacted variants)
 - [ ] Decide and document final ownership of generic fallback inference policy (currently leaning Homey adapter-owned)
 - [ ] Add second real catalog source adapter when a concrete source format is available
 

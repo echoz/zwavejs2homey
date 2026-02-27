@@ -99,7 +99,7 @@ Current implemented foundation in `packages/compiler`:
     - artifact retention policy (`--artifact-retention delete-on-pass`) to avoid keeping large generated compiled files after successful runs
     - curation backlog artifact (`--curation-backlog-json-file`) to rank per-signature rule-authoring priorities from live validation output
     - redacted-share outputs (`--redact-share`, `--redacted-report-file`, `--redacted-summary-json-file`, `--redacted-curation-backlog-json-file`) for PR-safe diagnostics
-    - baseline workflow wrapper (`compiler:baseline`) to run capture + zero-delta recheck in one command (including redacted-share parity via `--redact-share`)
+    - baseline workflow wrapper (`compiler:baseline`) to run capture + zero-delta recheck in one command (including redacted-share + backlog parity via `--redact-share` and `--emit-curation-backlog`)
     - baseline-enabled markdown reports include delta sections for fast human triage
   - gate calibration/setup playbook lives in `docs/compiler-validation-gates.md`
 - Added compiler artifact build foundation:
