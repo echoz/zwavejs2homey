@@ -329,6 +329,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - wrapper forwards non-loop flags into inspect/validate parsers and defaults to `rules/manifest.json` when no rules source flags are provided
     - supports explicit signature mode or backlog-driven mode (`--backlog-file` or `--from-backlog-file` + `--to-backlog-file`) with `--only`/`--fallback`/`--pick`
     - added loop-tool regression coverage for parse validation, explicit-signature execution, backlog-selection execution, and output formats
+71. Completed loop/backlog hardening slice:
+    - `compiler:backlog next` now also emits a ready-to-run `compiler:loop` command hint for tighter triage->iteration handoff
+    - added `compiler:loop --dry-run` to resolve signature + validate command shapes without executing inspect/validate network flows
+    - loop output now reports dry-run status and treats gate status as `n/a` when no live execution occurred
+    - expanded regression coverage for dry-run behavior and backlog-next loop-hint output
 
 ## Next Tasks
 

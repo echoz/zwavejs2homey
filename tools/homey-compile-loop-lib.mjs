@@ -131,6 +131,7 @@ export function getUsageText() {
     '                     [--fallback summary|none]',
     '                     [--pick N]',
     '                     [--skip-inspect] [--inspect-format list|summary|markdown|json|json-pretty|json-compact|ndjson]',
+    '                     [--dry-run]',
     '                     [--format summary|list|markdown|json|json-pretty|json-compact]',
     '',
     'Notes:',
@@ -220,6 +221,7 @@ export function parseCliArgs(argv) {
     '--pick',
     '--skip-inspect',
     '--inspect-format',
+    '--dry-run',
     '--format',
   ]);
   const forwardedArgv = stripFlags(argv, stripSet);
@@ -236,6 +238,7 @@ export function parseCliArgs(argv) {
       fallback,
       pick,
       skipInspect: flags.has('--skip-inspect'),
+      dryRun: flags.has('--dry-run'),
       inspectFormat,
       format,
       forwardedArgv,
@@ -291,6 +294,24 @@ export async function runLoopCommand(command, io = console, deps = {}) {
 
   const withSignature = [...command.forwardedArgv, '--signature', signature];
   const loopArgs = ensureRulesSourceArgs(withSignature);
+  const inspectCommandLine = command.skipInspect
+    ? null
+    : renderCommand([
+        'npm',
+        'run',
+        'compiler:inspect-live',
+        '--',
+        ...loopArgs,
+        '--format',
+        command.inspectFormat,
+      ]);
+  const validateCommandLine = renderCommand([
+    'npm',
+    'run',
+    'compiler:validate-live',
+    '--',
+    ...loopArgs,
+  ]);
 
   let inspectCommand;
   if (!command.skipInspect) {
@@ -299,11 +320,38 @@ export async function runLoopCommand(command, io = console, deps = {}) {
       parseInspectLiveCliImpl,
       'inspect',
     );
-    io.log(`Running inspect for signature ${signature}`);
-    await runLiveInspectCommandImpl(inspectCommand, io, deps);
+    if (!command.dryRun) {
+      io.log(`Running inspect for signature ${signature}`);
+      await runLiveInspectCommandImpl(inspectCommand, io, deps);
+    }
   }
 
   const validateCommand = parseOrThrow(loopArgs, parseValidateLiveCliImpl, 'validate');
+  if (command.dryRun) {
+    io.log(`Dry run: resolved signature ${signature}`);
+    return {
+      kind: 'loop',
+      signature,
+      selection: selected ?? null,
+      dryRun: true,
+      inspect: {
+        skipped: command.skipInspect,
+        format: command.inspectFormat,
+        commandLine: inspectCommandLine,
+      },
+      validate: {
+        commandLine: validateCommandLine,
+        reportFile: validateCommand.reportFile ?? null,
+        summaryJsonFile: validateCommand.summaryJsonFile ?? null,
+        curationBacklogJsonFile: validateCommand.curationBacklogJsonFile ?? null,
+        gatePassed: null,
+        outcomes: {},
+        reviewNodes: 0,
+        totalNodes: 0,
+      },
+    };
+  }
+
   io.log(`Running validate-live for signature ${signature}`);
   const validateResult = await runValidateLiveCommandImpl(validateCommand, io, deps);
 
@@ -311,23 +359,14 @@ export async function runLoopCommand(command, io = console, deps = {}) {
     kind: 'loop',
     signature,
     selection: selected ?? null,
+    dryRun: false,
     inspect: {
       skipped: command.skipInspect,
       format: command.inspectFormat,
-      commandLine: command.skipInspect
-        ? null
-        : renderCommand([
-            'npm',
-            'run',
-            'compiler:inspect-live',
-            '--',
-            ...loopArgs,
-            '--format',
-            command.inspectFormat,
-          ]),
+      commandLine: inspectCommandLine,
     },
     validate: {
-      commandLine: renderCommand(['npm', 'run', 'compiler:validate-live', '--', ...loopArgs]),
+      commandLine: validateCommandLine,
       reportFile: validateCommand.reportFile ?? null,
       summaryJsonFile: validateCommand.summaryJsonFile ?? null,
       curationBacklogJsonFile: validateCommand.curationBacklogJsonFile ?? null,
@@ -354,8 +393,9 @@ export function formatLoopOutput(result, format) {
       `- Signature: ${result.signature}`,
       selectedFromBacklog ? `- Backlog-selected signature: ${selectedFromBacklog}` : null,
       selectedTopReason ? `- Backlog top reason: ${selectedTopReason}` : null,
+      `- Dry run: ${result.dryRun ? 'yes' : 'no'}`,
       `- Inspect skipped: ${result.inspect?.skipped ? 'yes' : 'no'}`,
-      `- Validate gate passed: ${result.validate?.gatePassed ? 'yes' : 'no'}`,
+      `- Validate gate passed: ${result.validate?.gatePassed === null ? 'n/a' : result.validate?.gatePassed ? 'yes' : 'no'}`,
       `- Nodes validated: ${result.validate?.totalNodes ?? 0}`,
       `- Needs review: ${result.validate?.reviewNodes ?? 0}`,
       outcomeSummary ? `- Outcomes: ${outcomeSummary}` : null,
@@ -382,8 +422,9 @@ export function formatLoopOutput(result, format) {
     `Signature: ${result.signature}`,
     selectedFromBacklog ? `Backlog-selected signature: ${selectedFromBacklog}` : null,
     selectedTopReason ? `Backlog top reason: ${selectedTopReason}` : null,
+    `Dry run: ${result.dryRun ? 'yes' : 'no'}`,
     `Inspect skipped: ${result.inspect?.skipped ? 'yes' : 'no'}`,
-    `Validate gate passed: ${result.validate?.gatePassed ? 'yes' : 'no'}`,
+    `Validate gate passed: ${result.validate?.gatePassed === null ? 'n/a' : result.validate?.gatePassed ? 'yes' : 'no'}`,
     `Nodes validated: ${result.validate?.totalNodes ?? 0}`,
     `Needs review: ${result.validate?.reviewNodes ?? 0}`,
     outcomeSummary ? `Outcomes: ${outcomeSummary}` : null,

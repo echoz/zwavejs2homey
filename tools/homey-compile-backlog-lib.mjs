@@ -470,6 +470,18 @@ function buildNextCommandHints(signature, backlogFilePath, source) {
       '--signature',
       signature,
     ]),
+    loop: renderCommand([
+      'npm',
+      'run',
+      'compiler:loop',
+      '--',
+      '--url',
+      url,
+      ...scopeArgs,
+      ...ruleInputArgs,
+      '--signature',
+      signature,
+    ]),
   };
 }
 
@@ -1072,6 +1084,7 @@ function formatNextResult(result, format) {
       `- Scaffold rule: \`${commands.scaffold ?? ''}\``,
       `- Inspect live: \`${commands.inspectLive ?? ''}\``,
       `- Validate live: \`${commands.validateLive ?? ''}\``,
+      `- Iteration loop: \`${commands.loop ?? ''}\``,
       '',
     ]
       .filter((line) => line !== null)
@@ -1098,6 +1111,7 @@ function formatNextResult(result, format) {
     `  Scaffold rule: ${commands.scaffold ?? ''}`,
     `  Inspect live: ${commands.inspectLive ?? ''}`,
     `  Validate live: ${commands.validateLive ?? ''}`,
+    `  Iteration loop: ${commands.loop ?? ''}`,
   ]
     .filter((line) => line !== null)
     .join('\n');

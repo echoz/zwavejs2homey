@@ -89,6 +89,7 @@
 - [x] Runtime-validation signature-targeted loop slice: add `--signature` filtering to `compiler:inspect-live` and `compiler:validate-live` for focused per-product iteration
 - [x] Runtime-validation backlog-next helper slice: add `compiler:backlog next` (summary/diff modes) to pick the next signature and print runnable scaffold/inspect/validate command hints
 - [x] Runtime-validation signature-loop wrapper slice: add `compiler:loop` to run backlog selection + targeted inspect + targeted validate in one command
+- [x] Runtime-validation loop/backlog hardening slice: add `compiler:loop --dry-run` and backlog-next loop command hints for faster safe iteration setup
 - [ ] Decide and document final ownership of generic fallback inference policy (currently leaning Homey adapter-owned)
 - [ ] Add second real catalog source adapter when a concrete source format is available
 
