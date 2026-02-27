@@ -89,7 +89,12 @@ Supported profile fields:
 - `maxReviewNodes`
 - `maxGenericNodes`
 - `maxEmptyNodes`
+- `maxReviewDelta`
+- `maxGenericDelta`
+- `maxEmptyDelta`
 - `failOnReasons` (array of strings)
+- `failOnReasonDeltas` (object map: reason -> max delta)
+- `baselineSummaryJsonFile`
 - `artifactFile`
 - `reportFile`
 - `summaryJsonFile`
@@ -121,6 +126,21 @@ npm run compiler:validate-live -- \
   --print-effective-gates
 ```
 
+For regression gating, compare against a baseline summary:
+
+```bash
+npm run compiler:validate-live -- \
+  --url ws://HOST:PORT \
+  --all-nodes \
+  --baseline-summary-json-file /tmp/compiled-live.baseline.summary.json \
+  --max-review-delta 1 \
+  --max-generic-delta 0 \
+  --max-empty-delta 0 \
+  --fail-on-reason-delta known-device-unmapped:0
+```
+
+Delta gates fail only when current counts increase above baseline by more than the configured delta.
+
 For fully offline gate tuning (no ZWJS connection), replay gates from an existing summary JSON:
 
 ```bash
@@ -133,6 +153,7 @@ npm run compiler:validate-live -- \
 Optional:
 
 - add `--summary-json-file /tmp/compiled-live.summary.recheck.json` to write a refreshed summary with updated gate results
+- add `--baseline-summary-json-file /tmp/compiled-live.baseline.summary.json` and any `--max-*-delta` / `--fail-on-reason-delta` gates for offline regression checks
 
 ## Suggested Workflow
 

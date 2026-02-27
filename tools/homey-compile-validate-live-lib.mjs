@@ -89,22 +89,65 @@ function parseCounterMap(raw, fieldName, options = {}) {
   return result;
 }
 
-function loadSummaryGateInput(inputSummaryJsonFile) {
-  const resolvedFilePath = resolveFilePath(inputSummaryJsonFile);
+function parseReasonDeltaConfigMap(raw, fieldName) {
+  if (raw === undefined) return {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    throw new Error(`Field "${fieldName}" must be an object`);
+  }
+  const out = {};
+  for (const [reason, rawValue] of Object.entries(raw)) {
+    if (!reason) {
+      throw new Error(`Field "${fieldName}" contains an empty reason key`);
+    }
+    const parsed = Number(rawValue);
+    if (!Number.isInteger(parsed) || parsed < 0) {
+      throw new Error(`Field "${fieldName}.${reason}" must be a non-negative integer`);
+    }
+    out[reason] = parsed;
+  }
+  return out;
+}
+
+function parseReasonDeltaFlags(rawValues, flagName) {
+  const out = {};
+  for (const token of rawValues) {
+    const separator = token.lastIndexOf(':');
+    if (separator <= 0 || separator === token.length - 1) {
+      throw new Error(
+        `Invalid ${flagName} entry "${token}" (expected <reason>:<non-negative-int>)`,
+      );
+    }
+    const reason = token.slice(0, separator);
+    const deltaRaw = token.slice(separator + 1);
+    const parsed = Number(deltaRaw);
+    if (!Number.isInteger(parsed) || parsed < 0) {
+      throw new Error(`Invalid ${flagName} delta for "${reason}": ${deltaRaw}`);
+    }
+    if (out[reason] !== undefined) {
+      throw new Error(`Duplicate ${flagName} reason "${reason}"`);
+    }
+    out[reason] = parsed;
+  }
+  return out;
+}
+
+function loadSummaryGateInput(summaryJsonFile, options = {}) {
+  const { label = 'summary JSON file' } = options;
+  const resolvedFilePath = resolveFilePath(summaryJsonFile);
   let raw;
   try {
     raw = readJson(resolvedFilePath);
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
-    throw new Error(`Failed to read input summary JSON file "${resolvedFilePath}": ${reason}`);
+    throw new Error(`Failed to read ${label} "${resolvedFilePath}": ${reason}`);
   }
 
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
-    throw new Error(`Input summary JSON "${resolvedFilePath}" must be a JSON object`);
+    throw new Error(`${label} "${resolvedFilePath}" must be a JSON object`);
   }
   const counts = raw.counts;
   if (!counts || typeof counts !== 'object' || Array.isArray(counts)) {
-    throw new Error(`Input summary JSON "${resolvedFilePath}" must include object field "counts"`);
+    throw new Error(`${label} "${resolvedFilePath}" must include object field "counts"`);
   }
 
   const outcomes = parseCounterMap(counts.outcomes, 'counts.outcomes', { required: true });
@@ -144,7 +187,12 @@ function loadGateProfile(gateProfileFile) {
     'maxReviewNodes',
     'maxGenericNodes',
     'maxEmptyNodes',
+    'maxReviewDelta',
+    'maxGenericDelta',
+    'maxEmptyDelta',
     'failOnReasons',
+    'failOnReasonDeltas',
+    'baselineSummaryJsonFile',
     'artifactFile',
     'reportFile',
     'summaryJsonFile',
@@ -169,6 +217,9 @@ function loadGateProfile(gateProfileFile) {
   let maxReviewNodes;
   let maxGenericNodes;
   let maxEmptyNodes;
+  let maxReviewDelta;
+  let maxGenericDelta;
+  let maxEmptyDelta;
   try {
     maxReviewNodes = parseOptionalNonNegativeInt(raw.maxReviewNodes, 'gateProfile.maxReviewNodes');
     maxGenericNodes = parseOptionalNonNegativeInt(
@@ -176,6 +227,12 @@ function loadGateProfile(gateProfileFile) {
       'gateProfile.maxGenericNodes',
     );
     maxEmptyNodes = parseOptionalNonNegativeInt(raw.maxEmptyNodes, 'gateProfile.maxEmptyNodes');
+    maxReviewDelta = parseOptionalNonNegativeInt(raw.maxReviewDelta, 'gateProfile.maxReviewDelta');
+    maxGenericDelta = parseOptionalNonNegativeInt(
+      raw.maxGenericDelta,
+      'gateProfile.maxGenericDelta',
+    );
+    maxEmptyDelta = parseOptionalNonNegativeInt(raw.maxEmptyDelta, 'gateProfile.maxEmptyDelta');
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     throw new Error(`Invalid gate profile "${resolvedFilePath}": ${reason}`);
@@ -194,12 +251,31 @@ function loadGateProfile(gateProfileFile) {
     failOnReasons = raw.failOnReasons;
   }
 
+  let failOnReasonDeltas;
+  try {
+    failOnReasonDeltas = parseReasonDeltaConfigMap(
+      raw.failOnReasonDeltas,
+      'gateProfile.failOnReasonDeltas',
+    );
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new Error(`Invalid gate profile "${resolvedFilePath}": ${reason}`);
+  }
+
   return {
     filePath: resolvedFilePath,
     maxReviewNodes,
     maxGenericNodes,
     maxEmptyNodes,
+    maxReviewDelta,
+    maxGenericDelta,
+    maxEmptyDelta,
     failOnReasons,
+    failOnReasonDeltas,
+    baselineSummaryJsonFile: resolveProfilePath(
+      raw.baselineSummaryJsonFile,
+      'baselineSummaryJsonFile',
+    ),
     artifactFile: resolveProfilePath(raw.artifactFile, 'artifactFile'),
     reportFile: resolveProfilePath(raw.reportFile, 'reportFile'),
     summaryJsonFile: resolveProfilePath(raw.summaryJsonFile, 'summaryJsonFile'),
@@ -345,6 +421,11 @@ function formatOutcomeSummary(outcomes) {
   return [...orderedKeys, ...extras].map((key) => `${key}=${outcomes.get(key) ?? 0}`).join(', ');
 }
 
+function formatDeltaSummary(deltas) {
+  if (!deltas) return '';
+  return `review=${deltas.reviewNodes}, generic=${deltas.genericNodes}, empty=${deltas.emptyNodes}`;
+}
+
 function describeRuleSource(command) {
   if (command.ruleInputMode === 'compiled-file') {
     return `compiled-file (${command.compiledFile})`;
@@ -473,11 +554,92 @@ function evaluateValidationGates(command, summary) {
     }
   }
 
+  let baseline;
+  let deltas;
+  if (command.baselineSummary) {
+    const baselineGenericNodes = command.baselineSummary.outcomes.get('generic') ?? 0;
+    const baselineEmptyNodes = command.baselineSummary.outcomes.get('empty') ?? 0;
+    baseline = {
+      reviewNodes: command.baselineSummary.reviewNodes,
+      genericNodes: baselineGenericNodes,
+      emptyNodes: baselineEmptyNodes,
+      reasonCounts: mapToSortedObject(command.baselineSummary.reviewReasonCounts),
+    };
+    const reviewDelta = summary.reviewNodes - command.baselineSummary.reviewNodes;
+    const genericDelta = genericNodes - baselineGenericNodes;
+    const emptyDelta = emptyNodes - baselineEmptyNodes;
+    const reasonDeltas = new Map();
+    const configuredReasonDeltas = command.failOnReasonDeltas ?? {};
+    for (const reason of Object.keys(configuredReasonDeltas)) {
+      const current = summary.reviewReasonCounts.get(reason) ?? 0;
+      const baselineCount = command.baselineSummary.reviewReasonCounts.get(reason) ?? 0;
+      const delta = current - baselineCount;
+      reasonDeltas.set(reason, delta);
+      if (delta > configuredReasonDeltas[reason]) {
+        violations.push(
+          `reason "${reason}" delta ${delta} exceeded max ${configuredReasonDeltas[reason]} (--fail-on-reason-delta ${reason}:${configuredReasonDeltas[reason]})`,
+        );
+      }
+    }
+
+    deltas = {
+      reviewNodes: reviewDelta,
+      genericNodes: genericDelta,
+      emptyNodes: emptyDelta,
+      reasonDeltas: mapToSortedObject(reasonDeltas),
+    };
+
+    if (
+      command.maxReviewDelta !== undefined &&
+      Number.isInteger(command.maxReviewDelta) &&
+      reviewDelta > command.maxReviewDelta
+    ) {
+      violations.push(
+        `review nodes delta ${reviewDelta} exceeded max ${command.maxReviewDelta} (--max-review-delta)`,
+      );
+    }
+    if (
+      command.maxGenericDelta !== undefined &&
+      Number.isInteger(command.maxGenericDelta) &&
+      genericDelta > command.maxGenericDelta
+    ) {
+      violations.push(
+        `generic outcome nodes delta ${genericDelta} exceeded max ${command.maxGenericDelta} (--max-generic-delta)`,
+      );
+    }
+    if (
+      command.maxEmptyDelta !== undefined &&
+      Number.isInteger(command.maxEmptyDelta) &&
+      emptyDelta > command.maxEmptyDelta
+    ) {
+      violations.push(
+        `empty outcome nodes delta ${emptyDelta} exceeded max ${command.maxEmptyDelta} (--max-empty-delta)`,
+      );
+    }
+  }
+
   return {
     genericNodes,
     emptyNodes,
+    baseline,
+    deltas,
     passed: violations.length === 0,
     violations,
+  };
+}
+
+function buildConfiguredGateSection(command) {
+  return {
+    gateProfileFile: command.gateProfileFile,
+    baselineSummaryJsonFile: command.baselineSummaryJsonFile,
+    maxReviewNodes: command.maxReviewNodes,
+    maxGenericNodes: command.maxGenericNodes,
+    maxEmptyNodes: command.maxEmptyNodes,
+    maxReviewDelta: command.maxReviewDelta,
+    maxGenericDelta: command.maxGenericDelta,
+    maxEmptyDelta: command.maxEmptyDelta,
+    failOnReasons: command.failOnReasons,
+    failOnReasonDeltas: command.failOnReasonDeltas,
   };
 }
 
@@ -491,10 +653,17 @@ function buildEffectiveGateConfig(command) {
     mode,
     inputSummaryJsonFile: command.inputSummaryJsonFile ?? null,
     gateProfileFile: command.gateProfileFile ?? null,
+    baselineSummaryJsonFile: command.baselineSummaryJsonFile ?? null,
     thresholds: {
       maxReviewNodes: command.maxReviewNodes ?? null,
       maxGenericNodes: command.maxGenericNodes ?? null,
       maxEmptyNodes: command.maxEmptyNodes ?? null,
+    },
+    deltas: {
+      maxReviewDelta: command.maxReviewDelta ?? null,
+      maxGenericDelta: command.maxGenericDelta ?? null,
+      maxEmptyDelta: command.maxEmptyDelta ?? null,
+      failOnReasonDeltas: command.failOnReasonDeltas ?? {},
     },
     failOnReasons: command.failOnReasons ?? [],
     outputs: {
@@ -513,6 +682,7 @@ function buildMachineSummary(command, summary, gateResult, generatedAtIso) {
       scope: command.allNodes ? 'all-nodes' : `node:${command.nodeId}`,
       ruleInputMode: command.ruleInputMode,
       inputSummaryJsonFile: command.inputSummaryJsonFile,
+      baselineSummaryJsonFile: command.baselineSummaryJsonFile,
       manifestFile: command.manifestFile,
       rulesFiles: command.rulesFiles,
       compiledFile: command.compiledFile,
@@ -534,13 +704,9 @@ function buildMachineSummary(command, summary, gateResult, generatedAtIso) {
       suppressedSlots: summary.topSuppressed.map(([signature, count]) => ({ signature, count })),
     },
     gates: {
-      configured: {
-        gateProfileFile: command.gateProfileFile,
-        maxReviewNodes: command.maxReviewNodes,
-        maxGenericNodes: command.maxGenericNodes,
-        maxEmptyNodes: command.maxEmptyNodes,
-        failOnReasons: command.failOnReasons,
-      },
+      configured: buildConfiguredGateSection(command),
+      baseline: gateResult.baseline,
+      deltas: gateResult.deltas,
       passed: gateResult.passed,
       violations: gateResult.violations,
     },
@@ -552,23 +718,19 @@ function buildMachineSummaryFromInput(command, input, gateResult, generatedAtIso
     input?.source && typeof input.source === 'object' && !Array.isArray(input.source)
       ? input.source
       : {};
-  const configured = {
-    gateProfileFile: command.gateProfileFile,
-    maxReviewNodes: command.maxReviewNodes,
-    maxGenericNodes: command.maxGenericNodes,
-    maxEmptyNodes: command.maxEmptyNodes,
-    failOnReasons: command.failOnReasons,
-  };
   return {
     ...input,
     generatedAt: generatedAtIso,
     source: {
       ...source,
       inputSummaryJsonFile: command.inputSummaryJsonFile,
+      baselineSummaryJsonFile: command.baselineSummaryJsonFile,
       gateProfileFile: command.gateProfileFile,
     },
     gates: {
-      configured,
+      configured: buildConfiguredGateSection(command),
+      baseline: gateResult.baseline,
+      deltas: gateResult.deltas,
       passed: gateResult.passed,
       violations: gateResult.violations,
     },
@@ -590,15 +752,21 @@ export function getUsageText() {
     '                            [--report-file </tmp/compiled-live.validation.md>]',
     '                            [--summary-json-file </tmp/compiled-live.summary.json>]',
     '                            [--gate-profile-file <validation-gates.json>]',
+    '                            [--baseline-summary-json-file </tmp/compiled-live.baseline.summary.json>]',
     '                            [--max-review-nodes N] [--max-generic-nodes N] [--max-empty-nodes N]',
     '                            [--fail-on-reason <reason> ...]',
+    '                            [--max-review-delta N] [--max-generic-delta N] [--max-empty-delta N]',
+    '                            [--fail-on-reason-delta <reason>:<delta> ...]',
     '                            [--print-effective-gates]',
     '                            [--top N]',
     '',
     '  homey-compile-validate-live --input-summary-json-file </tmp/compiled-live.summary.json>',
     '                            [--gate-profile-file <validation-gates.json>]',
+    '                            [--baseline-summary-json-file </tmp/compiled-live.baseline.summary.json>]',
     '                            [--max-review-nodes N] [--max-generic-nodes N] [--max-empty-nodes N]',
     '                            [--fail-on-reason <reason> ...]',
+    '                            [--max-review-delta N] [--max-generic-delta N] [--max-empty-delta N]',
+    '                            [--fail-on-reason-delta <reason>:<delta> ...]',
     '                            [--summary-json-file </tmp/compiled-live.summary.recheck.json>]',
     '                            [--print-effective-gates]',
   ].join('\n');
@@ -615,6 +783,15 @@ export function parseCliArgs(argv, options = {}) {
       return { ok: false, error: '--input-summary-json-file requires a value' };
     }
     inputSummaryJsonFile = resolveFilePath(inputSummaryJsonFileFlag);
+  }
+
+  const baselineSummaryJsonFileFlag = flags.get('--baseline-summary-json-file');
+  let cliBaselineSummaryJsonFile;
+  if (baselineSummaryJsonFileFlag !== undefined) {
+    if (!baselineSummaryJsonFileFlag || baselineSummaryJsonFileFlag === 'true') {
+      return { ok: false, error: '--baseline-summary-json-file requires a value' };
+    }
+    cliBaselineSummaryJsonFile = resolveFilePath(baselineSummaryJsonFileFlag);
   }
   const summaryInputMode = inputSummaryJsonFile !== undefined;
 
@@ -779,6 +956,9 @@ export function parseCliArgs(argv, options = {}) {
   let cliMaxReviewNodes;
   let cliMaxGenericNodes;
   let cliMaxEmptyNodes;
+  let cliMaxReviewDelta;
+  let cliMaxGenericDelta;
+  let cliMaxEmptyDelta;
   try {
     cliMaxReviewNodes = parseOptionalNonNegativeInt(
       flags.get('--max-review-nodes'),
@@ -792,6 +972,18 @@ export function parseCliArgs(argv, options = {}) {
       flags.get('--max-empty-nodes'),
       '--max-empty-nodes',
     );
+    cliMaxReviewDelta = parseOptionalNonNegativeInt(
+      flags.get('--max-review-delta'),
+      '--max-review-delta',
+    );
+    cliMaxGenericDelta = parseOptionalNonNegativeInt(
+      flags.get('--max-generic-delta'),
+      '--max-generic-delta',
+    );
+    cliMaxEmptyDelta = parseOptionalNonNegativeInt(
+      flags.get('--max-empty-delta'),
+      '--max-empty-delta',
+    );
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     return { ok: false, error: reason };
@@ -799,9 +991,29 @@ export function parseCliArgs(argv, options = {}) {
   const maxReviewNodes = cliMaxReviewNodes ?? gateProfile?.maxReviewNodes;
   const maxGenericNodes = cliMaxGenericNodes ?? gateProfile?.maxGenericNodes;
   const maxEmptyNodes = cliMaxEmptyNodes ?? gateProfile?.maxEmptyNodes;
+  const maxReviewDelta = cliMaxReviewDelta ?? gateProfile?.maxReviewDelta;
+  const maxGenericDelta = cliMaxGenericDelta ?? gateProfile?.maxGenericDelta;
+  const maxEmptyDelta = cliMaxEmptyDelta ?? gateProfile?.maxEmptyDelta;
   const cliFailOnReasons = collectRepeatedFlag(argv, '--fail-on-reason');
   const failOnReasons =
     cliFailOnReasons.length > 0 ? cliFailOnReasons : (gateProfile?.failOnReasons ?? []);
+  const cliFailOnReasonDeltaSpecs = collectRepeatedFlag(argv, '--fail-on-reason-delta');
+  let cliFailOnReasonDeltas;
+  try {
+    cliFailOnReasonDeltas = parseReasonDeltaFlags(
+      cliFailOnReasonDeltaSpecs,
+      '--fail-on-reason-delta',
+    );
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    return { ok: false, error: reason };
+  }
+  const failOnReasonDeltas =
+    cliFailOnReasonDeltaSpecs.length > 0
+      ? cliFailOnReasonDeltas
+      : (gateProfile?.failOnReasonDeltas ?? {});
+  const baselineSummaryJsonFile =
+    cliBaselineSummaryJsonFile ?? gateProfile?.baselineSummaryJsonFile;
 
   let artifactFile;
   let reportFile;
@@ -836,6 +1048,7 @@ export function parseCliArgs(argv, options = {}) {
       ruleInputMode,
       compiledFile,
       inputSummaryJsonFile,
+      baselineSummaryJsonFile,
       catalogFile,
       artifactFile,
       reportFile,
@@ -844,7 +1057,11 @@ export function parseCliArgs(argv, options = {}) {
       maxReviewNodes,
       maxGenericNodes,
       maxEmptyNodes,
+      maxReviewDelta,
+      maxGenericDelta,
+      maxEmptyDelta,
       failOnReasons,
+      failOnReasonDeltas,
       printEffectiveGates: flags.has('--print-effective-gates'),
       top,
     },
@@ -856,28 +1073,48 @@ export async function runValidateLiveCommand(command, io = console, deps = {}) {
   const inspectImpl = deps.runLiveInspectCommandImpl ?? runLiveInspectCommand;
   const nowDate = deps.nowDate ?? new Date();
   const generatedAtIso = nowDate.toISOString();
+  let baselineSummary;
+  if (command.baselineSummaryJsonFile) {
+    baselineSummary = loadSummaryGateInput(command.baselineSummaryJsonFile, {
+      label: 'baseline summary JSON file',
+    }).summary;
+  }
+  const commandWithBaseline = {
+    ...command,
+    baselineSummary,
+  };
 
-  if (command.printEffectiveGates) {
-    io.log(`Effective gates:\n${formatJsonPretty(buildEffectiveGateConfig(command))}`);
+  if (commandWithBaseline.printEffectiveGates) {
+    io.log(`Effective gates:\n${formatJsonPretty(buildEffectiveGateConfig(commandWithBaseline))}`);
   }
 
-  if (command.inputSummaryJsonFile) {
-    const loaded = loadSummaryGateInput(command.inputSummaryJsonFile);
+  if (commandWithBaseline.inputSummaryJsonFile) {
+    const loaded = loadSummaryGateInput(commandWithBaseline.inputSummaryJsonFile, {
+      label: 'input summary JSON file',
+    });
     const summary = loaded.summary;
-    const gateResult = evaluateValidationGates(command, summary);
+    const gateResult = evaluateValidationGates(commandWithBaseline, summary);
     const machineSummary = buildMachineSummaryFromInput(
-      command,
+      commandWithBaseline,
       loaded.machineSummary,
       gateResult,
       generatedAtIso,
     );
-    if (command.summaryJsonFile) {
-      fs.writeFileSync(command.summaryJsonFile, `${formatJsonPretty(machineSummary)}\n`, 'utf8');
+    if (commandWithBaseline.summaryJsonFile) {
+      fs.writeFileSync(
+        commandWithBaseline.summaryJsonFile,
+        `${formatJsonPretty(machineSummary)}\n`,
+        'utf8',
+      );
     }
 
     io.log(`Input summary JSON: ${loaded.filePath}`);
-    if (command.summaryJsonFile) {
-      io.log(`Validation summary JSON: ${command.summaryJsonFile}`);
+    if (commandWithBaseline.baselineSummaryJsonFile) {
+      io.log(`Baseline summary JSON: ${commandWithBaseline.baselineSummaryJsonFile}`);
+      io.log(`Delta: ${formatDeltaSummary(gateResult.deltas)}`);
+    }
+    if (commandWithBaseline.summaryJsonFile) {
+      io.log(`Validation summary JSON: ${commandWithBaseline.summaryJsonFile}`);
     }
     io.log(`Nodes validated: ${summary.totalNodes}`);
     io.log(`Outcomes: ${formatOutcomeSummary(summary.outcomes)}`);
@@ -897,57 +1134,61 @@ export async function runValidateLiveCommand(command, io = console, deps = {}) {
   }
 
   let artifact;
-  if (command.compiledFile) {
+  if (commandWithBaseline.compiledFile) {
     try {
-      artifact = readJson(command.compiledFile);
+      artifact = readJson(commandWithBaseline.compiledFile);
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
-      throw new Error(`Failed to read compiled file "${command.compiledFile}": ${reason}`);
+      throw new Error(
+        `Failed to read compiled file "${commandWithBaseline.compiledFile}": ${reason}`,
+      );
     }
     if (!artifact || typeof artifact !== 'object' || Array.isArray(artifact)) {
-      throw new Error(`Compiled file "${command.compiledFile}" must contain a JSON object`);
+      throw new Error(
+        `Compiled file "${commandWithBaseline.compiledFile}" must contain a JSON object`,
+      );
     }
   } else {
     const buildCommand = {
-      url: command.url,
-      token: command.token,
-      schemaVersion: command.schemaVersion,
-      allNodes: command.allNodes,
-      nodeId: command.nodeId,
-      includeValues: command.includeValues,
-      maxValues: command.maxValues,
-      includeControllerNodes: command.includeControllerNodes,
+      url: commandWithBaseline.url,
+      token: commandWithBaseline.token,
+      schemaVersion: commandWithBaseline.schemaVersion,
+      allNodes: commandWithBaseline.allNodes,
+      nodeId: commandWithBaseline.nodeId,
+      includeValues: commandWithBaseline.includeValues,
+      maxValues: commandWithBaseline.maxValues,
+      includeControllerNodes: commandWithBaseline.includeControllerNodes,
       deviceFiles: [],
-      manifestFile: command.manifestFile,
-      rulesFiles: command.rulesFiles,
-      catalogFile: command.catalogFile,
+      manifestFile: commandWithBaseline.manifestFile,
+      rulesFiles: commandWithBaseline.rulesFiles,
+      catalogFile: commandWithBaseline.catalogFile,
       outputFile: undefined,
       format: 'summary',
-      ruleInputMode: command.ruleInputMode,
+      ruleInputMode: commandWithBaseline.ruleInputMode,
     };
 
     artifact = await buildImpl(buildCommand, deps);
-    fs.writeFileSync(command.artifactFile, `${formatJsonPretty(artifact)}\n`, 'utf8');
+    fs.writeFileSync(commandWithBaseline.artifactFile, `${formatJsonPretty(artifact)}\n`, 'utf8');
   }
 
   const inspectLogs = [];
   await inspectImpl(
     {
-      url: command.url,
-      token: command.token,
-      schemaVersion: command.schemaVersion,
-      allNodes: command.allNodes,
-      nodeId: command.nodeId,
-      compiledFile: command.artifactFile,
+      url: commandWithBaseline.url,
+      token: commandWithBaseline.token,
+      schemaVersion: commandWithBaseline.schemaVersion,
+      allNodes: commandWithBaseline.allNodes,
+      nodeId: commandWithBaseline.nodeId,
+      compiledFile: commandWithBaseline.artifactFile,
       manifestFile: undefined,
       rulesFiles: [],
-      catalogFile: command.catalogFile,
+      catalogFile: commandWithBaseline.catalogFile,
       format: 'json-compact',
-      includeValues: command.includeValues,
-      maxValues: command.maxValues,
-      includeControllerNodes: command.includeControllerNodes,
+      includeValues: commandWithBaseline.includeValues,
+      maxValues: commandWithBaseline.maxValues,
+      includeControllerNodes: commandWithBaseline.includeControllerNodes,
       focus: 'all',
-      top: command.top,
+      top: commandWithBaseline.top,
       show: 'none',
       explainAll: false,
       explainOnly: false,
@@ -971,23 +1212,36 @@ export async function runValidateLiveCommand(command, io = console, deps = {}) {
     throw new Error('Live inspect output did not include results array');
   }
 
-  const summary = summarizeValidationResults(results, command.top);
-  const gateResult = evaluateValidationGates(command, summary);
-  const markdown = formatMarkdownReport(command, summary, generatedAtIso);
-  fs.writeFileSync(command.reportFile, markdown, 'utf8');
-  const machineSummary = buildMachineSummary(command, summary, gateResult, generatedAtIso);
-  if (command.summaryJsonFile) {
-    fs.writeFileSync(command.summaryJsonFile, `${formatJsonPretty(machineSummary)}\n`, 'utf8');
+  const summary = summarizeValidationResults(results, commandWithBaseline.top);
+  const gateResult = evaluateValidationGates(commandWithBaseline, summary);
+  const markdown = formatMarkdownReport(commandWithBaseline, summary, generatedAtIso);
+  fs.writeFileSync(commandWithBaseline.reportFile, markdown, 'utf8');
+  const machineSummary = buildMachineSummary(
+    commandWithBaseline,
+    summary,
+    gateResult,
+    generatedAtIso,
+  );
+  if (commandWithBaseline.summaryJsonFile) {
+    fs.writeFileSync(
+      commandWithBaseline.summaryJsonFile,
+      `${formatJsonPretty(machineSummary)}\n`,
+      'utf8',
+    );
   }
 
-  if (command.compiledFile) {
-    io.log(`Using compiled artifact: ${command.artifactFile}`);
+  if (commandWithBaseline.compiledFile) {
+    io.log(`Using compiled artifact: ${commandWithBaseline.artifactFile}`);
   } else {
-    io.log(`Compiled artifact: ${command.artifactFile}`);
+    io.log(`Compiled artifact: ${commandWithBaseline.artifactFile}`);
   }
-  io.log(`Validation report: ${command.reportFile}`);
-  if (command.summaryJsonFile) {
-    io.log(`Validation summary JSON: ${command.summaryJsonFile}`);
+  if (commandWithBaseline.baselineSummaryJsonFile) {
+    io.log(`Baseline summary JSON: ${commandWithBaseline.baselineSummaryJsonFile}`);
+    io.log(`Delta: ${formatDeltaSummary(gateResult.deltas)}`);
+  }
+  io.log(`Validation report: ${commandWithBaseline.reportFile}`);
+  if (commandWithBaseline.summaryJsonFile) {
+    io.log(`Validation summary JSON: ${commandWithBaseline.summaryJsonFile}`);
   }
   io.log(`Nodes validated: ${summary.totalNodes}`);
   io.log(`Outcomes: ${formatOutcomeSummary(summary.outcomes)}`);

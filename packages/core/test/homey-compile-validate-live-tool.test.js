@@ -76,16 +76,40 @@ test('parseCliArgs validates required live inputs and rules source modes', async
   const parsedSummaryInput = parseCliArgs([
     '--input-summary-json-file',
     '/tmp/compiled-live.summary.json',
+    '--baseline-summary-json-file',
+    '/tmp/compiled-live.baseline.summary.json',
     '--max-review-nodes',
     '3',
+    '--max-review-delta',
+    '1',
+    '--fail-on-reason-delta',
+    'known-device-unmapped:0',
   ]);
   assert.equal(parsedSummaryInput.ok, true);
   assert.equal(parsedSummaryInput.command.ruleInputMode, 'summary-input');
   assert.equal(parsedSummaryInput.command.inputSummaryJsonFile, '/tmp/compiled-live.summary.json');
+  assert.equal(
+    parsedSummaryInput.command.baselineSummaryJsonFile,
+    '/tmp/compiled-live.baseline.summary.json',
+  );
   assert.equal(parsedSummaryInput.command.url, undefined);
   assert.equal(parsedSummaryInput.command.artifactFile, undefined);
   assert.equal(parsedSummaryInput.command.reportFile, undefined);
   assert.equal(parsedSummaryInput.command.maxReviewNodes, 3);
+  assert.equal(parsedSummaryInput.command.maxReviewDelta, 1);
+  assert.deepEqual(parsedSummaryInput.command.failOnReasonDeltas, {
+    'known-device-unmapped': 0,
+  });
+
+  assert.equal(
+    parseCliArgs([
+      '--input-summary-json-file',
+      '/tmp/compiled-live.summary.json',
+      '--fail-on-reason-delta',
+      'broken',
+    ]).ok,
+    false,
+  );
 
   assert.equal(
     parseCliArgs([
@@ -163,7 +187,14 @@ test('parseCliArgs validates required live inputs and rules source modes', async
         maxReviewNodes: 6,
         maxGenericNodes: 3,
         maxEmptyNodes: 1,
+        maxReviewDelta: 2,
+        maxGenericDelta: 1,
+        maxEmptyDelta: 0,
         failOnReasons: ['known-device-unmapped'],
+        failOnReasonDeltas: {
+          'known-device-unmapped': 0,
+        },
+        baselineSummaryJsonFile: './output/baseline.summary.json',
         artifactFile: './output/artifact.json',
         reportFile: './output/report.md',
         summaryJsonFile: './output/summary.json',
@@ -185,7 +216,17 @@ test('parseCliArgs validates required live inputs and rules source modes', async
   assert.equal(parsedFromGateProfile.command.maxReviewNodes, 6);
   assert.equal(parsedFromGateProfile.command.maxGenericNodes, 3);
   assert.equal(parsedFromGateProfile.command.maxEmptyNodes, 1);
+  assert.equal(parsedFromGateProfile.command.maxReviewDelta, 2);
+  assert.equal(parsedFromGateProfile.command.maxGenericDelta, 1);
+  assert.equal(parsedFromGateProfile.command.maxEmptyDelta, 0);
   assert.deepEqual(parsedFromGateProfile.command.failOnReasons, ['known-device-unmapped']);
+  assert.deepEqual(parsedFromGateProfile.command.failOnReasonDeltas, {
+    'known-device-unmapped': 0,
+  });
+  assert.equal(
+    parsedFromGateProfile.command.baselineSummaryJsonFile,
+    path.join(gateProfileDir, 'output', 'baseline.summary.json'),
+  );
   assert.equal(
     parsedFromGateProfile.command.artifactFile,
     path.join(gateProfileDir, 'output', 'artifact.json'),
@@ -210,8 +251,12 @@ test('parseCliArgs validates required live inputs and rules source modes', async
       '/tmp/override-artifact.json',
       '--max-review-nodes',
       '2',
+      '--max-review-delta',
+      '0',
       '--fail-on-reason',
       'known-device-generic-fallback',
+      '--fail-on-reason-delta',
+      'known-device-generic-fallback:0',
       '--print-effective-gates',
     ],
     {
@@ -222,9 +267,15 @@ test('parseCliArgs validates required live inputs and rules source modes', async
   assert.equal(parsedGateProfileCliOverride.command.maxReviewNodes, 2);
   assert.equal(parsedGateProfileCliOverride.command.maxGenericNodes, 3);
   assert.equal(parsedGateProfileCliOverride.command.maxEmptyNodes, 1);
+  assert.equal(parsedGateProfileCliOverride.command.maxReviewDelta, 0);
+  assert.equal(parsedGateProfileCliOverride.command.maxGenericDelta, 1);
+  assert.equal(parsedGateProfileCliOverride.command.maxEmptyDelta, 0);
   assert.deepEqual(parsedGateProfileCliOverride.command.failOnReasons, [
     'known-device-generic-fallback',
   ]);
+  assert.deepEqual(parsedGateProfileCliOverride.command.failOnReasonDeltas, {
+    'known-device-generic-fallback': 0,
+  });
   assert.equal(parsedGateProfileCliOverride.command.printEffectiveGates, true);
   assert.equal(parsedGateProfileCliOverride.command.artifactFile, '/tmp/override-artifact.json');
   assert.equal(
@@ -443,6 +494,7 @@ test('runValidateLiveCommand can evaluate gates from an existing summary JSON fi
   const { runValidateLiveCommand } = await loadLib();
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zwjs2homey-validate-live-summary-'));
   const inputSummaryJsonFile = path.join(tmpDir, 'compiled-live.summary.json');
+  const baselineSummaryJsonFile = path.join(tmpDir, 'compiled-live.baseline.summary.json');
   const outputSummaryJsonFile = path.join(tmpDir, 'compiled-live.summary.recheck.json');
   const logs = [];
   let buildCalled = false;
@@ -474,16 +526,40 @@ test('runValidateLiveCommand can evaluate gates from an existing summary JSON fi
     'utf8',
   );
 
+  fs.writeFileSync(
+    baselineSummaryJsonFile,
+    JSON.stringify(
+      {
+        counts: {
+          totalNodes: 4,
+          reviewNodes: 1,
+          genericNodes: 1,
+          emptyNodes: 0,
+          outcomes: { curated: 3, generic: 1, empty: 0 },
+          reasons: { 'known-device-generic-fallback': 0 },
+        },
+      },
+      null,
+      2,
+    ),
+    'utf8',
+  );
+
   const result = await runValidateLiveCommand(
     {
       ruleInputMode: 'summary-input',
       inputSummaryJsonFile,
+      baselineSummaryJsonFile,
       summaryJsonFile: outputSummaryJsonFile,
       gateProfileFile: '/tmp/gates.json',
       maxReviewNodes: 2,
       maxGenericNodes: 1,
       maxEmptyNodes: 0,
+      maxReviewDelta: 1,
+      maxGenericDelta: 0,
+      maxEmptyDelta: 0,
       failOnReasons: ['known-device-unmapped'],
+      failOnReasonDeltas: { 'known-device-generic-fallback': 1 },
       printEffectiveGates: false,
       top: 5,
     },
@@ -504,16 +580,28 @@ test('runValidateLiveCommand can evaluate gates from an existing summary JSON fi
   assert.equal(inspectCalled, false);
   assert.equal(result.summary.totalNodes, 4);
   assert.equal(result.gateResult.passed, true);
+  assert.equal(result.gateResult.deltas.reviewNodes, 1);
+  assert.equal(result.gateResult.deltas.genericNodes, 0);
+  assert.equal(result.gateResult.deltas.emptyNodes, 0);
+  assert.equal(result.gateResult.deltas.reasonDeltas['known-device-generic-fallback'], 1);
   assert.equal(fs.existsSync(outputSummaryJsonFile), true);
 
   const outputSummary = JSON.parse(fs.readFileSync(outputSummaryJsonFile, 'utf8'));
   assert.equal(outputSummary.source.inputSummaryJsonFile, inputSummaryJsonFile);
+  assert.equal(outputSummary.source.baselineSummaryJsonFile, baselineSummaryJsonFile);
   assert.equal(outputSummary.gates.configured.maxReviewNodes, 2);
+  assert.equal(outputSummary.gates.configured.maxReviewDelta, 1);
+  assert.equal(outputSummary.gates.configured.maxGenericDelta, 0);
+  assert.equal(outputSummary.gates.configured.maxEmptyDelta, 0);
+  assert.equal(outputSummary.gates.deltas.reviewNodes, 1);
+  assert.equal(outputSummary.gates.deltas.reasonDeltas['known-device-generic-fallback'], 1);
   assert.equal(outputSummary.gates.passed, true);
 
   assert.match(logs[0], /Input summary JSON:/);
-  assert.match(logs[1], /Validation summary JSON:/);
-  assert.equal(logs.length, 5);
+  assert.match(logs[1], /Baseline summary JSON:/);
+  assert.match(logs[2], /Delta: review=1, generic=0, empty=0/);
+  assert.match(logs[3], /Validation summary JSON:/);
+  assert.equal(logs.length, 7);
 });
 
 test('runValidateLiveCommand prints effective gates when requested', async () => {
@@ -582,7 +670,27 @@ test('runValidateLiveCommand writes machine summary and fails when gates are exc
   const artifactFile = path.join(tmpDir, 'compiled-live.json');
   const reportFile = path.join(tmpDir, 'compiled-live.validation.md');
   const summaryJsonFile = path.join(tmpDir, 'compiled-live.summary.json');
+  const baselineSummaryJsonFile = path.join(tmpDir, 'compiled-live.baseline.summary.json');
   const logs = [];
+
+  fs.writeFileSync(
+    baselineSummaryJsonFile,
+    JSON.stringify(
+      {
+        counts: {
+          totalNodes: 1,
+          reviewNodes: 0,
+          genericNodes: 0,
+          emptyNodes: 0,
+          outcomes: { curated: 1, generic: 0, empty: 0 },
+          reasons: { 'known-device-generic-fallback': 0 },
+        },
+      },
+      null,
+      2,
+    ),
+    'utf8',
+  );
 
   await assert.rejects(
     () =>
@@ -603,11 +711,16 @@ test('runValidateLiveCommand writes machine summary and fails when gates are exc
           artifactFile,
           reportFile,
           summaryJsonFile,
+          baselineSummaryJsonFile,
           gateProfileFile: '/tmp/gate-profile.json',
           maxReviewNodes: 0,
           maxGenericNodes: 0,
           maxEmptyNodes: 0,
+          maxReviewDelta: 0,
+          maxGenericDelta: 0,
+          maxEmptyDelta: 0,
           failOnReasons: ['known-device-generic-fallback'],
+          failOnReasonDeltas: { 'known-device-generic-fallback': 0 },
           top: 3,
         },
         { log: (line) => logs.push(line) },
@@ -660,10 +773,20 @@ test('runValidateLiveCommand writes machine summary and fails when gates are exc
   assert.equal(summaryJson.gates.passed, false);
   assert.equal(summaryJson.source.gateProfileFile, '/tmp/gate-profile.json');
   assert.equal(summaryJson.gates.configured.gateProfileFile, '/tmp/gate-profile.json');
+  assert.equal(summaryJson.gates.configured.baselineSummaryJsonFile, baselineSummaryJsonFile);
+  assert.equal(summaryJson.gates.configured.maxReviewDelta, 0);
+  assert.equal(summaryJson.gates.configured.maxGenericDelta, 0);
+  assert.equal(summaryJson.gates.configured.maxEmptyDelta, 0);
+  assert.equal(summaryJson.gates.deltas.reviewNodes, 1);
+  assert.equal(summaryJson.gates.deltas.genericNodes, 1);
+  assert.equal(summaryJson.gates.deltas.reasonDeltas['known-device-generic-fallback'], 1);
   assert.equal(summaryJson.counts.reviewNodes, 1);
   assert.equal(summaryJson.counts.genericNodes, 1);
   assert.equal(summaryJson.counts.reasons['known-device-generic-fallback'], 1);
   assert.equal(Array.isArray(summaryJson.gates.violations), true);
   assert.equal(summaryJson.gates.violations.length >= 1, true);
-  assert.match(logs[2], /Validation summary JSON:/);
+  assert.equal(
+    logs.some((line) => /Validation summary JSON:/.test(line)),
+    true,
+  );
 });

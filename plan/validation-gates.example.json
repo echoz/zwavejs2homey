@@ -2,7 +2,13 @@
   "maxReviewNodes": 5,
   "maxGenericNodes": 2,
   "maxEmptyNodes": 0,
+  "maxReviewDelta": 1,
+  "maxGenericDelta": 0,
+  "maxEmptyDelta": 0,
   "failOnReasons": ["known-device-unmapped"],
+  "failOnReasonDeltas": {
+    "known-device-unmapped": 0
+  },
   "artifactFile": "/tmp/compiled-live.json",
   "reportFile": "/tmp/compiled-live.validation.md",
   "summaryJsonFile": "/tmp/compiled-live.summary.json"

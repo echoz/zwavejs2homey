@@ -265,6 +265,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - summary-input mode now enforces explicit flag boundaries (disallows live/build flags) to keep offline behavior deterministic
     - runtime now loads summary counts/reason histograms, evaluates configured gates, and can optionally write refreshed summary JSON via `--summary-json-file`
     - expanded tool regression coverage for summary-input parsing and offline gate-evaluation execution path
+58. Completed runtime-validation baseline regression-gate slice:
+    - added `--baseline-summary-json-file` support to `compiler:validate-live` so current runs can be compared against a baseline summary artifact
+    - added delta-gate controls: `--max-review-delta`, `--max-generic-delta`, `--max-empty-delta`, and `--fail-on-reason-delta <reason>:<delta>`
+    - gate profile schema now supports baseline/delta config (`max*Delta`, `failOnReasonDeltas`, `baselineSummaryJsonFile`) with CLI override precedence preserved
+    - machine summary JSON now includes baseline counts and computed deltas; CLI logs now print baseline source + delta snapshot when enabled
 
 ## Next Tasks
 
