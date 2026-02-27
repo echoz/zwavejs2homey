@@ -6,11 +6,14 @@
   "maxGenericDelta": 0,
   "maxEmptyDelta": 0,
   "artifactRetention": "delete-on-pass",
+  "redactShare": true,
   "failOnReasons": ["known-device-unmapped"],
   "failOnReasonDeltas": {
     "known-device-unmapped": 0
   },
   "artifactFile": "/tmp/compiled-live.json",
   "reportFile": "/tmp/compiled-live.validation.md",
-  "summaryJsonFile": "/tmp/compiled-live.summary.json"
+  "summaryJsonFile": "/tmp/compiled-live.summary.json",
+  "redactedReportFile": "/tmp/compiled-live.validation.redacted.md",
+  "redactedSummaryJsonFile": "/tmp/compiled-live.summary.redacted.json"
 }

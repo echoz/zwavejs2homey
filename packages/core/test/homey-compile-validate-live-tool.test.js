@@ -62,6 +62,25 @@ test('parseCliArgs validates required live inputs and rules source modes', async
   assert.equal(parsedExplicit.command.artifactRetention, 'delete-on-pass');
   assert.equal(parsedExplicit.command.printEffectiveGates, false);
 
+  const parsedRedactShare = parseCliArgs([
+    '--url',
+    'ws://x',
+    '--all-nodes',
+    '--report-file',
+    '/tmp/compiled-live.validation.md',
+    '--redact-share',
+  ]);
+  assert.equal(parsedRedactShare.ok, true);
+  assert.equal(parsedRedactShare.command.redactShare, true);
+  assert.equal(
+    parsedRedactShare.command.redactedReportFile,
+    '/tmp/compiled-live.validation.redacted.md',
+  );
+  assert.equal(
+    parsedRedactShare.command.redactedSummaryJsonFile,
+    '/tmp/compiled-live.validation.summary.redacted.json',
+  );
+
   assert.equal(
     parseCliArgs(['--url', 'ws://x', '--all-nodes', '--artifact-retention', 'bad']).ok,
     false,
@@ -114,6 +133,29 @@ test('parseCliArgs validates required live inputs and rules source modes', async
   assert.deepEqual(parsedSummaryInput.command.failOnReasonDeltas, {
     'known-device-unmapped': 0,
   });
+
+  const parsedSummaryInputRedacted = parseCliArgs([
+    '--input-summary-json-file',
+    '/tmp/compiled-live.summary.json',
+    '--redact-share',
+  ]);
+  assert.equal(parsedSummaryInputRedacted.ok, true);
+  assert.equal(parsedSummaryInputRedacted.command.redactShare, true);
+  assert.equal(parsedSummaryInputRedacted.command.redactedReportFile, undefined);
+  assert.equal(
+    parsedSummaryInputRedacted.command.redactedSummaryJsonFile,
+    '/tmp/compiled-live.summary.redacted.json',
+  );
+
+  assert.equal(
+    parseCliArgs([
+      '--input-summary-json-file',
+      '/tmp/compiled-live.summary.json',
+      '--redacted-report-file',
+      '/tmp/compiled-live.redacted.md',
+    ]).ok,
+    false,
+  );
 
   assert.equal(
     parseCliArgs([
@@ -213,11 +255,14 @@ test('parseCliArgs validates required live inputs and rules source modes', async
         maxReviewDelta: 2,
         maxGenericDelta: 1,
         maxEmptyDelta: 0,
+        redactShare: true,
         failOnReasons: ['known-device-unmapped'],
         failOnReasonDeltas: {
           'known-device-unmapped': 0,
         },
         baselineSummaryJsonFile: './output/baseline.summary.json',
+        redactedReportFile: './output/report.redacted.md',
+        redactedSummaryJsonFile: './output/summary.redacted.json',
         artifactFile: './output/artifact.json',
         reportFile: './output/report.md',
         summaryJsonFile: './output/summary.json',
@@ -243,6 +288,7 @@ test('parseCliArgs validates required live inputs and rules source modes', async
   assert.equal(parsedFromGateProfile.command.maxReviewDelta, 2);
   assert.equal(parsedFromGateProfile.command.maxGenericDelta, 1);
   assert.equal(parsedFromGateProfile.command.maxEmptyDelta, 0);
+  assert.equal(parsedFromGateProfile.command.redactShare, true);
   assert.deepEqual(parsedFromGateProfile.command.failOnReasons, ['known-device-unmapped']);
   assert.deepEqual(parsedFromGateProfile.command.failOnReasonDeltas, {
     'known-device-unmapped': 0,
@@ -262,6 +308,14 @@ test('parseCliArgs validates required live inputs and rules source modes', async
   assert.equal(
     parsedFromGateProfile.command.summaryJsonFile,
     path.join(gateProfileDir, 'output', 'summary.json'),
+  );
+  assert.equal(
+    parsedFromGateProfile.command.redactedReportFile,
+    path.join(gateProfileDir, 'output', 'report.redacted.md'),
+  );
+  assert.equal(
+    parsedFromGateProfile.command.redactedSummaryJsonFile,
+    path.join(gateProfileDir, 'output', 'summary.redacted.json'),
   );
 
   const parsedGateProfileCliOverride = parseCliArgs(
@@ -510,6 +564,116 @@ test('runValidateLiveCommand can delete built artifact on pass with delete-on-pa
   );
 });
 
+test('runValidateLiveCommand writes redacted share artifacts when requested', async () => {
+  const { runValidateLiveCommand } = await loadLib();
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zwjs2homey-validate-live-redacted-'));
+  const artifactFile = path.join(tmpDir, 'compiled-live.json');
+  const reportFile = path.join(tmpDir, 'compiled-live.validation.md');
+  const summaryJsonFile = path.join(tmpDir, 'compiled-live.summary.json');
+  const redactedReportFile = path.join(tmpDir, 'compiled-live.validation.redacted.md');
+  const redactedSummaryJsonFile = path.join(tmpDir, 'compiled-live.summary.redacted.json');
+  const logs = [];
+
+  await runValidateLiveCommand(
+    {
+      url: 'ws://x',
+      token: undefined,
+      schemaVersion: 0,
+      allNodes: true,
+      nodeId: undefined,
+      includeValues: 'summary',
+      maxValues: 100,
+      includeControllerNodes: false,
+      manifestFile: path.join(fixturesDir, 'rule-manifest-with-ha-generated.json'),
+      rulesFiles: [],
+      ruleInputMode: 'manifest-file',
+      compiledFile: undefined,
+      inputSummaryJsonFile: undefined,
+      baselineSummaryJsonFile: undefined,
+      catalogFile: undefined,
+      artifactFile,
+      artifactRetention: 'keep',
+      reportFile,
+      summaryJsonFile,
+      redactShare: true,
+      redactedReportFile,
+      redactedSummaryJsonFile,
+      saveBaselineSummaryJsonFile: undefined,
+      gateProfileFile: '/tmp/gates/live.profile.json',
+      maxReviewNodes: undefined,
+      maxGenericNodes: undefined,
+      maxEmptyNodes: undefined,
+      maxReviewDelta: undefined,
+      maxGenericDelta: undefined,
+      maxEmptyDelta: undefined,
+      failOnReasons: [],
+      failOnReasonDeltas: {},
+      printEffectiveGates: false,
+      top: 3,
+    },
+    { log: (line) => logs.push(line) },
+    {
+      nowDate: new Date('2026-02-26T00:00:00.000Z'),
+      buildCompiledProfilesArtifactImpl: async () => ({
+        schemaVersion: 'compiled-homey-profiles/v1',
+        generatedAt: '2026-02-26T00:00:00.000Z',
+        source: { buildProfile: 'manifest-file', ruleSources: [] },
+        entries: [],
+      }),
+      runLiveInspectCommandImpl: async (_command, io) => {
+        io.log(
+          JSON.stringify({
+            results: [
+              {
+                node: { nodeId: 5, name: 'Kitchen Plug' },
+                compiled: {
+                  profile: {
+                    classification: {
+                      homeyClass: 'socket',
+                      confidence: 'curated',
+                      uncurated: false,
+                    },
+                  },
+                  report: {
+                    profileOutcome: 'curated',
+                    curationCandidates: { likelyNeedsReview: false, reasons: [] },
+                    byRule: [],
+                    bySuppressedSlot: [],
+                  },
+                },
+              },
+            ],
+          }),
+        );
+      },
+    },
+  );
+
+  assert.equal(fs.existsSync(redactedReportFile), true);
+  assert.equal(fs.existsSync(redactedSummaryJsonFile), true);
+
+  const redactedMarkdown = fs.readFileSync(redactedReportFile, 'utf8');
+  assert.match(redactedMarkdown, /ZWJS URL: REDACTED_URL/);
+  assert.match(redactedMarkdown, /REDACTED_NODE_NAME/);
+  assert.doesNotMatch(redactedMarkdown, /Kitchen Plug/);
+  assert.match(redactedMarkdown, /rule-manifest-with-ha-generated\.json/);
+
+  const redactedSummary = JSON.parse(fs.readFileSync(redactedSummaryJsonFile, 'utf8'));
+  assert.equal(redactedSummary.source.url, 'REDACTED_URL');
+  assert.equal(redactedSummary.source.manifestFile, 'rule-manifest-with-ha-generated.json');
+  assert.equal(redactedSummary.source.gateProfileFile, 'live.profile.json');
+  assert.equal(redactedSummary.gates.configured.gateProfileFile, 'live.profile.json');
+  assert.equal(redactedSummary.redaction.mode, 'share');
+  assert.equal(
+    logs.some((line) => /Redacted validation report:/.test(line)),
+    true,
+  );
+  assert.equal(
+    logs.some((line) => /Redacted summary JSON:/.test(line)),
+    true,
+  );
+});
+
 test('runValidateLiveCommand can validate using an existing compiled file', async () => {
   const { runValidateLiveCommand } = await loadLib();
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zwjs2homey-validate-live-compiled-'));
@@ -587,6 +751,7 @@ test('runValidateLiveCommand can evaluate gates from an existing summary JSON fi
   const inputSummaryJsonFile = path.join(tmpDir, 'compiled-live.summary.json');
   const baselineSummaryJsonFile = path.join(tmpDir, 'compiled-live.baseline.summary.json');
   const outputSummaryJsonFile = path.join(tmpDir, 'compiled-live.summary.recheck.json');
+  const redactedSummaryJsonFile = path.join(tmpDir, 'compiled-live.summary.redacted.json');
   const savedBaselineSummaryJsonFile = path.join(tmpDir, 'compiled-live.baseline.saved.json');
   const logs = [];
   let buildCalled = false;
@@ -643,6 +808,7 @@ test('runValidateLiveCommand can evaluate gates from an existing summary JSON fi
       inputSummaryJsonFile,
       baselineSummaryJsonFile,
       summaryJsonFile: outputSummaryJsonFile,
+      redactedSummaryJsonFile,
       saveBaselineSummaryJsonFile: savedBaselineSummaryJsonFile,
       gateProfileFile: '/tmp/gates.json',
       maxReviewNodes: 2,
@@ -678,6 +844,7 @@ test('runValidateLiveCommand can evaluate gates from an existing summary JSON fi
   assert.equal(result.gateResult.deltas.emptyNodes, 0);
   assert.equal(result.gateResult.deltas.reasonDeltas['known-device-generic-fallback'], 1);
   assert.equal(fs.existsSync(outputSummaryJsonFile), true);
+  assert.equal(fs.existsSync(redactedSummaryJsonFile), true);
   assert.equal(fs.existsSync(savedBaselineSummaryJsonFile), true);
 
   const outputSummary = JSON.parse(fs.readFileSync(outputSummaryJsonFile, 'utf8'));
@@ -693,13 +860,22 @@ test('runValidateLiveCommand can evaluate gates from an existing summary JSON fi
   const savedBaselineSummary = JSON.parse(fs.readFileSync(savedBaselineSummaryJsonFile, 'utf8'));
   assert.equal(savedBaselineSummary.source.inputSummaryJsonFile, inputSummaryJsonFile);
   assert.equal(savedBaselineSummary.gates.passed, true);
+  const redactedSummary = JSON.parse(fs.readFileSync(redactedSummaryJsonFile, 'utf8'));
+  assert.equal(redactedSummary.source.url, 'REDACTED_URL');
+  assert.equal(redactedSummary.source.inputSummaryJsonFile, 'compiled-live.summary.json');
+  assert.equal(
+    redactedSummary.source.baselineSummaryJsonFile,
+    'compiled-live.baseline.summary.json',
+  );
+  assert.equal(redactedSummary.redaction.mode, 'share');
 
   assert.match(logs[0], /Input summary JSON:/);
   assert.match(logs[1], /Baseline summary JSON:/);
   assert.match(logs[2], /Delta: review=1, generic=0, empty=0/);
   assert.match(logs[3], /Validation summary JSON:/);
   assert.match(logs[4], /Saved baseline summary JSON:/);
-  assert.equal(logs.length, 8);
+  assert.match(logs[5], /Redacted summary JSON:/);
+  assert.equal(logs.length, 9);
 });
 
 test('runValidateLiveCommand prints effective gates when requested', async () => {

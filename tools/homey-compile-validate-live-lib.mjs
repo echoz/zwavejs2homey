@@ -68,6 +68,100 @@ function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
 
+function parsePathFlag(flags, flagName) {
+  const rawValue = flags.get(flagName);
+  if (rawValue === undefined) return undefined;
+  if (!rawValue || rawValue === 'true') {
+    throw new Error(`${flagName} requires a value`);
+  }
+  return resolveFilePath(rawValue);
+}
+
+function makeRedactedReportPath(reportFile) {
+  if (!reportFile) return undefined;
+  if (reportFile.endsWith('.md')) return reportFile.replace(/\.md$/, '.redacted.md');
+  return `${reportFile}.redacted.md`;
+}
+
+function makeRedactedSummaryPath(baseFilePath) {
+  if (!baseFilePath) return undefined;
+  if (baseFilePath.endsWith('.json')) return baseFilePath.replace(/\.json$/, '.redacted.json');
+  return `${baseFilePath}.redacted.json`;
+}
+
+function makeDefaultRedactedSummaryPath({ summaryJsonFile, inputSummaryJsonFile, reportFile }) {
+  if (summaryJsonFile) return makeRedactedSummaryPath(summaryJsonFile);
+  if (inputSummaryJsonFile) return makeRedactedSummaryPath(inputSummaryJsonFile);
+  if (!reportFile) return undefined;
+  if (reportFile.endsWith('.md')) return reportFile.replace(/\.md$/, '.summary.redacted.json');
+  return `${reportFile}.summary.redacted.json`;
+}
+
+function redactSharePath(filePath) {
+  if (!filePath || typeof filePath !== 'string') return filePath;
+  return path.basename(filePath);
+}
+
+function redactShareScope(scope) {
+  if (!scope || typeof scope !== 'string') return scope;
+  if (scope === 'all-nodes') return scope;
+  if (scope.startsWith('node:')) return 'node:REDACTED_NODE_ID';
+  return scope;
+}
+
+function buildRedactedMachineSummary(machineSummary) {
+  const out = JSON.parse(JSON.stringify(machineSummary ?? {}));
+  const source = out && typeof out === 'object' ? out.source : undefined;
+  if (source && typeof source === 'object' && !Array.isArray(source)) {
+    if (typeof source.url === 'string' && source.url.length > 0) {
+      source.url = 'REDACTED_URL';
+    }
+    source.scope = redactShareScope(source.scope);
+    const sourcePathKeys = [
+      'inputSummaryJsonFile',
+      'baselineSummaryJsonFile',
+      'manifestFile',
+      'compiledFile',
+      'artifactFile',
+      'reportFile',
+      'gateProfileFile',
+      'summaryJsonFile',
+      'saveBaselineSummaryJsonFile',
+      'catalogFile',
+      'redactedReportFile',
+      'redactedSummaryJsonFile',
+    ];
+    for (const key of sourcePathKeys) {
+      if (typeof source[key] === 'string' && source[key].length > 0) {
+        source[key] = redactSharePath(source[key]);
+      }
+    }
+    if (Array.isArray(source.rulesFiles)) {
+      source.rulesFiles = source.rulesFiles.map((entry) =>
+        typeof entry === 'string' ? redactSharePath(entry) : entry,
+      );
+    }
+  }
+
+  const configured = out?.gates?.configured;
+  if (configured && typeof configured === 'object' && !Array.isArray(configured)) {
+    const gatePathKeys = [
+      'gateProfileFile',
+      'baselineSummaryJsonFile',
+      'redactedReportFile',
+      'redactedSummaryJsonFile',
+    ];
+    for (const key of gatePathKeys) {
+      if (typeof configured[key] === 'string' && configured[key].length > 0) {
+        configured[key] = redactSharePath(configured[key]);
+      }
+    }
+  }
+
+  out.redaction = { mode: 'share', version: 1 };
+  return out;
+}
+
 function parseNonNegativeIntValue(rawValue, fieldName) {
   const parsed = Number(rawValue);
   if (!Number.isInteger(parsed) || parsed < 0) {
@@ -203,6 +297,9 @@ function loadGateProfile(gateProfileFile) {
     'failOnReasonDeltas',
     'baselineSummaryJsonFile',
     'artifactRetention',
+    'redactShare',
+    'redactedReportFile',
+    'redactedSummaryJsonFile',
     'artifactFile',
     'reportFile',
     'summaryJsonFile',
@@ -231,6 +328,7 @@ function loadGateProfile(gateProfileFile) {
   let maxGenericDelta;
   let maxEmptyDelta;
   let artifactRetention;
+  let redactShare;
   try {
     maxReviewNodes = parseOptionalNonNegativeInt(raw.maxReviewNodes, 'gateProfile.maxReviewNodes');
     maxGenericNodes = parseOptionalNonNegativeInt(
@@ -248,6 +346,10 @@ function loadGateProfile(gateProfileFile) {
       raw.artifactRetention,
       'gateProfile.artifactRetention',
     );
+    if (raw.redactShare !== undefined && typeof raw.redactShare !== 'boolean') {
+      throw new Error('gateProfile.redactShare must be a boolean');
+    }
+    redactShare = raw.redactShare;
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     throw new Error(`Invalid gate profile "${resolvedFilePath}": ${reason}`);
@@ -292,6 +394,12 @@ function loadGateProfile(gateProfileFile) {
       'baselineSummaryJsonFile',
     ),
     artifactRetention,
+    redactShare,
+    redactedReportFile: resolveProfilePath(raw.redactedReportFile, 'redactedReportFile'),
+    redactedSummaryJsonFile: resolveProfilePath(
+      raw.redactedSummaryJsonFile,
+      'redactedSummaryJsonFile',
+    ),
     artifactFile: resolveProfilePath(raw.artifactFile, 'artifactFile'),
     reportFile: resolveProfilePath(raw.reportFile, 'reportFile'),
     summaryJsonFile: resolveProfilePath(raw.summaryJsonFile, 'summaryJsonFile'),
@@ -447,20 +555,32 @@ function formatSignedDelta(value) {
   return value > 0 ? `+${value}` : String(value);
 }
 
-function describeRuleSource(command) {
+function describeRuleSource(command, options = {}) {
+  const { redacted = false } = options;
+  const pathFormatter = redacted ? redactSharePath : (value) => value;
   if (command.ruleInputMode === 'compiled-file') {
-    return `compiled-file (${command.compiledFile})`;
+    return `compiled-file (${pathFormatter(command.compiledFile)})`;
   }
   if (command.ruleInputMode === 'default-manifest') {
-    return `default-manifest (${command.manifestFile})`;
+    return `default-manifest (${pathFormatter(command.manifestFile)})`;
   }
   if (command.manifestFile) {
-    return `manifest-file (${command.manifestFile})`;
+    return `manifest-file (${pathFormatter(command.manifestFile)})`;
   }
-  return `rules-files (${command.rulesFiles.join(', ')})`;
+  return `rules-files (${command.rulesFiles.map((filePath) => pathFormatter(filePath)).join(', ')})`;
 }
 
-function formatMarkdownReport(command, summary, generatedAtIso, gateResult) {
+function formatMarkdownReport(command, summary, generatedAtIso, gateResult, options = {}) {
+  const { redacted = false } = options;
+  const pathFormatter = redacted ? redactSharePath : (value) => value;
+  const urlValue = redacted ? 'REDACTED_URL' : command.url;
+  const scopeValue = redacted
+    ? command.allNodes
+      ? 'all-nodes'
+      : 'node REDACTED_NODE_ID'
+    : command.allNodes
+      ? 'all-nodes'
+      : `node ${command.nodeId}`;
   const outcomeRows = [...summary.outcomes.entries()]
     .sort((a, b) => a[0].localeCompare(b[0]))
     .map(([outcome, count]) => [outcome, count]);
@@ -478,9 +598,9 @@ function formatMarkdownReport(command, summary, generatedAtIso, gateResult) {
       : [['(none)', 0]];
   const nodeRows =
     summary.rows.length > 0
-      ? summary.rows.map((row) => [
-          row.nodeId ?? '',
-          row.name ?? '',
+      ? summary.rows.map((row, index) => [
+          redacted ? `node-${index + 1}` : (row.nodeId ?? ''),
+          redacted ? 'REDACTED_NODE_NAME' : (row.name ?? ''),
           row.homeyClass ?? '',
           row.outcome ?? '',
           row.confidence ?? '',
@@ -521,12 +641,13 @@ function formatMarkdownReport(command, summary, generatedAtIso, gateResult) {
     '# Live Compiler Validation',
     '',
     `- Generated at: ${generatedAtIso}`,
-    `- ZWJS URL: ${command.url}`,
-    `- Scope: ${command.allNodes ? 'all-nodes' : `node ${command.nodeId}`}`,
-    `- Rule source: ${describeRuleSource(command)}`,
-    `- Compiled artifact: ${command.artifactFile}`,
+    `- ZWJS URL: ${urlValue}`,
+    `- Scope: ${scopeValue}`,
+    `- Rule source: ${describeRuleSource(command, { redacted })}`,
+    `- Compiled artifact: ${pathFormatter(command.artifactFile)}`,
+    ...(redacted ? ['- Redaction: share-safe (URL, paths, and node identifiers anonymized)'] : []),
     ...(command.baselineSummaryJsonFile
-      ? [`- Baseline summary: ${command.baselineSummaryJsonFile}`]
+      ? [`- Baseline summary: ${pathFormatter(command.baselineSummaryJsonFile)}`]
       : []),
     `- Nodes validated: ${summary.totalNodes}`,
     `- Nodes needing review: ${summary.reviewNodes}`,
@@ -697,6 +818,9 @@ function buildConfiguredGateSection(command) {
     gateProfileFile: command.gateProfileFile,
     baselineSummaryJsonFile: command.baselineSummaryJsonFile,
     artifactRetention: command.artifactRetention,
+    redactShare: command.redactShare,
+    redactedReportFile: command.redactedReportFile,
+    redactedSummaryJsonFile: command.redactedSummaryJsonFile,
     maxReviewNodes: command.maxReviewNodes,
     maxGenericNodes: command.maxGenericNodes,
     maxEmptyNodes: command.maxEmptyNodes,
@@ -733,9 +857,12 @@ function buildEffectiveGateConfig(command) {
     failOnReasons: command.failOnReasons ?? [],
     outputs: {
       artifactRetention: command.artifactRetention ?? 'keep',
+      redactShare: command.redactShare ?? false,
       artifactFile: command.artifactFile ?? null,
       reportFile: command.reportFile ?? null,
       summaryJsonFile: command.summaryJsonFile ?? null,
+      redactedReportFile: command.redactedReportFile ?? null,
+      redactedSummaryJsonFile: command.redactedSummaryJsonFile ?? null,
       saveBaselineSummaryJsonFile: command.saveBaselineSummaryJsonFile ?? null,
     },
   };
@@ -757,6 +884,9 @@ function buildMachineSummary(command, summary, gateResult, generatedAtIso) {
       artifactFile: command.artifactFile,
       reportFile: command.reportFile,
       gateProfileFile: command.gateProfileFile,
+      redactedReportFile: command.redactedReportFile,
+      redactedSummaryJsonFile: command.redactedSummaryJsonFile,
+      redactShare: command.redactShare,
     },
     counts: {
       totalNodes: summary.totalNodes,
@@ -794,6 +924,9 @@ function buildMachineSummaryFromInput(command, input, gateResult, generatedAtIso
       inputSummaryJsonFile: command.inputSummaryJsonFile,
       baselineSummaryJsonFile: command.baselineSummaryJsonFile,
       gateProfileFile: command.gateProfileFile,
+      redactedSummaryJsonFile: command.redactedSummaryJsonFile,
+      redactedReportFile: command.redactedReportFile,
+      redactShare: command.redactShare,
     },
     gates: {
       configured: buildConfiguredGateSection(command),
@@ -820,6 +953,9 @@ export function getUsageText() {
     '                            [--artifact-retention keep|delete-on-pass]',
     '                            [--report-file </tmp/compiled-live.validation.md>]',
     '                            [--summary-json-file </tmp/compiled-live.summary.json>]',
+    '                            [--redact-share]',
+    '                            [--redacted-report-file </tmp/compiled-live.validation.redacted.md>]',
+    '                            [--redacted-summary-json-file </tmp/compiled-live.summary.redacted.json>]',
     '                            [--save-baseline-summary-json-file </tmp/compiled-live.baseline.summary.json>]',
     '                            [--gate-profile-file <validation-gates.json>]',
     '                            [--baseline-summary-json-file </tmp/compiled-live.baseline.summary.json>]',
@@ -838,6 +974,8 @@ export function getUsageText() {
     '                            [--max-review-delta N] [--max-generic-delta N] [--max-empty-delta N]',
     '                            [--fail-on-reason-delta <reason>:<delta> ...]',
     '                            [--summary-json-file </tmp/compiled-live.summary.recheck.json>]',
+    '                            [--redact-share]',
+    '                            [--redacted-summary-json-file </tmp/compiled-live.summary.recheck.redacted.json>]',
     '                            [--save-baseline-summary-json-file </tmp/compiled-live.baseline.summary.json>]',
     '                            [--artifact-retention keep|delete-on-pass]',
     '                            [--print-effective-gates]',
@@ -1025,6 +1163,17 @@ export function parseCliArgs(argv, options = {}) {
     }
   }
 
+  const cliRedactShare = flags.has('--redact-share');
+  let cliRedactedReportFile;
+  let cliRedactedSummaryJsonFile;
+  try {
+    cliRedactedReportFile = parsePathFlag(flags, '--redacted-report-file');
+    cliRedactedSummaryJsonFile = parsePathFlag(flags, '--redacted-summary-json-file');
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    return { ok: false, error: reason };
+  }
+
   let cliArtifactRetention;
   try {
     cliArtifactRetention = parseArtifactRetention(
@@ -1124,6 +1273,32 @@ export function parseCliArgs(argv, options = {}) {
     saveBaselineSummaryJsonFile = resolveFilePath(saveBaselineSummaryJsonFileFlag);
   }
 
+  const redactShare = cliRedactShare || gateProfile?.redactShare === true;
+  let redactedReportFile = cliRedactedReportFile ?? gateProfile?.redactedReportFile;
+  let redactedSummaryJsonFile = cliRedactedSummaryJsonFile ?? gateProfile?.redactedSummaryJsonFile;
+
+  if (summaryInputMode && redactedReportFile) {
+    if (cliRedactedReportFile) {
+      return {
+        ok: false,
+        error: '--redacted-report-file cannot be used with --input-summary-json-file',
+      };
+    }
+    redactedReportFile = undefined;
+  }
+  if (redactShare) {
+    if (!summaryInputMode && !redactedReportFile) {
+      redactedReportFile = makeRedactedReportPath(reportFile);
+    }
+    if (!redactedSummaryJsonFile) {
+      redactedSummaryJsonFile = makeDefaultRedactedSummaryPath({
+        summaryJsonFile,
+        inputSummaryJsonFile,
+        reportFile,
+      });
+    }
+  }
+
   return {
     ok: true,
     command: {
@@ -1146,6 +1321,9 @@ export function parseCliArgs(argv, options = {}) {
       artifactRetention,
       reportFile,
       summaryJsonFile,
+      redactShare,
+      redactedReportFile,
+      redactedSummaryJsonFile,
       saveBaselineSummaryJsonFile,
       gateProfileFile: gateProfile?.filePath,
       maxReviewNodes,
@@ -1208,6 +1386,13 @@ export async function runValidateLiveCommand(command, io = console, deps = {}) {
         'utf8',
       );
     }
+    if (commandWithBaseline.redactedSummaryJsonFile) {
+      fs.writeFileSync(
+        commandWithBaseline.redactedSummaryJsonFile,
+        `${formatJsonPretty(buildRedactedMachineSummary(machineSummary))}\n`,
+        'utf8',
+      );
+    }
 
     io.log(`Input summary JSON: ${loaded.filePath}`);
     if (commandWithBaseline.baselineSummaryJsonFile) {
@@ -1219,6 +1404,9 @@ export async function runValidateLiveCommand(command, io = console, deps = {}) {
     }
     if (commandWithBaseline.saveBaselineSummaryJsonFile) {
       io.log(`Saved baseline summary JSON: ${commandWithBaseline.saveBaselineSummaryJsonFile}`);
+    }
+    if (commandWithBaseline.redactedSummaryJsonFile) {
+      io.log(`Redacted summary JSON: ${commandWithBaseline.redactedSummaryJsonFile}`);
     }
     io.log(`Nodes validated: ${summary.totalNodes}`);
     io.log(`Outcomes: ${formatOutcomeSummary(summary.outcomes)}`);
@@ -1320,6 +1508,16 @@ export async function runValidateLiveCommand(command, io = console, deps = {}) {
   const gateResult = evaluateValidationGates(commandWithBaseline, summary);
   const markdown = formatMarkdownReport(commandWithBaseline, summary, generatedAtIso, gateResult);
   fs.writeFileSync(commandWithBaseline.reportFile, markdown, 'utf8');
+  if (commandWithBaseline.redactedReportFile) {
+    const redactedMarkdown = formatMarkdownReport(
+      commandWithBaseline,
+      summary,
+      generatedAtIso,
+      gateResult,
+      { redacted: true },
+    );
+    fs.writeFileSync(commandWithBaseline.redactedReportFile, redactedMarkdown, 'utf8');
+  }
   const machineSummary = buildMachineSummary(
     commandWithBaseline,
     summary,
@@ -1330,6 +1528,13 @@ export async function runValidateLiveCommand(command, io = console, deps = {}) {
     fs.writeFileSync(
       commandWithBaseline.summaryJsonFile,
       `${formatJsonPretty(machineSummary)}\n`,
+      'utf8',
+    );
+  }
+  if (commandWithBaseline.redactedSummaryJsonFile) {
+    fs.writeFileSync(
+      commandWithBaseline.redactedSummaryJsonFile,
+      `${formatJsonPretty(buildRedactedMachineSummary(machineSummary))}\n`,
       'utf8',
     );
   }
@@ -1351,8 +1556,14 @@ export async function runValidateLiveCommand(command, io = console, deps = {}) {
     io.log(`Delta: ${formatDeltaSummary(gateResult.deltas)}`);
   }
   io.log(`Validation report: ${commandWithBaseline.reportFile}`);
+  if (commandWithBaseline.redactedReportFile) {
+    io.log(`Redacted validation report: ${commandWithBaseline.redactedReportFile}`);
+  }
   if (commandWithBaseline.summaryJsonFile) {
     io.log(`Validation summary JSON: ${commandWithBaseline.summaryJsonFile}`);
+  }
+  if (commandWithBaseline.redactedSummaryJsonFile) {
+    io.log(`Redacted summary JSON: ${commandWithBaseline.redactedSummaryJsonFile}`);
   }
   if (commandWithBaseline.saveBaselineSummaryJsonFile) {
     io.log(`Saved baseline summary JSON: ${commandWithBaseline.saveBaselineSummaryJsonFile}`);

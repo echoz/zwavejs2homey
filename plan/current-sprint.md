@@ -289,6 +289,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - wrapper emits timestamped baseline/recheck artifacts under `plan/baselines/` (configurable output dir/stamp)
     - recheck stage enforces delta gates (default strict zero deltas) and supports optional gate-profile + reason-delta flags
     - baseline workflow defaults artifact retention to `delete-on-pass` to avoid local compiled-artifact bloat
+63. Completed runtime-validation redacted-share output slice:
+    - added share-safe output support to `compiler:validate-live` (`--redact-share`) with optional explicit output paths (`--redacted-report-file`, `--redacted-summary-json-file`)
+    - redacted markdown hides URL/path/node identifiers while preserving diagnostics structure for review
+    - redacted machine summary JSON now emits sanitized source/config paths and URL-safe metadata (`redaction.mode=share`)
+    - gate profiles now support redaction output fields (`redactShare`, `redactedReportFile`, `redactedSummaryJsonFile`) with normal CLI precedence
 
 ## Next Tasks
 
