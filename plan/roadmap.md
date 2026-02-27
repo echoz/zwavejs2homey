@@ -73,6 +73,7 @@
 - [x] Runtime-validation gating slice: add threshold/reason gate flags and machine-summary JSON output to `compiler:validate-live` for CI-friendly pass/fail automation
 - [x] Runtime-validation docs slice: add gate setup/calibration playbook (`docs/compiler-validation-gates.md`) and surface links from README/architecture
 - [x] Runtime-validation gate profile slice: add `--gate-profile-file` to `compiler:validate-live` so gate/output settings can be versioned in JSON (CLI overrides profile)
+- [x] Runtime-validation diagnostics slice: add `--print-effective-gates` to `compiler:validate-live` to show resolved gate/output config before execution
 - [ ] Decide and document final ownership of generic fallback inference policy (currently leaning Homey adapter-owned)
 - [ ] Add second real catalog source adapter when a concrete source format is available
 

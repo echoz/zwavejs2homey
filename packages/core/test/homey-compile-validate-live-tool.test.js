@@ -57,6 +57,7 @@ test('parseCliArgs validates required live inputs and rules source modes', async
   assert.equal(parsedExplicit.command.manifestFile, undefined);
   assert.equal(parsedExplicit.command.rulesFiles.length, 2);
   assert.equal(parsedExplicit.command.top, 7);
+  assert.equal(parsedExplicit.command.printEffectiveGates, false);
   assert.equal(
     parseCliArgs(['--url', 'ws://x', '--all-nodes', '--max-review-nodes', '-1']).ok,
     false,
@@ -148,6 +149,7 @@ test('parseCliArgs validates required live inputs and rules source modes', async
       '2',
       '--fail-on-reason',
       'known-device-generic-fallback',
+      '--print-effective-gates',
     ],
     {
       defaultManifestFile: path.join(fixturesDir, 'rule-manifest-with-ha-generated.json'),
@@ -160,6 +162,7 @@ test('parseCliArgs validates required live inputs and rules source modes', async
   assert.deepEqual(parsedGateProfileCliOverride.command.failOnReasons, [
     'known-device-generic-fallback',
   ]);
+  assert.equal(parsedGateProfileCliOverride.command.printEffectiveGates, true);
   assert.equal(parsedGateProfileCliOverride.command.artifactFile, '/tmp/override-artifact.json');
   assert.equal(
     parsedGateProfileCliOverride.command.reportFile,
@@ -300,6 +303,66 @@ test('runValidateLiveCommand writes artifact and markdown summary from live insp
   assert.equal(logs.length, 5);
   assert.match(logs[0], /Compiled artifact:/);
   assert.match(logs[1], /Validation report:/);
+});
+
+test('runValidateLiveCommand prints effective gates when requested', async () => {
+  const { runValidateLiveCommand } = await loadLib();
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zwjs2homey-validate-live-effective-'));
+  const artifactFile = path.join(tmpDir, 'compiled-live.json');
+  const reportFile = path.join(tmpDir, 'compiled-live.validation.md');
+  const logs = [];
+
+  await runValidateLiveCommand(
+    {
+      url: 'ws://x',
+      token: undefined,
+      schemaVersion: 0,
+      allNodes: true,
+      nodeId: undefined,
+      includeValues: 'summary',
+      maxValues: 100,
+      includeControllerNodes: false,
+      manifestFile: path.join(fixturesDir, 'rule-manifest-with-ha-generated.json'),
+      rulesFiles: [],
+      ruleInputMode: 'manifest-file',
+      catalogFile: undefined,
+      artifactFile,
+      reportFile,
+      summaryJsonFile: undefined,
+      gateProfileFile: '/tmp/gates.json',
+      maxReviewNodes: 5,
+      maxGenericNodes: 2,
+      maxEmptyNodes: 0,
+      failOnReasons: ['known-device-unmapped'],
+      printEffectiveGates: true,
+      top: 3,
+    },
+    { log: (line) => logs.push(line) },
+    {
+      nowDate: new Date('2026-02-26T00:00:00.000Z'),
+      buildCompiledProfilesArtifactImpl: async () => ({
+        schemaVersion: 'compiled-homey-profiles/v1',
+        generatedAt: '2026-02-26T00:00:00.000Z',
+        source: { buildProfile: 'manifest-file', ruleSources: [] },
+        entries: [],
+      }),
+      runLiveInspectCommandImpl: async (_command, io) => {
+        io.log(JSON.stringify({ results: [] }));
+      },
+    },
+  );
+
+  assert.match(logs[0], /Effective gates:/);
+  const effectiveJson = JSON.parse(logs[0].split('Effective gates:\n', 2)[1]);
+  assert.equal(effectiveJson.gateProfileFile, '/tmp/gates.json');
+  assert.equal(effectiveJson.thresholds.maxReviewNodes, 5);
+  assert.equal(effectiveJson.thresholds.maxGenericNodes, 2);
+  assert.equal(effectiveJson.thresholds.maxEmptyNodes, 0);
+  assert.deepEqual(effectiveJson.failOnReasons, ['known-device-unmapped']);
+  assert.equal(effectiveJson.outputs.artifactFile, artifactFile);
+  assert.equal(effectiveJson.outputs.reportFile, reportFile);
+  assert.equal(effectiveJson.outputs.summaryJsonFile, null);
+  assert.equal(logs.length, 6);
 });
 
 test('runValidateLiveCommand writes machine summary and fails when gates are exceeded', async () => {

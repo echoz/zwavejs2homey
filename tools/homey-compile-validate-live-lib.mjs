@@ -406,6 +406,23 @@ function evaluateValidationGates(command, summary) {
   };
 }
 
+function buildEffectiveGateConfig(command) {
+  return {
+    gateProfileFile: command.gateProfileFile ?? null,
+    thresholds: {
+      maxReviewNodes: command.maxReviewNodes ?? null,
+      maxGenericNodes: command.maxGenericNodes ?? null,
+      maxEmptyNodes: command.maxEmptyNodes ?? null,
+    },
+    failOnReasons: command.failOnReasons ?? [],
+    outputs: {
+      artifactFile: command.artifactFile,
+      reportFile: command.reportFile,
+      summaryJsonFile: command.summaryJsonFile ?? null,
+    },
+  };
+}
+
 function buildMachineSummary(command, summary, gateResult, generatedAtIso) {
   return {
     generatedAt: generatedAtIso,
@@ -462,6 +479,7 @@ export function getUsageText() {
     '                            [--gate-profile-file <validation-gates.json>]',
     '                            [--max-review-nodes N] [--max-generic-nodes N] [--max-empty-nodes N]',
     '                            [--fail-on-reason <reason> ...]',
+    '                            [--print-effective-gates]',
     '                            [--top N]',
   ].join('\n');
 }
@@ -608,6 +626,7 @@ export function parseCliArgs(argv, options = {}) {
       maxGenericNodes,
       maxEmptyNodes,
       failOnReasons,
+      printEffectiveGates: flags.has('--print-effective-gates'),
       top,
     },
   };
@@ -618,6 +637,10 @@ export async function runValidateLiveCommand(command, io = console, deps = {}) {
   const inspectImpl = deps.runLiveInspectCommandImpl ?? runLiveInspectCommand;
   const nowDate = deps.nowDate ?? new Date();
   const generatedAtIso = nowDate.toISOString();
+
+  if (command.printEffectiveGates) {
+    io.log(`Effective gates:\n${formatJsonPretty(buildEffectiveGateConfig(command))}`);
+  }
 
   const buildCommand = {
     url: command.url,

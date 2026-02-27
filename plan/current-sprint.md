@@ -251,6 +251,10 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - gate profile supports thresholds/reasons and output paths (`artifactFile`, `reportFile`, `summaryJsonFile`) with profile-relative path resolution
     - established deterministic precedence: CLI flags override profile values; profile values override tool defaults
     - expanded tool regression coverage for profile loading, CLI override behavior, and invalid profile validation
+55. Completed runtime-validation effective-gate diagnostics slice:
+    - added `--print-effective-gates` to `compiler:validate-live` to print resolved gate/output config before execution
+    - output reflects final precedence resolution (CLI > gate profile > defaults) for thresholds, reasons, and output paths
+    - expanded tool regression coverage for parse wiring and runtime diagnostics logging behavior
 
 ## Next Tasks
 

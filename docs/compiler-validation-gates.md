@@ -102,6 +102,14 @@ Precedence is deterministic:
 
 `artifactFile`/`reportFile`/`summaryJsonFile` may be absolute or relative. Relative paths are resolved from the profile file directory.
 
+For diagnostics, add:
+
+```bash
+--print-effective-gates
+```
+
+This prints the final merged gate/output config (CLI > profile > defaults) before validation runs.
+
 ## Suggested Workflow
 
 1. Keep one baseline summary JSON per network snapshot in `plan/` or `docs/`.
