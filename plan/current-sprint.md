@@ -255,6 +255,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - added `--print-effective-gates` to `compiler:validate-live` to print resolved gate/output config before execution
     - output reflects final precedence resolution (CLI > gate profile > defaults) for thresholds, reasons, and output paths
     - expanded tool regression coverage for parse wiring and runtime diagnostics logging behavior
+56. Completed runtime-validation compiled-artifact reuse slice:
+    - added `--compiled-file` mode to `compiler:validate-live` to reuse an existing compiled artifact and skip the build phase
+    - parser now enforces clear mode boundaries (`--compiled-file` cannot be combined with rules-source flags or `--artifact-file`)
+    - runtime now reads the provided compiled artifact and runs apply/gate/report flow unchanged, with explicit "Using compiled artifact" logging
+    - expanded tool regression coverage for parse mode selection/conflict validation and build-skip runtime behavior
 
 ## Next Tasks
 

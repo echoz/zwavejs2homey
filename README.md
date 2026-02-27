@@ -82,6 +82,7 @@ This emits a `compiled-homey-profiles/v1` artifact.
 - `npm run compiler:validate-live -- --url ws://HOST:PORT --all-nodes --summary-json-file /tmp/compiled-live.summary.json --max-review-nodes 5 --max-generic-nodes 2 --fail-on-reason known-device-generic-fallback`
 - `npm run compiler:validate-live -- --url ws://HOST:PORT --all-nodes --manifest-file rules/manifest.json --gate-profile-file plan/validation-gates.example.json`
 - `npm run compiler:validate-live -- --url ws://HOST:PORT --all-nodes --gate-profile-file plan/validation-gates.example.json --print-effective-gates`
+- `npm run compiler:validate-live -- --url ws://HOST:PORT --all-nodes --compiled-file /tmp/compiled-live.json --report-file /tmp/compiled-live.validation.md`
 
 This runs the canonical live validation loop in one command:
 
@@ -91,6 +92,7 @@ This runs the canonical live validation loop in one command:
 - optionally enforces quality gates and exits non-zero (CI-friendly) via `--max-*` and `--fail-on-reason`
 - gate/output settings can be loaded from `--gate-profile-file` (CLI flags override profile values)
 - `--print-effective-gates` prints the merged gate/output config (after CLI/profile/default precedence) before execution
+- `--compiled-file` reuses an existing compiled artifact and skips the build phase
 
 Gate setup guide: `docs/compiler-validation-gates.md`
 

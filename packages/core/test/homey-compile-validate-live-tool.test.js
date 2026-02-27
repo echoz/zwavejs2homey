@@ -58,6 +58,45 @@ test('parseCliArgs validates required live inputs and rules source modes', async
   assert.equal(parsedExplicit.command.rulesFiles.length, 2);
   assert.equal(parsedExplicit.command.top, 7);
   assert.equal(parsedExplicit.command.printEffectiveGates, false);
+
+  const parsedCompiledFile = parseCliArgs([
+    '--url',
+    'ws://x',
+    '--all-nodes',
+    '--compiled-file',
+    '/tmp/compiled.json',
+  ]);
+  assert.equal(parsedCompiledFile.ok, true);
+  assert.equal(parsedCompiledFile.command.ruleInputMode, 'compiled-file');
+  assert.equal(parsedCompiledFile.command.manifestFile, undefined);
+  assert.deepEqual(parsedCompiledFile.command.rulesFiles, []);
+  assert.equal(parsedCompiledFile.command.compiledFile, '/tmp/compiled.json');
+  assert.equal(parsedCompiledFile.command.artifactFile, '/tmp/compiled.json');
+
+  assert.equal(
+    parseCliArgs([
+      '--url',
+      'ws://x',
+      '--all-nodes',
+      '--compiled-file',
+      '/tmp/compiled.json',
+      '--manifest-file',
+      'rules/manifest.json',
+    ]).ok,
+    false,
+  );
+  assert.equal(
+    parseCliArgs([
+      '--url',
+      'ws://x',
+      '--all-nodes',
+      '--compiled-file',
+      '/tmp/compiled.json',
+      '--artifact-file',
+      '/tmp/other.json',
+    ]).ok,
+    false,
+  );
   assert.equal(
     parseCliArgs(['--url', 'ws://x', '--all-nodes', '--max-review-nodes', '-1']).ok,
     false,
@@ -303,6 +342,77 @@ test('runValidateLiveCommand writes artifact and markdown summary from live insp
   assert.equal(logs.length, 5);
   assert.match(logs[0], /Compiled artifact:/);
   assert.match(logs[1], /Validation report:/);
+});
+
+test('runValidateLiveCommand can validate using an existing compiled file', async () => {
+  const { runValidateLiveCommand } = await loadLib();
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zwjs2homey-validate-live-compiled-'));
+  const compiledFile = path.join(tmpDir, 'compiled-live.json');
+  const reportFile = path.join(tmpDir, 'compiled-live.validation.md');
+  const logs = [];
+  let buildCalled = false;
+  let inspectCommand = null;
+
+  fs.writeFileSync(
+    compiledFile,
+    JSON.stringify(
+      {
+        schemaVersion: 'compiled-homey-profiles/v1',
+        generatedAt: '2026-02-26T00:00:00.000Z',
+        source: { buildProfile: 'manifest-file', ruleSources: [] },
+        entries: [],
+      },
+      null,
+      2,
+    ),
+    'utf8',
+  );
+
+  const result = await runValidateLiveCommand(
+    {
+      url: 'ws://x',
+      token: undefined,
+      schemaVersion: 0,
+      allNodes: true,
+      nodeId: undefined,
+      includeValues: 'summary',
+      maxValues: 100,
+      includeControllerNodes: false,
+      manifestFile: undefined,
+      rulesFiles: [],
+      ruleInputMode: 'compiled-file',
+      compiledFile,
+      catalogFile: undefined,
+      artifactFile: compiledFile,
+      reportFile,
+      summaryJsonFile: undefined,
+      gateProfileFile: undefined,
+      maxReviewNodes: undefined,
+      maxGenericNodes: undefined,
+      maxEmptyNodes: undefined,
+      failOnReasons: [],
+      printEffectiveGates: false,
+      top: 3,
+    },
+    { log: (line) => logs.push(line) },
+    {
+      nowDate: new Date('2026-02-26T00:00:00.000Z'),
+      buildCompiledProfilesArtifactImpl: async () => {
+        buildCalled = true;
+        throw new Error('build should not be called');
+      },
+      runLiveInspectCommandImpl: async (command, io) => {
+        inspectCommand = command;
+        io.log(JSON.stringify({ results: [] }));
+      },
+    },
+  );
+
+  assert.equal(buildCalled, false);
+  assert.equal(inspectCommand.compiledFile, compiledFile);
+  assert.equal(result.artifact.schemaVersion, 'compiled-homey-profiles/v1');
+  assert.equal(fs.existsSync(reportFile), true);
+  assert.match(logs[0], /Using compiled artifact:/);
 });
 
 test('runValidateLiveCommand prints effective gates when requested', async () => {

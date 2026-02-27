@@ -274,6 +274,9 @@ function formatOutcomeSummary(outcomes) {
 }
 
 function describeRuleSource(command) {
+  if (command.ruleInputMode === 'compiled-file') {
+    return `compiled-file (${command.compiledFile})`;
+  }
   if (command.ruleInputMode === 'default-manifest') {
     return `default-manifest (${command.manifestFile})`;
   }
@@ -432,6 +435,7 @@ function buildMachineSummary(command, summary, gateResult, generatedAtIso) {
       ruleInputMode: command.ruleInputMode,
       manifestFile: command.manifestFile,
       rulesFiles: command.rulesFiles,
+      compiledFile: command.compiledFile,
       artifactFile: command.artifactFile,
       reportFile: command.reportFile,
       gateProfileFile: command.gateProfileFile,
@@ -468,7 +472,8 @@ export function getUsageText() {
     'Usage:',
     '  homey-compile-validate-live --url ws://host:port (--all-nodes | --node <id>)',
     '                            [--manifest-file <manifest.json> | --rules-file <rules.json> [--rules-file ...]]',
-    '                            (defaults to rules/manifest.json when neither is provided)',
+    '                            [--compiled-file <compiled-homey-profiles.json>]',
+    '                            (defaults to rules/manifest.json when no rules source is provided)',
     '                            [--catalog-file <catalog.json>]',
     '                            [--token ...] [--schema-version 0]',
     '                            [--include-values none|summary|full] [--max-values N]',
@@ -504,8 +509,26 @@ export function parseCliArgs(argv, options = {}) {
     return { ok: false, error: `Invalid --node: ${nodeRaw}` };
   }
 
+  const compiledFileFlag = flags.get('--compiled-file');
+  let compiledFile;
+  if (compiledFileFlag !== undefined) {
+    if (!compiledFileFlag || compiledFileFlag === 'true') {
+      return { ok: false, error: '--compiled-file requires a value' };
+    }
+    compiledFile = resolveFilePath(compiledFileFlag);
+  }
+  if (compiledFile && flags.get('--artifact-file') !== undefined) {
+    return { ok: false, error: 'Use either --compiled-file or --artifact-file, not both' };
+  }
+
   const manifestFlag = flags.get('--manifest-file');
   const rulesFiles = collectRepeatedFlag(argv, '--rules-file');
+  if (compiledFile && (manifestFlag || rulesFiles.length > 0)) {
+    return {
+      ok: false,
+      error: 'Use either --compiled-file or rules source flags (--manifest-file/--rules-file)',
+    };
+  }
   if (manifestFlag && rulesFiles.length > 0) {
     return { ok: false, error: 'Use either --manifest-file or --rules-file, not both' };
   }
@@ -513,19 +536,26 @@ export function parseCliArgs(argv, options = {}) {
   const defaultManifestFile = resolveFilePath(
     options.defaultManifestFile ?? DEFAULT_RULE_MANIFEST_FILE,
   );
-  let manifestFile = manifestFlag ? resolveFilePath(manifestFlag) : undefined;
-  let ruleInputMode = manifestFlag ? 'manifest-file' : 'rules-files';
-  if (!manifestFile && rulesFiles.length === 0) {
-    if (!fs.existsSync(defaultManifestFile)) {
-      return {
-        ok: false,
-        error:
-          `No rules source provided and default manifest not found: ${defaultManifestFile}. ` +
-          'Provide --manifest-file or at least one --rules-file',
-      };
+  let manifestFile;
+  let ruleInputMode;
+  if (compiledFile) {
+    manifestFile = undefined;
+    ruleInputMode = 'compiled-file';
+  } else {
+    manifestFile = manifestFlag ? resolveFilePath(manifestFlag) : undefined;
+    ruleInputMode = manifestFlag ? 'manifest-file' : 'rules-files';
+    if (!manifestFile && rulesFiles.length === 0) {
+      if (!fs.existsSync(defaultManifestFile)) {
+        return {
+          ok: false,
+          error:
+            `No rules source provided and default manifest not found: ${defaultManifestFile}. ` +
+            'Provide --manifest-file or at least one --rules-file',
+        };
+      }
+      manifestFile = defaultManifestFile;
+      ruleInputMode = 'default-manifest';
     }
-    manifestFile = defaultManifestFile;
-    ruleInputMode = 'default-manifest';
   }
 
   const includeValues = flags.get('--include-values') ?? (allNodes ? 'summary' : 'full');
@@ -593,7 +623,10 @@ export function parseCliArgs(argv, options = {}) {
 
   const nowDate = options.nowDate ?? new Date();
   const artifactFile = resolveFilePath(
-    flags.get('--artifact-file') ?? gateProfile?.artifactFile ?? buildDefaultArtifactPath(nowDate),
+    compiledFile ??
+      flags.get('--artifact-file') ??
+      gateProfile?.artifactFile ??
+      buildDefaultArtifactPath(nowDate),
   );
   const reportFile = resolveFilePath(
     flags.get('--report-file') ?? gateProfile?.reportFile ?? buildDefaultReportPath(artifactFile),
@@ -615,6 +648,7 @@ export function parseCliArgs(argv, options = {}) {
       manifestFile,
       rulesFiles: rulesFiles.map((filePath) => resolveFilePath(filePath)),
       ruleInputMode,
+      compiledFile,
       catalogFile: flags.get('--catalog-file')
         ? resolveFilePath(flags.get('--catalog-file'))
         : undefined,
@@ -642,26 +676,39 @@ export async function runValidateLiveCommand(command, io = console, deps = {}) {
     io.log(`Effective gates:\n${formatJsonPretty(buildEffectiveGateConfig(command))}`);
   }
 
-  const buildCommand = {
-    url: command.url,
-    token: command.token,
-    schemaVersion: command.schemaVersion,
-    allNodes: command.allNodes,
-    nodeId: command.nodeId,
-    includeValues: command.includeValues,
-    maxValues: command.maxValues,
-    includeControllerNodes: command.includeControllerNodes,
-    deviceFiles: [],
-    manifestFile: command.manifestFile,
-    rulesFiles: command.rulesFiles,
-    catalogFile: command.catalogFile,
-    outputFile: undefined,
-    format: 'summary',
-    ruleInputMode: command.ruleInputMode,
-  };
+  let artifact;
+  if (command.compiledFile) {
+    try {
+      artifact = readJson(command.compiledFile);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to read compiled file "${command.compiledFile}": ${reason}`);
+    }
+    if (!artifact || typeof artifact !== 'object' || Array.isArray(artifact)) {
+      throw new Error(`Compiled file "${command.compiledFile}" must contain a JSON object`);
+    }
+  } else {
+    const buildCommand = {
+      url: command.url,
+      token: command.token,
+      schemaVersion: command.schemaVersion,
+      allNodes: command.allNodes,
+      nodeId: command.nodeId,
+      includeValues: command.includeValues,
+      maxValues: command.maxValues,
+      includeControllerNodes: command.includeControllerNodes,
+      deviceFiles: [],
+      manifestFile: command.manifestFile,
+      rulesFiles: command.rulesFiles,
+      catalogFile: command.catalogFile,
+      outputFile: undefined,
+      format: 'summary',
+      ruleInputMode: command.ruleInputMode,
+    };
 
-  const artifact = await buildImpl(buildCommand, deps);
-  fs.writeFileSync(command.artifactFile, `${formatJsonPretty(artifact)}\n`, 'utf8');
+    artifact = await buildImpl(buildCommand, deps);
+    fs.writeFileSync(command.artifactFile, `${formatJsonPretty(artifact)}\n`, 'utf8');
+  }
 
   const inspectLogs = [];
   await inspectImpl(
@@ -713,7 +760,11 @@ export async function runValidateLiveCommand(command, io = console, deps = {}) {
     fs.writeFileSync(command.summaryJsonFile, `${formatJsonPretty(machineSummary)}\n`, 'utf8');
   }
 
-  io.log(`Compiled artifact: ${command.artifactFile}`);
+  if (command.compiledFile) {
+    io.log(`Using compiled artifact: ${command.artifactFile}`);
+  } else {
+    io.log(`Compiled artifact: ${command.artifactFile}`);
+  }
   io.log(`Validation report: ${command.reportFile}`);
   if (command.summaryJsonFile) {
     io.log(`Validation summary JSON: ${command.summaryJsonFile}`);

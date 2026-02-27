@@ -110,6 +110,17 @@ For diagnostics, add:
 
 This prints the final merged gate/output config (CLI > profile > defaults) before validation runs.
 
+If you already have a compiled artifact, you can skip rebuild during gate tuning:
+
+```bash
+npm run compiler:validate-live -- \
+  --url ws://HOST:PORT \
+  --all-nodes \
+  --compiled-file /tmp/compiled-live.json \
+  --gate-profile-file plan/validation-gates.example.json \
+  --print-effective-gates
+```
+
 ## Suggested Workflow
 
 1. Keep one baseline summary JSON per network snapshot in `plan/` or `docs/`.
