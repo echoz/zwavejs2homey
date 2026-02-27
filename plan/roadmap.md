@@ -78,6 +78,7 @@
 - [x] Runtime-validation offline replay slice: add `--input-summary-json-file` mode to `compiler:validate-live` for gate rechecks from existing summary artifacts without live ZWJS access
 - [x] Runtime-validation baseline-regression slice: add baseline/delta gate controls (`--baseline-summary-json-file`, `--max-*-delta`, `--fail-on-reason-delta`) with machine-summary/log delta reporting
 - [x] Runtime-validation baseline-report slice: include baseline/delta sections in markdown validation reports for fast human triage
+- [x] Runtime-validation baseline-snapshot slice: add `--save-baseline-summary-json-file` to refresh baseline artifacts directly from current validation runs
 - [ ] Decide and document final ownership of generic fallback inference policy (currently leaning Homey adapter-owned)
 - [ ] Add second real catalog source adapter when a concrete source format is available
 

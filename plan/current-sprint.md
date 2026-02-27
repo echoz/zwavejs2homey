@@ -274,6 +274,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - live/compiled validation markdown reports now include `Baseline Delta` and `Reason Deltas` sections when baseline mode is active
     - report header now includes baseline summary source for traceability
     - expanded tool regression coverage to assert baseline-delta markdown output shape
+60. Completed baseline snapshot helper slice:
+    - added `--save-baseline-summary-json-file` to `compiler:validate-live` so the current run can directly emit a baseline-ready summary artifact
+    - helper works across live-build, compiled-artifact reuse, and summary-input replay modes
+    - CLI now logs the saved baseline path when written; parser validates required path value
+    - expanded tool regression coverage for save-baseline parsing and offline replay write behavior
 
 ## Next Tasks
 

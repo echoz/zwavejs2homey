@@ -76,6 +76,8 @@ test('parseCliArgs validates required live inputs and rules source modes', async
   const parsedSummaryInput = parseCliArgs([
     '--input-summary-json-file',
     '/tmp/compiled-live.summary.json',
+    '--save-baseline-summary-json-file',
+    '/tmp/compiled-live.baseline.saved.json',
     '--baseline-summary-json-file',
     '/tmp/compiled-live.baseline.summary.json',
     '--max-review-nodes',
@@ -88,6 +90,10 @@ test('parseCliArgs validates required live inputs and rules source modes', async
   assert.equal(parsedSummaryInput.ok, true);
   assert.equal(parsedSummaryInput.command.ruleInputMode, 'summary-input');
   assert.equal(parsedSummaryInput.command.inputSummaryJsonFile, '/tmp/compiled-live.summary.json');
+  assert.equal(
+    parsedSummaryInput.command.saveBaselineSummaryJsonFile,
+    '/tmp/compiled-live.baseline.saved.json',
+  );
   assert.equal(
     parsedSummaryInput.command.baselineSummaryJsonFile,
     '/tmp/compiled-live.baseline.summary.json',
@@ -107,6 +113,14 @@ test('parseCliArgs validates required live inputs and rules source modes', async
       '/tmp/compiled-live.summary.json',
       '--fail-on-reason-delta',
       'broken',
+    ]).ok,
+    false,
+  );
+  assert.equal(
+    parseCliArgs([
+      '--input-summary-json-file',
+      '/tmp/compiled-live.summary.json',
+      '--save-baseline-summary-json-file',
     ]).ok,
     false,
   );
@@ -496,6 +510,7 @@ test('runValidateLiveCommand can evaluate gates from an existing summary JSON fi
   const inputSummaryJsonFile = path.join(tmpDir, 'compiled-live.summary.json');
   const baselineSummaryJsonFile = path.join(tmpDir, 'compiled-live.baseline.summary.json');
   const outputSummaryJsonFile = path.join(tmpDir, 'compiled-live.summary.recheck.json');
+  const savedBaselineSummaryJsonFile = path.join(tmpDir, 'compiled-live.baseline.saved.json');
   const logs = [];
   let buildCalled = false;
   let inspectCalled = false;
@@ -551,6 +566,7 @@ test('runValidateLiveCommand can evaluate gates from an existing summary JSON fi
       inputSummaryJsonFile,
       baselineSummaryJsonFile,
       summaryJsonFile: outputSummaryJsonFile,
+      saveBaselineSummaryJsonFile: savedBaselineSummaryJsonFile,
       gateProfileFile: '/tmp/gates.json',
       maxReviewNodes: 2,
       maxGenericNodes: 1,
@@ -585,6 +601,7 @@ test('runValidateLiveCommand can evaluate gates from an existing summary JSON fi
   assert.equal(result.gateResult.deltas.emptyNodes, 0);
   assert.equal(result.gateResult.deltas.reasonDeltas['known-device-generic-fallback'], 1);
   assert.equal(fs.existsSync(outputSummaryJsonFile), true);
+  assert.equal(fs.existsSync(savedBaselineSummaryJsonFile), true);
 
   const outputSummary = JSON.parse(fs.readFileSync(outputSummaryJsonFile, 'utf8'));
   assert.equal(outputSummary.source.inputSummaryJsonFile, inputSummaryJsonFile);
@@ -596,12 +613,16 @@ test('runValidateLiveCommand can evaluate gates from an existing summary JSON fi
   assert.equal(outputSummary.gates.deltas.reviewNodes, 1);
   assert.equal(outputSummary.gates.deltas.reasonDeltas['known-device-generic-fallback'], 1);
   assert.equal(outputSummary.gates.passed, true);
+  const savedBaselineSummary = JSON.parse(fs.readFileSync(savedBaselineSummaryJsonFile, 'utf8'));
+  assert.equal(savedBaselineSummary.source.inputSummaryJsonFile, inputSummaryJsonFile);
+  assert.equal(savedBaselineSummary.gates.passed, true);
 
   assert.match(logs[0], /Input summary JSON:/);
   assert.match(logs[1], /Baseline summary JSON:/);
   assert.match(logs[2], /Delta: review=1, generic=0, empty=0/);
   assert.match(logs[3], /Validation summary JSON:/);
-  assert.equal(logs.length, 7);
+  assert.match(logs[4], /Saved baseline summary JSON:/);
+  assert.equal(logs.length, 8);
 });
 
 test('runValidateLiveCommand prints effective gates when requested', async () => {

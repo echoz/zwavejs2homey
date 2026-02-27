@@ -718,6 +718,7 @@ function buildEffectiveGateConfig(command) {
       artifactFile: command.artifactFile ?? null,
       reportFile: command.reportFile ?? null,
       summaryJsonFile: command.summaryJsonFile ?? null,
+      saveBaselineSummaryJsonFile: command.saveBaselineSummaryJsonFile ?? null,
     },
   };
 }
@@ -799,6 +800,7 @@ export function getUsageText() {
     '                            [--artifact-file </tmp/compiled-live.json>]',
     '                            [--report-file </tmp/compiled-live.validation.md>]',
     '                            [--summary-json-file </tmp/compiled-live.summary.json>]',
+    '                            [--save-baseline-summary-json-file </tmp/compiled-live.baseline.summary.json>]',
     '                            [--gate-profile-file <validation-gates.json>]',
     '                            [--baseline-summary-json-file </tmp/compiled-live.baseline.summary.json>]',
     '                            [--max-review-nodes N] [--max-generic-nodes N] [--max-empty-nodes N]',
@@ -816,6 +818,7 @@ export function getUsageText() {
     '                            [--max-review-delta N] [--max-generic-delta N] [--max-empty-delta N]',
     '                            [--fail-on-reason-delta <reason>:<delta> ...]',
     '                            [--summary-json-file </tmp/compiled-live.summary.recheck.json>]',
+    '                            [--save-baseline-summary-json-file </tmp/compiled-live.baseline.summary.json>]',
     '                            [--print-effective-gates]',
   ].join('\n');
 }
@@ -1079,6 +1082,14 @@ export function parseCliArgs(argv, options = {}) {
   }
   const summaryJsonFileRaw = flags.get('--summary-json-file') ?? gateProfile?.summaryJsonFile;
   const summaryJsonFile = summaryJsonFileRaw ? resolveFilePath(summaryJsonFileRaw) : undefined;
+  const saveBaselineSummaryJsonFileFlag = flags.get('--save-baseline-summary-json-file');
+  let saveBaselineSummaryJsonFile;
+  if (saveBaselineSummaryJsonFileFlag !== undefined) {
+    if (!saveBaselineSummaryJsonFileFlag || saveBaselineSummaryJsonFileFlag === 'true') {
+      return { ok: false, error: '--save-baseline-summary-json-file requires a value' };
+    }
+    saveBaselineSummaryJsonFile = resolveFilePath(saveBaselineSummaryJsonFileFlag);
+  }
 
   return {
     ok: true,
@@ -1101,6 +1112,7 @@ export function parseCliArgs(argv, options = {}) {
       artifactFile,
       reportFile,
       summaryJsonFile,
+      saveBaselineSummaryJsonFile,
       gateProfileFile: gateProfile?.filePath,
       maxReviewNodes,
       maxGenericNodes,
@@ -1155,6 +1167,13 @@ export async function runValidateLiveCommand(command, io = console, deps = {}) {
         'utf8',
       );
     }
+    if (commandWithBaseline.saveBaselineSummaryJsonFile) {
+      fs.writeFileSync(
+        commandWithBaseline.saveBaselineSummaryJsonFile,
+        `${formatJsonPretty(machineSummary)}\n`,
+        'utf8',
+      );
+    }
 
     io.log(`Input summary JSON: ${loaded.filePath}`);
     if (commandWithBaseline.baselineSummaryJsonFile) {
@@ -1163,6 +1182,9 @@ export async function runValidateLiveCommand(command, io = console, deps = {}) {
     }
     if (commandWithBaseline.summaryJsonFile) {
       io.log(`Validation summary JSON: ${commandWithBaseline.summaryJsonFile}`);
+    }
+    if (commandWithBaseline.saveBaselineSummaryJsonFile) {
+      io.log(`Saved baseline summary JSON: ${commandWithBaseline.saveBaselineSummaryJsonFile}`);
     }
     io.log(`Nodes validated: ${summary.totalNodes}`);
     io.log(`Outcomes: ${formatOutcomeSummary(summary.outcomes)}`);
@@ -1277,6 +1299,13 @@ export async function runValidateLiveCommand(command, io = console, deps = {}) {
       'utf8',
     );
   }
+  if (commandWithBaseline.saveBaselineSummaryJsonFile) {
+    fs.writeFileSync(
+      commandWithBaseline.saveBaselineSummaryJsonFile,
+      `${formatJsonPretty(machineSummary)}\n`,
+      'utf8',
+    );
+  }
 
   if (commandWithBaseline.compiledFile) {
     io.log(`Using compiled artifact: ${commandWithBaseline.artifactFile}`);
@@ -1290,6 +1319,9 @@ export async function runValidateLiveCommand(command, io = console, deps = {}) {
   io.log(`Validation report: ${commandWithBaseline.reportFile}`);
   if (commandWithBaseline.summaryJsonFile) {
     io.log(`Validation summary JSON: ${commandWithBaseline.summaryJsonFile}`);
+  }
+  if (commandWithBaseline.saveBaselineSummaryJsonFile) {
+    io.log(`Saved baseline summary JSON: ${commandWithBaseline.saveBaselineSummaryJsonFile}`);
   }
   io.log(`Nodes validated: ${summary.totalNodes}`);
   io.log(`Outcomes: ${formatOutcomeSummary(summary.outcomes)}`);

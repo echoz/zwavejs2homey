@@ -159,6 +159,7 @@ Optional:
 
 - add `--summary-json-file /tmp/compiled-live.summary.recheck.json` to write a refreshed summary with updated gate results
 - add `--baseline-summary-json-file /tmp/compiled-live.baseline.summary.json` and any `--max-*-delta` / `--fail-on-reason-delta` gates for offline regression checks
+- add `--save-baseline-summary-json-file /tmp/compiled-live.baseline.summary.json` to save the current run as a new baseline snapshot
 
 ## Suggested Workflow
 

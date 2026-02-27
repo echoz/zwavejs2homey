@@ -85,6 +85,7 @@ This emits a `compiled-homey-profiles/v1` artifact.
 - `npm run compiler:validate-live -- --url ws://HOST:PORT --all-nodes --compiled-file /tmp/compiled-live.json --report-file /tmp/compiled-live.validation.md`
 - `npm run compiler:validate-live -- --input-summary-json-file /tmp/compiled-live.summary.json --gate-profile-file plan/validation-gates.example.json --print-effective-gates`
 - `npm run compiler:validate-live -- --url ws://HOST:PORT --all-nodes --baseline-summary-json-file /tmp/compiled-live.baseline.summary.json --max-review-delta 1 --max-generic-delta 0 --fail-on-reason-delta known-device-unmapped:0`
+- `npm run compiler:validate-live -- --url ws://HOST:PORT --all-nodes --save-baseline-summary-json-file /tmp/compiled-live.baseline.summary.json`
 
 This runs the canonical live validation loop in one command:
 
@@ -98,6 +99,7 @@ This runs the canonical live validation loop in one command:
 - `--input-summary-json-file` re-evaluates gates from an existing summary JSON (offline gate tuning; no ZWJS connection)
 - regression deltas are supported with `--baseline-summary-json-file`, `--max-*-delta`, and `--fail-on-reason-delta <reason>:<delta>`
 - when baseline is configured, markdown reports include baseline/delta tables for quick human triage
+- `--save-baseline-summary-json-file` writes the current machine summary in baseline-friendly form so refreshing baseline snapshots is one command
 
 Gate setup guide: `docs/compiler-validation-gates.md`
 
