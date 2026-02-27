@@ -1,4 +1,11 @@
-import type { NodeDetail, NodeSummary } from '../model/types';
+import type {
+  BacklogSummary,
+  NodeDetail,
+  NodeSummary,
+  ScaffoldDraft,
+  SignatureInspectSummary,
+  ValidationSummary,
+} from '../model/types';
 
 function formatCell(value: unknown): string {
   if (value === null || value === undefined) return '';
@@ -29,6 +36,15 @@ export function renderShellHelp(): string {
     '  list                  Show cached node list',
     '  refresh               Refetch node list',
     '  show <nodeId>         Show node detail',
+    '  signature [triple] [--from-node <id>]  Set/derive selected signature',
+    '  inspect [--manifest <file>]            Inspect selected signature',
+    '  validate [--manifest <file>]           Validate selected signature',
+    '  backlog load <file> [--top N]          Load backlog summary',
+    '  backlog show                            Show loaded backlog entries',
+    '  backlog pick [rank]                     Select signature from loaded backlog',
+    '  scaffold preview [--product-name "..."] Preview scaffold draft from backlog',
+    '  scaffold write [filePath] [--force]     Write scaffold draft file',
+    '  log [--limit N]                         Show run log',
     '  help                  Show this help',
     '  quit                  Exit',
   ].join('\n');
@@ -102,4 +118,97 @@ export function renderNodeDetail(detail: NodeDetail): string {
   }
 
   return lines.join('\n');
+}
+
+export function renderSignatureSelected(signature: string): string {
+  return `Selected signature: ${signature}`;
+}
+
+export function renderInspectSummary(summary: SignatureInspectSummary): string {
+  const lines = [
+    `Signature: ${summary.signature}`,
+    `Nodes: ${summary.totalNodes}`,
+    `Outcomes: ${Object.entries(summary.outcomeCounts)
+      .map(([key, value]) => `${key}=${value}`)
+      .join(', ')}`,
+  ];
+
+  if (!summary.nodes.length) {
+    lines.push('No matching nodes found.');
+    return lines.join('\n');
+  }
+
+  const rows = summary.nodes.map((node) => [
+    String(node.nodeId),
+    node.name ?? '',
+    node.homeyClass ?? '',
+    node.outcome ?? '',
+    node.confidence ?? '',
+    node.reviewReason ?? '',
+  ]);
+  lines.push('');
+  lines.push(renderTable(['Node', 'Name', 'Class', 'Outcome', 'Conf', 'Review'], rows));
+  return lines.join('\n');
+}
+
+export function renderValidationSummary(summary: ValidationSummary): string {
+  return [
+    `Validation signature: ${summary.signature}`,
+    `Nodes: ${summary.totalNodes}`,
+    `Needs review: ${summary.reviewNodes}`,
+    `Outcomes: ${Object.entries(summary.outcomes)
+      .map(([key, value]) => `${key}=${value}`)
+      .join(', ')}`,
+    summary.reportFile ? `Report: ${summary.reportFile}` : null,
+    summary.artifactFile ? `Artifact: ${summary.artifactFile}` : null,
+  ]
+    .filter((line) => line !== null)
+    .join('\n');
+}
+
+export function renderBacklogSummary(summary: BacklogSummary): string {
+  const lines = [
+    `Backlog file: ${summary.filePath}`,
+    `Signatures: ${summary.totalSignatures}`,
+    `Total nodes: ${summary.totalNodes}`,
+    `Review nodes: ${summary.reviewNodes}`,
+  ];
+  if (!summary.entries.length) {
+    lines.push('No entries in summary window.');
+    return lines.join('\n');
+  }
+
+  const rows = summary.entries.map((entry) => [
+    String(entry.rank),
+    entry.signature,
+    String(entry.nodeCount),
+    String(entry.reviewNodeCount),
+    String(entry.genericNodeCount),
+    String(entry.emptyNodeCount),
+    entry.topReason ?? '',
+  ]);
+  lines.push('');
+  lines.push(
+    renderTable(['Rank', 'Signature', 'Nodes', 'Review', 'Generic', 'Empty', 'Top reason'], rows),
+  );
+  return lines.join('\n');
+}
+
+export function renderScaffoldDraft(draft: ScaffoldDraft): string {
+  return [
+    `Scaffold signature: ${draft.signature}`,
+    `File hint: ${draft.fileHint}`,
+    `Generated: ${draft.generatedAt}`,
+    '',
+    JSON.stringify(draft.bundle, null, 2),
+  ].join('\n');
+}
+
+export function renderRunLog(
+  lines: Array<{ timestamp: string; level: string; message: string }>,
+): string {
+  if (!lines.length) return 'Run log is empty.';
+  return lines
+    .map((entry) => `[${entry.timestamp}] ${entry.level.toUpperCase()} ${entry.message}`)
+    .join('\n');
 }

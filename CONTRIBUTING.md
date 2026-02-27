@@ -152,6 +152,13 @@ npm run compiler:tui -- --url ws://HOST:PORT --include-values summary
 npm run compiler:inspect-live -- --url ws://HOST:PORT --all-nodes --manifest-file rules/manifest.json --format list
 ```
 
+TUI workflow shortcuts (inside `compiler:tui`):
+
+- `show <nodeId>` then `signature --from-node <nodeId>`
+- `inspect` and `validate`
+- `backlog load <file>`, `backlog pick [rank]`
+- `scaffold preview` then `scaffold write <filePath> --force`
+
 ### 3) Edit Rules in the Correct Layer
 
 - Product-specific curated overrides:

@@ -3,14 +3,81 @@ const assert = require('node:assert/strict');
 
 const { ExplorerPresenter } = require('../dist/presenter/explorer-presenter');
 
+function createCoordinator(overrides = {}) {
+  return {
+    async connect() {},
+    async disconnect() {},
+    async listNodes() {
+      return [];
+    },
+    async getNodeDetail(nodeId) {
+      return {
+        nodeId,
+        state: { name: 'Node' },
+        neighbors: [],
+        notificationEvents: [],
+        values: [],
+      };
+    },
+    deriveSignatureFromNodeDetail() {
+      return '29:66:2';
+    },
+    async inspectSignature(_session, signature) {
+      return {
+        signature,
+        totalNodes: 1,
+        outcomeCounts: { curated: 1 },
+        nodes: [],
+      };
+    },
+    async validateSignature(_session, signature) {
+      return {
+        signature,
+        totalNodes: 1,
+        reviewNodes: 0,
+        outcomes: { curated: 1 },
+      };
+    },
+    loadBacklogSummary(filePath) {
+      return {
+        filePath,
+        totalSignatures: 1,
+        totalNodes: 1,
+        reviewNodes: 1,
+        entries: [
+          {
+            rank: 1,
+            signature: '29:66:2',
+            nodeCount: 1,
+            reviewNodeCount: 1,
+            genericNodeCount: 0,
+            emptyNodeCount: 0,
+          },
+        ],
+      };
+    },
+    scaffoldFromBacklog(_backlogFile, signature) {
+      return {
+        signature,
+        fileHint: 'product-29-66-2.json',
+        generatedAt: new Date().toISOString(),
+        bundle: { schemaVersion: 'product-rules/v1', rules: [] },
+      };
+    },
+    writeScaffoldDraft(filePath) {
+      return filePath;
+    },
+    ...overrides,
+  };
+}
+
 test('ExplorerPresenter connect success loads nodes and sets ready state', async () => {
-  const service = {
+  const coordinator = createCoordinator({
     connectCalls: 0,
     listNodesCalls: 0,
     async connect() {
       this.connectCalls += 1;
     },
-    async disconnect() {},
     async listNodes() {
       this.listNodesCalls += 1;
       return [
@@ -24,12 +91,9 @@ test('ExplorerPresenter connect success loads nodes and sets ready state', async
         },
       ];
     },
-    async getNodeDetail() {
-      throw new Error('not used');
-    },
-  };
+  });
 
-  const presenter = new ExplorerPresenter(service);
+  const presenter = new ExplorerPresenter(coordinator);
   const nodes = await presenter.connect({
     url: 'ws://127.0.0.1:3000',
     schemaVersion: 0,
@@ -37,8 +101,8 @@ test('ExplorerPresenter connect success loads nodes and sets ready state', async
     maxValues: 200,
   });
 
-  assert.equal(service.connectCalls, 1);
-  assert.equal(service.listNodesCalls, 1);
+  assert.equal(coordinator.connectCalls, 1);
+  assert.equal(coordinator.listNodesCalls, 1);
   assert.equal(nodes.length, 1);
   const state = presenter.getState();
   assert.equal(state.connectionState, 'ready');
@@ -47,20 +111,13 @@ test('ExplorerPresenter connect success loads nodes and sets ready state', async
 });
 
 test('ExplorerPresenter connect failure sets error state', async () => {
-  const service = {
+  const coordinator = createCoordinator({
     async connect() {
       throw new Error('boom');
     },
-    async disconnect() {},
-    async listNodes() {
-      return [];
-    },
-    async getNodeDetail() {
-      return null;
-    },
-  };
+  });
 
-  const presenter = new ExplorerPresenter(service);
+  const presenter = new ExplorerPresenter(coordinator);
   await assert.rejects(
     () =>
       presenter.connect({
@@ -81,34 +138,41 @@ test('ExplorerPresenter connect failure sets error state', async () => {
   );
 });
 
-test('ExplorerPresenter showNodeDetail caches selected node detail', async () => {
-  const service = {
-    async connect() {},
-    async disconnect() {},
-    async listNodes() {
-      return [];
-    },
-    async getNodeDetail(nodeId) {
-      return {
-        nodeId,
-        state: { name: 'Node' },
-        neighbors: [],
-        notificationEvents: [],
-        values: [],
-      };
-    },
-  };
-  const presenter = new ExplorerPresenter(service);
+test('ExplorerPresenter can derive signature, inspect and validate selected signature', async () => {
+  const presenter = new ExplorerPresenter(createCoordinator());
   await presenter.connect({
     url: 'ws://127.0.0.1:3000',
     schemaVersion: 0,
     includeValues: 'summary',
     maxValues: 200,
   });
+  await presenter.showNodeDetail(12);
 
-  const detail = await presenter.showNodeDetail(12);
-  assert.equal(detail.nodeId, 12);
-  const state = presenter.getState();
-  assert.equal(state.explorer.selectedNodeId, 12);
-  assert.equal(state.nodeDetailCache[12].nodeId, 12);
+  const signature = presenter.selectSignatureFromNode(12);
+  assert.equal(signature, '29:66:2');
+  const inspect = await presenter.inspectSelectedSignature();
+  assert.equal(inspect.signature, '29:66:2');
+  const validate = await presenter.validateSelectedSignature();
+  assert.equal(validate.signature, '29:66:2');
+});
+
+test('ExplorerPresenter backlog + scaffold draft + write flow', async () => {
+  const writes = [];
+  const coordinator = createCoordinator({
+    writeScaffoldDraft(filePath, _draft, options) {
+      assert.equal(options.confirm, true);
+      writes.push(filePath);
+      return `/abs/${filePath}`;
+    },
+  });
+  const presenter = new ExplorerPresenter(coordinator);
+
+  const backlog = presenter.loadBacklog('/tmp/backlog.json');
+  assert.equal(backlog.entries.length, 1);
+  presenter.selectSignature(backlog.entries[0].signature);
+  const draft = presenter.createScaffoldFromBacklog({});
+  assert.equal(draft.signature, '29:66:2');
+  const written = presenter.writeScaffoldDraft(undefined, { confirm: true });
+  assert.equal(written, '/abs/product-29-66-2.json');
+  assert.equal(writes.length, 1);
 });

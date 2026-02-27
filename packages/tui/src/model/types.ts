@@ -56,6 +56,56 @@ export interface RunLogEntry {
   message: string;
 }
 
+export interface InspectNodeResult {
+  nodeId: number;
+  name: string | null;
+  homeyClass: string | null;
+  outcome: string | null;
+  confidence: string | null;
+  reviewReason: string | null;
+}
+
+export interface SignatureInspectSummary {
+  signature: string;
+  totalNodes: number;
+  outcomeCounts: Record<string, number>;
+  nodes: InspectNodeResult[];
+}
+
+export interface ValidationSummary {
+  signature: string;
+  totalNodes: number;
+  reviewNodes: number;
+  outcomes: Record<string, number>;
+  reportFile?: string;
+  artifactFile?: string;
+}
+
+export interface BacklogEntrySummary {
+  rank: number;
+  signature: string;
+  nodeCount: number;
+  reviewNodeCount: number;
+  genericNodeCount: number;
+  emptyNodeCount: number;
+  topReason?: string;
+}
+
+export interface BacklogSummary {
+  filePath: string;
+  totalSignatures: number;
+  totalNodes: number;
+  reviewNodes: number;
+  entries: BacklogEntrySummary[];
+}
+
+export interface ScaffoldDraft {
+  signature: string;
+  fileHint: string;
+  bundle: Record<string, unknown>;
+  generatedAt: string;
+}
+
 export interface ExplorerState {
   items: NodeSummary[];
   selectedNodeId?: number;
@@ -67,6 +117,11 @@ export interface AppState {
   connectionState: ConnectionState;
   explorer: ExplorerState;
   nodeDetailCache: Record<number, NodeDetail>;
+  selectedSignature?: string;
+  inspectSummary?: SignatureInspectSummary;
+  validationSummary?: ValidationSummary;
+  backlogSummary?: BacklogSummary;
+  scaffoldDraft?: ScaffoldDraft;
   lastError?: string;
   runLog: RunLogEntry[];
 }

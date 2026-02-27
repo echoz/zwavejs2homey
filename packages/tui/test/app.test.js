@@ -28,26 +28,40 @@ test('parseCliArgs parses required and optional fields', () => {
   });
 });
 
-test('runApp executes list/show/quit happy path', async () => {
-  const commands = ['list', 'show 2', 'quit'];
-  let idx = 0;
-  let closed = 0;
+test('runApp executes interactive command flow through presenter/coordinator', async () => {
+  const commands = [
+    'list',
+    'show 2',
+    'signature --from-node 2',
+    'inspect',
+    'backlog load /tmp/backlog.json --top 5',
+    'backlog pick 1',
+    'scaffold preview --product-name TestProduct',
+    'scaffold write test-output.json --force',
+    'log --limit 5',
+    'quit',
+  ];
+  let index = 0;
+  let closeCalls = 0;
+
   const fakeReadline = {
     async question() {
-      const command = commands[idx] ?? 'quit';
-      idx += 1;
-      return command;
+      const value = commands[index] ?? 'quit';
+      index += 1;
+      return value;
     },
     close() {
-      closed += 1;
+      closeCalls += 1;
     },
   };
 
-  const service = {
+  const coordinator = {
     connectCalls: 0,
     disconnectCalls: 0,
     listCalls: 0,
     detailCalls: 0,
+    inspectCalls: 0,
+    validateCalls: 0,
     async connect() {
       this.connectCalls += 1;
     },
@@ -80,6 +94,57 @@ test('runApp executes list/show/quit happy path', async () => {
         values: [],
       };
     },
+    deriveSignatureFromNodeDetail() {
+      return '29:66:2';
+    },
+    async inspectSignature(_session, signature) {
+      this.inspectCalls += 1;
+      return {
+        signature,
+        totalNodes: 1,
+        outcomeCounts: { curated: 1 },
+        nodes: [],
+      };
+    },
+    async validateSignature() {
+      this.validateCalls += 1;
+      return {
+        signature: '29:66:2',
+        totalNodes: 1,
+        reviewNodes: 0,
+        outcomes: { curated: 1 },
+      };
+    },
+    loadBacklogSummary(filePath) {
+      return {
+        filePath,
+        totalSignatures: 1,
+        totalNodes: 1,
+        reviewNodes: 1,
+        entries: [
+          {
+            rank: 1,
+            signature: '29:66:2',
+            nodeCount: 1,
+            reviewNodeCount: 1,
+            genericNodeCount: 0,
+            emptyNodeCount: 0,
+          },
+        ],
+      };
+    },
+    scaffoldFromBacklog(_filePath, signature) {
+      return {
+        signature,
+        fileHint: 'product-29-66-2.json',
+        generatedAt: new Date().toISOString(),
+        bundle: { schemaVersion: 'product-rules/v1', rules: [] },
+      };
+    },
+    writeScaffoldDraft(filePath, _draft, options) {
+      assert.equal(options.confirm, true);
+      return `/abs/${filePath}`;
+    },
   };
 
   const logs = [];
@@ -96,21 +161,27 @@ test('runApp executes list/show/quit happy path', async () => {
       error: (line) => errors.push(String(line)),
     },
     {
-      service,
+      coordinator,
       createInterfaceImpl: () => fakeReadline,
       stdin: {},
       stdout: {},
     },
   );
 
-  assert.equal(service.connectCalls, 1);
-  assert.equal(service.disconnectCalls, 1);
-  assert.equal(service.listCalls >= 1, true);
-  assert.equal(service.detailCalls, 1);
-  assert.equal(closed, 1);
+  assert.equal(coordinator.connectCalls, 1);
+  assert.equal(coordinator.disconnectCalls, 1);
+  assert.equal(coordinator.listCalls >= 1, true);
+  assert.equal(coordinator.detailCalls, 1);
+  assert.equal(coordinator.inspectCalls, 1);
+  assert.equal(coordinator.validateCalls, 0);
+  assert.equal(closeCalls, 1);
   assert.equal(errors.length, 0);
   assert.equal(
-    logs.some((line) => line.includes('Node 2')),
+    logs.some((line) => line.includes('Selected signature: 29:66:2')),
+    true,
+  );
+  assert.equal(
+    logs.some((line) => line.includes('Scaffold written: /abs/test-output.json')),
     true,
   );
 });

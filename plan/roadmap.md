@@ -3,7 +3,7 @@
 ## Current Focus (Active)
 
 - [x] Finish remaining Phase 3 compiler backlog (`DSL simplification slice 2` + final review/fix pass)
-- [ ] Implement Phase 4 ZWJS Explorer + Curation TUI MVP slices 2-6 (`plan/tui-explorer-curation-spec.md`, `plan/tui-implementation-plan.md`)
+- [ ] Complete remaining Phase 4 TUI MVP work (slice 6 polish + manifest helper) (`plan/tui-explorer-curation-spec.md`, `plan/tui-implementation-plan.md`)
 - [ ] Hold new Homey adapter design/implementation slices until Phase 4 checkpoint is complete
 
 ## Phase 1: Foundation (Completed)
@@ -112,10 +112,10 @@
 
 - [x] Draft unified ZWJS Explorer + Curation TUI MVP spec (`plan/tui-explorer-curation-spec.md`)
 - [x] Implement TUI slice 1: app shell + connect + node list/detail (read-only)
-- [ ] Implement TUI slice 2: signature workspace + compiled inspect view
-- [ ] Implement TUI slice 3: scaffold preview + guarded write flow
-- [ ] Implement TUI slice 4: targeted validate action + result panels
-- [ ] Implement TUI slice 5: optional backlog panel + next-target picker
+- [x] Implement TUI slice 2: signature workspace + compiled inspect view
+- [x] Implement TUI slice 3: scaffold preview + guarded write flow
+- [x] Implement TUI slice 4: targeted validate action + result panels
+- [x] Implement TUI slice 5: optional backlog panel + next-target picker
 - [ ] Implement TUI slice 6: manifest helper + run-log polish
 - [ ] Keep Homey adapter implementation frozen until TUI checkpoint completion
 

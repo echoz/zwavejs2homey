@@ -42,15 +42,18 @@ Use a strict data-driven layering model:
 2. Presenter (`packages/tui/src/presenter/*`)
    - handles intents, state transitions, loading/error behavior
    - maps use-case results to view models
-3. Application Service (`packages/tui/src/service/*`)
+3. Coordinator (`packages/tui/src/coordinator/*`)
+   - orchestrates presenter use-cases into service calls
+   - keeps orchestration rules out of view and service layers
+4. Services (`packages/tui/src/service/*`)
    - typed orchestration wrapper over existing tooling/libs
    - normalized return/error contracts
-4. Core (existing `tools/*-lib.mjs`, compiler/core APIs)
+5. Core (existing `tools/*-lib.mjs`, compiler/core APIs)
    - domain/protocol/compiler work only
 
 Data flow:
 
-- `Intent -> Presenter -> Application Service -> Core -> Presenter -> ViewModel -> View`
+- `Intent -> Presenter -> Coordinator -> Services -> Core -> Presenter -> ViewModel -> View`
 
 ## State Model
 
@@ -68,12 +71,12 @@ Single in-memory state with these top-level sections:
 
 ## Implementation Slices
 
-1. Slice 1: app shell + connect + node list/detail (read-only)
-2. Slice 2: signature workspace + compiled inspect view
-3. Slice 3: scaffold preview + guarded write flow
-4. Slice 4: targeted validate action + result panels
-5. Slice 5: optional backlog panel + next-target picker
-6. Slice 6: manifest helper + run-log polish
+- [x] Slice 1: app shell + connect + node list/detail (read-only)
+- [x] Slice 2: signature workspace + compiled inspect view
+- [x] Slice 3: scaffold preview + guarded write flow
+- [x] Slice 4: targeted validate action + result panels
+- [x] Slice 5: optional backlog panel + next-target picker
+- [ ] Slice 6: manifest helper + run-log polish
 
 ## Package and Module Layout
 
@@ -81,6 +84,7 @@ Single in-memory state with these top-level sections:
 - `packages/tui/src/model/*`
 - `packages/tui/src/view/*`
 - `packages/tui/src/presenter/*`
+- `packages/tui/src/coordinator/*`
 - `packages/tui/src/service/*`
 - `tools/homey-compile-tui.mjs` (thin launcher)
 

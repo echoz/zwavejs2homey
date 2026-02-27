@@ -426,16 +426,27 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - added interactive shell command loop via `npm run compiler:tui` (`list`, `refresh`, `show <nodeId>`, `help`, `quit`)
     - added slice-1 tests (presenter transitions, service adapter behavior, and app smoke path)
     - folded TUI package tests/build into root workspace quality gates (`npm run check`)
+92. Completed Phase 4 TUI slices 2-5 (signature workspace, inspect/validate, scaffold, backlog):
+    - introduced explicit coordinator layer (`packages/tui/src/coordinator/*`) between presenter and services/core
+    - added signature workflow commands:
+      - `signature [triple] [--from-node <id>]`
+      - `inspect [--manifest <file>]`
+      - `validate [--manifest <file>]`
+    - added compiler curation service integration for signature inspect/validate via existing tool libs
+    - added backlog + scaffold workflow commands:
+      - `backlog load <file> [--top N]`, `backlog show`, `backlog pick [rank]`
+      - `scaffold preview [--product-name ...]`, `scaffold write [filePath] --force`
+    - scaffold writes are path-guarded to `rules/project/product/*` and require explicit confirmation (`--force`)
+    - added run-log command (`log [--limit N]`) and per-command error handling so interactive sessions continue after failures
+    - expanded TUI tests for coordinator delegation, command parsing, and presenter/app signature-curation flows
 
 ## Next Tasks
 
 1. Continue Phase 4 TUI implementation against `plan/tui-explorer-curation-spec.md`:
-   - Slice 2: signature workspace + compiled profile inspect view
-2. Continue TUI slices 3-6 after Slice 2 stabilization:
-   - scaffold preview/write
-   - targeted validate action + result panels
-   - optional backlog panel
-   - manifest helper + run log polish
+   - Slice 6: manifest helper + additional run-log polish
+2. Add light UX polish pass for discoverability:
+   - add a compact status snapshot command (selected node/signature/backlog/scaffold draft)
+   - improve shell help with common end-to-end flow examples
 3. Keep project-generic rules minimal/provisional; generic fallback inference policy remains adapter-owned (ADR 0004)
 4. Keep Homey adapter implementation/design frozen until compiler + TUI completion checkpoint
 

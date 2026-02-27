@@ -6,7 +6,7 @@ The project is intentionally split into layers:
 
 - `packages/core`: protocol-first `ZwjsClient` (WebSocket client for `zwave-js-server`)
 - `packages/compiler`: Homey-targeted profile compiler (rules + HA import + catalog tooling)
-- `packages/tui`: Phase 4 ZWJS explorer/curation terminal UI (view/presenter/service shell over existing tooling)
+- `packages/tui`: Phase 4 ZWJS explorer/curation terminal UI (view/presenter/coordinator/service shell over existing tooling)
 - `co.lazylabs.zwavejs2homey`: Homey app package (adapter/runtime integration, in progress)
 
 ## Project Goals
@@ -35,7 +35,7 @@ The project is intentionally split into layers:
 - `packages/compiler/`
   - compiler models, rule loading/matching/application, HA import pipeline, catalog tooling
 - `packages/tui/`
-  - terminal UI app shell, presenter state logic, and ZWJS read-only service adapter
+  - terminal UI app shell with strict view/presenter/coordinator/service layering
 - `tools/`
   - local CLIs for inspection, import, catalog operations, benchmarking, and compiler builds
 - `rules/`
@@ -53,7 +53,7 @@ The project is intentionally split into layers:
 - `npm run zwjs:inspect -- nodes list --url ws://HOST:PORT --format table`
 - `npm run zwjs:inspect -- nodes show <nodeId> --url ws://HOST:PORT --format json --include-values full`
 
-### ZWJS Explorer TUI (Phase 4 Slice 1)
+### ZWJS Explorer TUI (Phase 4 Slices 1-5)
 
 - `npm run compiler:tui -- --help`
 - `npm run compiler:tui -- --url ws://HOST:PORT --include-values summary`
@@ -64,6 +64,15 @@ Interactive commands:
 - `list`
 - `refresh`
 - `show <nodeId>`
+- `signature [<manufacturerId:productType:productId>] [--from-node <id>]`
+- `inspect [--manifest <file>]`
+- `validate [--manifest <file>]`
+- `backlog load <file> [--top N]`
+- `backlog show`
+- `backlog pick [rank]`
+- `scaffold preview [--product-name "..."]`
+- `scaffold write [filePath] --force`
+- `log [--limit N]`
 - `help`
 - `quit`
 

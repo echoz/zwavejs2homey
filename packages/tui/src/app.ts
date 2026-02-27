@@ -2,10 +2,20 @@ import { createInterface } from 'node:readline/promises';
 import { stdin as defaultStdin, stdout as defaultStdout } from 'node:process';
 
 import type { IncludeValuesMode, SessionConfig } from './model/types';
+import { TuiCoordinatorImpl, type TuiCoordinator } from './coordinator/tui-coordinator';
 import { ExplorerPresenter } from './presenter/explorer-presenter';
-import { ZwjsExplorerServiceImpl, type ZwjsExplorerService } from './service/zwjs-explorer-service';
 import { parseShellCommand } from './view/command-parser';
-import { renderNodeDetail, renderNodeList, renderShellHelp } from './view/formatting';
+import {
+  renderBacklogSummary,
+  renderInspectSummary,
+  renderNodeDetail,
+  renderNodeList,
+  renderRunLog,
+  renderScaffoldDraft,
+  renderShellHelp,
+  renderSignatureSelected,
+  renderValidationSummary,
+} from './view/formatting';
 
 function parseFlagMap(argv: string[]): { flags: Map<string, string>; positionals: string[] } {
   const flags = new Map<string, string>();
@@ -53,8 +63,12 @@ export function getUsageText(): string {
     '  compiler-tui --url ws://host:port [--token <bearer>] [--schema-version 0]',
     '               [--include-values none|summary|full] [--max-values N] [--start-node <id>]',
     '',
-    'Commands:',
-    '  list | refresh | show <nodeId> | help | quit',
+    'Interactive commands:',
+    '  list | refresh | show <nodeId>',
+    '  signature [<m:p:id>] [--from-node <id>] | inspect | validate',
+    '  backlog load <file> [--top N] | backlog show | backlog pick [rank]',
+    '  scaffold preview [--product-name "..."] | scaffold write [filePath] --force',
+    '  log [--limit N] | help | quit',
   ].join('\n');
 }
 
@@ -128,7 +142,7 @@ interface ReadlineLike {
 }
 
 interface RunAppDeps {
-  service?: ZwjsExplorerService;
+  coordinator?: TuiCoordinator;
   createInterfaceImpl?: (options: {
     input: NodeJS.ReadStream;
     output: NodeJS.WriteStream;
@@ -143,8 +157,8 @@ export async function runApp(
   io: LoggerLike = console,
   deps: RunAppDeps = {},
 ): Promise<void> {
-  const service = deps.service ?? new ZwjsExplorerServiceImpl();
-  const presenter = new ExplorerPresenter(service);
+  const coordinator = deps.coordinator ?? new TuiCoordinatorImpl();
+  const presenter = new ExplorerPresenter(coordinator);
   const createInterfaceImpl = deps.createInterfaceImpl ?? createInterface;
   const input = deps.stdin ?? defaultStdin;
   const output = deps.stdout ?? defaultStdout;
@@ -175,28 +189,102 @@ export async function runApp(
       }
 
       const command = parsed.command;
-      if (command.type === 'noop') continue;
-      if (command.type === 'help') {
-        io.log(renderShellHelp());
+      if (command.type === 'noop') {
         continue;
       }
-      if (command.type === 'list') {
-        io.log(renderNodeList(presenter.getState().explorer.items));
-        continue;
-      }
-      if (command.type === 'refresh') {
-        const nodes = await presenter.refreshNodes();
-        io.log(renderNodeList(nodes));
-        continue;
-      }
-      if (command.type === 'show') {
-        const detail = await presenter.showNodeDetail(command.nodeId);
-        io.log(renderNodeDetail(detail));
-        continue;
-      }
-      if (command.type === 'quit') {
-        io.log('Bye.');
-        break;
+      try {
+        if (command.type === 'help') {
+          io.log(renderShellHelp());
+          continue;
+        }
+        if (command.type === 'list') {
+          io.log(renderNodeList(presenter.getState().explorer.items));
+          continue;
+        }
+        if (command.type === 'refresh') {
+          const nodes = await presenter.refreshNodes();
+          io.log(renderNodeList(nodes));
+          continue;
+        }
+        if (command.type === 'show') {
+          const detail = await presenter.showNodeDetail(command.nodeId);
+          io.log(renderNodeDetail(detail));
+          continue;
+        }
+        if (command.type === 'signature') {
+          if (command.signature) {
+            presenter.selectSignature(command.signature);
+            io.log(renderSignatureSelected(command.signature));
+          } else {
+            const signature = presenter.selectSignatureFromNode(command.fromNodeId);
+            io.log(renderSignatureSelected(signature));
+          }
+          continue;
+        }
+        if (command.type === 'inspect') {
+          const summary = await presenter.inspectSelectedSignature({
+            manifestFile: command.manifestFile,
+          });
+          io.log(renderInspectSummary(summary));
+          continue;
+        }
+        if (command.type === 'validate') {
+          const summary = await presenter.validateSelectedSignature({
+            manifestFile: command.manifestFile,
+          });
+          io.log(renderValidationSummary(summary));
+          continue;
+        }
+        if (command.type === 'backlog-load') {
+          const summary = presenter.loadBacklog(command.filePath, { top: command.top });
+          io.log(renderBacklogSummary(summary));
+          continue;
+        }
+        if (command.type === 'backlog-show') {
+          const summary = presenter.getState().backlogSummary;
+          io.log(summary ? renderBacklogSummary(summary) : 'Backlog is not loaded.');
+          continue;
+        }
+        if (command.type === 'backlog-pick') {
+          const summary = presenter.getState().backlogSummary;
+          if (!summary || summary.entries.length === 0) {
+            io.error('Backlog is not loaded or has no entries.');
+            continue;
+          }
+          const rank = command.rank ?? 1;
+          const entry = summary.entries.find((candidate) => candidate.rank === rank);
+          if (!entry) {
+            io.error(`Backlog rank ${rank} is not present.`);
+            continue;
+          }
+          presenter.selectSignature(entry.signature);
+          io.log(renderSignatureSelected(entry.signature));
+          continue;
+        }
+        if (command.type === 'scaffold-preview') {
+          const draft = presenter.createScaffoldFromBacklog({
+            productName: command.productName,
+          });
+          io.log(renderScaffoldDraft(draft));
+          continue;
+        }
+        if (command.type === 'scaffold-write') {
+          const writtenPath = presenter.writeScaffoldDraft(command.filePath, {
+            confirm: command.force,
+          });
+          io.log(`Scaffold written: ${writtenPath}`);
+          continue;
+        }
+        if (command.type === 'log') {
+          io.log(renderRunLog(presenter.getRunLog(command.limit)));
+          continue;
+        }
+        if (command.type === 'quit') {
+          io.log('Bye.');
+          break;
+        }
+      } catch (error) {
+        io.error(error instanceof Error ? error.message : String(error));
       }
     }
   } finally {

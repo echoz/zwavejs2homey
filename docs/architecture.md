@@ -147,12 +147,13 @@ Layering contract:
 
 1. view: terminal rendering and input only
 2. presenter: UI business logic, state transitions, view-model mapping
-3. application service: typed use-case wrappers over existing libs/tools
-4. core/tooling: existing compiler/ZWJS domain logic
+3. coordinator: orchestration boundary between UI intent flow and service calls
+4. services: typed use-case wrappers over existing libs/tools
+5. core/tooling: existing compiler/ZWJS domain logic
 
 Data flow:
 
-- intent -> presenter -> application service -> core/tooling -> presenter -> view-model -> view
+- intent -> presenter -> coordinator -> services -> core/tooling -> presenter -> view-model -> view
 
 Guardrails:
 
@@ -160,12 +161,15 @@ Guardrails:
 - no compiler semantics changes from TUI work
 - Homey adapter implementation remains paused until Phase 4 is complete
 
-Current implemented slice:
+Current implemented slices:
 
-- Slice 1 delivered in `packages/tui`:
+- Slices 1-5 delivered in `packages/tui`:
   - read-only connect/list/show explorer flow
-  - interactive shell command loop (`npm run compiler:tui`)
-  - presenter/service layering with package-local regression tests
+  - signature selection/derivation + inspect/validate actions
+  - backlog load/pick workflow
+  - scaffold preview + guarded write flow
+  - interactive shell command loop (`npm run compiler:tui`) with run-log view
+  - presenter/coordinator/service layering with package-local regression tests
 
 ## Runtime Flow (Target)
 
