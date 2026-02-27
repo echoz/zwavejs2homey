@@ -299,6 +299,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - added stage-specific redacted output overrides (`--baseline-redacted-report-file`, `--baseline-redacted-summary-json-file`, `--recheck-redacted-report-file`, `--recheck-redacted-summary-json-file`)
     - baseline wrapper now forwards redaction flags into both internal `compiler:validate-live` stages with deterministic default redacted paths
     - added parse/orchestration regression coverage for redaction wiring and invalid flag combinations
+65. Completed runtime-validation curation-backlog artifact slice:
+    - added `--curation-backlog-json-file` to `compiler:validate-live` to emit a ranked per-signature curation work queue from live validation output
+    - backlog entries aggregate review/generic/empty pressure, actionable review reasons, unmatched/suppressed counts, and sample nodes
+    - added redaction parity for backlog artifacts (`--redacted-curation-backlog-json-file`) with automatic default pathing under `--redact-share`
+    - expanded parse/runtime regression coverage for backlog flag wiring, gate-profile fields, and redacted backlog output behavior
 
 ## Next Tasks
 

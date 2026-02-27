@@ -89,6 +89,12 @@ function makeRedactedSummaryPath(baseFilePath) {
   return `${baseFilePath}.redacted.json`;
 }
 
+function makeRedactedBacklogPath(backlogFile) {
+  if (!backlogFile) return undefined;
+  if (backlogFile.endsWith('.json')) return backlogFile.replace(/\.json$/, '.redacted.json');
+  return `${backlogFile}.redacted.json`;
+}
+
 function makeDefaultRedactedSummaryPath({ summaryJsonFile, inputSummaryJsonFile, reportFile }) {
   if (summaryJsonFile) return makeRedactedSummaryPath(summaryJsonFile);
   if (inputSummaryJsonFile) return makeRedactedSummaryPath(inputSummaryJsonFile);
@@ -130,6 +136,8 @@ function buildRedactedMachineSummary(machineSummary) {
       'catalogFile',
       'redactedReportFile',
       'redactedSummaryJsonFile',
+      'curationBacklogJsonFile',
+      'redactedCurationBacklogJsonFile',
     ];
     for (const key of sourcePathKeys) {
       if (typeof source[key] === 'string' && source[key].length > 0) {
@@ -150,10 +158,59 @@ function buildRedactedMachineSummary(machineSummary) {
       'baselineSummaryJsonFile',
       'redactedReportFile',
       'redactedSummaryJsonFile',
+      'curationBacklogJsonFile',
+      'redactedCurationBacklogJsonFile',
     ];
     for (const key of gatePathKeys) {
       if (typeof configured[key] === 'string' && configured[key].length > 0) {
         configured[key] = redactSharePath(configured[key]);
+      }
+    }
+  }
+
+  out.redaction = { mode: 'share', version: 1 };
+  return out;
+}
+
+function buildRedactedCurationBacklog(backlog) {
+  const out = JSON.parse(JSON.stringify(backlog ?? {}));
+  const source = out && typeof out === 'object' ? out.source : undefined;
+  if (source && typeof source === 'object' && !Array.isArray(source)) {
+    if (typeof source.url === 'string' && source.url.length > 0) {
+      source.url = 'REDACTED_URL';
+    }
+    source.scope = redactShareScope(source.scope);
+    const sourcePathKeys = [
+      'manifestFile',
+      'compiledFile',
+      'gateProfileFile',
+      'curationBacklogJsonFile',
+      'redactedCurationBacklogJsonFile',
+    ];
+    for (const key of sourcePathKeys) {
+      if (typeof source[key] === 'string' && source[key].length > 0) {
+        source[key] = redactSharePath(source[key]);
+      }
+    }
+    if (Array.isArray(source.rulesFiles)) {
+      source.rulesFiles = source.rulesFiles.map((entry) =>
+        typeof entry === 'string' ? redactSharePath(entry) : entry,
+      );
+    }
+  }
+
+  if (Array.isArray(out.entries)) {
+    for (const entry of out.entries) {
+      if (!entry || typeof entry !== 'object') continue;
+      if (Array.isArray(entry.sampleNodes)) {
+        entry.sampleNodes = entry.sampleNodes.map((node, index) => ({
+          ...node,
+          nodeId: `node-${index + 1}`,
+          name: 'REDACTED_NODE_NAME',
+        }));
+      }
+      if (typeof entry.signature === 'string' && entry.signature.startsWith('unknown:')) {
+        entry.signature = 'unknown:REDACTED_DIAGNOSTIC_KEY';
       }
     }
   }
@@ -300,6 +357,8 @@ function loadGateProfile(gateProfileFile) {
     'redactShare',
     'redactedReportFile',
     'redactedSummaryJsonFile',
+    'curationBacklogJsonFile',
+    'redactedCurationBacklogJsonFile',
     'artifactFile',
     'reportFile',
     'summaryJsonFile',
@@ -400,6 +459,14 @@ function loadGateProfile(gateProfileFile) {
       raw.redactedSummaryJsonFile,
       'redactedSummaryJsonFile',
     ),
+    curationBacklogJsonFile: resolveProfilePath(
+      raw.curationBacklogJsonFile,
+      'curationBacklogJsonFile',
+    ),
+    redactedCurationBacklogJsonFile: resolveProfilePath(
+      raw.redactedCurationBacklogJsonFile,
+      'redactedCurationBacklogJsonFile',
+    ),
     artifactFile: resolveProfilePath(raw.artifactFile, 'artifactFile'),
     reportFile: resolveProfilePath(raw.reportFile, 'reportFile'),
     summaryJsonFile: resolveProfilePath(raw.summaryJsonFile, 'summaryJsonFile'),
@@ -470,6 +537,184 @@ function mapOutcomes(results) {
     outcomes.set(outcome, (outcomes.get(outcome) ?? 0) + 1);
   }
   return outcomes;
+}
+
+function mapToSortedObjectByCountDesc(counter) {
+  return Object.fromEntries(
+    [...counter.entries()].sort((a, b) => {
+      if (a[1] !== b[1]) return b[1] - a[1];
+      return a[0].localeCompare(b[0]);
+    }),
+  );
+}
+
+function parseReasonNumericSuffix(reason, prefix) {
+  if (typeof reason !== 'string' || !reason.startsWith(prefix)) return undefined;
+  const raw = reason.slice(prefix.length);
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function productTripleSignature(deviceFacts) {
+  const manufacturerId = Number(deviceFacts?.manufacturerId);
+  const productType = Number(deviceFacts?.productType);
+  const productId = Number(deviceFacts?.productId);
+  if (![manufacturerId, productType, productId].every((value) => Number.isInteger(value))) {
+    return undefined;
+  }
+  return `${manufacturerId}:${productType}:${productId}`;
+}
+
+function buildCurationBacklog(results, command, generatedAtIso) {
+  const bySignature = new Map();
+  let totalReviewNodes = 0;
+
+  for (const row of results) {
+    const node = row?.node ?? {};
+    const deviceFacts = row?.deviceFacts ?? {};
+    const report = row?.compiled?.report ?? {};
+    const profile = row?.compiled?.profile ?? {};
+    const classification = profile?.classification ?? {};
+    const curation = report?.curationCandidates ?? {};
+    const reasons = Array.isArray(curation.reasons) ? curation.reasons : [];
+    const actionableReasons = reasons.filter((reason) => !isTechnicalCurationReason(reason));
+    const likelyNeedsReview = curation.likelyNeedsReview === true;
+    if (likelyNeedsReview) totalReviewNodes += 1;
+
+    const signature =
+      productTripleSignature(deviceFacts) ??
+      `unknown:${report?.diagnosticDeviceKey ?? node?.nodeId ?? 'n/a'}`;
+    if (!bySignature.has(signature)) {
+      bySignature.set(signature, {
+        signature,
+        manufacturerId: Number.isInteger(Number(deviceFacts?.manufacturerId))
+          ? Number(deviceFacts.manufacturerId)
+          : undefined,
+        productType: Number.isInteger(Number(deviceFacts?.productType))
+          ? Number(deviceFacts.productType)
+          : undefined,
+        productId: Number.isInteger(Number(deviceFacts?.productId))
+          ? Number(deviceFacts.productId)
+          : undefined,
+        nodeCount: 0,
+        reviewNodeCount: 0,
+        outcomeCounts: new Map(),
+        actionableReasonCounts: new Map(),
+        suppressedFillActionsTotal: 0,
+        unmatchedActionsTotal: 0,
+        appliedActionsTotal: 0,
+        highUnmatchedRatioSignalCount: 0,
+        sampleNodes: [],
+      });
+    }
+
+    const group = bySignature.get(signature);
+    group.nodeCount += 1;
+    if (likelyNeedsReview) group.reviewNodeCount += 1;
+    incrementCounter(group.outcomeCounts, report?.profileOutcome ?? 'unknown', 1);
+    for (const reason of actionableReasons) {
+      incrementCounter(group.actionableReasonCounts, reason, 1);
+    }
+
+    const summary = report?.summary ?? {};
+    const suppressedFromSummary = Number(summary.suppressedFillActions ?? 0);
+    const hasSuppressedFromSummary =
+      Number.isFinite(suppressedFromSummary) && suppressedFromSummary > 0;
+    if (hasSuppressedFromSummary) {
+      group.suppressedFillActionsTotal += suppressedFromSummary;
+    }
+    const unmatchedActions = Number(summary.unmatchedActions ?? 0);
+    if (Number.isFinite(unmatchedActions) && unmatchedActions > 0) {
+      group.unmatchedActionsTotal += unmatchedActions;
+    }
+    const appliedActions = Number(summary.appliedActions ?? 0);
+    if (Number.isFinite(appliedActions) && appliedActions > 0) {
+      group.appliedActionsTotal += appliedActions;
+    }
+
+    for (const reason of reasons) {
+      const suppressedFromReason = parseReasonNumericSuffix(reason, 'suppressed-fill-actions:');
+      if (
+        !hasSuppressedFromSummary &&
+        suppressedFromReason !== undefined &&
+        suppressedFromReason > 0
+      ) {
+        group.suppressedFillActionsTotal += suppressedFromReason;
+      }
+      if (typeof reason === 'string' && reason.startsWith('high-unmatched-ratio:')) {
+        group.highUnmatchedRatioSignalCount += 1;
+      }
+    }
+
+    if (group.sampleNodes.length < 3) {
+      group.sampleNodes.push({
+        nodeId: node?.nodeId,
+        name: node?.name ?? '',
+        outcome: report?.profileOutcome ?? 'unknown',
+        homeyClass: classification?.homeyClass ?? 'other',
+        confidence: classification?.confidence ?? '',
+        actionableReasons,
+      });
+    }
+  }
+
+  const entries = [...bySignature.values()]
+    .map((entry) => {
+      const genericNodes = entry.outcomeCounts.get('generic') ?? 0;
+      const emptyNodes = entry.outcomeCounts.get('empty') ?? 0;
+      const totalActions = entry.unmatchedActionsTotal + entry.appliedActionsTotal;
+      const unmatchedRatio = totalActions > 0 ? entry.unmatchedActionsTotal / totalActions : 0;
+      return {
+        signature: entry.signature,
+        manufacturerId: entry.manufacturerId,
+        productType: entry.productType,
+        productId: entry.productId,
+        nodeCount: entry.nodeCount,
+        reviewNodeCount: entry.reviewNodeCount,
+        genericNodeCount: genericNodes,
+        emptyNodeCount: emptyNodes,
+        outcomeCounts: mapToSortedObjectByCountDesc(entry.outcomeCounts),
+        actionableReasonCounts: mapToSortedObjectByCountDesc(entry.actionableReasonCounts),
+        pressure: {
+          suppressedFillActionsTotal: entry.suppressedFillActionsTotal,
+          unmatchedActionsTotal: entry.unmatchedActionsTotal,
+          appliedActionsTotal: entry.appliedActionsTotal,
+          unmatchedRatio,
+          highUnmatchedRatioSignalCount: entry.highUnmatchedRatioSignalCount,
+        },
+        sampleNodes: entry.sampleNodes,
+      };
+    })
+    .sort((a, b) => {
+      if (a.reviewNodeCount !== b.reviewNodeCount) return b.reviewNodeCount - a.reviewNodeCount;
+      if (a.genericNodeCount !== b.genericNodeCount) return b.genericNodeCount - a.genericNodeCount;
+      if (a.emptyNodeCount !== b.emptyNodeCount) return b.emptyNodeCount - a.emptyNodeCount;
+      if (a.nodeCount !== b.nodeCount) return b.nodeCount - a.nodeCount;
+      return a.signature.localeCompare(b.signature);
+    })
+    .map((entry, index) => ({ rank: index + 1, ...entry }));
+
+  return {
+    schemaVersion: 'curation-backlog/v1',
+    generatedAt: generatedAtIso,
+    source: {
+      url: command.url,
+      scope: command.allNodes ? 'all-nodes' : `node:${command.nodeId}`,
+      ruleInputMode: command.ruleInputMode,
+      manifestFile: command.manifestFile,
+      rulesFiles: command.rulesFiles,
+      compiledFile: command.compiledFile,
+      gateProfileFile: command.gateProfileFile,
+      curationBacklogJsonFile: command.curationBacklogJsonFile,
+      redactedCurationBacklogJsonFile: command.redactedCurationBacklogJsonFile,
+    },
+    counts: {
+      totalNodes: results.length,
+      reviewNodes: totalReviewNodes,
+      signatures: entries.length,
+    },
+    entries,
+  };
 }
 
 function summarizeValidationResults(results, top) {
@@ -821,6 +1066,8 @@ function buildConfiguredGateSection(command) {
     redactShare: command.redactShare,
     redactedReportFile: command.redactedReportFile,
     redactedSummaryJsonFile: command.redactedSummaryJsonFile,
+    curationBacklogJsonFile: command.curationBacklogJsonFile,
+    redactedCurationBacklogJsonFile: command.redactedCurationBacklogJsonFile,
     maxReviewNodes: command.maxReviewNodes,
     maxGenericNodes: command.maxGenericNodes,
     maxEmptyNodes: command.maxEmptyNodes,
@@ -863,6 +1110,8 @@ function buildEffectiveGateConfig(command) {
       summaryJsonFile: command.summaryJsonFile ?? null,
       redactedReportFile: command.redactedReportFile ?? null,
       redactedSummaryJsonFile: command.redactedSummaryJsonFile ?? null,
+      curationBacklogJsonFile: command.curationBacklogJsonFile ?? null,
+      redactedCurationBacklogJsonFile: command.redactedCurationBacklogJsonFile ?? null,
       saveBaselineSummaryJsonFile: command.saveBaselineSummaryJsonFile ?? null,
     },
   };
@@ -887,6 +1136,8 @@ function buildMachineSummary(command, summary, gateResult, generatedAtIso) {
       redactedReportFile: command.redactedReportFile,
       redactedSummaryJsonFile: command.redactedSummaryJsonFile,
       redactShare: command.redactShare,
+      curationBacklogJsonFile: command.curationBacklogJsonFile,
+      redactedCurationBacklogJsonFile: command.redactedCurationBacklogJsonFile,
     },
     counts: {
       totalNodes: summary.totalNodes,
@@ -927,6 +1178,8 @@ function buildMachineSummaryFromInput(command, input, gateResult, generatedAtIso
       redactedSummaryJsonFile: command.redactedSummaryJsonFile,
       redactedReportFile: command.redactedReportFile,
       redactShare: command.redactShare,
+      curationBacklogJsonFile: command.curationBacklogJsonFile,
+      redactedCurationBacklogJsonFile: command.redactedCurationBacklogJsonFile,
     },
     gates: {
       configured: buildConfiguredGateSection(command),
@@ -953,9 +1206,11 @@ export function getUsageText() {
     '                            [--artifact-retention keep|delete-on-pass]',
     '                            [--report-file </tmp/compiled-live.validation.md>]',
     '                            [--summary-json-file </tmp/compiled-live.summary.json>]',
+    '                            [--curation-backlog-json-file </tmp/compiled-live.curation-backlog.json>]',
     '                            [--redact-share]',
     '                            [--redacted-report-file </tmp/compiled-live.validation.redacted.md>]',
     '                            [--redacted-summary-json-file </tmp/compiled-live.summary.redacted.json>]',
+    '                            [--redacted-curation-backlog-json-file </tmp/compiled-live.curation-backlog.redacted.json>]',
     '                            [--save-baseline-summary-json-file </tmp/compiled-live.baseline.summary.json>]',
     '                            [--gate-profile-file <validation-gates.json>]',
     '                            [--baseline-summary-json-file </tmp/compiled-live.baseline.summary.json>]',
@@ -1021,6 +1276,8 @@ export function parseCliArgs(argv, options = {}) {
       '--include-controller-nodes',
       '--artifact-file',
       '--report-file',
+      '--curation-backlog-json-file',
+      '--redacted-curation-backlog-json-file',
       '--top',
     ];
     const unsupported = unsupportedFlags.find((flagName) => hasFlagOccurrence(argv, flagName));
@@ -1166,9 +1423,16 @@ export function parseCliArgs(argv, options = {}) {
   const cliRedactShare = flags.has('--redact-share');
   let cliRedactedReportFile;
   let cliRedactedSummaryJsonFile;
+  let cliCurationBacklogJsonFile;
+  let cliRedactedCurationBacklogJsonFile;
   try {
     cliRedactedReportFile = parsePathFlag(flags, '--redacted-report-file');
     cliRedactedSummaryJsonFile = parsePathFlag(flags, '--redacted-summary-json-file');
+    cliCurationBacklogJsonFile = parsePathFlag(flags, '--curation-backlog-json-file');
+    cliRedactedCurationBacklogJsonFile = parsePathFlag(
+      flags,
+      '--redacted-curation-backlog-json-file',
+    );
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     return { ok: false, error: reason };
@@ -1276,6 +1540,9 @@ export function parseCliArgs(argv, options = {}) {
   const redactShare = cliRedactShare || gateProfile?.redactShare === true;
   let redactedReportFile = cliRedactedReportFile ?? gateProfile?.redactedReportFile;
   let redactedSummaryJsonFile = cliRedactedSummaryJsonFile ?? gateProfile?.redactedSummaryJsonFile;
+  let curationBacklogJsonFile = cliCurationBacklogJsonFile ?? gateProfile?.curationBacklogJsonFile;
+  let redactedCurationBacklogJsonFile =
+    cliRedactedCurationBacklogJsonFile ?? gateProfile?.redactedCurationBacklogJsonFile;
 
   if (summaryInputMode && redactedReportFile) {
     if (cliRedactedReportFile) {
@@ -1285,6 +1552,25 @@ export function parseCliArgs(argv, options = {}) {
       };
     }
     redactedReportFile = undefined;
+  }
+  if (summaryInputMode && curationBacklogJsonFile) {
+    if (cliCurationBacklogJsonFile) {
+      return {
+        ok: false,
+        error: '--curation-backlog-json-file cannot be used with --input-summary-json-file',
+      };
+    }
+    curationBacklogJsonFile = undefined;
+  }
+  if (summaryInputMode && redactedCurationBacklogJsonFile) {
+    if (cliRedactedCurationBacklogJsonFile) {
+      return {
+        ok: false,
+        error:
+          '--redacted-curation-backlog-json-file cannot be used with --input-summary-json-file',
+      };
+    }
+    redactedCurationBacklogJsonFile = undefined;
   }
   if (redactShare) {
     if (!summaryInputMode && !redactedReportFile) {
@@ -1296,6 +1582,9 @@ export function parseCliArgs(argv, options = {}) {
         inputSummaryJsonFile,
         reportFile,
       });
+    }
+    if (curationBacklogJsonFile && !redactedCurationBacklogJsonFile) {
+      redactedCurationBacklogJsonFile = makeRedactedBacklogPath(curationBacklogJsonFile);
     }
   }
 
@@ -1324,6 +1613,8 @@ export function parseCliArgs(argv, options = {}) {
       redactShare,
       redactedReportFile,
       redactedSummaryJsonFile,
+      curationBacklogJsonFile,
+      redactedCurationBacklogJsonFile,
       saveBaselineSummaryJsonFile,
       gateProfileFile: gateProfile?.filePath,
       maxReviewNodes,
@@ -1422,6 +1713,7 @@ export async function runValidateLiveCommand(command, io = console, deps = {}) {
       markdown: undefined,
       gateResult,
       machineSummary,
+      curationBacklog: undefined,
     };
   }
 
@@ -1506,6 +1798,11 @@ export async function runValidateLiveCommand(command, io = console, deps = {}) {
 
   const summary = summarizeValidationResults(results, commandWithBaseline.top);
   const gateResult = evaluateValidationGates(commandWithBaseline, summary);
+  const curationBacklog =
+    commandWithBaseline.curationBacklogJsonFile ||
+    commandWithBaseline.redactedCurationBacklogJsonFile
+      ? buildCurationBacklog(results, commandWithBaseline, generatedAtIso)
+      : undefined;
   const markdown = formatMarkdownReport(commandWithBaseline, summary, generatedAtIso, gateResult);
   fs.writeFileSync(commandWithBaseline.reportFile, markdown, 'utf8');
   if (commandWithBaseline.redactedReportFile) {
@@ -1538,6 +1835,20 @@ export async function runValidateLiveCommand(command, io = console, deps = {}) {
       'utf8',
     );
   }
+  if (commandWithBaseline.curationBacklogJsonFile && curationBacklog) {
+    fs.writeFileSync(
+      commandWithBaseline.curationBacklogJsonFile,
+      `${formatJsonPretty(curationBacklog)}\n`,
+      'utf8',
+    );
+  }
+  if (commandWithBaseline.redactedCurationBacklogJsonFile && curationBacklog) {
+    fs.writeFileSync(
+      commandWithBaseline.redactedCurationBacklogJsonFile,
+      `${formatJsonPretty(buildRedactedCurationBacklog(curationBacklog))}\n`,
+      'utf8',
+    );
+  }
   if (commandWithBaseline.saveBaselineSummaryJsonFile) {
     fs.writeFileSync(
       commandWithBaseline.saveBaselineSummaryJsonFile,
@@ -1564,6 +1875,14 @@ export async function runValidateLiveCommand(command, io = console, deps = {}) {
   }
   if (commandWithBaseline.redactedSummaryJsonFile) {
     io.log(`Redacted summary JSON: ${commandWithBaseline.redactedSummaryJsonFile}`);
+  }
+  if (commandWithBaseline.curationBacklogJsonFile) {
+    io.log(`Curation backlog JSON: ${commandWithBaseline.curationBacklogJsonFile}`);
+  }
+  if (commandWithBaseline.redactedCurationBacklogJsonFile) {
+    io.log(
+      `Redacted curation backlog JSON: ${commandWithBaseline.redactedCurationBacklogJsonFile}`,
+    );
   }
   if (commandWithBaseline.saveBaselineSummaryJsonFile) {
     io.log(`Saved baseline summary JSON: ${commandWithBaseline.saveBaselineSummaryJsonFile}`);
@@ -1592,5 +1911,5 @@ export async function runValidateLiveCommand(command, io = console, deps = {}) {
     }
   }
 
-  return { artifact, results, summary, markdown, gateResult, machineSummary };
+  return { artifact, results, summary, markdown, gateResult, machineSummary, curationBacklog };
 }

@@ -14,6 +14,8 @@
   "artifactFile": "/tmp/compiled-live.json",
   "reportFile": "/tmp/compiled-live.validation.md",
   "summaryJsonFile": "/tmp/compiled-live.summary.json",
+  "curationBacklogJsonFile": "/tmp/compiled-live.curation-backlog.json",
   "redactedReportFile": "/tmp/compiled-live.validation.redacted.md",
-  "redactedSummaryJsonFile": "/tmp/compiled-live.summary.redacted.json"
+  "redactedSummaryJsonFile": "/tmp/compiled-live.summary.redacted.json",
+  "redactedCurationBacklogJsonFile": "/tmp/compiled-live.curation-backlog.redacted.json"
 }
