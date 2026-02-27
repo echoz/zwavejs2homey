@@ -92,6 +92,7 @@ Supported profile fields:
 - `maxReviewDelta`
 - `maxGenericDelta`
 - `maxEmptyDelta`
+- `artifactRetention` (`keep` or `delete-on-pass`)
 - `failOnReasons` (array of strings)
 - `failOnReasonDeltas` (object map: reason -> max delta)
 - `baselineSummaryJsonFile`
@@ -160,6 +161,7 @@ Optional:
 - add `--summary-json-file /tmp/compiled-live.summary.recheck.json` to write a refreshed summary with updated gate results
 - add `--baseline-summary-json-file /tmp/compiled-live.baseline.summary.json` and any `--max-*-delta` / `--fail-on-reason-delta` gates for offline regression checks
 - add `--save-baseline-summary-json-file /tmp/compiled-live.baseline.summary.json` to save the current run as a new baseline snapshot
+- add `--artifact-retention delete-on-pass` to auto-delete generated compiled artifacts when validation passes
 
 ## Suggested Workflow
 

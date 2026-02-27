@@ -79,6 +79,7 @@
 - [x] Runtime-validation baseline-regression slice: add baseline/delta gate controls (`--baseline-summary-json-file`, `--max-*-delta`, `--fail-on-reason-delta`) with machine-summary/log delta reporting
 - [x] Runtime-validation baseline-report slice: include baseline/delta sections in markdown validation reports for fast human triage
 - [x] Runtime-validation baseline-snapshot slice: add `--save-baseline-summary-json-file` to refresh baseline artifacts directly from current validation runs
+- [x] Runtime-validation artifact-retention slice: add `--artifact-retention keep|delete-on-pass` to control cleanup of large generated compiled artifacts
 - [ ] Decide and document final ownership of generic fallback inference policy (currently leaning Homey adapter-owned)
 - [ ] Add second real catalog source adapter when a concrete source format is available
 

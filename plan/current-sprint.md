@@ -279,6 +279,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - helper works across live-build, compiled-artifact reuse, and summary-input replay modes
     - CLI now logs the saved baseline path when written; parser validates required path value
     - expanded tool regression coverage for save-baseline parsing and offline replay write behavior
+61. Completed validation artifact-retention slice:
+    - added `--artifact-retention keep|delete-on-pass` to `compiler:validate-live` with gate-profile support (`artifactRetention`)
+    - default retention remains `keep`; `delete-on-pass` removes generated live-build compiled artifacts only after gates pass
+    - machine summary/effective-gates output now include retention config for reproducibility
+    - expanded tool regression coverage for parse wiring and delete-on-pass runtime behavior
 
 ## Next Tasks
 

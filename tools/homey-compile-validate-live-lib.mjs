@@ -7,6 +7,7 @@ import { formatJsonPretty } from './output-format-lib.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DEFAULT_RULE_MANIFEST_FILE = path.join(REPO_ROOT, 'rules', 'manifest.json');
+const ARTIFACT_RETENTION_MODES = new Set(['keep', 'delete-on-pass']);
 
 function parseFlagMap(argv) {
   const flags = new Map();
@@ -53,6 +54,14 @@ function parseOptionalNonNegativeInt(rawValue, flagName) {
     throw new Error(`Invalid ${flagName}: ${rawValue}`);
   }
   return parsed;
+}
+
+function parseArtifactRetention(rawValue, fieldName) {
+  if (rawValue === undefined) return undefined;
+  if (typeof rawValue !== 'string' || !ARTIFACT_RETENTION_MODES.has(rawValue)) {
+    throw new Error(`Invalid ${fieldName}: ${rawValue} (expected keep|delete-on-pass)`);
+  }
+  return rawValue;
 }
 
 function readJson(filePath) {
@@ -193,6 +202,7 @@ function loadGateProfile(gateProfileFile) {
     'failOnReasons',
     'failOnReasonDeltas',
     'baselineSummaryJsonFile',
+    'artifactRetention',
     'artifactFile',
     'reportFile',
     'summaryJsonFile',
@@ -220,6 +230,7 @@ function loadGateProfile(gateProfileFile) {
   let maxReviewDelta;
   let maxGenericDelta;
   let maxEmptyDelta;
+  let artifactRetention;
   try {
     maxReviewNodes = parseOptionalNonNegativeInt(raw.maxReviewNodes, 'gateProfile.maxReviewNodes');
     maxGenericNodes = parseOptionalNonNegativeInt(
@@ -233,6 +244,10 @@ function loadGateProfile(gateProfileFile) {
       'gateProfile.maxGenericDelta',
     );
     maxEmptyDelta = parseOptionalNonNegativeInt(raw.maxEmptyDelta, 'gateProfile.maxEmptyDelta');
+    artifactRetention = parseArtifactRetention(
+      raw.artifactRetention,
+      'gateProfile.artifactRetention',
+    );
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     throw new Error(`Invalid gate profile "${resolvedFilePath}": ${reason}`);
@@ -276,6 +291,7 @@ function loadGateProfile(gateProfileFile) {
       raw.baselineSummaryJsonFile,
       'baselineSummaryJsonFile',
     ),
+    artifactRetention,
     artifactFile: resolveProfilePath(raw.artifactFile, 'artifactFile'),
     reportFile: resolveProfilePath(raw.reportFile, 'reportFile'),
     summaryJsonFile: resolveProfilePath(raw.summaryJsonFile, 'summaryJsonFile'),
@@ -680,6 +696,7 @@ function buildConfiguredGateSection(command) {
   return {
     gateProfileFile: command.gateProfileFile,
     baselineSummaryJsonFile: command.baselineSummaryJsonFile,
+    artifactRetention: command.artifactRetention,
     maxReviewNodes: command.maxReviewNodes,
     maxGenericNodes: command.maxGenericNodes,
     maxEmptyNodes: command.maxEmptyNodes,
@@ -715,6 +732,7 @@ function buildEffectiveGateConfig(command) {
     },
     failOnReasons: command.failOnReasons ?? [],
     outputs: {
+      artifactRetention: command.artifactRetention ?? 'keep',
       artifactFile: command.artifactFile ?? null,
       reportFile: command.reportFile ?? null,
       summaryJsonFile: command.summaryJsonFile ?? null,
@@ -735,6 +753,7 @@ function buildMachineSummary(command, summary, gateResult, generatedAtIso) {
       manifestFile: command.manifestFile,
       rulesFiles: command.rulesFiles,
       compiledFile: command.compiledFile,
+      artifactRetention: command.artifactRetention,
       artifactFile: command.artifactFile,
       reportFile: command.reportFile,
       gateProfileFile: command.gateProfileFile,
@@ -798,6 +817,7 @@ export function getUsageText() {
     '                            [--include-values none|summary|full] [--max-values N]',
     '                            [--include-controller-nodes]',
     '                            [--artifact-file </tmp/compiled-live.json>]',
+    '                            [--artifact-retention keep|delete-on-pass]',
     '                            [--report-file </tmp/compiled-live.validation.md>]',
     '                            [--summary-json-file </tmp/compiled-live.summary.json>]',
     '                            [--save-baseline-summary-json-file </tmp/compiled-live.baseline.summary.json>]',
@@ -819,6 +839,7 @@ export function getUsageText() {
     '                            [--fail-on-reason-delta <reason>:<delta> ...]',
     '                            [--summary-json-file </tmp/compiled-live.summary.recheck.json>]',
     '                            [--save-baseline-summary-json-file </tmp/compiled-live.baseline.summary.json>]',
+    '                            [--artifact-retention keep|delete-on-pass]',
     '                            [--print-effective-gates]',
   ].join('\n');
 }
@@ -1004,6 +1025,17 @@ export function parseCliArgs(argv, options = {}) {
     }
   }
 
+  let cliArtifactRetention;
+  try {
+    cliArtifactRetention = parseArtifactRetention(
+      flags.get('--artifact-retention'),
+      '--artifact-retention',
+    );
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    return { ok: false, error: reason };
+  }
+
   let cliMaxReviewNodes;
   let cliMaxGenericNodes;
   let cliMaxEmptyNodes;
@@ -1065,6 +1097,7 @@ export function parseCliArgs(argv, options = {}) {
       : (gateProfile?.failOnReasonDeltas ?? {});
   const baselineSummaryJsonFile =
     cliBaselineSummaryJsonFile ?? gateProfile?.baselineSummaryJsonFile;
+  const artifactRetention = cliArtifactRetention ?? gateProfile?.artifactRetention ?? 'keep';
 
   let artifactFile;
   let reportFile;
@@ -1110,6 +1143,7 @@ export function parseCliArgs(argv, options = {}) {
       baselineSummaryJsonFile,
       catalogFile,
       artifactFile,
+      artifactRetention,
       reportFile,
       summaryJsonFile,
       saveBaselineSummaryJsonFile,
@@ -1328,6 +1362,23 @@ export async function runValidateLiveCommand(command, io = console, deps = {}) {
   io.log(`Needs review: ${summary.reviewNodes}`);
   if (!gateResult.passed) {
     throw new Error(`Validation gates failed:\n- ${gateResult.violations.join('\n- ')}`);
+  }
+
+  if (
+    commandWithBaseline.artifactRetention === 'delete-on-pass' &&
+    !commandWithBaseline.compiledFile
+  ) {
+    try {
+      if (fs.existsSync(commandWithBaseline.artifactFile)) {
+        fs.unlinkSync(commandWithBaseline.artifactFile);
+        io.log(`Deleted compiled artifact: ${commandWithBaseline.artifactFile}`);
+      }
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      io.log(
+        `Warning: failed to delete compiled artifact "${commandWithBaseline.artifactFile}": ${reason}`,
+      );
+    }
   }
 
   return { artifact, results, summary, markdown, gateResult, machineSummary };

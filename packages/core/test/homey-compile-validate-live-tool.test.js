@@ -49,6 +49,8 @@ test('parseCliArgs validates required live inputs and rules source modes', async
     '/tmp/live-compiled.json',
     '--report-file',
     '/tmp/live-compiled.validation.md',
+    '--artifact-retention',
+    'delete-on-pass',
     '--top',
     '7',
   ]);
@@ -57,7 +59,13 @@ test('parseCliArgs validates required live inputs and rules source modes', async
   assert.equal(parsedExplicit.command.manifestFile, undefined);
   assert.equal(parsedExplicit.command.rulesFiles.length, 2);
   assert.equal(parsedExplicit.command.top, 7);
+  assert.equal(parsedExplicit.command.artifactRetention, 'delete-on-pass');
   assert.equal(parsedExplicit.command.printEffectiveGates, false);
+
+  assert.equal(
+    parseCliArgs(['--url', 'ws://x', '--all-nodes', '--artifact-retention', 'bad']).ok,
+    false,
+  );
 
   const parsedCompiledFile = parseCliArgs([
     '--url',
@@ -201,6 +209,7 @@ test('parseCliArgs validates required live inputs and rules source modes', async
         maxReviewNodes: 6,
         maxGenericNodes: 3,
         maxEmptyNodes: 1,
+        artifactRetention: 'delete-on-pass',
         maxReviewDelta: 2,
         maxGenericDelta: 1,
         maxEmptyDelta: 0,
@@ -230,6 +239,7 @@ test('parseCliArgs validates required live inputs and rules source modes', async
   assert.equal(parsedFromGateProfile.command.maxReviewNodes, 6);
   assert.equal(parsedFromGateProfile.command.maxGenericNodes, 3);
   assert.equal(parsedFromGateProfile.command.maxEmptyNodes, 1);
+  assert.equal(parsedFromGateProfile.command.artifactRetention, 'delete-on-pass');
   assert.equal(parsedFromGateProfile.command.maxReviewDelta, 2);
   assert.equal(parsedFromGateProfile.command.maxGenericDelta, 1);
   assert.equal(parsedFromGateProfile.command.maxEmptyDelta, 0);
@@ -263,6 +273,8 @@ test('parseCliArgs validates required live inputs and rules source modes', async
       gateProfileFile,
       '--artifact-file',
       '/tmp/override-artifact.json',
+      '--artifact-retention',
+      'keep',
       '--max-review-nodes',
       '2',
       '--max-review-delta',
@@ -281,6 +293,7 @@ test('parseCliArgs validates required live inputs and rules source modes', async
   assert.equal(parsedGateProfileCliOverride.command.maxReviewNodes, 2);
   assert.equal(parsedGateProfileCliOverride.command.maxGenericNodes, 3);
   assert.equal(parsedGateProfileCliOverride.command.maxEmptyNodes, 1);
+  assert.equal(parsedGateProfileCliOverride.command.artifactRetention, 'keep');
   assert.equal(parsedGateProfileCliOverride.command.maxReviewDelta, 0);
   assert.equal(parsedGateProfileCliOverride.command.maxGenericDelta, 1);
   assert.equal(parsedGateProfileCliOverride.command.maxEmptyDelta, 0);
@@ -431,6 +444,70 @@ test('runValidateLiveCommand writes artifact and markdown summary from live insp
   assert.equal(logs.length, 5);
   assert.match(logs[0], /Compiled artifact:/);
   assert.match(logs[1], /Validation report:/);
+});
+
+test('runValidateLiveCommand can delete built artifact on pass with delete-on-pass retention', async () => {
+  const { runValidateLiveCommand } = await loadLib();
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zwjs2homey-validate-live-retention-'));
+  const artifactFile = path.join(tmpDir, 'compiled-live.json');
+  const reportFile = path.join(tmpDir, 'compiled-live.validation.md');
+  const logs = [];
+
+  await runValidateLiveCommand(
+    {
+      url: 'ws://x',
+      token: undefined,
+      schemaVersion: 0,
+      allNodes: true,
+      nodeId: undefined,
+      includeValues: 'summary',
+      maxValues: 100,
+      includeControllerNodes: false,
+      manifestFile: path.join(fixturesDir, 'rule-manifest-with-ha-generated.json'),
+      rulesFiles: [],
+      ruleInputMode: 'manifest-file',
+      compiledFile: undefined,
+      inputSummaryJsonFile: undefined,
+      baselineSummaryJsonFile: undefined,
+      catalogFile: undefined,
+      artifactFile,
+      artifactRetention: 'delete-on-pass',
+      reportFile,
+      summaryJsonFile: undefined,
+      saveBaselineSummaryJsonFile: undefined,
+      gateProfileFile: undefined,
+      maxReviewNodes: undefined,
+      maxGenericNodes: undefined,
+      maxEmptyNodes: undefined,
+      maxReviewDelta: undefined,
+      maxGenericDelta: undefined,
+      maxEmptyDelta: undefined,
+      failOnReasons: [],
+      failOnReasonDeltas: {},
+      printEffectiveGates: false,
+      top: 3,
+    },
+    { log: (line) => logs.push(line) },
+    {
+      nowDate: new Date('2026-02-26T00:00:00.000Z'),
+      buildCompiledProfilesArtifactImpl: async () => ({
+        schemaVersion: 'compiled-homey-profiles/v1',
+        generatedAt: '2026-02-26T00:00:00.000Z',
+        source: { buildProfile: 'manifest-file', ruleSources: [] },
+        entries: [],
+      }),
+      runLiveInspectCommandImpl: async (_command, io) => {
+        io.log(JSON.stringify({ results: [] }));
+      },
+    },
+  );
+
+  assert.equal(fs.existsSync(reportFile), true);
+  assert.equal(fs.existsSync(artifactFile), false);
+  assert.equal(
+    logs.some((line) => /Deleted compiled artifact:/.test(line)),
+    true,
+  );
 });
 
 test('runValidateLiveCommand can validate using an existing compiled file', async () => {
@@ -679,6 +756,7 @@ test('runValidateLiveCommand prints effective gates when requested', async () =>
   assert.equal(effectiveJson.thresholds.maxGenericNodes, 2);
   assert.equal(effectiveJson.thresholds.maxEmptyNodes, 0);
   assert.deepEqual(effectiveJson.failOnReasons, ['known-device-unmapped']);
+  assert.equal(effectiveJson.outputs.artifactRetention, 'keep');
   assert.equal(effectiveJson.outputs.artifactFile, artifactFile);
   assert.equal(effectiveJson.outputs.reportFile, reportFile);
   assert.equal(effectiveJson.outputs.summaryJsonFile, null);
@@ -734,6 +812,7 @@ test('runValidateLiveCommand writes machine summary and fails when gates are exc
           summaryJsonFile,
           baselineSummaryJsonFile,
           gateProfileFile: '/tmp/gate-profile.json',
+          artifactRetention: 'delete-on-pass',
           maxReviewNodes: 0,
           maxGenericNodes: 0,
           maxEmptyNodes: 0,
@@ -799,6 +878,7 @@ test('runValidateLiveCommand writes machine summary and fails when gates are exc
   assert.equal(summaryJson.gates.passed, false);
   assert.equal(summaryJson.source.gateProfileFile, '/tmp/gate-profile.json');
   assert.equal(summaryJson.gates.configured.gateProfileFile, '/tmp/gate-profile.json');
+  assert.equal(summaryJson.gates.configured.artifactRetention, 'delete-on-pass');
   assert.equal(summaryJson.gates.configured.baselineSummaryJsonFile, baselineSummaryJsonFile);
   assert.equal(summaryJson.gates.configured.maxReviewDelta, 0);
   assert.equal(summaryJson.gates.configured.maxGenericDelta, 0);

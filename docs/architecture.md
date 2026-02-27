@@ -96,6 +96,7 @@ Current implemented foundation in `packages/compiler`:
     - offline summary replay (`--input-summary-json-file`) for gate-only rechecks
     - baseline regression deltas (`--baseline-summary-json-file`, `--max-*-delta`, `--fail-on-reason-delta`)
     - baseline snapshot helper (`--save-baseline-summary-json-file`) to refresh baseline artifacts from the current run
+    - artifact retention policy (`--artifact-retention delete-on-pass`) to avoid keeping large generated compiled files after successful runs
     - baseline-enabled markdown reports include delta sections for fast human triage
   - gate calibration/setup playbook lives in `docs/compiler-validation-gates.md`
 - Added compiler artifact build foundation:
