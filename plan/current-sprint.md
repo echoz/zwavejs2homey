@@ -382,6 +382,10 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - curation is instance-scoped (`homeyDeviceId`) and remains authoritative over compiler baseline updates
     - pairing starts from compiler baseline; user curation becomes device-static effective override
     - when baseline improves, adapter surfaces recommendation/adopt flow instead of auto-replacing local curation
+85. Locked baseline recommendation detection policy for v1:
+    - store per-device baseline markers (`pipelineFingerprint` + canonical baseline profile hash)
+    - recommendation prompts are based on canonical hash changes, not timestamp-only artifact churn
+    - missing legacy markers are backfilled without raising prompt on first backfill pass
 
 ## Next Tasks
 

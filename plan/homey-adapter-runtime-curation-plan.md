@@ -14,6 +14,7 @@ Related ADRs:
 - `docs/decisions/0011-homey-curation-model-v1-materialized-overrides.md`
 - `docs/decisions/0012-homey-curation-execution-via-runtime-rule-lowering.md`
 - `docs/decisions/0013-homey-device-instance-curation-precedence-v1.md`
+- `docs/decisions/0014-homey-baseline-recommendation-detection-v1.md`
 
 Compiler remains responsible for:
 
@@ -269,6 +270,33 @@ Not in v1:
 - auto-overwrite local curation when recommendation changes
 - selective field-by-field merge UX
 
+## Recommendation Detection (v1)
+
+To decide whether to show "new recommended profile available", keep per-device baseline markers:
+
+- `pipelineFingerprint` (from compiled artifact source metadata when available)
+- `baselineProfileHash` (`sha256` of canonical baseline profile projection)
+
+Canonical baseline projection should include mapping semantics used at runtime:
+
+- classification identity
+- capabilities + mappings + flags
+- subscriptions
+- ignored values
+
+Canonical projection should exclude volatile/report-only fields:
+
+- timestamps
+- validation/report diagnostics
+
+Detection flow:
+
+1. Recompute marker for current baseline.
+2. Compare with stored marker for `homeyDeviceId`.
+3. If `baselineProfileHash` changed: recommendation available.
+4. If hash unchanged: no recommendation prompt, even if `pipelineFingerprint` differs.
+5. If marker missing (legacy entry): backfill marker and skip prompt on that first backfill pass.
+
 ## Diagnostics & UX (v1 Minimal)
 
 ### Must-have diagnostics
@@ -321,6 +349,12 @@ No seed generator needed in v1.
 - invalid curation set falls back safely to base compiled profile
 - instance-scoped curation remains active after baseline refresh until user adopts recommendation
 
+### 6) Recommendation detection tests
+
+- changed canonical baseline profile hash triggers recommendation-available status
+- unchanged canonical hash does not trigger recommendation even when `pipelineFingerprint` changes
+- missing stored marker backfills without raising recommendation on first backfill pass
+
 ## Acceptance Criteria (v1)
 
 - Adapter-owned curation schema is versioned and documented
@@ -329,6 +363,7 @@ No seed generator needed in v1.
 - Adapter applies curation (via runtime lowering) before executing compiled profiles
 - Skipped/failing curation fields are observable in diagnostics
 - Device-instance curation precedence over baseline updates is enforced by default
+- Recommendation prompts are driven by baseline marker/hash detection rules
 - Compiler remains unchanged in responsibility (no runtime curation apply logic in compiler package)
 - Docs and roadmap reflect compiler/adapter boundary clearly
 
@@ -357,7 +392,14 @@ No seed generator needed in v1.
 - Load/validate/apply at adapter runtime
 - Safe fallback behavior + diagnostics
 
-### Phase E — Minimal Curation Admin Flow
+### Phase E — Baseline Marker + Recommendation Detection
+
+- Implement canonical baseline projection + hash helper
+- Persist marker metadata per `homeyDeviceId`
+- Compute recommendation-available status on baseline refresh
+- Backfill missing markers without first-run prompt spam
+
+### Phase F — Minimal Curation Admin Flow
 
 - Basic internal/admin-facing way to inspect and edit curation entries (CLI/log/manual JSON first if needed)
 - Optional UI later

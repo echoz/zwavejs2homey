@@ -17,3 +17,4 @@ Decision records for major technical boundaries and policy choices.
 - `0011-homey-curation-model-v1-materialized-overrides.md`: Adapter runtime curation model is materialized overrides per target; detailed stored field schema is deferred to phase-4 implementation
 - `0012-homey-curation-execution-via-runtime-rule-lowering.md`: Adapter executes curation by lowering persisted overrides into runtime rules and reusing rules-engine ordering semantics
 - `0013-homey-device-instance-curation-precedence-v1.md`: Adapter curation is instance-scoped (`homeyDeviceId`) override over compiler baseline; updated recommendations are user-adopted, not auto-applied
+- `0014-homey-baseline-recommendation-detection-v1.md`: Adapter detects "new recommended baseline" with stored per-device baseline markers (`pipelineFingerprint` + canonical baseline profile hash)

@@ -30,6 +30,8 @@ Review note:
 
 - this decision is expected to be revisited once Homey adapter implementation and SDK constraints are validated in practice
 
+Detection of "new recommended baseline available" is defined separately in `docs/decisions/0014-homey-baseline-recommendation-detection-v1.md`.
+
 Not in v1:
 
 - automatic replacement of user-curated instance overrides when baseline changes
