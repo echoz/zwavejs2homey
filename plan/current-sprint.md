@@ -406,21 +406,26 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - added `device-identity.driverId` alias normalization to `driverTemplateId`
     - hardened malformed action-shorthand validation with clear load-time errors
     - added fixture-backed regression tests and docs updates (`README.md`, `docs/rules-grammar.md`)
+89. Completed compiler review pass + newcomer cold-start DSL usability audit:
+    - reviewed compiler rule-loading/validation behavior after shorthand additions
+    - hardened capability mapping schema validation to reject unsupported fields and malformed canonical mapping metadata
+    - added regression coverage for post-expansion unknown-field rejection in shorthand mappings
+    - ran no-context authoring exercise from docs for product+generic rules; resulting ergonomics updates:
+      - refreshed `CONTRIBUTING.md` minimal example to use new shorthand and alias forms
+      - added explicit shorthand/alias expansion notes for newcomer clarity
 
 ## Next Tasks
 
-1. Complete remaining compiler backlog for phase-3 readiness:
-   - final compiler code-review pass + fixes + green checks
-2. Start TUI implementation against `plan/tui-explorer-curation-spec.md`:
+1. Start TUI implementation against `plan/tui-explorer-curation-spec.md`:
    - Slice 1: app shell + connect + node list/detail (read-only)
    - Slice 2: signature workspace + compiled profile inspect view
-3. Continue TUI slices 3-6 after Slice 1/2 stabilization:
+2. Continue TUI slices 3-6 after Slice 1/2 stabilization:
    - scaffold preview/write
    - targeted validate action + result panels
    - optional backlog panel
    - manifest helper + run log polish
-4. Keep project-generic rules minimal/provisional; generic fallback inference policy remains adapter-owned (ADR 0004)
-5. Keep Homey adapter implementation/design frozen until compiler + TUI completion checkpoint
+3. Keep project-generic rules minimal/provisional; generic fallback inference policy remains adapter-owned (ADR 0004)
+4. Keep Homey adapter implementation/design frozen until compiler + TUI completion checkpoint
 
 ## Risks / Unknowns
 

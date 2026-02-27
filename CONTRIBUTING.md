@@ -96,24 +96,42 @@ npm run check
   },
   "rules": [
     {
-      "ruleId": "product-29-66-2-identity",
+      "ruleId": "product-29-66-2-onoff",
       "value": {
         "commandClass": 37,
-        "property": "currentValue",
-        "readable": true
+        "property": "currentValue"
       },
       "actions": [
+        {
+          "type": "capability",
+          "capabilityId": "onoff",
+          "inboundMapping": {
+            "commandClass": 37,
+            "property": "currentValue"
+          },
+          "outboundMapping": {
+            "commandClass": 37,
+            "property": "targetValue"
+          }
+        },
         {
           "type": "device-identity",
           "mode": "replace",
           "homeyClass": "socket",
-          "driverTemplateId": "product-29-66-2"
+          "driverId": "product-29-66-2"
         }
       ]
     }
   ]
 }
 ```
+
+Notes:
+
+- action shorthand is deterministic load-time expansion:
+  - inbound value-id -> `{ "kind": "value", "selector": ... }`
+  - outbound value-id -> `{ "kind": "set_value", "target": ... }`
+- `device-identity.driverId` is an alias for `driverTemplateId`
 
 ### 1) Start from Stable Device Identity
 

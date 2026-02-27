@@ -1,0 +1,17 @@
+[
+  {
+    "ruleId": "invalid-action-mapping-extra-field",
+    "layer": "project-product",
+    "actions": [
+      {
+        "type": "capability",
+        "capabilityId": "onoff",
+        "inboundMapping": {
+          "commandClass": 37,
+          "property": "currentValue",
+          "foo": true
+        }
+      }
+    ]
+  }
+]

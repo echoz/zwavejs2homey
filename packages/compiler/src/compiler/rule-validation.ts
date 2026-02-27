@@ -113,6 +113,242 @@ function isValidCommandTargetShape(value: unknown): boolean {
   return true;
 }
 
+function isValidInboundWatcherShape(value: unknown): boolean {
+  if (isValidValueIdShape(value)) return true;
+  return isObject(value) && isNonEmptyString(value.eventType);
+}
+
+function validateCapabilityInboundMappingShape(
+  action: Record<string, unknown>,
+  filePath: string,
+  ruleId: string,
+  actionIndex: number,
+): void {
+  const mapping = action.inboundMapping;
+  if (mapping === undefined) return;
+  if (!isObject(mapping)) {
+    throw new RuleFileLoadError(
+      `Rule "${ruleId}" capability action ${actionIndex} inboundMapping must be an object`,
+      filePath,
+    );
+  }
+
+  const allowedKeys = new Set(['kind', 'selector', 'transformRef', 'transformParams', 'watchers']);
+  for (const key of Object.keys(mapping)) {
+    if (!allowedKeys.has(key)) {
+      throw new RuleFileLoadError(
+        `Rule "${ruleId}" capability action ${actionIndex} inboundMapping has unsupported field "${key}"`,
+        filePath,
+      );
+    }
+  }
+
+  if (!isNonEmptyString(mapping.kind) || (mapping.kind !== 'value' && mapping.kind !== 'event')) {
+    throw new RuleFileLoadError(
+      `Rule "${ruleId}" capability action ${actionIndex} inboundMapping.kind must be "value" or "event"`,
+      filePath,
+    );
+  }
+
+  if (mapping.kind === 'value' && !isValidValueIdShape(mapping.selector)) {
+    throw new RuleFileLoadError(
+      `Rule "${ruleId}" capability action ${actionIndex} inboundMapping selector must be a value-id shape when kind is "value"`,
+      filePath,
+    );
+  }
+
+  if (
+    mapping.kind === 'event' &&
+    (!isObject(mapping.selector) || !isNonEmptyString(mapping.selector.eventType))
+  ) {
+    throw new RuleFileLoadError(
+      `Rule "${ruleId}" capability action ${actionIndex} inboundMapping selector.eventType must be a non-empty string when kind is "event"`,
+      filePath,
+    );
+  }
+
+  if (mapping.transformRef !== undefined && !isNonEmptyString(mapping.transformRef)) {
+    throw new RuleFileLoadError(
+      `Rule "${ruleId}" capability action ${actionIndex} inboundMapping.transformRef must be a non-empty string`,
+      filePath,
+    );
+  }
+
+  if (mapping.transformParams !== undefined && !isObject(mapping.transformParams)) {
+    throw new RuleFileLoadError(
+      `Rule "${ruleId}" capability action ${actionIndex} inboundMapping.transformParams must be an object`,
+      filePath,
+    );
+  }
+
+  if (mapping.watchers !== undefined) {
+    if (!Array.isArray(mapping.watchers)) {
+      throw new RuleFileLoadError(
+        `Rule "${ruleId}" capability action ${actionIndex} inboundMapping.watchers must be an array`,
+        filePath,
+      );
+    }
+    if (!mapping.watchers.every(isValidInboundWatcherShape)) {
+      throw new RuleFileLoadError(
+        `Rule "${ruleId}" capability action ${actionIndex} inboundMapping.watchers must contain value-id or eventType watcher shapes`,
+        filePath,
+      );
+    }
+  }
+}
+
+function validateCapabilityOutboundMappingShape(
+  action: Record<string, unknown>,
+  filePath: string,
+  ruleId: string,
+  actionIndex: number,
+): void {
+  const mapping = action.outboundMapping;
+  if (mapping === undefined) return;
+  if (!isObject(mapping)) {
+    throw new RuleFileLoadError(
+      `Rule "${ruleId}" capability action ${actionIndex} outboundMapping must be an object`,
+      filePath,
+    );
+  }
+
+  const allowedKeys = new Set([
+    'kind',
+    'target',
+    'transformRef',
+    'transformParams',
+    'validation',
+    'executionHints',
+  ]);
+  for (const key of Object.keys(mapping)) {
+    if (!allowedKeys.has(key)) {
+      throw new RuleFileLoadError(
+        `Rule "${ruleId}" capability action ${actionIndex} outboundMapping has unsupported field "${key}"`,
+        filePath,
+      );
+    }
+  }
+
+  if (
+    !isNonEmptyString(mapping.kind) ||
+    (mapping.kind !== 'set_value' &&
+      mapping.kind !== 'invoke_cc_api' &&
+      mapping.kind !== 'zwjs_command')
+  ) {
+    throw new RuleFileLoadError(
+      `Rule "${ruleId}" capability action ${actionIndex} outboundMapping.kind is invalid`,
+      filePath,
+    );
+  }
+
+  if (mapping.target === undefined) {
+    throw new RuleFileLoadError(
+      `Rule "${ruleId}" capability action ${actionIndex} outboundMapping requires target`,
+      filePath,
+    );
+  }
+
+  if (mapping.kind === 'set_value' && !isValidValueIdShape(mapping.target)) {
+    throw new RuleFileLoadError(
+      `Rule "${ruleId}" capability action ${actionIndex} outboundMapping target must be a value-id shape when kind is "set_value"`,
+      filePath,
+    );
+  }
+
+  if (
+    (mapping.kind === 'invoke_cc_api' || mapping.kind === 'zwjs_command') &&
+    !isValidValueIdShape(mapping.target) &&
+    !isValidCommandTargetShape(mapping.target)
+  ) {
+    throw new RuleFileLoadError(
+      `Rule "${ruleId}" capability action ${actionIndex} outboundMapping target must be a value-id shape or command target`,
+      filePath,
+    );
+  }
+
+  if (mapping.transformRef !== undefined && !isNonEmptyString(mapping.transformRef)) {
+    throw new RuleFileLoadError(
+      `Rule "${ruleId}" capability action ${actionIndex} outboundMapping.transformRef must be a non-empty string`,
+      filePath,
+    );
+  }
+
+  if (mapping.transformParams !== undefined && !isObject(mapping.transformParams)) {
+    throw new RuleFileLoadError(
+      `Rule "${ruleId}" capability action ${actionIndex} outboundMapping.transformParams must be an object`,
+      filePath,
+    );
+  }
+
+  if (mapping.validation !== undefined) {
+    if (!isObject(mapping.validation)) {
+      throw new RuleFileLoadError(
+        `Rule "${ruleId}" capability action ${actionIndex} outboundMapping.validation must be an object`,
+        filePath,
+      );
+    }
+    for (const key of Object.keys(mapping.validation)) {
+      if (!['min', 'max', 'step', 'enum'].includes(key)) {
+        throw new RuleFileLoadError(
+          `Rule "${ruleId}" capability action ${actionIndex} outboundMapping.validation has unsupported field "${key}"`,
+          filePath,
+        );
+      }
+    }
+    for (const key of ['min', 'max', 'step'] as const) {
+      if (mapping.validation[key] !== undefined && typeof mapping.validation[key] !== 'number') {
+        throw new RuleFileLoadError(
+          `Rule "${ruleId}" capability action ${actionIndex} outboundMapping.validation.${key} must be a number`,
+          filePath,
+        );
+      }
+    }
+    if (mapping.validation.enum !== undefined && !Array.isArray(mapping.validation.enum)) {
+      throw new RuleFileLoadError(
+        `Rule "${ruleId}" capability action ${actionIndex} outboundMapping.validation.enum must be an array`,
+        filePath,
+      );
+    }
+  }
+
+  if (mapping.executionHints !== undefined) {
+    if (!isObject(mapping.executionHints)) {
+      throw new RuleFileLoadError(
+        `Rule "${ruleId}" capability action ${actionIndex} outboundMapping.executionHints must be an object`,
+        filePath,
+      );
+    }
+    for (const key of Object.keys(mapping.executionHints)) {
+      if (!['optimisticState', 'debounceMs', 'throttleMs'].includes(key)) {
+        throw new RuleFileLoadError(
+          `Rule "${ruleId}" capability action ${actionIndex} outboundMapping.executionHints has unsupported field "${key}"`,
+          filePath,
+        );
+      }
+    }
+    if (
+      mapping.executionHints.optimisticState !== undefined &&
+      typeof mapping.executionHints.optimisticState !== 'boolean'
+    ) {
+      throw new RuleFileLoadError(
+        `Rule "${ruleId}" capability action ${actionIndex} outboundMapping.executionHints.optimisticState must be a boolean`,
+        filePath,
+      );
+    }
+    for (const key of ['debounceMs', 'throttleMs'] as const) {
+      if (
+        mapping.executionHints[key] !== undefined &&
+        typeof mapping.executionHints[key] !== 'number'
+      ) {
+        throw new RuleFileLoadError(
+          `Rule "${ruleId}" capability action ${actionIndex} outboundMapping.executionHints.${key} must be a number`,
+          filePath,
+        );
+      }
+    }
+  }
+}
+
 function normalizeCapabilityInboundMapping(
   action: Record<string, unknown>,
   filePath: string,
@@ -143,55 +379,22 @@ function normalizeCapabilityInboundMapping(
           ...(propertyKey !== undefined ? { propertyKey } : {}),
         },
       };
-      return;
-    }
-
-    if (isNonEmptyString(mapping.eventType)) {
+    } else if (isNonEmptyString(mapping.eventType)) {
       const { eventType, ...rest } = mapping;
       action.inboundMapping = {
         ...rest,
         kind: 'event',
         selector: { eventType },
       };
-      return;
+    } else {
+      throw new RuleFileLoadError(
+        `Rule "${ruleId}" capability action ${actionIndex} inboundMapping shorthand must be a value-id object or eventType`,
+        filePath,
+      );
     }
-
-    throw new RuleFileLoadError(
-      `Rule "${ruleId}" capability action ${actionIndex} inboundMapping shorthand must be a value-id object or eventType`,
-      filePath,
-    );
   }
 
-  if (kind !== 'value' && kind !== 'event') {
-    throw new RuleFileLoadError(
-      `Rule "${ruleId}" capability action ${actionIndex} inboundMapping.kind must be "value" or "event"`,
-      filePath,
-    );
-  }
-
-  if (!('selector' in mapping)) {
-    throw new RuleFileLoadError(
-      `Rule "${ruleId}" capability action ${actionIndex} inboundMapping requires selector`,
-      filePath,
-    );
-  }
-
-  if (kind === 'value' && !isValidValueIdShape(mapping.selector)) {
-    throw new RuleFileLoadError(
-      `Rule "${ruleId}" capability action ${actionIndex} inboundMapping selector must be a value-id shape when kind is "value"`,
-      filePath,
-    );
-  }
-
-  if (
-    kind === 'event' &&
-    (!isObject(mapping.selector) || !isNonEmptyString(mapping.selector.eventType))
-  ) {
-    throw new RuleFileLoadError(
-      `Rule "${ruleId}" capability action ${actionIndex} inboundMapping selector.eventType must be a non-empty string when kind is "event"`,
-      filePath,
-    );
-  }
+  validateCapabilityInboundMappingShape(action, filePath, ruleId, actionIndex);
 }
 
 function normalizeCapabilityOutboundMapping(
@@ -224,10 +427,7 @@ function normalizeCapabilityOutboundMapping(
           ...(propertyKey !== undefined ? { propertyKey } : {}),
         },
       };
-      return;
-    }
-
-    if (isNonEmptyString(mapping.command)) {
+    } else if (isNonEmptyString(mapping.command)) {
       const { command, argsTemplate, ...rest } = mapping;
       if (argsTemplate !== undefined && !isObject(argsTemplate)) {
         throw new RuleFileLoadError(
@@ -243,46 +443,15 @@ function normalizeCapabilityOutboundMapping(
           ...(argsTemplate !== undefined ? { argsTemplate } : {}),
         },
       };
-      return;
+    } else {
+      throw new RuleFileLoadError(
+        `Rule "${ruleId}" capability action ${actionIndex} outboundMapping shorthand must be a value-id object or command target`,
+        filePath,
+      );
     }
-
-    throw new RuleFileLoadError(
-      `Rule "${ruleId}" capability action ${actionIndex} outboundMapping shorthand must be a value-id object or command target`,
-      filePath,
-    );
   }
 
-  if (kind !== 'set_value' && kind !== 'invoke_cc_api' && kind !== 'zwjs_command') {
-    throw new RuleFileLoadError(
-      `Rule "${ruleId}" capability action ${actionIndex} outboundMapping.kind is invalid`,
-      filePath,
-    );
-  }
-
-  if (!('target' in mapping)) {
-    throw new RuleFileLoadError(
-      `Rule "${ruleId}" capability action ${actionIndex} outboundMapping requires target`,
-      filePath,
-    );
-  }
-
-  if (kind === 'set_value' && !isValidValueIdShape(mapping.target)) {
-    throw new RuleFileLoadError(
-      `Rule "${ruleId}" capability action ${actionIndex} outboundMapping target must be a value-id shape when kind is "set_value"`,
-      filePath,
-    );
-  }
-
-  if (
-    (kind === 'invoke_cc_api' || kind === 'zwjs_command') &&
-    !isValidValueIdShape(mapping.target) &&
-    !isValidCommandTargetShape(mapping.target)
-  ) {
-    throw new RuleFileLoadError(
-      `Rule "${ruleId}" capability action ${actionIndex} outboundMapping target must be a value-id shape or command target`,
-      filePath,
-    );
-  }
+  validateCapabilityOutboundMappingShape(action, filePath, ruleId, actionIndex);
 }
 
 function normalizeDeviceIdentityAliases(

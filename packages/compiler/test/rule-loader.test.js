@@ -230,3 +230,14 @@ test('loadJsonRuleFile rejects malformed action shorthand with clear error', () 
       /inboundMapping shorthand must be a value-id object or eventType/i.test(error.message),
   );
 });
+
+test('loadJsonRuleFile rejects unsupported fields after action-shorthand expansion', () => {
+  const filePath = path.join(fixturesDir, 'rules-invalid-action-mapping-extra-field.json');
+  assert.throws(
+    () => compiler.loadJsonRuleFile(filePath),
+    (error) =>
+      error &&
+      error.filePath === filePath &&
+      /inboundMapping has unsupported field \"foo\"/i.test(error.message),
+  );
+});
