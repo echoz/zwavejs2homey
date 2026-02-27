@@ -106,6 +106,212 @@ function isValidValueIdShape(value: unknown): boolean {
   return true;
 }
 
+function isValidCommandTargetShape(value: unknown): boolean {
+  if (!isObject(value)) return false;
+  if (!isNonEmptyString(value.command)) return false;
+  if (value.argsTemplate !== undefined && !isObject(value.argsTemplate)) return false;
+  return true;
+}
+
+function normalizeCapabilityInboundMapping(
+  action: Record<string, unknown>,
+  filePath: string,
+  ruleId: string,
+  actionIndex: number,
+): void {
+  const mapping = action.inboundMapping;
+  if (mapping === undefined) return;
+  if (!isObject(mapping)) {
+    throw new RuleFileLoadError(
+      `Rule "${ruleId}" capability action ${actionIndex} inboundMapping must be an object`,
+      filePath,
+    );
+  }
+
+  const kind = mapping.kind;
+
+  if (kind === undefined) {
+    if (isValidValueIdShape(mapping)) {
+      const { commandClass, endpoint, property, propertyKey, ...rest } = mapping;
+      action.inboundMapping = {
+        ...rest,
+        kind: 'value',
+        selector: {
+          commandClass,
+          ...(endpoint !== undefined ? { endpoint } : {}),
+          property,
+          ...(propertyKey !== undefined ? { propertyKey } : {}),
+        },
+      };
+      return;
+    }
+
+    if (isNonEmptyString(mapping.eventType)) {
+      const { eventType, ...rest } = mapping;
+      action.inboundMapping = {
+        ...rest,
+        kind: 'event',
+        selector: { eventType },
+      };
+      return;
+    }
+
+    throw new RuleFileLoadError(
+      `Rule "${ruleId}" capability action ${actionIndex} inboundMapping shorthand must be a value-id object or eventType`,
+      filePath,
+    );
+  }
+
+  if (kind !== 'value' && kind !== 'event') {
+    throw new RuleFileLoadError(
+      `Rule "${ruleId}" capability action ${actionIndex} inboundMapping.kind must be "value" or "event"`,
+      filePath,
+    );
+  }
+
+  if (!('selector' in mapping)) {
+    throw new RuleFileLoadError(
+      `Rule "${ruleId}" capability action ${actionIndex} inboundMapping requires selector`,
+      filePath,
+    );
+  }
+
+  if (kind === 'value' && !isValidValueIdShape(mapping.selector)) {
+    throw new RuleFileLoadError(
+      `Rule "${ruleId}" capability action ${actionIndex} inboundMapping selector must be a value-id shape when kind is "value"`,
+      filePath,
+    );
+  }
+
+  if (
+    kind === 'event' &&
+    (!isObject(mapping.selector) || !isNonEmptyString(mapping.selector.eventType))
+  ) {
+    throw new RuleFileLoadError(
+      `Rule "${ruleId}" capability action ${actionIndex} inboundMapping selector.eventType must be a non-empty string when kind is "event"`,
+      filePath,
+    );
+  }
+}
+
+function normalizeCapabilityOutboundMapping(
+  action: Record<string, unknown>,
+  filePath: string,
+  ruleId: string,
+  actionIndex: number,
+): void {
+  const mapping = action.outboundMapping;
+  if (mapping === undefined) return;
+  if (!isObject(mapping)) {
+    throw new RuleFileLoadError(
+      `Rule "${ruleId}" capability action ${actionIndex} outboundMapping must be an object`,
+      filePath,
+    );
+  }
+
+  const kind = mapping.kind;
+
+  if (kind === undefined) {
+    if (isValidValueIdShape(mapping)) {
+      const { commandClass, endpoint, property, propertyKey, ...rest } = mapping;
+      action.outboundMapping = {
+        ...rest,
+        kind: 'set_value',
+        target: {
+          commandClass,
+          ...(endpoint !== undefined ? { endpoint } : {}),
+          property,
+          ...(propertyKey !== undefined ? { propertyKey } : {}),
+        },
+      };
+      return;
+    }
+
+    if (isNonEmptyString(mapping.command)) {
+      const { command, argsTemplate, ...rest } = mapping;
+      if (argsTemplate !== undefined && !isObject(argsTemplate)) {
+        throw new RuleFileLoadError(
+          `Rule "${ruleId}" capability action ${actionIndex} outboundMapping argsTemplate must be an object`,
+          filePath,
+        );
+      }
+      action.outboundMapping = {
+        ...rest,
+        kind: 'zwjs_command',
+        target: {
+          command,
+          ...(argsTemplate !== undefined ? { argsTemplate } : {}),
+        },
+      };
+      return;
+    }
+
+    throw new RuleFileLoadError(
+      `Rule "${ruleId}" capability action ${actionIndex} outboundMapping shorthand must be a value-id object or command target`,
+      filePath,
+    );
+  }
+
+  if (kind !== 'set_value' && kind !== 'invoke_cc_api' && kind !== 'zwjs_command') {
+    throw new RuleFileLoadError(
+      `Rule "${ruleId}" capability action ${actionIndex} outboundMapping.kind is invalid`,
+      filePath,
+    );
+  }
+
+  if (!('target' in mapping)) {
+    throw new RuleFileLoadError(
+      `Rule "${ruleId}" capability action ${actionIndex} outboundMapping requires target`,
+      filePath,
+    );
+  }
+
+  if (kind === 'set_value' && !isValidValueIdShape(mapping.target)) {
+    throw new RuleFileLoadError(
+      `Rule "${ruleId}" capability action ${actionIndex} outboundMapping target must be a value-id shape when kind is "set_value"`,
+      filePath,
+    );
+  }
+
+  if (
+    (kind === 'invoke_cc_api' || kind === 'zwjs_command') &&
+    !isValidValueIdShape(mapping.target) &&
+    !isValidCommandTargetShape(mapping.target)
+  ) {
+    throw new RuleFileLoadError(
+      `Rule "${ruleId}" capability action ${actionIndex} outboundMapping target must be a value-id shape or command target`,
+      filePath,
+    );
+  }
+}
+
+function normalizeDeviceIdentityAliases(
+  action: Record<string, unknown>,
+  filePath: string,
+  ruleId: string,
+  actionIndex: number,
+): void {
+  if (!('driverId' in action)) return;
+  const driverId = action.driverId;
+  if (!isNonEmptyString(driverId)) {
+    throw new RuleFileLoadError(
+      `Rule "${ruleId}" device-identity action ${actionIndex} driverId must be a non-empty string`,
+      filePath,
+    );
+  }
+  if (
+    action.driverTemplateId !== undefined &&
+    (typeof action.driverTemplateId !== 'string' || action.driverTemplateId !== driverId)
+  ) {
+    throw new RuleFileLoadError(
+      `Rule "${ruleId}" device-identity action ${actionIndex} driverId and driverTemplateId must match when both are provided`,
+      filePath,
+    );
+  }
+  action.driverTemplateId = driverId;
+  delete action.driverId;
+}
+
 function validateDeviceMatcherShape(
   rule: Record<string, unknown>,
   filePath: string,
@@ -369,6 +575,8 @@ function validateRuleActionShape(
         filePath,
       );
     }
+    normalizeCapabilityInboundMapping(action, filePath, ruleId, actionIndex);
+    normalizeCapabilityOutboundMapping(action, filePath, ruleId, actionIndex);
     if (action.conflict !== undefined) {
       if (!isObject(action.conflict)) {
         throw new RuleFileLoadError(
@@ -407,6 +615,7 @@ function validateRuleActionShape(
   }
 
   if (action.type === 'device-identity') {
+    normalizeDeviceIdentityAliases(action, filePath, ruleId, actionIndex);
     if (
       (typeof action.homeyClass !== 'string' || action.homeyClass.length === 0) &&
       (typeof action.driverTemplateId !== 'string' || action.driverTemplateId.length === 0)

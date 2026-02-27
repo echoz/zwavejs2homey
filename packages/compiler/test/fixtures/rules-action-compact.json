@@ -1,0 +1,51 @@
+[
+  {
+    "ruleId": "compact-action-value-shorthand",
+    "layer": "project-product",
+    "value": { "commandClass": 37, "property": "currentValue" },
+    "actions": [
+      {
+        "type": "capability",
+        "capabilityId": "onoff",
+        "inboundMapping": {
+          "commandClass": 37,
+          "endpoint": 0,
+          "property": "currentValue"
+        },
+        "outboundMapping": {
+          "commandClass": 37,
+          "endpoint": 0,
+          "property": "targetValue"
+        }
+      }
+    ]
+  },
+  {
+    "ruleId": "compact-action-event-shorthand",
+    "layer": "project-generic",
+    "actions": [
+      {
+        "type": "capability",
+        "capabilityId": "alarm_motion",
+        "inboundMapping": {
+          "eventType": "notification.motion"
+        },
+        "outboundMapping": {
+          "command": "zwavejs/motion/reset",
+          "argsTemplate": { "reason": "manual" }
+        }
+      }
+    ]
+  },
+  {
+    "ruleId": "compact-device-identity-driver-id-alias",
+    "layer": "project-product",
+    "actions": [
+      {
+        "type": "device-identity",
+        "homeyClass": "socket",
+        "driverId": "product-29-66-2"
+      }
+    ]
+  }
+]

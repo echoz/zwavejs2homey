@@ -36,6 +36,43 @@ test('loadJsonRuleFile expands compact scalar matcher syntax to canonical arrays
   assert.deepEqual(rules[2].value.notPropertyKey, [null]);
 });
 
+test('loadJsonRuleFile expands compact action shorthand to canonical mapping actions', () => {
+  const filePath = path.join(fixturesDir, 'rules-action-compact.json');
+  const rules = compiler.loadJsonRuleFile(filePath);
+
+  assert.deepEqual(rules[0].actions[0].inboundMapping, {
+    kind: 'value',
+    selector: {
+      commandClass: 37,
+      endpoint: 0,
+      property: 'currentValue',
+    },
+  });
+  assert.deepEqual(rules[0].actions[0].outboundMapping, {
+    kind: 'set_value',
+    target: {
+      commandClass: 37,
+      endpoint: 0,
+      property: 'targetValue',
+    },
+  });
+
+  assert.deepEqual(rules[1].actions[0].inboundMapping, {
+    kind: 'event',
+    selector: { eventType: 'notification.motion' },
+  });
+  assert.deepEqual(rules[1].actions[0].outboundMapping, {
+    kind: 'zwjs_command',
+    target: {
+      command: 'zwavejs/motion/reset',
+      argsTemplate: { reason: 'manual' },
+    },
+  });
+
+  assert.equal(rules[2].actions[0].driverTemplateId, 'product-29-66-2');
+  assert.equal('driverId' in rules[2].actions[0], false);
+});
+
 test('loadJsonRuleFile injects manifest-declared layer for no-layer rule files', () => {
   const filePath = path.join(fixturesDir, 'rules-switch-meter-generic-no-layer.json');
   const rules = compiler.loadJsonRuleFile(filePath, { declaredLayer: 'project-generic' });
@@ -180,5 +217,16 @@ test('loadJsonRuleFile rejects invalid matcher shapes before compile-time', () =
       /(device\.deviceClassGeneric|value\.commandClass|constraints\.requiredValues\[0\]\.property)/i.test(
         error.message,
       ),
+  );
+});
+
+test('loadJsonRuleFile rejects malformed action shorthand with clear error', () => {
+  const filePath = path.join(fixturesDir, 'rules-invalid-action-shorthand.json');
+  assert.throws(
+    () => compiler.loadJsonRuleFile(filePath),
+    (error) =>
+      error &&
+      error.filePath === filePath &&
+      /inboundMapping shorthand must be a value-id object or eventType/i.test(error.message),
   );
 });

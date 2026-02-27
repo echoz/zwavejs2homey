@@ -1,0 +1,13 @@
+[
+  {
+    "ruleId": "invalid-action-shorthand-inbound",
+    "layer": "project-generic",
+    "actions": [
+      {
+        "type": "capability",
+        "capabilityId": "onoff",
+        "inboundMapping": { "foo": "bar" }
+      }
+    ]
+  }
+]

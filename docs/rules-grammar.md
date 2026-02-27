@@ -158,6 +158,29 @@ Examples:
 - `"manufacturerId": 29` -> `"manufacturerId": [29]`
 - `"propertyKey": null` -> `"propertyKey": [null]`
 
+Action shorthand is also supported with deterministic canonical expansion.
+
+Examples:
+
+- capability inbound mapping value-id shorthand:
+  - `"inboundMapping": { "commandClass": 37, "property": "currentValue" }`
+  - expands to:
+    - `"inboundMapping": { "kind": "value", "selector": { "commandClass": 37, "property": "currentValue" } }`
+- capability outbound mapping value-id shorthand:
+  - `"outboundMapping": { "commandClass": 37, "property": "targetValue" }`
+  - expands to:
+    - `"outboundMapping": { "kind": "set_value", "target": { "commandClass": 37, "property": "targetValue" } }`
+- capability inbound event shorthand:
+  - `"inboundMapping": { "eventType": "notification.motion" }`
+  - expands to:
+    - `"inboundMapping": { "kind": "event", "selector": { "eventType": "notification.motion" } }`
+- capability outbound command shorthand:
+  - `"outboundMapping": { "command": "zwavejs/foo" }`
+  - expands to:
+    - `"outboundMapping": { "kind": "zwjs_command", "target": { "command": "zwavejs/foo" } }`
+- device identity alias:
+  - `"driverId": "product-29-66-2"` expands to `"driverTemplateId": "product-29-66-2"`
+
 This expansion is deterministic and compile-time only.
 
 ## Layer Vocabulary and Authoring Context

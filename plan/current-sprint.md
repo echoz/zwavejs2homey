@@ -397,11 +397,19 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - top-level storage key/value shape (`schemaVersion`, `updatedAt`, `entries` map keyed by `homeyDeviceId`)
     - entry contract includes `targetDevice`, `baselineMarker`, `overrides`, optional note/metadata
     - strict validation rules (unknown-field reject, key/target match, add/remove overlap reject, deterministic dedupe)
+88. Completed compiler DSL simplification slice 2 (action shorthand canonicalization):
+    - added deterministic action shorthand expansion for capability mappings:
+      - inbound value-id shorthand -> canonical `{ kind: "value", selector: ... }`
+      - inbound event shorthand (`eventType`) -> canonical `{ kind: "event", selector: ... }`
+      - outbound value-id shorthand -> canonical `{ kind: "set_value", target: ... }`
+      - outbound command shorthand (`command`) -> canonical `{ kind: "zwjs_command", target: ... }`
+    - added `device-identity.driverId` alias normalization to `driverTemplateId`
+    - hardened malformed action-shorthand validation with clear load-time errors
+    - added fixture-backed regression tests and docs updates (`README.md`, `docs/rules-grammar.md`)
 
 ## Next Tasks
 
 1. Complete remaining compiler backlog for phase-3 readiness:
-   - DSL simplification slice 2 (action-level defaults/shorthands with deterministic canonical expansion)
    - final compiler code-review pass + fixes + green checks
 2. Start TUI implementation against `plan/tui-explorer-curation-spec.md`:
    - Slice 1: app shell + connect + node list/detail (read-only)

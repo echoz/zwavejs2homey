@@ -104,7 +104,7 @@
 - [x] Decide single-target bundle policy for compiler product rules and adapter curation rules (ADR 0007)
 - [x] Decide manifest-layer single-source-of-truth policy (no per-rule layer in manifest-scoped compile-time files; ADR 0008)
 - [x] Decide full migration policy for product authoring format (`project-product` uses `product-rules/v1` only; ADR 0009)
-- [ ] DSL simplification slice 2: add explicit action-level defaults/shorthands with canonical expansion (no runtime inference)
+- [x] DSL simplification slice 2: add explicit action-level defaults/shorthands with canonical expansion (no runtime inference)
 - [ ] Add second real catalog source adapter when a concrete source format is available
 
 ## Phase 4: Homey Adapter MVP (Next Major Area)

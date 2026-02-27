@@ -173,6 +173,12 @@ Authoring ergonomics:
 - matcher fields accept compact scalar syntax and are normalized to canonical arrays at load-time
 - example: `"commandClass": 37` is equivalent to `"commandClass": [37]`
 - same for `property`, `propertyKey`, `endpoint`, and product/device matcher fields
+- action fields support deterministic shorthand expansion at load-time:
+  - `inboundMapping` value-id object -> `{ kind: "value", selector: ... }`
+  - `outboundMapping` value-id object -> `{ kind: "set_value", target: ... }`
+  - `inboundMapping` `{ eventType: "..." }` -> `{ kind: "event", selector: ... }`
+  - `outboundMapping` `{ command: "..." }` -> `{ kind: "zwjs_command", target: ... }`
+  - `device-identity.driverId` alias -> `driverTemplateId`
 
 ## Documentation Sync Contract
 
