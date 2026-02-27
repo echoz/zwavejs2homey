@@ -163,6 +163,24 @@ Optional:
 - add `--save-baseline-summary-json-file /tmp/compiled-live.baseline.summary.json` to save the current run as a new baseline snapshot
 - add `--artifact-retention delete-on-pass` to auto-delete generated compiled artifacts when validation passes
 
+## Baseline Helper Command
+
+For maintainers, `compiler:baseline` wraps baseline capture + immediate recheck:
+
+```bash
+npm run compiler:baseline -- \
+  --url ws://HOST:PORT \
+  --all-nodes \
+  --manifest-file rules/manifest.json
+```
+
+Default behavior:
+
+- writes timestamped outputs under `plan/baselines/`
+- captures baseline summary snapshot
+- runs recheck against that baseline with strict zero deltas (`max * delta = 0`)
+- defaults artifact retention to `delete-on-pass` to avoid large compiled-file buildup
+
 ## Suggested Workflow
 
 1. Keep one baseline summary JSON per network snapshot in `plan/` or `docs/`.

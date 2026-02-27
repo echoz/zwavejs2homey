@@ -284,6 +284,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - default retention remains `keep`; `delete-on-pass` removes generated live-build compiled artifacts only after gates pass
     - machine summary/effective-gates output now include retention config for reproducibility
     - expanded tool regression coverage for parse wiring and delete-on-pass runtime behavior
+62. Completed baseline workflow wrapper slice:
+    - added `compiler:baseline` (`tools/homey-compile-baseline*.mjs`) to orchestrate baseline capture + immediate recheck in one command
+    - wrapper emits timestamped baseline/recheck artifacts under `plan/baselines/` (configurable output dir/stamp)
+    - recheck stage enforces delta gates (default strict zero deltas) and supports optional gate-profile + reason-delta flags
+    - baseline workflow defaults artifact retention to `delete-on-pass` to avoid local compiled-artifact bloat
 
 ## Next Tasks
 

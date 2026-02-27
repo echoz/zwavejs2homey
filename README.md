@@ -86,6 +86,7 @@ This emits a `compiled-homey-profiles/v1` artifact.
 - `npm run compiler:validate-live -- --input-summary-json-file /tmp/compiled-live.summary.json --gate-profile-file plan/validation-gates.example.json --print-effective-gates`
 - `npm run compiler:validate-live -- --url ws://HOST:PORT --all-nodes --baseline-summary-json-file /tmp/compiled-live.baseline.summary.json --max-review-delta 1 --max-generic-delta 0 --fail-on-reason-delta known-device-unmapped:0`
 - `npm run compiler:validate-live -- --url ws://HOST:PORT --all-nodes --save-baseline-summary-json-file /tmp/compiled-live.baseline.summary.json --artifact-retention delete-on-pass`
+- `npm run compiler:baseline -- --url ws://HOST:PORT --all-nodes --manifest-file rules/manifest.json`
 
 This runs the canonical live validation loop in one command:
 
@@ -101,6 +102,7 @@ This runs the canonical live validation loop in one command:
 - when baseline is configured, markdown reports include baseline/delta tables for quick human triage
 - `--save-baseline-summary-json-file` writes the current machine summary in baseline-friendly form so refreshing baseline snapshots is one command
 - `--artifact-retention delete-on-pass` removes large generated compiled artifacts after successful validation runs
+- `compiler:baseline` orchestrates baseline capture + immediate recheck in one command and writes timestamped artifacts under `plan/baselines/` by default
 
 Gate setup guide: `docs/compiler-validation-gates.md`
 

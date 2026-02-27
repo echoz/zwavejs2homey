@@ -1,0 +1,305 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import {
+  parseCliArgs as parseValidateLiveCli,
+  runValidateLiveCommand,
+} from './homey-compile-validate-live-lib.mjs';
+
+function parseFlagMap(argv) {
+  const flags = new Map();
+  for (let i = 0; i < argv.length; i += 1) {
+    const token = argv[i];
+    if (!token.startsWith('--')) continue;
+    const [key, inline] = token.split('=', 2);
+    if (inline !== undefined) {
+      flags.set(key, inline);
+      continue;
+    }
+    const next = argv[i + 1];
+    if (next && !next.startsWith('--')) {
+      flags.set(key, next);
+      i += 1;
+    } else {
+      flags.set(key, 'true');
+    }
+  }
+  return flags;
+}
+
+function collectRepeatedFlag(argv, flagName) {
+  const values = [];
+  for (let i = 0; i < argv.length; i += 1) {
+    if (argv[i] === flagName && argv[i + 1]) values.push(argv[i + 1]);
+    if (argv[i].startsWith(`${flagName}=`)) values.push(argv[i].split('=', 2)[1]);
+  }
+  return values;
+}
+
+function resolveFilePath(filePath) {
+  return path.isAbsolute(filePath) ? filePath : path.resolve(filePath);
+}
+
+function parseOptionalNonNegativeInt(rawValue, flagName) {
+  if (rawValue === undefined) return undefined;
+  const parsed = Number.parseInt(rawValue, 10);
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    throw new Error(`Invalid ${flagName}: ${rawValue}`);
+  }
+  return parsed;
+}
+
+export function getUsageText() {
+  return [
+    'Usage:',
+    '  homey-compile-baseline --url ws://host:port (--all-nodes | --node <id>)',
+    '                        [--manifest-file <manifest.json> | --rules-file <rules.json> [--rules-file ...]]',
+    '                        [--catalog-file <catalog.json>]',
+    '                        [--token ...] [--schema-version 0]',
+    '                        [--include-values none|summary|full] [--max-values N]',
+    '                        [--include-controller-nodes]',
+    '                        [--output-dir <plan/baselines>]',
+    '                        [--stamp <YYYY-MM-DD>]',
+    '                        [--artifact-retention keep|delete-on-pass]',
+    '                        [--gate-profile-file <validation-gates.json>]',
+    '                        [--max-review-delta N] [--max-generic-delta N] [--max-empty-delta N]',
+    '                        [--fail-on-reason-delta <reason>:<delta> ...]',
+    '                        [--top N]',
+    '                        [--skip-recheck]',
+    '                        [--print-effective-gates]',
+  ].join('\n');
+}
+
+export function parseCliArgs(argv, options = {}) {
+  if (argv.includes('--help') || argv.includes('-h')) return { ok: false, error: getUsageText() };
+
+  const flags = parseFlagMap(argv);
+  const url = flags.get('--url');
+  if (!url) return { ok: false, error: '--url is required' };
+
+  const allNodes = flags.has('--all-nodes');
+  const nodeRaw = flags.get('--node');
+  if (!allNodes && nodeRaw === undefined) {
+    return { ok: false, error: 'Provide --all-nodes or --node <id>' };
+  }
+  if (allNodes && nodeRaw !== undefined) {
+    return { ok: false, error: 'Use either --all-nodes or --node, not both' };
+  }
+  const nodeId = nodeRaw === undefined ? undefined : Number.parseInt(nodeRaw, 10);
+  if (nodeRaw !== undefined && !Number.isInteger(nodeId)) {
+    return { ok: false, error: `Invalid --node: ${nodeRaw}` };
+  }
+
+  const manifestFile = flags.get('--manifest-file')
+    ? resolveFilePath(flags.get('--manifest-file'))
+    : undefined;
+  const rulesFiles = collectRepeatedFlag(argv, '--rules-file').map((filePath) =>
+    resolveFilePath(filePath),
+  );
+  if (manifestFile && rulesFiles.length > 0) {
+    return { ok: false, error: 'Use either --manifest-file or --rules-file, not both' };
+  }
+
+  const nowDate = options.nowDate ?? new Date();
+  const stamp = flags.get('--stamp') ?? nowDate.toISOString().slice(0, 10);
+  if (!/^[A-Za-z0-9._-]+$/.test(stamp)) {
+    return { ok: false, error: `Invalid --stamp: ${stamp}` };
+  }
+
+  let maxReviewDelta;
+  let maxGenericDelta;
+  let maxEmptyDelta;
+  try {
+    maxReviewDelta = parseOptionalNonNegativeInt(
+      flags.get('--max-review-delta') ?? '0',
+      '--max-review-delta',
+    );
+    maxGenericDelta = parseOptionalNonNegativeInt(
+      flags.get('--max-generic-delta') ?? '0',
+      '--max-generic-delta',
+    );
+    maxEmptyDelta = parseOptionalNonNegativeInt(
+      flags.get('--max-empty-delta') ?? '0',
+      '--max-empty-delta',
+    );
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    return { ok: false, error: reason };
+  }
+
+  const failOnReasonDeltaSpecs = collectRepeatedFlag(argv, '--fail-on-reason-delta');
+  for (const spec of failOnReasonDeltaSpecs) {
+    const separator = spec.lastIndexOf(':');
+    if (separator <= 0 || separator === spec.length - 1) {
+      return {
+        ok: false,
+        error: `Invalid --fail-on-reason-delta entry "${spec}" (expected <reason>:<delta>)`,
+      };
+    }
+    const deltaRaw = spec.slice(separator + 1);
+    const parsed = Number(deltaRaw);
+    if (!Number.isInteger(parsed) || parsed < 0) {
+      return {
+        ok: false,
+        error: `Invalid --fail-on-reason-delta entry "${spec}" (delta must be non-negative integer)`,
+      };
+    }
+  }
+
+  const topRaw = flags.get('--top') ?? '5';
+  const top = Number.parseInt(topRaw, 10);
+  if (!Number.isInteger(top) || top < 1) {
+    return { ok: false, error: `Invalid --top: ${topRaw}` };
+  }
+
+  const outputDir = resolveFilePath(flags.get('--output-dir') ?? path.join('plan', 'baselines'));
+  const artifactRetention = flags.get('--artifact-retention') ?? 'delete-on-pass';
+  if (!['keep', 'delete-on-pass'].includes(artifactRetention)) {
+    return {
+      ok: false,
+      error: `Invalid --artifact-retention: ${artifactRetention} (expected keep|delete-on-pass)`,
+    };
+  }
+
+  return {
+    ok: true,
+    command: {
+      url,
+      token: flags.get('--token'),
+      schemaVersion: Number(flags.get('--schema-version') ?? '0'),
+      allNodes,
+      nodeId,
+      includeValues: flags.get('--include-values') ?? (allNodes ? 'summary' : 'full'),
+      maxValues: Number(flags.get('--max-values') ?? (allNodes ? '100' : '200')),
+      includeControllerNodes: flags.has('--include-controller-nodes'),
+      manifestFile,
+      rulesFiles,
+      catalogFile: flags.get('--catalog-file')
+        ? resolveFilePath(flags.get('--catalog-file'))
+        : undefined,
+      gateProfileFile: flags.get('--gate-profile-file')
+        ? resolveFilePath(flags.get('--gate-profile-file'))
+        : undefined,
+      outputDir,
+      stamp,
+      artifactRetention,
+      maxReviewDelta,
+      maxGenericDelta,
+      maxEmptyDelta,
+      failOnReasonDeltaSpecs,
+      top,
+      skipRecheck: flags.has('--skip-recheck'),
+      printEffectiveGates: flags.has('--print-effective-gates'),
+    },
+  };
+}
+
+function buildCommonValidateArgs(command) {
+  const args = ['--url', command.url];
+  if (command.token) args.push('--token', command.token);
+  if (command.schemaVersion !== undefined)
+    args.push('--schema-version', String(command.schemaVersion));
+  if (command.allNodes) args.push('--all-nodes');
+  if (command.nodeId !== undefined) args.push('--node', String(command.nodeId));
+  if (command.manifestFile) args.push('--manifest-file', command.manifestFile);
+  if (command.rulesFiles.length > 0) {
+    for (const filePath of command.rulesFiles) args.push('--rules-file', filePath);
+  }
+  if (command.catalogFile) args.push('--catalog-file', command.catalogFile);
+  if (command.includeValues) args.push('--include-values', command.includeValues);
+  if (command.maxValues !== undefined) args.push('--max-values', String(command.maxValues));
+  if (command.includeControllerNodes) args.push('--include-controller-nodes');
+  args.push('--top', String(command.top));
+  if (command.printEffectiveGates) args.push('--print-effective-gates');
+  return args;
+}
+
+function parseValidateOrThrow(argv, stage, parseImpl) {
+  const parsed = parseImpl(argv);
+  if (!parsed.ok) {
+    throw new Error(`${stage} parse failed: ${parsed.error}`);
+  }
+  return parsed.command;
+}
+
+export async function runBaselineWorkflowCommand(command, io = console, deps = {}) {
+  const parseValidateLiveCliImpl = deps.parseValidateLiveCliImpl ?? parseValidateLiveCli;
+  const runValidateLiveCommandImpl = deps.runValidateLiveCommandImpl ?? runValidateLiveCommand;
+
+  fs.mkdirSync(command.outputDir, { recursive: true });
+  const prefix = path.join(command.outputDir, command.stamp);
+  const paths = {
+    baselineCompiled: `${prefix}.compiled.json`,
+    baselineReport: `${prefix}.validation.md`,
+    baselineSummary: `${prefix}.summary.json`,
+    baselineSnapshot: `${prefix}.baseline.summary.json`,
+    recheckCompiled: `${prefix}.recheck.compiled.json`,
+    recheckReport: `${prefix}.recheck.validation.md`,
+    recheckSummary: `${prefix}.recheck.summary.json`,
+  };
+
+  const common = buildCommonValidateArgs(command);
+  const baselineArgs = [
+    ...common,
+    '--artifact-file',
+    paths.baselineCompiled,
+    '--report-file',
+    paths.baselineReport,
+    '--summary-json-file',
+    paths.baselineSummary,
+    '--save-baseline-summary-json-file',
+    paths.baselineSnapshot,
+    '--artifact-retention',
+    command.artifactRetention,
+  ];
+
+  io.log(`Baseline workflow stamp: ${command.stamp}`);
+  io.log(`Output dir: ${command.outputDir}`);
+  io.log('Running baseline capture...');
+  const baselineCommand = parseValidateOrThrow(
+    baselineArgs,
+    'baseline-capture',
+    parseValidateLiveCliImpl,
+  );
+  const baselineResult = await runValidateLiveCommandImpl(baselineCommand, io, deps);
+
+  let recheckResult;
+  if (!command.skipRecheck) {
+    const recheckArgs = [
+      ...common,
+      '--artifact-file',
+      paths.recheckCompiled,
+      '--report-file',
+      paths.recheckReport,
+      '--summary-json-file',
+      paths.recheckSummary,
+      '--baseline-summary-json-file',
+      paths.baselineSnapshot,
+      '--max-review-delta',
+      String(command.maxReviewDelta),
+      '--max-generic-delta',
+      String(command.maxGenericDelta),
+      '--max-empty-delta',
+      String(command.maxEmptyDelta),
+      '--artifact-retention',
+      command.artifactRetention,
+    ];
+    if (command.gateProfileFile) {
+      recheckArgs.push('--gate-profile-file', command.gateProfileFile);
+    }
+    for (const spec of command.failOnReasonDeltaSpecs) {
+      recheckArgs.push('--fail-on-reason-delta', spec);
+    }
+
+    io.log('Running baseline recheck...');
+    const recheckCommand = parseValidateOrThrow(
+      recheckArgs,
+      'baseline-recheck',
+      parseValidateLiveCliImpl,
+    );
+    recheckResult = await runValidateLiveCommandImpl(recheckCommand, io, deps);
+  }
+
+  io.log(`Baseline summary: ${paths.baselineSnapshot}`);
+  if (!command.skipRecheck) io.log(`Recheck summary: ${paths.recheckSummary}`);
+  return { paths, baselineResult, recheckResult };
+}
