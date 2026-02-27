@@ -242,6 +242,7 @@ See `CONTRIBUTING.md` for code + rule/profile contribution workflow, evidence ex
 - Homey adapter owns:
   - runtime curation behavior
   - patch storage/application semantics
+  - v1 persistence backend: `this.homey.settings` with versioned curation payloads
   - runtime execution of compiled inbound/outbound mappings
 
 ## Where to look next

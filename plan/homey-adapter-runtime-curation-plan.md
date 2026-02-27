@@ -10,6 +10,7 @@ Related ADRs:
 - `docs/decisions/0004-generic-fallback-ownership.md`
 - `docs/decisions/0006-homey-adapter-runtime-rule-order.md`
 - `docs/decisions/0007-product-and-curation-single-target-bundles.md`
+- `docs/decisions/0010-homey-adapter-curation-storage-v1.md`
 
 Compiler remains responsible for:
 
@@ -187,22 +188,24 @@ Pure function (or near-pure helper) in the Homey adapter layer:
 
 ## Persistence Model (v1)
 
-Recommended:
+Decision locked:
 
-- Homey app settings/storage as primary store
+- Homey app settings/storage (`this.homey.settings`) is the only persistence backend in v1
 
 Store:
 
-- full patch set JSON
+- versioned full patch set JSON (for example key `curation.v1` + schema version)
 - optional metadata per patch (author, last edited UI version)
 
 Optional later:
 
 - export/import JSON for backup/share
+- alternate storage backend behind the adapter storage interface
 
 ### Migration
 
 - Patch schema is versioned
+- storage is accessed through an adapter interface (`loadCuration`, `saveCuration`) to allow backend migration in future versions
 - Adapter owns migrations (e.g. `v1 -> v2`)
 - Compiler version upgrades should not require patch rewrites unless compiled profile target fields change
 

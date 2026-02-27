@@ -367,6 +367,13 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - replaced `rules/project/product/live-network-overrides.json` with one bundle file per product triple
     - updated `rules/manifest.json` to enumerate all per-target product bundle files
     - updated compiler rule loading/validation to enforce manifest-owned layer, product bundle requirements, and bundle target inheritance
+81. Drafted unified ZWJS Explorer + Curation TUI spec:
+    - documented MVP scope, screens, backend integration, safety model, and phased slices
+    - documented explicit replacement mapping from current backlog/loop command choreography to guided TUI flows
+82. Locked Homey adapter curation persistence for v1:
+    - selected `this.homey.settings` as the single persistence backend for adapter curation deltas
+    - documented versioned payload policy (`curation.v1`) and adapter-owned migration expectation
+    - recorded backend abstraction expectation (`loadCuration`/`saveCuration`) for future backend swap without apply-logic churn
 
 ## Next Tasks
 

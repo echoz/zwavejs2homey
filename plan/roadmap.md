@@ -105,6 +105,8 @@
 
 - [ ] Start only after compiler runtime-validation readiness milestone is met
 - [ ] Define first supported Homey device/capability vertical slice using compiled profiles
+- [x] Draft unified ZWJS Explorer + Curation TUI MVP spec (`plan/tui-explorer-curation-spec.md`)
+- [x] Lock adapter curation persistence v1 policy: `this.homey.settings` + versioned payloads (`docs/decisions/0010-homey-adapter-curation-storage-v1.md`)
 - [ ] Implement adapter execution of inbound/outbound mappings
 - [ ] Device lifecycle/sync (discovery, create/update, mapping diagnostics)
 - [ ] User curation patch application in Homey runtime

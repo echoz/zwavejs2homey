@@ -13,3 +13,4 @@ Decision records for major technical boundaries and policy choices.
 - `0007-product-and-curation-single-target-bundles.md`: Product and curation rules use one-target-per-bundle in v1
 - `0008-manifest-layer-is-single-source-of-truth.md`: Compile-time rule files must not declare per-rule layer; manifest owns layer
 - `0009-product-rules-v1-only.md`: Product rules migrate fully to `product-rules/v1` bundle authoring
+- `0010-homey-adapter-curation-storage-v1.md`: Adapter runtime curation persistence uses Homey settings (`this.homey.settings`) in v1
