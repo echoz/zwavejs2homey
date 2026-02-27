@@ -11,6 +11,7 @@ test('compiler loop parseCliArgs validates signature source and loop options', a
   assert.equal(parseCliArgs([]).ok, false);
   assert.equal(parseCliArgs(['--signature', '29:66:2', '--backlog-file', 'x.json']).ok, false);
   assert.equal(parseCliArgs(['--signature', 'bad-signature']).ok, false);
+  assert.equal(parseCliArgs(['--signature', '29:66:2', '--candidate-policy', 'bad']).ok, false);
   assert.equal(parseCliArgs(['--from-backlog-file', 'a.json']).ok, false);
   assert.equal(
     parseCliArgs([
@@ -47,6 +48,8 @@ test('compiler loop parseCliArgs validates signature source and loop options', a
     'worsened',
     '--fallback',
     'summary',
+    '--candidate-policy',
+    'pressure',
     '--pick',
     '2',
     '--url',
@@ -55,6 +58,7 @@ test('compiler loop parseCliArgs validates signature source and loop options', a
   ]);
   assert.equal(parsedDiff.ok, true);
   assert.equal(parsedDiff.command.backlogMode, 'diff');
+  assert.equal(parsedDiff.command.candidatePolicy, 'pressure');
 });
 
 test('runLoopCommand runs inspect + validate with explicit signature and default manifest fallback', async () => {
@@ -177,6 +181,7 @@ test('runLoopCommand resolves signature from backlog and supports --skip-inspect
   assert.equal(backlogCalls[0].subcommand, 'next');
   assert.equal(backlogCalls[0].mode, 'diff');
   assert.equal(backlogCalls[0].only, 'worsened');
+  assert.equal(backlogCalls[0].candidatePolicy, 'curation');
   assert.equal(validateParseCalls.length, 1);
   assert.equal(validateParseCalls[0].includes('77:2:9'), true);
   assert.equal(result.signature, '77:2:9');

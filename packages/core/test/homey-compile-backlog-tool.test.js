@@ -121,6 +121,8 @@ test('backlog parseCliArgs validates subcommands, formats, and required flags', 
       'b.json',
       '--only',
       'worsened',
+      '--candidate-policy',
+      'pressure',
       '--fallback',
       'summary',
     ]).ok,
@@ -133,6 +135,18 @@ test('backlog parseCliArgs validates subcommands, formats, and required flags', 
   );
   assert.equal(
     parseCliArgs(['next', '--from-file', 'a.json', '--to-file', 'b.json', '--fallback', 'bad']).ok,
+    false,
+  );
+  assert.equal(
+    parseCliArgs([
+      'next',
+      '--from-file',
+      'a.json',
+      '--to-file',
+      'b.json',
+      '--candidate-policy',
+      'bad',
+    ]).ok,
     false,
   );
 });
@@ -324,6 +338,7 @@ test('backlog next summary mode selects actionable signature and prints command 
 
   assert.equal(result.kind, 'next');
   assert.equal(result.selectionMode, 'summary');
+  assert.equal(result.candidatePolicy, 'curation');
   assert.equal(result.selected.signature, '29:66:2');
   assert.equal(result.candidateCount, 1);
   assert.match(result.commands.scaffold, /compiler:backlog -- scaffold/);
@@ -378,6 +393,7 @@ test('backlog next diff mode prefers diff candidates and falls back to summary w
     fromFile,
     toFile,
     only: 'worsened',
+    candidatePolicy: 'curation',
     fallback: 'summary',
     pick: 1,
     format: 'summary',
@@ -393,6 +409,7 @@ test('backlog next diff mode prefers diff candidates and falls back to summary w
     fromFile,
     toFile: toNoDiffFile,
     only: 'worsened',
+    candidatePolicy: 'curation',
     fallback: 'summary',
     pick: 1,
     format: 'summary',
@@ -409,10 +426,58 @@ test('backlog next diff mode prefers diff candidates and falls back to summary w
         fromFile,
         toFile: toNoDiffFile,
         only: 'worsened',
+        candidatePolicy: 'curation',
         fallback: 'none',
         pick: 1,
         format: 'summary',
       }),
-    /No diff candidates found/i,
+    /No diff .*candidates found/i,
   );
+});
+
+test('backlog next candidate policy defaults to curation and can opt into pressure-only signatures', async () => {
+  const { runBacklogCommand } = await loadLib();
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zwjs2homey-backlog-next-policy-'));
+  const inputFile = path.join(tmpDir, 'backlog.json');
+  writeBacklogFile(inputFile, [
+    makeBacklogEntry({
+      rank: 1,
+      signature: '29:66:2',
+      reviewNodeCount: 0,
+      genericNodeCount: 0,
+      emptyNodeCount: 0,
+      actionableReasonCounts: {},
+      pressure: {
+        suppressedFillActionsTotal: 3,
+        unmatchedActionsTotal: 8,
+        appliedActionsTotal: 2,
+        unmatchedRatio: 0.8,
+        highUnmatchedRatioSignalCount: 1,
+      },
+    }),
+  ]);
+
+  assert.throws(
+    () =>
+      runBacklogCommand({
+        subcommand: 'next',
+        mode: 'summary',
+        inputFile,
+        candidatePolicy: 'curation',
+        pick: 1,
+        format: 'summary',
+      }),
+    /No curation signatures found/i,
+  );
+
+  const pressureResult = runBacklogCommand({
+    subcommand: 'next',
+    mode: 'summary',
+    inputFile,
+    candidatePolicy: 'pressure',
+    pick: 1,
+    format: 'summary',
+  });
+  assert.equal(pressureResult.selected.signature, '29:66:2');
+  assert.equal(pressureResult.candidatePolicy, 'pressure');
 });

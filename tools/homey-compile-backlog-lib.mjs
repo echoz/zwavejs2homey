@@ -18,6 +18,7 @@ const DIFF_ONLY_FILTERS = new Set([
   'unchanged',
 ]);
 const NEXT_FALLBACK_MODES = new Set(['summary', 'none']);
+const NEXT_CANDIDATE_POLICIES = new Set(['curation', 'pressure']);
 const NEXT_FORMATS = new Set([
   'summary',
   'list',
@@ -340,12 +341,16 @@ function buildBacklogDiff(fromArtifact, toArtifact, command, filePathFrom, fileP
   };
 }
 
-function isNextActionableEntry(entry) {
+function isCurationCandidateEntry(entry) {
   if (!entry) return false;
   if (entry.reviewNodeCount > 0) return true;
   if (entry.genericNodeCount > 0) return true;
   if (entry.emptyNodeCount > 0) return true;
-  if (topReason(entry.actionableReasonCounts).length > 0) return true;
+  return topReason(entry.actionableReasonCounts).length > 0;
+}
+
+function isPressureCandidateEntry(entry) {
+  if (isCurationCandidateEntry(entry)) return true;
   const pressure =
     entry.pressure && typeof entry.pressure === 'object' && !Array.isArray(entry.pressure)
       ? entry.pressure
@@ -356,16 +361,22 @@ function isNextActionableEntry(entry) {
   );
 }
 
-function pickNextEntry(entries, command) {
-  const actionable = entries.filter(isNextActionableEntry);
-  if (actionable.length === 0) {
+function filterEntriesByCandidatePolicy(entries, candidatePolicy) {
+  if (candidatePolicy === 'pressure') return entries.filter(isPressureCandidateEntry);
+  return entries.filter(isCurationCandidateEntry);
+}
+
+function pickNextEntry(entries, command, options = {}) {
+  const label = options.label ?? 'candidates';
+  const filtered = filterEntriesByCandidatePolicy(entries, command.candidatePolicy);
+  if (filtered.length === 0) {
     return { candidateCount: 0, selectedEntry: null };
   }
   const index = command.pick - 1;
-  if (index >= actionable.length) {
-    throw new Error(`--pick ${command.pick} is out of range (candidates: ${actionable.length})`);
+  if (index >= filtered.length) {
+    throw new Error(`--pick ${command.pick} is out of range (${label}: ${filtered.length})`);
   }
-  return { candidateCount: actionable.length, selectedEntry: actionable[index] };
+  return { candidateCount: filtered.length, selectedEntry: filtered[index] };
 }
 
 function isUsableSourcePath(value) {
@@ -501,6 +512,7 @@ function buildNextResultFromEntry({
     selectionMode,
     fallbackUsed,
     fallbackMode: command.fallback,
+    candidatePolicy: command.candidatePolicy,
     fromFilePath: fromFilePath ?? null,
     toFilePath: toFilePath ?? null,
     sourceFilePath,
@@ -529,9 +541,9 @@ function buildNextResultFromEntry({
 
 function buildNextFromSummary(artifact, command, filePath) {
   const entries = sortBacklogEntries(artifact.entries.map(normalizeBacklogEntry));
-  const pick = pickNextEntry(entries, command);
+  const pick = pickNextEntry(entries, command, { label: `${command.candidatePolicy} candidates` });
   if (!pick.selectedEntry) {
-    throw new Error(`No actionable signatures found in backlog: ${filePath}`);
+    throw new Error(`No ${command.candidatePolicy} signatures found in backlog: ${filePath}`);
   }
   return {
     ...buildNextResultFromEntry({
@@ -556,7 +568,7 @@ function entryMapBySignature(artifact) {
 }
 
 function buildNextFromDiff(fromArtifact, toArtifact, command, fromFilePath, toFilePath) {
-  const diff = buildBacklogDiff(
+  const diffAll = buildBacklogDiff(
     fromArtifact,
     toArtifact,
     { ...command, top: Number.MAX_SAFE_INTEGER },
@@ -565,15 +577,24 @@ function buildNextFromDiff(fromArtifact, toArtifact, command, fromFilePath, toFi
   );
   const toBySignature = entryMapBySignature(toArtifact);
   const fromBySignature = entryMapBySignature(fromArtifact);
+  const diffEntries = diffAll.entries.filter(
+    (diffEntry) =>
+      filterEntriesByCandidatePolicy(
+        [toBySignature.get(diffEntry.signature) ?? fromBySignature.get(diffEntry.signature)].filter(
+          Boolean,
+        ),
+        command.candidatePolicy,
+      ).length > 0,
+  );
   const pickIndex = command.pick - 1;
 
-  if (diff.entries.length > 0) {
-    if (pickIndex >= diff.entries.length) {
+  if (diffEntries.length > 0) {
+    if (pickIndex >= diffEntries.length) {
       throw new Error(
-        `--pick ${command.pick} is out of range (candidates: ${diff.entries.length})`,
+        `--pick ${command.pick} is out of range (${command.candidatePolicy} candidates: ${diffEntries.length})`,
       );
     }
-    const diffEntry = diff.entries[pickIndex];
+    const diffEntry = diffEntries[pickIndex];
     const selectedEntry =
       toBySignature.get(diffEntry.signature) ?? fromBySignature.get(diffEntry.signature);
     if (!selectedEntry) {
@@ -593,20 +614,24 @@ function buildNextFromDiff(fromArtifact, toArtifact, command, fromFilePath, toFi
         fromFilePath,
         toFilePath,
       }),
-      candidateCount: diff.entries.length,
+      candidateCount: diffEntries.length,
     };
   }
 
   if (command.fallback === 'none') {
     throw new Error(
-      `No diff candidates found for --only ${command.only} and --fallback none (from: ${fromFilePath}, to: ${toFilePath})`,
+      `No diff ${command.candidatePolicy} candidates found for --only ${command.only} and --fallback none (from: ${fromFilePath}, to: ${toFilePath})`,
     );
   }
 
   const summaryEntries = sortBacklogEntries(toArtifact.entries.map(normalizeBacklogEntry));
-  const pick = pickNextEntry(summaryEntries, command);
+  const pick = pickNextEntry(summaryEntries, command, {
+    label: `fallback ${command.candidatePolicy} candidates`,
+  });
   if (!pick.selectedEntry) {
-    throw new Error(`No actionable signatures found in fallback summary backlog: ${toFilePath}`);
+    throw new Error(
+      `No ${command.candidatePolicy} signatures found in fallback summary backlog: ${toFilePath}`,
+    );
   }
   return {
     ...buildNextResultFromEntry({
@@ -712,11 +737,13 @@ export function getUsageText() {
     '                                [--format summary|markdown|json|json-pretty|json-compact]',
     '',
     '  homey-compile-backlog next --input-file <curation-backlog.json>',
+    '                            [--candidate-policy curation|pressure]',
     '                            [--pick N]',
     '                            [--format summary|list|markdown|json|json-pretty|json-compact]',
     '',
     '  homey-compile-backlog next --from-file <baseline-backlog.json> --to-file <current-backlog.json>',
     '                            [--only worsened|improved|neutral|added|removed|changed|unchanged|all]',
+    '                            [--candidate-policy curation|pressure]',
     '                            [--fallback summary|none]',
     '                            [--pick N]',
     '                            [--format summary|list|markdown|json|json-pretty|json-compact]',
@@ -748,6 +775,13 @@ export function parseCliArgs(argv) {
       const reason = error instanceof Error ? error.message : String(error);
       return { ok: false, error: reason };
     }
+    const candidatePolicy = flags.get('--candidate-policy') ?? 'curation';
+    if (!NEXT_CANDIDATE_POLICIES.has(candidatePolicy)) {
+      return {
+        ok: false,
+        error: `Unsupported --candidate-policy for next: ${candidatePolicy} (expected curation|pressure)`,
+      };
+    }
 
     const inputFile = flags.get('--input-file');
     const fromFile = flags.get('--from-file');
@@ -771,6 +805,7 @@ export function parseCliArgs(argv) {
           subcommand,
           mode: 'summary',
           inputFile,
+          candidatePolicy,
           pick,
           format,
         },
@@ -802,6 +837,7 @@ export function parseCliArgs(argv) {
         fromFile,
         toFile,
         only,
+        candidatePolicy,
         fallback,
         pick,
         format,
@@ -1063,6 +1099,7 @@ function formatNextResult(result, format) {
   if (format === 'list') {
     const rows = [
       ['Selection mode', result.selectionMode],
+      ['Candidate policy', result.candidatePolicy],
       ['Fallback mode', result.fallbackMode],
       ['Fallback used', result.fallbackUsed ? 'yes' : 'no'],
       ['Source backlog', result.sourceFilePath],
@@ -1092,6 +1129,7 @@ function formatNextResult(result, format) {
       '# Next Curation Target',
       '',
       `- Selection mode: ${result.selectionMode}`,
+      `- Candidate policy: ${result.candidatePolicy}`,
       `- Fallback mode: ${result.fallbackMode}`,
       `- Fallback used: ${result.fallbackUsed ? 'yes' : 'no'}`,
       `- Source backlog: ${result.sourceFilePath}`,
@@ -1120,6 +1158,7 @@ function formatNextResult(result, format) {
 
   return [
     `Selection mode: ${result.selectionMode}`,
+    `Candidate policy: ${result.candidatePolicy}`,
     `Fallback mode: ${result.fallbackMode}`,
     `Fallback used: ${result.fallbackUsed ? 'yes' : 'no'}`,
     `Source backlog: ${result.sourceFilePath}`,
@@ -1161,16 +1200,21 @@ export function runBacklogCommand(command, options = {}) {
     );
   }
   if (command.subcommand === 'next') {
+    const normalized = {
+      ...command,
+      candidatePolicy: command.candidatePolicy ?? 'curation',
+      fallback: command.fallback ?? 'summary',
+    };
     if (command.mode === 'summary') {
       const loaded = loadBacklogArtifact(command.inputFile, 'backlog file');
-      return buildNextFromSummary(loaded.raw, command, loaded.filePath);
+      return buildNextFromSummary(loaded.raw, normalized, loaded.filePath);
     }
     const fromLoaded = loadBacklogArtifact(command.fromFile, 'from backlog file');
     const toLoaded = loadBacklogArtifact(command.toFile, 'to backlog file');
     return buildNextFromDiff(
       fromLoaded.raw,
       toLoaded.raw,
-      command,
+      normalized,
       fromLoaded.filePath,
       toLoaded.filePath,
     );

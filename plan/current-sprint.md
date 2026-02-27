@@ -334,6 +334,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - added `compiler:loop --dry-run` to resolve signature + validate command shapes without executing inspect/validate network flows
     - loop output now reports dry-run status and treats gate status as `n/a` when no live execution occurred
     - expanded regression coverage for dry-run behavior and backlog-next loop-hint output
+72. Completed backlog candidate-policy slice:
+    - added `--candidate-policy curation|pressure` to `compiler:backlog next` and `compiler:loop` backlog selection path
+    - default policy is now `curation`, so next-target selection ignores technical-pressure-only signatures unless explicitly requested
+    - pressure policy remains available for optimization passes (`suppressed/unmatched` tuning) when curation is already clean
+    - expanded backlog/loop regression coverage for candidate-policy parse validation and curation-vs-pressure selection behavior
 
 ## Next Tasks
 

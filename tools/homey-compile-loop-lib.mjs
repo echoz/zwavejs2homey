@@ -25,6 +25,7 @@ const DIFF_ONLY_FILTERS = new Set([
   'unchanged',
 ]);
 const NEXT_FALLBACK_MODES = new Set(['summary', 'none']);
+const NEXT_CANDIDATE_POLICIES = new Set(['curation', 'pressure']);
 const LOOP_FORMATS = new Set([
   'summary',
   'list',
@@ -128,6 +129,7 @@ export function getUsageText() {
     '                     [--include-controller-nodes]',
     '                     [--signature <manufacturerId:productType:productId> | --backlog-file <curation-backlog.json> | (--from-backlog-file <baseline.json> --to-backlog-file <current.json>)]',
     '                     [--only worsened|improved|neutral|added|removed|changed|unchanged|all]',
+    '                     [--candidate-policy curation|pressure]',
     '                     [--fallback summary|none]',
     '                     [--pick N]',
     '                     [--skip-inspect] [--inspect-format list|summary|markdown|json|json-pretty|json-compact|ndjson]',
@@ -205,6 +207,13 @@ export function parseCliArgs(argv) {
       error: `Unsupported --fallback: ${fallback} (expected summary|none)`,
     };
   }
+  const candidatePolicy = flags.get('--candidate-policy') ?? 'curation';
+  if (!NEXT_CANDIDATE_POLICIES.has(candidatePolicy)) {
+    return {
+      ok: false,
+      error: `Unsupported --candidate-policy: ${candidatePolicy} (expected curation|pressure)`,
+    };
+  }
 
   const inspectFormat = flags.get('--inspect-format') ?? 'list';
   if (inspectFormat !== 'list' && !isSupportedDiagnosticFormat(inspectFormat)) {
@@ -224,6 +233,7 @@ export function parseCliArgs(argv) {
     '--from-backlog-file',
     '--to-backlog-file',
     '--only',
+    '--candidate-policy',
     '--fallback',
     '--pick',
     '--skip-inspect',
@@ -242,6 +252,7 @@ export function parseCliArgs(argv) {
       toBacklogFile,
       backlogMode: backlogFile ? 'summary' : hasDiffBacklogFlags ? 'diff' : null,
       only,
+      candidatePolicy,
       fallback,
       pick,
       skipInspect: flags.has('--skip-inspect'),
@@ -277,6 +288,7 @@ export async function runLoopCommand(command, io = console, deps = {}) {
             subcommand: 'next',
             mode: 'summary',
             inputFile: command.backlogFile,
+            candidatePolicy: command.candidatePolicy,
             pick: command.pick,
             format: 'summary',
           }
@@ -286,6 +298,7 @@ export async function runLoopCommand(command, io = console, deps = {}) {
             fromFile: command.fromBacklogFile,
             toFile: command.toBacklogFile,
             only: command.only,
+            candidatePolicy: command.candidatePolicy,
             fallback: command.fallback,
             pick: command.pick,
             format: 'summary',
@@ -400,6 +413,9 @@ export function formatLoopOutput(result, format) {
       `- Signature: ${result.signature}`,
       selectedFromBacklog ? `- Backlog-selected signature: ${selectedFromBacklog}` : null,
       selectedTopReason ? `- Backlog top reason: ${selectedTopReason}` : null,
+      result.selection?.candidatePolicy
+        ? `- Backlog candidate policy: ${result.selection.candidatePolicy}`
+        : null,
       `- Dry run: ${result.dryRun ? 'yes' : 'no'}`,
       `- Inspect skipped: ${result.inspect?.skipped ? 'yes' : 'no'}`,
       `- Validate gate passed: ${result.validate?.gatePassed === null ? 'n/a' : result.validate?.gatePassed ? 'yes' : 'no'}`,
@@ -429,6 +445,9 @@ export function formatLoopOutput(result, format) {
     `Signature: ${result.signature}`,
     selectedFromBacklog ? `Backlog-selected signature: ${selectedFromBacklog}` : null,
     selectedTopReason ? `Backlog top reason: ${selectedTopReason}` : null,
+    result.selection?.candidatePolicy
+      ? `Backlog candidate policy: ${result.selection.candidatePolicy}`
+      : null,
     `Dry run: ${result.dryRun ? 'yes' : 'no'}`,
     `Inspect skipped: ${result.inspect?.skipped ? 'yes' : 'no'}`,
     `Validate gate passed: ${result.validate?.gatePassed === null ? 'n/a' : result.validate?.gatePassed ? 'yes' : 'no'}`,
