@@ -29,6 +29,8 @@ Lowering and execution requirements:
 - stable rule IDs derived from target + override path
 - invalid override fields are skipped with diagnostics
 
+Target selection for curation entries is defined in `docs/decisions/0013-homey-device-instance-curation-precedence-v1.md`.
+
 ## Consequences
 
 Positive:

@@ -22,6 +22,8 @@ Lock only the v1 model direction now:
 - adapter applies overrides onto compiled profiles deterministically at runtime
 - exact stored JSON field shape is deferred to Homey adapter implementation phase
 
+Target key selection and precedence/update behavior are defined separately in `docs/decisions/0013-homey-device-instance-curation-precedence-v1.md`.
+
 Not selected for v1 baseline:
 
 - operation-log patch model as the primary persistence shape

@@ -108,6 +108,7 @@
 - [x] Draft unified ZWJS Explorer + Curation TUI MVP spec (`plan/tui-explorer-curation-spec.md`)
 - [x] Lock adapter curation persistence v1 policy: `this.homey.settings` + versioned payloads (`docs/decisions/0010-homey-adapter-curation-storage-v1.md`)
 - [x] Lock adapter curation execution direction: persist materialized overrides, lower to runtime rules, execute with shared engine order semantics (`docs/decisions/0012-homey-curation-execution-via-runtime-rule-lowering.md`)
+- [x] Lock adapter precedence/update direction: instance-scoped curation (`homeyDeviceId`) overrides baseline by default; baseline improvements are surfaced as user-adopted recommendations (`docs/decisions/0013-homey-device-instance-curation-precedence-v1.md`)
 - [ ] Implement adapter execution of inbound/outbound mappings
 - [ ] Device lifecycle/sync (discovery, create/update, mapping diagnostics)
 - [ ] User curation application in Homey runtime

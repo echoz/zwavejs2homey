@@ -13,6 +13,7 @@ Related ADRs:
 - `docs/decisions/0010-homey-adapter-curation-storage-v1.md`
 - `docs/decisions/0011-homey-curation-model-v1-materialized-overrides.md`
 - `docs/decisions/0012-homey-curation-execution-via-runtime-rule-lowering.md`
+- `docs/decisions/0013-homey-device-instance-curation-precedence-v1.md`
 
 Compiler remains responsible for:
 
@@ -26,12 +27,14 @@ Homey adapter becomes responsible for:
 - curation storage
 - override-to-rule lowering semantics
 - runtime curation apply semantics
+- device-instance precedence and recommendation update UX
 - curation UX/workflow
 
 ## Goals (v1)
 
 - Let users correct mappings in the Homey app without rebuilding compiler outputs
 - Keep runtime behavior deterministic (curation applies to explicit targets only)
+- Keep curated device behavior stable across compiler/rule updates unless user chooses to adopt new recommendations
 - Preserve auditability (what changed, why, when)
 - Maintain a strict compiler/adapter boundary
 - Support both:
@@ -59,6 +62,8 @@ Homey adapter becomes responsible for:
 - Defines runtime curation schema
 - Stores curation override sets
 - Lowers overrides to runtime rules and executes runtime curation against compiled profiles
+- Keeps curation instance-scoped (`homeyDeviceId`) and authoritative over baseline updates
+- Surfaces “recommended profile available” decisions to users
 - Surfaces curation diagnostics to users/admins
 - Handles migration/versioning of adapter-owned curation schema
 
@@ -77,10 +82,11 @@ Runtime flow:
 
 ### Targeting (device selection)
 
-Each curation entry targets one device by:
+Each curation entry targets one Homey device instance by:
 
-- `catalogId` (preferred when available)
-- or `diagnosticDeviceKey` (fallback for unknown devices)
+- `homeyDeviceId` (primary key)
+
+Compiler identity fields (`catalogId`/`diagnosticDeviceKey`) remain baseline identity/provenance context and may be stored as metadata for recommendation checks.
 
 ### Allowed Curation Scope (v1)
 
@@ -127,8 +133,9 @@ Decision locked:
 ### Entry (conceptual)
 
 - `targetDevice`
-  - `catalogId?`
-  - `diagnosticDeviceKey?`
+  - `homeyDeviceId`
+  - `catalogId?` (metadata/context)
+  - `diagnosticDeviceKey?` (metadata/context)
 - `overrides`
 - `note?`
 - `updatedAt?`
@@ -225,25 +232,42 @@ Optional later:
 ## Adapter Integration Flow (Runtime)
 
 1. Load compiled profile from compiler artifact
-2. Determine device target identity:
+2. Resolve Homey device instance key (`homeyDeviceId`)
+3. Resolve compiler identity context for baseline/provenance:
 
 - `catalogId` if available
 - else `diagnosticDeviceKey`
 
-3. Load matching curation overrides from Homey storage
-4. Validate curation schema
-5. Lower overrides -> runtime curation rules
-6. Execute rules engine in runtime order (generic first, curation second)
-7. Use resulting runtime profile for:
+4. Load matching curation overrides from Homey storage by `homeyDeviceId`
+5. Validate curation schema
+6. Lower overrides -> runtime curation rules
+7. Execute rules engine in runtime order (generic first, curation second)
+8. Use resulting runtime profile for:
 
 - inbound updates (ZWJS -> Homey)
 - outbound commands (Homey -> ZWJS)
 
-8. Surface curation diagnostics in logs/UI if:
+9. Surface curation diagnostics in logs/UI if:
 
 - skipped override fields
 - invalid curation set
 - target mismatch after compiler profile changes
+
+## Baseline Update Behavior (v1)
+
+When compiler/rule updates produce a newer recommended baseline:
+
+1. Recompute/reload baseline for the device identity.
+2. Keep instance-scoped curation override active by default.
+3. Mark device as having a newer recommended profile available.
+4. Expose user action in Homey UX:
+   - adopt recommended baseline (v1 full replace)
+   - keep current curated configuration
+
+Not in v1:
+
+- auto-overwrite local curation when recommendation changes
+- selective field-by-field merge UX
 
 ## Diagnostics & UX (v1 Minimal)
 
@@ -295,6 +319,7 @@ No seed generator needed in v1.
 - curated runtime profile actually changes runtime mapping behavior
 - outbound mapping correction affects command execution target
 - invalid curation set falls back safely to base compiled profile
+- instance-scoped curation remains active after baseline refresh until user adopts recommendation
 
 ## Acceptance Criteria (v1)
 
@@ -303,6 +328,7 @@ No seed generator needed in v1.
 - Override-to-rule lowering + apply helper exist and are unit-tested
 - Adapter applies curation (via runtime lowering) before executing compiled profiles
 - Skipped/failing curation fields are observable in diagnostics
+- Device-instance curation precedence over baseline updates is enforced by default
 - Compiler remains unchanged in responsibility (no runtime curation apply logic in compiler package)
 - Docs and roadmap reflect compiler/adapter boundary clearly
 

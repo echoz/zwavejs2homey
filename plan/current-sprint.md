@@ -378,6 +378,10 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - curation source-of-truth remains persisted materialized overrides
     - adapter lowers overrides into in-memory runtime curation rules at runtime
     - runtime execution reuses rules engine semantics (generic first, curation second)
+84. Locked Homey adapter precedence/update direction for v1:
+    - curation is instance-scoped (`homeyDeviceId`) and remains authoritative over compiler baseline updates
+    - pairing starts from compiler baseline; user curation becomes device-static effective override
+    - when baseline improves, adapter surfaces recommendation/adopt flow instead of auto-replacing local curation
 
 ## Next Tasks
 
