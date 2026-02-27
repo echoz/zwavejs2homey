@@ -110,6 +110,7 @@ Current implemented foundation in `packages/compiler`:
   - `rules/` directory skeleton established for real `ha-derived`, `project/generic`, and `project/product` rulesets
   - canonical layered manifest now lives at `rules/manifest.json`
   - HA-derived generated rules and an initial project-generic ruleset are now checked in
+  - rule authoring now supports compact scalar matcher syntax that is deterministically normalized to canonical array-based matcher models at load-time
   - policy decision: keep compiler generic rules minimal/provisional; generic fallback inference ownership is in the Homey adapter (ADR 0004)
   - compiler now applies a small HA-derived overlap suppression policy for same-selector conflicts (initially focused on curtain/multilevel duplicates and generic `number_value` shadowing)
 - Catalog/curation workflow decision:
@@ -117,7 +118,12 @@ Current implemented foundation in `packages/compiler`:
 - Runtime curation boundary decision:
   - compiler does not own curation patch schema/apply semantics
   - Homey adapter owns runtime curation behavior and may define patch semantics to fit adapter needs
-  - decisions are recorded in `docs/decisions/0002-compiler-adapter-boundary.md`, `docs/decisions/0003-defer-curation-seed-artifact.md`, and `docs/decisions/0004-generic-fallback-ownership.md`
+  - compiler compile-time rule scope is manifest-owned; non-manifest rules are adapter/runtime scope (`docs/decisions/0005-manifest-owned-compile-rule-scope.md`)
+  - compile-time layer is manifest-only; per-rule `layer` fields are forbidden in manifest-scoped files (`docs/decisions/0008-manifest-layer-is-single-source-of-truth.md`)
+  - adapter runtime order (v1) is generic inference first, then curation (curation wins) per `docs/decisions/0006-homey-adapter-runtime-rule-order.md`
+  - product/compiler and adapter-curation authoring both prefer single-target bundles in v1 (`docs/decisions/0007-product-and-curation-single-target-bundles.md`)
+  - product compile-time authoring is fully migrated to `product-rules/v1` bundle format (`docs/decisions/0009-product-rules-v1-only.md`)
+  - decisions are recorded in `docs/decisions/0002-compiler-adapter-boundary.md`, `docs/decisions/0003-defer-curation-seed-artifact.md`, `docs/decisions/0004-generic-fallback-ownership.md`, `docs/decisions/0005-manifest-owned-compile-rule-scope.md`, `docs/decisions/0006-homey-adapter-runtime-rule-order.md`, `docs/decisions/0007-product-and-curation-single-target-bundles.md`, `docs/decisions/0008-manifest-layer-is-single-source-of-truth.md`, and `docs/decisions/0009-product-rules-v1-only.md`
 - Sequencing decision:
   - complete the compiler runtime-validation pipeline first (real HA-derived + project rulesets, compiled profiles export, live ZWJS validation using compiled artifacts)
   - defer Homey adapter implementation until compiled profiles can be validated end-to-end outside Homey

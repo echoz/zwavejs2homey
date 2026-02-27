@@ -5,6 +5,7 @@ Project documentation and durable technical context.
 Suggested contents:
 
 - architecture.md
+- rules-grammar.md
 - compiler-validation-gates.md
 - integration-notes.md
 - homey-sdk-notes.md

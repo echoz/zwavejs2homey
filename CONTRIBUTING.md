@@ -64,11 +64,20 @@ npm run compiler:inspect-live -- --url ws://HOST:PORT --all-nodes --manifest-fil
 ### 3) Edit Rules in the Correct Layer
 
 - Product-specific curated overrides:
-  - `rules/project/product/*.json`
+  - `rules/project/product/*.json` using `product-rules/v1` single-target bundle format
 - Generic fallback rules (minimal, fill-only policy):
   - `rules/project/generic/*.json`
 - HA-generated rules are generated artifacts:
   - `rules/ha-derived/home-assistant.zwave_js.generated.json`
+
+Compiler boundary:
+
+- Add compile-time rule files to `rules/manifest.json`.
+- Only manifest-listed rule files are compiler inputs.
+- Rules not listed in the compiler manifest are runtime/Homey-adapter scope.
+- Prefer manifest-driven commands (`--manifest-file` or default manifest) for canonical compile/validate workflows.
+- For manifest-scoped compile-time files, do not set per-rule `layer`; layer is owned by manifest entry.
+- For product bundles, target is owned by bundle context; do not set per-rule target overrides.
 
 ### 4) Add Portable Regression Coverage
 

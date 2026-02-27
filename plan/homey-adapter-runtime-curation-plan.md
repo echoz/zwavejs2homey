@@ -8,6 +8,8 @@ Related ADRs:
 
 - `docs/decisions/0002-compiler-adapter-boundary.md`
 - `docs/decisions/0004-generic-fallback-ownership.md`
+- `docs/decisions/0006-homey-adapter-runtime-rule-order.md`
+- `docs/decisions/0007-product-and-curation-single-target-bundles.md`
 
 Compiler remains responsible for:
 
@@ -65,8 +67,9 @@ Patch the compiled profile (not raw Z-Wave facts, not rules).
 Runtime flow:
 
 1. Load compiled profile
-2. Apply curation patches
-3. Execute final profile
+2. Apply adapter generic inference (`fill`-oriented cleanup)
+3. Apply curation patches (final authority)
+4. Execute final profile
 
 ### Patch Targeting (device selection)
 

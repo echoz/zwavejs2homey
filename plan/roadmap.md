@@ -92,7 +92,13 @@
 - [x] Runtime-validation loop/backlog hardening slice: add `compiler:loop --dry-run` and backlog-next loop command hints for faster safe iteration setup
 - [x] Runtime-validation backlog candidate-policy slice: add `--candidate-policy curation|pressure` so next-target selection defaults to curation work and can opt into technical-pressure tuning
 - [x] Decide and document final ownership of generic fallback inference policy (Homey adapter-owned; see ADR 0004)
-- [ ] Simplify rule authoring DSL with deterministic defaults + canonical expansion (progressive disclosure without runtime inference)
+- [x] DSL simplification slice 1: support compact scalar matcher syntax with deterministic load-time canonicalization to arrays
+- [x] Decide compiler rule boundary: compile-time rule scope is manifest-owned; non-manifest rules are runtime/Homey-adapter scope (ADR 0005)
+- [x] Decide manifest-first compiler workflow policy (canonical flows use manifest inputs; ad-hoc rules-file is non-canonical/dev-only)
+- [x] Decide single-target bundle policy for compiler product rules and adapter curation rules (ADR 0007)
+- [x] Decide manifest-layer single-source-of-truth policy (no per-rule layer in manifest-scoped compile-time files; ADR 0008)
+- [x] Decide full migration policy for product authoring format (`project-product` uses `product-rules/v1` only; ADR 0009)
+- [ ] DSL simplification slice 2: add explicit action-level defaults/shorthands with canonical expansion (no runtime inference)
 - [ ] Add second real catalog source adapter when a concrete source format is available
 
 ## Phase 4: Homey Adapter MVP (Next Major Area)

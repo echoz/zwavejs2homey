@@ -339,6 +339,30 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - default policy is now `curation`, so next-target selection ignores technical-pressure-only signatures unless explicitly requested
     - pressure policy remains available for optimization passes (`suppressed/unmatched` tuning) when curation is already clean
     - expanded backlog/loop regression coverage for candidate-policy parse validation and curation-vs-pressure selection behavior
+73. Started DSL simplification slice 1 (deterministic compact matcher syntax):
+    - rule loader/validator now accepts scalar matcher inputs for device/value/constraint fields and normalizes them to canonical array forms at load-time
+    - supported scalar shorthand includes: `manufacturerId`, `productType`, `productId`, `deviceClassGeneric`, `deviceClassSpecific`, `commandClass`, `endpoint`, `property`, `propertyKey`, `notPropertyKey`, and `metadataType`
+    - added regression fixture coverage to verify compact syntax expansion and preserved strict invalid-shape rejection for malformed matcher types
+74. Added rule grammar/vocabulary reference doc:
+    - documented current canonical rule grammar, matcher/action vocabulary, layer/mode semantics, and deterministic shorthand expansion policy
+    - captured simplification direction for filesystem/manifest-driven layer inference and product-targeted rule bundle shape
+75. Locked compiler rule boundary decision:
+    - compile-time rule scope is manifest-owned (`rules/manifest.json`)
+    - non-manifest rules are runtime/Homey-adapter scope
+    - broad rule-defaults abstraction is deferred in favor of structured context (manifest layer + product-target bundles)
+76. Locked manifest-first workflow decision:
+    - canonical compiler workflows should run manifest-first (`--manifest-file` or default manifest)
+    - ad-hoc `--rules-file` usage is treated as non-canonical local experimentation only
+77. Locked single-target bundle decision for product + curation:
+    - compiler product rules should be authored as one-target bundles (top-level product triple, inherited by contained rules)
+    - adapter curation rules should be one-target bundles (product triple or `diagnosticDeviceKey`)
+    - per-rule/per-entry target overrides are disallowed in bundle scope for v1
+78. Locked manifest-layer single-source-of-truth decision:
+    - manifest-scoped compile-time files must not declare per-rule `layer`
+    - manifest entry layer is the only authoring-time source; canonical internal expansion may still include explicit layer for diagnostics
+79. Locked full migration decision for product-rule format:
+    - `project-product` compile-time authoring migrates fully to `product-rules/v1` single-target bundles
+    - no legacy raw-array product rule authoring path remains as a canonical supported format
 
 ## Next Tasks
 
@@ -348,7 +372,7 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 4. Use `compiler:inspect-live --compiled-file ...` to validate compiled artifacts on real ZWJS data
 5. Keep project-generic rules minimal/provisional; generic fallback inference policy is adapter-owned (ADR 0004)
 6. Defer Homey adapter implementation until compiler runtime-validation readiness milestone is reached
-7. Define DSL simplification pass (deterministic defaults + canonical rule expansion) to reduce authoring complexity without adding runtime dynamism
+7. Continue DSL simplification with deterministic action defaults/shorthands where behavior remains explicit and statically expanded
 
 ## Risks / Unknowns
 

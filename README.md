@@ -157,9 +157,22 @@ Using the canonical layered rules pipeline:
 
 - `rules/ha-derived/` (generated from Home Assistant extraction/translation)
 - `rules/project/generic/` (starter/provisional generic rules; fallback inference policy may move to the Homey adapter)
-- `rules/project/product/` (product-specific overrides)
+- `rules/project/product/` (product-specific overrides authored as `product-rules/v1` single-target bundles)
 
 `rules/` is now the primary runtime-validation rules source. `packages/compiler/test/fixtures/` remains for isolated unit/integration test scenarios.
+
+Compile-time boundary:
+
+- `rules/manifest.json` defines which rule files are compile-time inputs and their layer context
+- rules not in the compiler manifest are treated as runtime/Homey-adapter scope
+- canonical compiler workflows should use `--manifest-file` (or default manifest) rather than ad-hoc `--rules-file` lists
+- in manifest-scoped compile-time files, layer comes from manifest context (per-rule `layer` is not part of authoring surface)
+
+Authoring ergonomics:
+
+- matcher fields accept compact scalar syntax and are normalized to canonical arrays at load-time
+- example: `"commandClass": 37` is equivalent to `"commandClass": [37]`
+- same for `property`, `propertyKey`, `endpoint`, and product/device matcher fields
 
 ## Documentation Sync Contract
 
@@ -169,6 +182,7 @@ To keep repo memory consistent, each behavior-changing slice updates these files
 - `plan/current-sprint.md`: latest completed slices + live validation outcomes
 - `plan/roadmap.md`: phase-level completion state
 - `docs/architecture.md`: ownership boundaries + system structure
+- `docs/rules-grammar.md`: rule DSL grammar and vocabulary
 - `rules/project/product/README.md` and/or `rules/ha-derived/README.md` when rule coverage changes
 
 Rule of thumb:
