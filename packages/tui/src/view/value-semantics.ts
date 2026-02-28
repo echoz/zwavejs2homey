@@ -3,6 +3,7 @@ import type { NodeValueDetail } from '../model/types';
 export type ValueDirection = 'read' | 'write' | 'read-write' | 'unknown';
 export type ValueConfidence = 'high' | 'medium' | 'low';
 export type ValueSemanticSource = 'metadata' | 'heuristic';
+export type ValuePresentationGroup = 'interactive' | 'static';
 
 export interface ValueSemanticAnnotation {
   capabilityId: string | null;
@@ -202,4 +203,50 @@ export function semanticCapabilityScore(capabilityId: string | null): number {
     default:
       return 0;
   }
+}
+
+export function classifyNodeValueGroup(entry: NodeValueDetail): ValuePresentationGroup {
+  if (entry._error !== undefined || !entry.valueId) {
+    return 'static';
+  }
+
+  const metadata = asRecord(entry.metadata);
+  const states = asRecord(metadata?.states);
+  const unit = asText(metadata?.unit);
+  const propertyText =
+    `${asText(entry.valueId.property)} ${asText(entry.valueId.propertyKey)} ${asText(metadata?.label)}`.trim();
+  const hasStates = states ? Object.keys(states).length > 0 : false;
+  const semantic = annotateNodeValue(entry);
+
+  if (semantic.direction === 'write' || semantic.direction === 'read-write') return 'interactive';
+  if (hasStates) return 'interactive';
+  if (unit.length > 0) return 'interactive';
+
+  const capability = semantic.capabilityId;
+  if (
+    capability &&
+    capability !== 'measure_generic' &&
+    capability !== 'number_value' &&
+    capability !== 'alarm_generic'
+  ) {
+    return 'interactive';
+  }
+
+  const staticHints = [
+    'status',
+    'interview',
+    'manufacturer',
+    'product',
+    'firmware',
+    'version',
+    'protocol',
+    'serial',
+    'hardware',
+    'powerlevel',
+    'zwaveplus',
+    'sdk',
+  ];
+
+  if (hasAny(propertyText, staticHints)) return 'static';
+  return 'interactive';
 }

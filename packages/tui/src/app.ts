@@ -34,7 +34,7 @@ import { ZwjsExplorerServiceImpl, type ZwjsExplorerService } from './service/zwj
 import { parseShellCommand } from './view/command-parser';
 import {
   annotateNodeValue,
-  formatValueSemanticTag,
+  classifyNodeValueGroup,
   semanticCapabilityScore,
 } from './view/value-semantics';
 import {
@@ -764,38 +764,6 @@ function renderNotificationLines(notificationEvents: unknown): string[] {
   return [`Notifications: ${truncateValueText(stringifyCompact(notificationEvents), 120)}`];
 }
 
-function isStaticLikeNodeValue(entry: NodeValueDetail): boolean {
-  if (entry._error !== undefined) return false;
-  const metadata = asRecord(entry.metadata);
-  const states = asRecord(metadata?.states);
-  const semantic = annotateNodeValue(entry);
-  const commandClass = toCommandClassNumber(entry.valueId?.commandClass);
-  const propertyText = `${entry.valueId?.property ?? ''} ${entry.valueId?.propertyKey ?? ''}`
-    .trim()
-    .toLowerCase();
-  const hasStates = Boolean(states && Object.keys(states).length > 0);
-  const hasUnit = Boolean(asNonEmptyString(metadata?.unit));
-  const writeable = metadata?.writeable === true;
-  const semanticDynamic = semantic.capabilityId !== null && semantic.confidence !== 'low';
-  if (writeable || hasStates || hasUnit || semanticDynamic) {
-    return false;
-  }
-  if ([112, 114, 115].includes(commandClass ?? -1)) {
-    return true;
-  }
-  return (
-    propertyText.includes('status') ||
-    propertyText.includes('manufacturer') ||
-    propertyText.includes('product') ||
-    propertyText.includes('firmware') ||
-    propertyText.includes('version') ||
-    propertyText.includes('protocol') ||
-    propertyText.includes('interview') ||
-    propertyText.includes('serial') ||
-    propertyText.includes('hardware')
-  );
-}
-
 function extractListIdentityFromDetail(detail: NodeDetail | undefined): {
   manufacturer: string | null;
   product: string | null;
@@ -998,13 +966,19 @@ function formatNodeValueLine(entry: NodeValueDetail): string {
   ]
     .filter((value) => value !== null)
     .join(' ');
-  const semanticTag = formatValueSemanticTag(annotateNodeValue(entry));
+  const semantic = annotateNodeValue(entry);
+  const detailBits = [
+    `id ${identifier}`,
+    metaBits ? `meta ${metaBits}` : null,
+    semantic.capabilityId
+      ? `maps ${semantic.capabilityId}${semantic.confidence ? ` (${semantic.confidence})` : ''}`
+      : null,
+    errors ? `errors ${errors}` : null,
+  ].filter((bit): bit is string => bit !== null);
 
   return [
-    `- ${identifier}`,
-    `  ${truncateValueText(label, 32)} = ${truncateValueText(mappedValueText + unit)}${
-      metaBits ? ` [${metaBits}]` : ''
-    } ${semanticTag}${errors ? ` ${errors}` : ''}`,
+    `- ${truncateValueText(label, 34)}: ${truncateValueText(mappedValueText + unit, 56)}`,
+    `  ${detailBits.join(' | ')}`,
   ].join('\n');
 }
 
@@ -1035,13 +1009,7 @@ function formatNodeValueCompactLine(entry: NodeValueDetail): string {
     metadata && typeof metadata.label === 'string' && metadata.label.trim().length > 0
       ? metadata.label.trim()
       : String(valueId.property);
-  const identifier = `CC ${valueId.commandClass} ep ${valueId.endpoint ?? 0} ${String(valueId.property)}${
-    valueId.propertyKey != null ? `/${String(valueId.propertyKey)}` : ''
-  }`;
-
-  return `- [static] ${identifier} ${truncateValueText(label, 24)} = ${truncateValueText(
-    mappedValueText + unit,
-  )}`;
+  return `- [static] ${truncateValueText(label, 28)}: ${truncateValueText(mappedValueText + unit, 48)}`;
 }
 
 function valueIdKey(entry: NodeValueDetail): string {
@@ -1166,8 +1134,10 @@ function renderPanelNodeDetail(
   const sortedValues = sortValuesByRelevance(values);
   const valuesExpanded = options.valuesExpanded === true;
   const valuesDisclosure = valuesExpanded ? '▼' : '▶';
-  const interactiveValues = sortedValues.filter((entry) => !isStaticLikeNodeValue(entry));
-  const staticValues = sortedValues.filter((entry) => isStaticLikeNodeValue(entry));
+  const interactiveValues = sortedValues.filter(
+    (entry) => classifyNodeValueGroup(entry) === 'interactive',
+  );
+  const staticValues = sortedValues.filter((entry) => classifyNodeValueGroup(entry) === 'static');
   const previewRows = (valuesExpanded ? interactiveValues : interactiveValues.slice(0, 3)).map(
     (entry) => formatNodeValueLine(entry),
   );

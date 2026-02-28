@@ -830,26 +830,25 @@ test('runPanelApp orders expanded values by relevance', async () => {
   assert.equal(expandedValuesFrame.includes('Static/Diagnostic values: 1'), true);
   assert.equal(
     expandedValuesFrame.includes(
-      'Switch = on (99) [number,rw] {cap:onoff dir:rw conf:high src:meta}',
+      'Switch: on (99)',
     ),
     true,
   );
   assert.equal(
     expandedValuesFrame.includes(
-      'Temperature = 21.4 C [number,r] {cap:measure_temperature dir:r conf:high src:meta}',
+      'Temperature: 21.4 C',
     ),
     true,
   );
-  assert.equal(expandedValuesFrame.includes('Status Flags = 3'), true);
+  assert.equal(expandedValuesFrame.includes('[static] Status Flags: 3'), true);
   assert.notEqual(expandedValuesFrame, undefined);
   assert.equal(
-    expandedValuesFrame.indexOf('Switch = on (99)') <
-      expandedValuesFrame.indexOf('Temperature = 21.4 C'),
+    expandedValuesFrame.indexOf('Switch: on (99)') < expandedValuesFrame.indexOf('Temperature: 21.4 C'),
     true,
   );
   assert.equal(
-    expandedValuesFrame.indexOf('Temperature = 21.4 C') <
-      expandedValuesFrame.indexOf('Status Flags = 3'),
+    expandedValuesFrame.indexOf('Temperature: 21.4 C') <
+      expandedValuesFrame.indexOf('[static] Status Flags: 3'),
     true,
   );
 });
@@ -1032,7 +1031,7 @@ test('runPanelApp can scroll past large neighbors block to values section', asyn
 
   const rendered = capture.text();
   assert.equal(rendered.includes('Values 1 (z)'), true);
-  assert.equal(rendered.includes('Switch = on (99)'), true);
+  assert.equal(rendered.includes('Switch: on (99)'), true);
 });
 
 test('runPanelApp can quit via ctrl+c keypress intent', async () => {
