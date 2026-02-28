@@ -474,7 +474,7 @@ function splitLines(value: string): string[] {
 }
 
 function formatDetailLinesForDisplay(lines: string[]): string {
-  const sectionHeadings = new Set(['Overview', 'Identity', 'Telemetry', 'Neighbors', 'Values']);
+  const headingPattern = /^(Identity|Telemetry|Neighbors|Values)\b/;
   const rendered: string[] = [];
   for (const line of lines) {
     const trimmed = line.trim();
@@ -482,8 +482,8 @@ function formatDetailLinesForDisplay(lines: string[]): string {
       rendered.push('');
       continue;
     }
-    if (sectionHeadings.has(trimmed)) {
-      rendered.push(`{bold}{cyan-fg}${trimmed}{/cyan-fg}{/bold}`);
+    if (headingPattern.test(trimmed)) {
+      rendered.push(`{bold}{inverse} ${trimmed} {/inverse}{/bold}`);
       rendered.push('{gray-fg}--------------------------------{/gray-fg}');
       continue;
     }
@@ -1132,6 +1132,13 @@ function renderPanelNodeDetail(
     neighborLookup: options.neighborLookup,
     lifelineRoute: detail.lifelineRoute,
   });
+  const neighborHeaderLine =
+    neighborLines[0]?.startsWith('Neighbors:') === true ? neighborLines[0] : null;
+  const neighborSectionTitle =
+    neighborHeaderLine === null
+      ? 'Neighbors'
+      : neighborHeaderLine.replace(/^Neighbors:\s*/, 'Neighbors ');
+  const neighborBodyLines = neighborHeaderLine ? neighborLines.slice(1) : neighborLines;
   const notificationLines = renderNotificationLines(detail.notificationEvents);
   const values = detail.values ?? [];
   const sortedValues = sortValuesByRelevance(values);
@@ -1144,11 +1151,11 @@ function renderPanelNodeDetail(
   const staticRows = (valuesExpanded ? staticValues : staticValues.slice(0, 2)).map((entry) =>
     formatNodeValueCompactLine(entry),
   );
+  const valuesSectionTitle = `Values ${values.length}${
+    values.length > 0 ? (valuesExpanded ? ' (press z to collapse)' : ' (press z to expand)') : ''
+  }`;
 
   return [
-    'Overview',
-    `Node ${detail.nodeId}`,
-    '',
     'Identity',
     `Name: ${name || '(unnamed)'}`,
     `Ready: ${ready}  Status: ${status}`,
@@ -1158,13 +1165,10 @@ function renderPanelNodeDetail(
     'Telemetry',
     ...notificationLines,
     '',
-    'Neighbors',
-    ...neighborLines,
+    neighborSectionTitle,
+    ...neighborBodyLines,
     '',
-    'Values',
-    `Values: ${values.length}${
-      values.length > 0 ? (valuesExpanded ? ' (press z to collapse)' : ' (press z to expand)') : ''
-    }`,
+    valuesSectionTitle,
     interactiveValues.length > 0
       ? valuesExpanded
         ? `Live/Control values: ${interactiveValues.length}`
@@ -1925,7 +1929,10 @@ export async function runPanelApp(
       rightAllLines.length > rightVisibleCapacity
         ? ` [${rightWindowStart}-${rightWindowEnd}/${rightAllLines.length}]`
         : '';
-    const rightTitle = `Detail${rightRange}`;
+    const rightTitle =
+      isNodesMode && currentNodeDetail
+        ? `Node ${currentNodeDetail.nodeId} Detail${rightRange}`
+        : `Detail${rightRange}`;
 
     const bottomAllLines = splitLines(bottomText);
     const bottomVisibleCapacity = Math.max(1, paneHeights.bottomContentHeight);
