@@ -483,6 +483,7 @@ function padOrTruncateText(value: string, width: number): string {
 
 function formatDetailLinesForDisplay(lines: string[], sectionWidth: number): string {
   const headingPattern = /^(Identity|Telemetry|Neighbors|Values)\b/;
+  const labelValuePattern = /^([A-Za-z][A-Za-z0-9 _/()\-]*):(.*)$/;
   const rendered: string[] = [];
   for (const line of lines) {
     const trimmed = line.trim();
@@ -498,6 +499,15 @@ function formatDetailLinesForDisplay(lines: string[], sectionWidth: number): str
     if (trimmed.startsWith('Static/Diagnostic values:')) {
       rendered.push(`{yellow-fg}${line}{/yellow-fg}`);
       continue;
+    }
+    if (!trimmed.startsWith('-')) {
+      const labelMatch = line.match(labelValuePattern);
+      if (labelMatch) {
+        const label = labelMatch[1];
+        const value = labelMatch[2];
+        rendered.push(`{bold}${label}:{/bold}${value}`);
+        continue;
+      }
     }
     if (trimmed.startsWith('- [static]')) {
       rendered.push(`{gray-fg}${line}{/gray-fg}`);
