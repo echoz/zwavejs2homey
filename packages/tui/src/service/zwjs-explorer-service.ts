@@ -68,7 +68,11 @@ export interface ZwjsExplorerService {
   listNodes(): Promise<NodeSummary[]>;
   getNodeDetail(
     nodeId: number,
-    options?: { includeValues?: IncludeValuesMode; maxValues?: number },
+    options?: {
+      includeValues?: IncludeValuesMode;
+      maxValues?: number;
+      includeLinkQuality?: boolean;
+    },
   ): Promise<NodeDetail>;
 }
 
@@ -78,6 +82,37 @@ interface CreateClientFn {
 
 interface ServiceDeps {
   createClient?: CreateClientFn;
+}
+
+function toIntegerArray(value: unknown): number[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is number => Number.isInteger(item) && item > 0);
+}
+
+function normalizeLifelineRouteValue(value: unknown): unknown {
+  if (!isObject(value)) return value;
+  const repeaters = toIntegerArray(value.repeaters);
+  const routeSpeed =
+    typeof value.routeSpeed === 'number' && Number.isFinite(value.routeSpeed)
+      ? value.routeSpeed
+      : undefined;
+  const normalized: Record<string, unknown> = {};
+  if (repeaters.length > 0) normalized.repeaters = repeaters;
+  if (routeSpeed !== undefined) normalized.routeSpeed = routeSpeed;
+  if (Object.keys(normalized).length > 0) {
+    return normalized;
+  }
+  return value;
+}
+
+function extractNodeLifelineRoute(result: unknown, nodeId: number): unknown {
+  if (!isObject(result)) return null;
+  const routes = isObject(result.routes)
+    ? (result.routes as Record<string, unknown>)
+    : (result as Record<string, unknown>);
+  const routeValue = routes[String(nodeId)];
+  if (routeValue === undefined) return null;
+  return normalizeLifelineRouteValue(routeValue);
 }
 
 export class ZwjsExplorerServiceImpl implements ZwjsExplorerService {
@@ -133,16 +168,22 @@ export class ZwjsExplorerServiceImpl implements ZwjsExplorerService {
 
   async getNodeDetail(
     nodeId: number,
-    options: { includeValues?: IncludeValuesMode; maxValues?: number } = {},
+    options: {
+      includeValues?: IncludeValuesMode;
+      maxValues?: number;
+      includeLinkQuality?: boolean;
+    } = {},
   ): Promise<NodeDetail> {
     const client = this.requireClient();
     const includeValues = options.includeValues ?? 'summary';
     const maxValues = options.maxValues ?? 200;
+    const includeLinkQuality = options.includeLinkQuality ?? true;
 
-    const [stateRes, neighborsRes, notifRes, definedRes] = await Promise.all([
+    const [stateRes, neighborsRes, notifRes, lifelineRes, definedRes] = await Promise.all([
       client.getNodeState(nodeId),
       client.getControllerNodeNeighbors(nodeId),
       client.getNodeSupportedNotificationEvents(nodeId),
+      includeLinkQuality ? client.getControllerKnownLifelineRoutes() : Promise.resolve(null),
       includeValues === 'none' ? Promise.resolve(null) : client.getNodeDefinedValueIds(nodeId),
     ]);
 
@@ -156,6 +197,12 @@ export class ZwjsExplorerServiceImpl implements ZwjsExplorerService {
       neighbors: neighborsRes.success
         ? unwrapNeighborsResult(neighborsRes.result)
         : { _error: neighborsRes.error },
+      lifelineRoute:
+        lifelineRes === null
+          ? undefined
+          : lifelineRes.success
+            ? extractNodeLifelineRoute(lifelineRes.result, nodeId)
+            : { _error: lifelineRes.error },
       notificationEvents: notifRes.success ? notifRes.result : { _error: notifRes.error },
     };
 

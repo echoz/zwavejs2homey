@@ -536,6 +536,12 @@ interface NeighborIdentity {
   product: string | null;
 }
 
+interface LifelineRouteSummary {
+  repeaters: number[];
+  routeSpeed?: number;
+  error?: string;
+}
+
 function stringifyCompact(value: unknown): string {
   try {
     if (typeof value === 'string') return value;
@@ -611,10 +617,64 @@ function parseNodeId(value: unknown): number | undefined {
   return undefined;
 }
 
+function parseLifelineRouteSummary(value: unknown): LifelineRouteSummary | null {
+  const record = asRecord(value);
+  if (!record) return null;
+  if (record._error !== undefined) {
+    return { repeaters: [], error: truncateValueText(stringifyCompact(record._error), 60) };
+  }
+  const repeaters = Array.isArray(record.repeaters)
+    ? record.repeaters
+        .map((item) => parseNodeId(item))
+        .filter((item): item is number => item !== undefined)
+    : [];
+  const routeSpeed =
+    typeof record.routeSpeed === 'number' && Number.isFinite(record.routeSpeed)
+      ? record.routeSpeed
+      : undefined;
+  return { repeaters, routeSpeed };
+}
+
+function formatRouteSpeed(value: number | undefined): string | null {
+  if (value === undefined) return null;
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)} Mbps`;
+  if (value >= 1000) return `${Math.round(value / 1000)} kbps`;
+  return `${value} bps`;
+}
+
+function formatLifelineRouteSummary(route: LifelineRouteSummary | null): string {
+  if (!route) return 'Lifeline route: unknown';
+  if (route.error) return `Lifeline route: unavailable (${route.error})`;
+  const speed = formatRouteSpeed(route.routeSpeed);
+  if (route.repeaters.length === 0) {
+    return `Lifeline route: direct${speed ? ` @ ${speed}` : ''}`;
+  }
+  return `Lifeline route: ${route.repeaters.join(' -> ')}${speed ? ` @ ${speed}` : ''}`;
+}
+
+function formatNeighborLinkQuality(
+  neighborId: number | undefined,
+  route: LifelineRouteSummary | null,
+): string {
+  if (!route) return 'link unknown';
+  if (route.error) return 'link unavailable';
+  const speed = formatRouteSpeed(route.routeSpeed);
+  if (neighborId === undefined) return 'link unknown';
+  if (route.repeaters.length === 0) return 'not-on-lifeline';
+  const hopIndex = route.repeaters.indexOf(neighborId);
+  if (hopIndex < 0) return 'not-on-lifeline';
+  return `lifeline hop ${hopIndex + 1}/${route.repeaters.length}${speed ? ` @ ${speed}` : ''}`;
+}
+
 function renderNeighborLines(
   neighbors: unknown,
-  options: { expanded: boolean; neighborLookup?: Map<number, NeighborIdentity> },
+  options: {
+    expanded: boolean;
+    neighborLookup?: Map<number, NeighborIdentity>;
+    lifelineRoute?: unknown;
+  },
 ): string[] {
+  const route = parseLifelineRouteSummary(options.lifelineRoute);
   if (Array.isArray(neighbors)) {
     const values = neighbors.map((value) => formatNeighborValue(value));
     if (!options.expanded) {
@@ -633,10 +693,12 @@ function renderNeighborLines(
       const name = summary.name ?? '(unnamed)';
       const manufacturer = summary.manufacturer ?? 'unknown';
       const product = summary.product ?? 'unknown';
-      return `- Node ${value} | ${name} | ${manufacturer} | ${product}`;
+      const linkQuality = formatNeighborLinkQuality(neighborId, route);
+      return `- Node ${value} | ${name} | ${manufacturer} | ${product} | ${linkQuality}`;
     });
     return [
       `Neighbors: ${values.length}${values.length > 0 ? ' (press n to collapse)' : ''}`,
+      formatLifelineRouteSummary(route),
       values.length > 0 ? 'Neighbor Nodes:' : 'Neighbor Nodes: (none)',
       ...rows,
       values.length > maxNeighborLines
@@ -825,6 +887,7 @@ function renderPanelNodeDetail(
   const neighborLines = renderNeighborLines(detail.neighbors, {
     expanded: options.neighborsExpanded === true,
     neighborLookup: options.neighborLookup,
+    lifelineRoute: detail.lifelineRoute,
   });
   const values = detail.values ?? [];
   const sortedValues = sortValuesByRelevance(values);
@@ -1154,6 +1217,7 @@ export async function runPanelApp(
           selectNode: false,
           includeValues: 'none',
           maxValues: 1,
+          includeLinkQuality: false,
         });
       } catch {
         // Best effort hydration only; keep rendering available info.

@@ -12,7 +12,11 @@ export interface ExplorerSessionChildPresenterLike {
   listNodes(): Promise<NodeSummary[]>;
   getNodeDetail(
     nodeId: number,
-    options?: { includeValues?: IncludeValuesMode; maxValues?: number },
+    options?: {
+      includeValues?: IncludeValuesMode;
+      maxValues?: number;
+      includeLinkQuality?: boolean;
+    },
   ): Promise<NodeDetail>;
 }
 
@@ -33,7 +37,11 @@ export class ExplorerSessionPresenter implements ExplorerSessionChildPresenterLi
 
   async getNodeDetail(
     nodeId: number,
-    options: { includeValues?: IncludeValuesMode; maxValues?: number } = {},
+    options: {
+      includeValues?: IncludeValuesMode;
+      maxValues?: number;
+      includeLinkQuality?: boolean;
+    } = {},
   ): Promise<NodeDetail> {
     return this.service.getNodeDetail(nodeId, options);
   }

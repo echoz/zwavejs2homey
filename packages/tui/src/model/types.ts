@@ -55,6 +55,7 @@ export interface NodeDetail {
   nodeId: number;
   state: Record<string, unknown> | null;
   neighbors: unknown;
+  lifelineRoute?: unknown;
   notificationEvents: unknown;
   values?: NodeValueDetail[];
 }

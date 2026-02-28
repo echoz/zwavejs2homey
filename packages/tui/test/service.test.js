@@ -48,6 +48,19 @@ function createFakeClient() {
     async getNodeSupportedNotificationEvents() {
       return { success: true, result: [] };
     },
+    async getControllerKnownLifelineRoutes() {
+      return {
+        success: true,
+        result: {
+          routes: {
+            2: {
+              repeaters: [1, 7],
+              routeSpeed: 40_000,
+            },
+          },
+        },
+      };
+    },
     async getNodeDefinedValueIds() {
       return {
         success: true,
@@ -95,6 +108,14 @@ test('ZwjsExplorerServiceImpl connects, lists nodes, shows details, and disconne
   assert.equal(detail.nodeId, 2);
   assert.equal(Array.isArray(detail.values), true);
   assert.equal(detail.values.length, 1);
+  assert.deepEqual(detail.lifelineRoute, { repeaters: [1, 7], routeSpeed: 40_000 });
+
+  const detailNoLink = await service.getNodeDetail(2, {
+    includeValues: 'none',
+    maxValues: 1,
+    includeLinkQuality: false,
+  });
+  assert.equal(detailNoLink.lifelineRoute, undefined);
 
   await service.disconnect();
   assert.equal(fakeClient.stopCalls, 1);

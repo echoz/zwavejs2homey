@@ -260,6 +260,7 @@ test('runPanelApp toggles neighbors in node detail and shows readable identity l
           productId: 8,
         },
         neighbors: [2, 5, 11],
+        lifelineRoute: { repeaters: [2, 5], routeSpeed: 40_000 },
         notificationEvents: [],
         values: [
           {
@@ -340,13 +341,27 @@ test('runPanelApp toggles neighbors in node detail and shows readable identity l
     true,
   );
   assert.equal(
+    output.writes.some((line) => line.includes('Lifeline route: 2 -> 5 @ 40 kbps')),
+    true,
+  );
+  assert.equal(
     output.writes.some(
-      (line) => line.includes('Neighbor Nodes:') && line.includes('Node 2 | Kitchen'),
+      (line) =>
+        line.includes('Neighbor Nodes:') &&
+        line.includes('Node 2 | Kitchen | Zooz | Plug | lifeline hop 1/2 @ 40 kbps'),
     ),
     true,
   );
   assert.equal(
-    output.writes.some((line) => line.includes('Node 5 | Office | Aeotec | Sensor')),
+    output.writes.some((line) =>
+      line.includes('Node 5 | Office | Aeotec | Sensor | lifeline hop 2/2 @ 40 kbps'),
+    ),
+    true,
+  );
+  assert.equal(
+    output.writes.some((line) =>
+      line.includes('Node 11 | Hallway | Inovelli | Light | not-on-lifeline'),
+    ),
     true,
   );
   assert.equal(
@@ -429,6 +444,7 @@ test('runPanelApp hydrates missing neighbor manufacturer/product from node detai
         nodeId,
         state: detailByNode[nodeId] ?? detailByNode[9],
         neighbors: nodeId === 9 ? [2, 5] : [],
+        lifelineRoute: nodeId === 9 ? { repeaters: [2], routeSpeed: 100_000 } : null,
         notificationEvents: [],
         values: [],
       };

@@ -113,7 +113,12 @@ export class ExplorerPresenter {
 
   async showNodeDetail(
     nodeId: number,
-    options: { selectNode?: boolean; includeValues?: IncludeValuesMode; maxValues?: number } = {},
+    options: {
+      selectNode?: boolean;
+      includeValues?: IncludeValuesMode;
+      maxValues?: number;
+      includeLinkQuality?: boolean;
+    } = {},
   ): Promise<NodeDetail> {
     this.requireReady();
     const config = this.requireSessionConfig();
@@ -125,6 +130,7 @@ export class ExplorerPresenter {
       const detail = await this.children.explorer.getNodeDetail(nodeId, {
         includeValues: options.includeValues ?? config.includeValues,
         maxValues: options.maxValues ?? config.maxValues,
+        includeLinkQuality: options.includeLinkQuality,
       });
       this.state.nodeDetailCache[nodeId] = detail;
       this.logInfo(`Loaded node ${nodeId} detail`);
