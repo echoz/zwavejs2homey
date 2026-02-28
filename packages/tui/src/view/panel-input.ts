@@ -20,6 +20,8 @@ export type PanelIntent =
   | { type: 'status' }
   | { type: 'log' }
   | { type: 'cancel-operation' }
+  | { type: 'toggle-neighbors' }
+  | { type: 'toggle-values' }
   | { type: 'help' };
 
 interface KeyLike {
@@ -64,6 +66,8 @@ export function parsePanelKeypress(char: string, key: KeyLike = {}): PanelIntent
   if (name === 's' || token === 's') return { type: 'status' };
   if (name === 'l' || token === 'l') return { type: 'log' };
   if (name === 'c' || token === 'c') return { type: 'cancel-operation' };
+  if (name === 'n' || token === 'n') return { type: 'toggle-neighbors' };
+  if (name === 'z' || token === 'z') return { type: 'toggle-values' };
   if (name === 'h' || name === '?' || char === '?') return { type: 'help' };
   return { type: 'noop' };
 }

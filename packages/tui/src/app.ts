@@ -6,6 +6,8 @@ import type {
   ConnectedSessionConfig,
   IncludeValuesMode,
   NodeDetail,
+  NodeSummary,
+  NodeValueDetail,
   RuleDetail,
   SessionConfig,
   SimulationSummary,
@@ -104,6 +106,8 @@ export function getUsageText(): string {
     '  arrows/j/k move | pgup/pgdn page | home/end jump | / filter | tab switch pane',
     '  enter open | r refresh',
     '  i inspect | v validate | m simulate | d simulate --dry-run',
+    '  n toggle neighbors in node detail',
+    '  z toggle values in node detail',
     '  p scaffold preview | W scaffold write (confirm x2) | A manifest add (confirm x2)',
     '  s status | l log | c cancel op | h help | q quit',
     '',
@@ -461,6 +465,8 @@ function renderPanelHelp(mode: SessionConfig['mode']): string {
     'Keys: up/down move | pgup/pgdn page | home/end jump | / filter | tab switch pane',
     'enter open | r refresh',
     'i inspect | v validate | m simulate | d simulate(dry-run) | p scaffold-preview',
+    'n toggle neighbors in node detail',
+    'z toggle values in node detail',
     'W scaffold-write (confirmed) | A manifest-add (confirmed)',
     's status | l log | c cancel operation | h help | q quit',
     sourceHint,
@@ -534,38 +540,316 @@ function stringifyCompact(value: unknown): string {
   }
 }
 
-function renderPanelNodeDetail(detail: NodeDetail): string {
+function truncateValueText(value: string, maxLength = 44): string {
+  if (value.length <= maxLength) return value;
+  return `${value.slice(0, maxLength - 1)}~`;
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
+function asNonEmptyString(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function asReadableId(value: unknown): string | undefined {
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  return asNonEmptyString(value);
+}
+
+function formatManufacturerLabel(state: Record<string, unknown>): string {
+  const deviceConfig = asRecord(state.deviceConfig);
+  const name = asNonEmptyString(state.manufacturer) ?? asNonEmptyString(deviceConfig?.manufacturer);
+  const manufacturerId = asReadableId(state.manufacturerId);
+  if (name && manufacturerId) {
+    return name.includes(manufacturerId) ? name : `${name} (id ${manufacturerId})`;
+  }
+  return name ?? manufacturerId ?? '';
+}
+
+function formatProductLabel(state: Record<string, unknown>): string {
+  const deviceConfig = asRecord(state.deviceConfig);
+  const name =
+    asNonEmptyString(state.product) ??
+    asNonEmptyString(state.productLabel) ??
+    asNonEmptyString(deviceConfig?.label);
+  const productType = asReadableId(state.productType);
+  const productId = asReadableId(state.productId);
+  let idLabel = '';
+  if (productType && productId) {
+    idLabel = `type ${productType}, id ${productId}`;
+  } else if (productType) {
+    idLabel = `type ${productType}`;
+  } else if (productId) {
+    idLabel = `id ${productId}`;
+  }
+  if (name && idLabel) return `${name} (${idLabel})`;
+  return name ?? idLabel;
+}
+
+function formatNeighborValue(value: unknown): string {
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  if (typeof value === 'string') return value;
+  return stringifyCompact(value);
+}
+
+function parseNodeId(value: unknown): number | undefined {
+  if (typeof value === 'number' && Number.isInteger(value) && value > 0) return value;
+  if (typeof value === 'string' && value.trim().length > 0) {
+    const parsed = Number(value.trim());
+    if (Number.isInteger(parsed) && parsed > 0) return parsed;
+  }
+  return undefined;
+}
+
+function renderNeighborLines(
+  neighbors: unknown,
+  options: { expanded: boolean; neighborLookup?: Map<number, NodeSummary> },
+): string[] {
+  if (Array.isArray(neighbors)) {
+    const values = neighbors.map((value) => formatNeighborValue(value));
+    if (!options.expanded) {
+      return [`Neighbors: ${values.length}${values.length > 0 ? ' (press n to expand)' : ''}`];
+    }
+    const maxNeighborLines = 24;
+    const rows = values.slice(0, maxNeighborLines).map((value, index) => {
+      const neighborId = parseNodeId(neighbors[index]);
+      if (neighborId === undefined) {
+        return `- Node ${value}`;
+      }
+      const summary = options.neighborLookup?.get(neighborId);
+      if (!summary) {
+        return `- Node ${value}`;
+      }
+      const name = summary.name ?? '(unnamed)';
+      const manufacturer = summary.manufacturer ?? '-';
+      const product = summary.product ?? '-';
+      return `- Node ${value} | ${name} | ${manufacturer} | ${product}`;
+    });
+    return [
+      `Neighbors: ${values.length}${values.length > 0 ? ' (press n to collapse)' : ''}`,
+      values.length > 0 ? 'Neighbor Nodes:' : 'Neighbor Nodes: (none)',
+      ...rows,
+      values.length > maxNeighborLines
+        ? `... ${values.length - maxNeighborLines} more neighbors`
+        : null,
+    ].filter((line): line is string => line !== null);
+  }
+  const record = asRecord(neighbors);
+  if (record && record._error !== undefined) {
+    return [`Neighbors: error ${truncateValueText(stringifyCompact(record._error), 96)}`];
+  }
+  return [`Neighbors: ${truncateValueText(stringifyCompact(neighbors), 96)}`];
+}
+
+function formatReadableValue(value: unknown): string {
+  if (value === undefined) return '<no value>';
+  if (value === null) return 'null';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  return stringifyCompact(value);
+}
+
+function formatNodeValueLine(entry: NodeValueDetail): string {
+  if (entry._error !== undefined) {
+    return `- value-error: ${truncateValueText(stringifyCompact(entry._error))}`;
+  }
+
+  const valueId = entry.valueId;
+  if (!valueId) return '- value: <missing valueId>';
+
+  const metadata = asRecord(entry.metadata);
+  const states = asRecord(metadata?.states);
+  const rawValueText = formatReadableValue(entry.value);
+  const mappedValue =
+    states && entry.value !== undefined
+      ? (states[String(entry.value)] ?? states[String(Number(entry.value))])
+      : undefined;
+  const mappedValueText =
+    typeof mappedValue === 'string' && mappedValue.trim().length > 0
+      ? `${mappedValue} (${rawValueText})`
+      : rawValueText;
+  const unit =
+    metadata && typeof metadata.unit === 'string' && metadata.unit.trim().length > 0
+      ? ` ${metadata.unit}`
+      : '';
+  const label =
+    metadata && typeof metadata.label === 'string' && metadata.label.trim().length > 0
+      ? metadata.label.trim()
+      : String(valueId.property);
+  const type =
+    metadata && typeof metadata.type === 'string' && metadata.type.trim().length > 0
+      ? metadata.type.trim()
+      : undefined;
+  const permissions = [
+    metadata?.readable === true ? 'r' : '',
+    metadata?.writeable === true ? 'w' : '',
+  ]
+    .join('')
+    .trim();
+  const metaBits = [type, permissions].filter((item) => item && item.length > 0).join(',');
+  const identifier = `CC ${valueId.commandClass} ep ${valueId.endpoint ?? 0} ${String(valueId.property)}${
+    valueId.propertyKey != null ? `/${String(valueId.propertyKey)}` : ''
+  }`;
+
+  const errors = [
+    entry.metadataError
+      ? `meta-err=${truncateValueText(stringifyCompact(entry.metadataError), 28)}`
+      : null,
+    entry.valueError
+      ? `val-err=${truncateValueText(stringifyCompact(entry.valueError), 28)}`
+      : null,
+    entry.timestampError
+      ? `ts-err=${truncateValueText(stringifyCompact(entry.timestampError), 28)}`
+      : null,
+  ]
+    .filter((value) => value !== null)
+    .join(' ');
+
+  return [
+    `- ${identifier}`,
+    `  ${truncateValueText(label, 32)} = ${truncateValueText(mappedValueText + unit)}${
+      metaBits ? ` [${metaBits}]` : ''
+    }${errors ? ` ${errors}` : ''}`,
+  ].join('\n');
+}
+
+function valueIdKey(entry: NodeValueDetail): string {
+  if (!entry.valueId) return 'missing';
+  const valueId = entry.valueId;
+  return [
+    String(valueId.commandClass),
+    String(valueId.endpoint ?? 0),
+    String(valueId.property),
+    valueId.propertyKey == null ? '' : String(valueId.propertyKey),
+  ].join(':');
+}
+
+function toCommandClassNumber(commandClass: unknown): number | undefined {
+  if (typeof commandClass === 'number' && Number.isInteger(commandClass)) return commandClass;
+  if (typeof commandClass === 'string') {
+    const trimmed = commandClass.trim();
+    if (trimmed.length > 0) {
+      const parsed = Number(trimmed);
+      if (Number.isInteger(parsed)) return parsed;
+    }
+  }
+  return undefined;
+}
+
+function scoreCommandClass(commandClass: number | undefined): number {
+  switch (commandClass) {
+    case 37:
+    case 38:
+      return 30; // primary actuator values
+    case 48:
+    case 49:
+    case 50:
+      return 24; // primary sensor/meter values
+    case 113:
+      return 16; // notifications
+    case 91:
+      return 14; // central scene
+    case 128:
+      return 12; // battery
+    case 114:
+    case 115:
+      return -8; // manufacturer/powerlevel diagnostics
+    case 112:
+      return -4; // configuration often secondary
+    default:
+      return 0;
+  }
+}
+
+function scoreNodeValue(entry: NodeValueDetail): number {
+  if (entry._error !== undefined) return -1000;
+  const metadata = asRecord(entry.metadata);
+  const states = asRecord(metadata?.states);
+  const propertyText = `${entry.valueId?.property ?? ''} ${entry.valueId?.propertyKey ?? ''}`
+    .trim()
+    .toLowerCase();
+
+  let score = 0;
+  if (entry.value !== undefined) score += 8;
+  if (asNonEmptyString(metadata?.label)) score += 14;
+  if (asNonEmptyString(metadata?.description)) score += 3;
+  if (states && Object.keys(states).length > 0) score += 20;
+  if (metadata?.writeable === true) score += 20;
+  if (metadata?.readable === true) score += 6;
+  if (asNonEmptyString(metadata?.unit)) score += 6;
+  score += scoreCommandClass(toCommandClassNumber(entry.valueId?.commandClass));
+
+  if (
+    propertyText.includes('interview') ||
+    propertyText.includes('status') ||
+    propertyText.includes('health') ||
+    propertyText.includes('last')
+  ) {
+    score -= 10;
+  }
+  return score;
+}
+
+function sortValuesByRelevance(values: NodeValueDetail[]): NodeValueDetail[] {
+  return [...values].sort((a, b) => {
+    const scoreDelta = scoreNodeValue(b) - scoreNodeValue(a);
+    if (scoreDelta !== 0) return scoreDelta;
+    return valueIdKey(a).localeCompare(valueIdKey(b));
+  });
+}
+
+function renderPanelNodeDetail(
+  detail: NodeDetail,
+  options: {
+    neighborsExpanded?: boolean;
+    valuesExpanded?: boolean;
+    neighborLookup?: Map<number, NodeSummary>;
+  } = {},
+): string {
   const state = detail.state ?? {};
   const ready = String(state.ready ?? '');
   const status = String(state.status ?? '');
-  const manufacturer = String(state.manufacturer ?? state.manufacturerId ?? '');
-  const product = String(state.product ?? state.productId ?? '');
+  const manufacturer = formatManufacturerLabel(state);
+  const product = formatProductLabel(state);
   const name = String(state.name ?? '');
-  const values = detail.values ?? [];
-  const previewRows = values.slice(0, 12).map((entry) => {
-    if (entry._error !== undefined) return `- value-error: ${stringifyCompact(entry._error)}`;
-    const valueId = entry.valueId;
-    if (!valueId) return '- value: <missing valueId>';
-    const valuePreview =
-      entry.value !== undefined
-        ? stringifyCompact(entry.value)
-        : entry.metadata && typeof entry.metadata === 'object' && 'type' in entry.metadata
-          ? `meta:${stringifyCompact((entry.metadata as Record<string, unknown>).type)}`
-          : '';
-    return `- CC ${valueId.commandClass} ep ${valueId.endpoint ?? 0} ${String(valueId.property)}${valueId.propertyKey != null ? `/${String(valueId.propertyKey)}` : ''} ${valuePreview}`;
+  const neighborLines = renderNeighborLines(detail.neighbors, {
+    expanded: options.neighborsExpanded === true,
+    neighborLookup: options.neighborLookup,
   });
+  const values = detail.values ?? [];
+  const sortedValues = sortValuesByRelevance(values);
+  const valuesExpanded = options.valuesExpanded === true;
+  const previewLimit = valuesExpanded ? 12 : 3;
+  const previewRows = sortedValues
+    .slice(0, previewLimit)
+    .map((entry) => formatNodeValueLine(entry));
 
   return [
     `Node ${detail.nodeId}`,
     `Name: ${name}`,
     `Ready: ${ready}  Status: ${status}`,
-    `Manufacturer: ${manufacturer}  Product: ${product}`,
-    `Neighbors: ${stringifyCompact(detail.neighbors)}`,
+    `Manufacturer: ${manufacturer}`,
+    `Product: ${product}`,
+    ...neighborLines,
     `Notifications: ${stringifyCompact(detail.notificationEvents)}`,
-    `Values: ${values.length}`,
+    `Values: ${values.length}${
+      values.length > 0 ? (valuesExpanded ? ' (press z to collapse)' : ' (press z to expand)') : ''
+    }`,
+    values.length > 0
+      ? valuesExpanded
+        ? 'Value Preview (top relevant first):'
+        : 'Top Values (top relevant first):'
+      : null,
     ...previewRows,
-    values.length > previewRows.length
-      ? `... ${values.length - previewRows.length} more values`
+    sortedValues.length > previewRows.length
+      ? valuesExpanded
+        ? `... ${sortedValues.length - previewRows.length} more values`
+        : `... ${sortedValues.length - previewRows.length} more values (press z to expand)`
       : null,
   ]
     .filter((line) => line !== null)
@@ -684,6 +968,9 @@ export async function runPanelApp(
   let filterMode = false;
   let filterQuery = '';
   let rightText = '';
+  let currentNodeDetail: NodeDetail | null = null;
+  let neighborsExpanded = false;
+  let valuesExpanded = false;
   let bottomText = renderPanelHelp(config.mode);
   let isClosing = false;
   let pendingConfirm: PendingConfirm | null = null;
@@ -805,6 +1092,35 @@ export async function runPanelApp(
     return entry.ruleIndex;
   }
 
+  function updateNodeDetail(detail: NodeDetail): void {
+    const selectedNodeChanged = currentNodeDetail?.nodeId !== detail.nodeId;
+    currentNodeDetail = detail;
+    if (selectedNodeChanged) {
+      neighborsExpanded = false;
+      valuesExpanded = false;
+    }
+    const neighborLookup = isNodesMode
+      ? new Map(nodesPresenter.getState().explorer.items.map((item) => [item.nodeId, item]))
+      : undefined;
+    rightText = renderPanelNodeDetail(detail, {
+      neighborsExpanded,
+      valuesExpanded,
+      neighborLookup,
+    });
+  }
+
+  function rerenderCurrentNodeDetail(): void {
+    if (!currentNodeDetail || !isNodesMode) return;
+    const neighborLookup = new Map(
+      nodesPresenter.getState().explorer.items.map((item) => [item.nodeId, item]),
+    );
+    rightText = renderPanelNodeDetail(currentNodeDetail, {
+      neighborsExpanded,
+      valuesExpanded,
+      neighborLookup,
+    });
+  }
+
   function clearExpiredPendingConfirm(): void {
     if (!pendingConfirm) return;
     if (pendingConfirm.expiresAt <= Date.now()) {
@@ -881,7 +1197,7 @@ export async function runPanelApp(
         throw new Error('No node selected');
       }
       const detail = await nodesPresenter.showNodeDetail(nodeId);
-      rightText = renderPanelNodeDetail(detail);
+      updateNodeDetail(detail);
       return nodesPresenter.selectSignatureFromNode(nodeId);
     }
     const ruleIndex = getSelectedRuleIndex();
@@ -926,7 +1242,7 @@ export async function runPanelApp(
         : '';
     const footer = filterMode
       ? `Filter mode: type to search | backspace delete | enter apply | esc apply${statusSuffix}`
-      : `q quit | arrows move | pgup/pgdn page | / filter | enter open | i/v/m loop | c cancel${statusSuffix}`;
+      : `q quit | arrows move | pgup/pgdn page | / filter | enter open | i/v/m loop | n neighbors | z values | c cancel${statusSuffix}`;
 
     const frame = renderPanelFrame({
       width,
@@ -993,10 +1309,14 @@ export async function runPanelApp(
       if (isNodesMode) {
         const nodeId = getSelectedNodeId();
         if (!nodeId) throw new Error('No node selected');
-        rightText = renderPanelNodeDetail(await nodesPresenter.showNodeDetail(nodeId));
+        const detail = await nodesPresenter.showNodeDetail(nodeId);
+        updateNodeDetail(detail);
       } else {
         const ruleIndex = getSelectedRuleIndex();
         if (!ruleIndex) throw new Error('No rule selected');
+        currentNodeDetail = null;
+        neighborsExpanded = false;
+        valuesExpanded = false;
         rightText = renderPanelRuleDetail(rulesPresenter.showRuleDetail(ruleIndex));
       }
       return;
@@ -1004,11 +1324,62 @@ export async function runPanelApp(
     if (intent.type === 'refresh') {
       if (isNodesMode) {
         await nodesPresenter.refreshNodes();
+        if (currentNodeDetail) {
+          const stillExists = nodesPresenter
+            .getState()
+            .explorer.items.some((node) => node.nodeId === currentNodeDetail?.nodeId);
+          if (!stillExists) {
+            currentNodeDetail = null;
+            neighborsExpanded = false;
+            valuesExpanded = false;
+            rightText = '';
+          } else {
+            rerenderCurrentNodeDetail();
+          }
+        }
       } else {
         rulesPresenter.refreshRules();
       }
       pendingConfirm = null;
       bottomText = `Refreshed ${getListEntries().length} item(s).`;
+      return;
+    }
+    if (intent.type === 'toggle-neighbors') {
+      if (!isNodesMode) {
+        bottomText = 'Neighbors view is only available in nodes mode.';
+        return;
+      }
+      if (!currentNodeDetail) {
+        const nodeId = getSelectedNodeId();
+        if (!nodeId) {
+          bottomText = 'Open a node first.';
+          return;
+        }
+        const detail = await nodesPresenter.showNodeDetail(nodeId);
+        updateNodeDetail(detail);
+      }
+      neighborsExpanded = !neighborsExpanded;
+      rerenderCurrentNodeDetail();
+      bottomText = neighborsExpanded ? 'Expanded neighbors.' : 'Collapsed neighbors.';
+      return;
+    }
+    if (intent.type === 'toggle-values') {
+      if (!isNodesMode) {
+        bottomText = 'Values view is only available in nodes mode.';
+        return;
+      }
+      if (!currentNodeDetail) {
+        const nodeId = getSelectedNodeId();
+        if (!nodeId) {
+          bottomText = 'Open a node first.';
+          return;
+        }
+        const detail = await nodesPresenter.showNodeDetail(nodeId);
+        updateNodeDetail(detail);
+      }
+      valuesExpanded = !valuesExpanded;
+      rerenderCurrentNodeDetail();
+      bottomText = valuesExpanded ? 'Expanded values.' : 'Collapsed values.';
       return;
     }
     if (intent.type === 'inspect') {
@@ -1115,7 +1486,7 @@ export async function runPanelApp(
     if (isNodesMode) {
       await nodesPresenter.connect(config as ConnectedSessionConfig);
       if (config.startNode !== undefined) {
-        rightText = renderPanelNodeDetail(await nodesPresenter.showNodeDetail(config.startNode));
+        updateNodeDetail(await nodesPresenter.showNodeDetail(config.startNode));
       }
     } else {
       rulesPresenter.initialize(config);

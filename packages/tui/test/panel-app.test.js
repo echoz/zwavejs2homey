@@ -214,6 +214,270 @@ test('runPanelApp supports interactive filtering in list pane', async () => {
   );
 });
 
+test('runPanelApp toggles neighbors in node detail and shows readable identity labels', async () => {
+  const input = new FakeInput();
+  const output = new FakeOutput();
+  output.columns = 140;
+  const presenter = {
+    async connect() {},
+    async disconnect() {},
+    getState() {
+      return {
+        explorer: {
+          items: [
+            {
+              nodeId: 9,
+              name: 'Living Room',
+              manufacturer: 'Zooz',
+              product: 'ZEN32 Scene Controller',
+            },
+            { nodeId: 2, name: 'Kitchen', manufacturer: 'Zooz', product: 'Plug' },
+            { nodeId: 5, name: 'Office', manufacturer: 'Aeotec', product: 'Sensor' },
+            { nodeId: 11, name: 'Hallway', manufacturer: 'Inovelli', product: 'Light' },
+          ],
+        },
+      };
+    },
+    getStatusSnapshot() {
+      return {
+        mode: 'nodes',
+        connectionState: 'ready',
+        selectedSignature: undefined,
+        cachedNodeCount: 1,
+      };
+    },
+    async showNodeDetail(nodeId) {
+      return {
+        nodeId,
+        state: {
+          name: 'Living Room',
+          ready: true,
+          status: 'alive',
+          manufacturer: 'Zooz',
+          manufacturerId: 634,
+          product: 'ZEN32 Scene Controller',
+          productType: 4,
+          productId: 8,
+        },
+        neighbors: [2, 5, 11],
+        notificationEvents: [],
+        values: [
+          {
+            valueId: { commandClass: 49, endpoint: 0, property: 'Air temperature' },
+            metadata: {
+              label: 'Temperature',
+              readable: true,
+              writeable: false,
+              type: 'number',
+              unit: 'C',
+            },
+            value: 22.7,
+          },
+          {
+            valueId: { commandClass: 38, endpoint: 0, property: 'targetValue' },
+            metadata: {
+              label: 'Switch',
+              readable: true,
+              writeable: true,
+              type: 'number',
+              states: { 0: 'off', 99: 'on' },
+            },
+            value: 99,
+          },
+          {
+            valueId: { commandClass: 112, endpoint: 0, property: 'statusFlags' },
+            metadata: {
+              label: 'Status Flags',
+              readable: true,
+              writeable: false,
+              type: 'number',
+            },
+            value: 3,
+          },
+        ],
+      };
+    },
+  };
+
+  const runPromise = runPanelApp(
+    {
+      mode: 'nodes',
+      uiMode: 'panel',
+      manifestFile: 'rules/manifest.json',
+      url: 'ws://127.0.0.1:3000',
+      schemaVersion: 0,
+      includeValues: 'summary',
+      maxValues: 100,
+    },
+    { log: () => {}, error: () => {} },
+    { presenter, stdin: input, stdout: output },
+  );
+
+  setTimeout(() => {
+    input.emit('keypress', '', { name: 'return' });
+    input.emit('keypress', 'n', { name: 'n' });
+    input.emit('keypress', 'n', { name: 'n' });
+    input.emit('keypress', 'z', { name: 'z' });
+    input.emit('keypress', 'q', {});
+  }, 5);
+
+  await runPromise;
+
+  assert.equal(
+    output.writes.some((line) => line.includes('Manufacturer: Zooz (id 634)')),
+    true,
+  );
+  assert.equal(
+    output.writes.some((line) => line.includes('Product: ZEN32 Scene Controller (type 4, id 8)')),
+    true,
+  );
+  assert.equal(
+    output.writes.some((line) => line.includes('Neighbors: 3 (press n to expand)')),
+    true,
+  );
+  assert.equal(
+    output.writes.some((line) => line.includes('Neighbors: 3 (press n to collapse)')),
+    true,
+  );
+  assert.equal(
+    output.writes.some(
+      (line) => line.includes('Neighbor Nodes:') && line.includes('Node 2 | Kitchen'),
+    ),
+    true,
+  );
+  assert.equal(
+    output.writes.some((line) => line.includes('Node 5 | Office | Aeotec | Sensor')),
+    true,
+  );
+  assert.equal(
+    output.writes.some((line) => line.includes('Values: 3 (press z to expand)')),
+    true,
+  );
+  assert.equal(
+    output.writes.some((line) => line.includes('Values: 3 (press z to collapse)')),
+    true,
+  );
+});
+
+test('runPanelApp orders expanded values by relevance', async () => {
+  const input = new FakeInput();
+  const output = new FakeOutput();
+  output.columns = 140;
+  output.rows = 42;
+  const presenter = {
+    async connect() {},
+    async disconnect() {},
+    getState() {
+      return {
+        explorer: {
+          items: [{ nodeId: 3, name: 'Kitchen', manufacturer: 'Zooz', product: 'Dimmer' }],
+        },
+      };
+    },
+    getStatusSnapshot() {
+      return {
+        mode: 'nodes',
+        connectionState: 'ready',
+        selectedSignature: undefined,
+        cachedNodeCount: 1,
+      };
+    },
+    async showNodeDetail(nodeId) {
+      return {
+        nodeId,
+        state: {
+          name: 'Kitchen',
+          ready: true,
+          status: 'alive',
+          manufacturer: 'Zooz',
+          manufacturerId: 634,
+          product: 'Dimmer',
+          productType: 4,
+          productId: 2,
+        },
+        neighbors: [],
+        notificationEvents: [],
+        values: [
+          {
+            valueId: { commandClass: 112, endpoint: 0, property: 'statusFlags' },
+            metadata: {
+              label: 'Status Flags',
+              readable: true,
+              writeable: false,
+              type: 'number',
+            },
+            value: 3,
+          },
+          {
+            valueId: { commandClass: 49, endpoint: 0, property: 'Air temperature' },
+            metadata: {
+              label: 'Temperature',
+              readable: true,
+              writeable: false,
+              type: 'number',
+              unit: 'C',
+            },
+            value: 21.4,
+          },
+          {
+            valueId: { commandClass: 38, endpoint: 0, property: 'targetValue' },
+            metadata: {
+              label: 'Switch',
+              readable: true,
+              writeable: true,
+              type: 'number',
+              states: { 0: 'off', 99: 'on' },
+            },
+            value: 99,
+          },
+        ],
+      };
+    },
+  };
+
+  const runPromise = runPanelApp(
+    {
+      mode: 'nodes',
+      uiMode: 'panel',
+      manifestFile: 'rules/manifest.json',
+      url: 'ws://127.0.0.1:3000',
+      schemaVersion: 0,
+      includeValues: 'summary',
+      maxValues: 100,
+    },
+    { log: () => {}, error: () => {} },
+    { presenter, stdin: input, stdout: output },
+  );
+
+  setTimeout(() => {
+    input.emit('keypress', '', { name: 'return' });
+    input.emit('keypress', 'z', { name: 'z' });
+    input.emit('keypress', 'q', {});
+  }, 5);
+
+  await runPromise;
+
+  const expandedValuesFrame = output.writes.find(
+    (line) =>
+      line.includes('Values: 3 (press z to collapse)') &&
+      line.includes('Value Preview (top relevant first):') &&
+      line.includes('Switch = on (99)') &&
+      line.includes('Temperature = 21.4 C') &&
+      line.includes('Status Flags = 3'),
+  );
+  assert.notEqual(expandedValuesFrame, undefined);
+  assert.equal(
+    expandedValuesFrame.indexOf('Switch = on (99)') <
+      expandedValuesFrame.indexOf('Temperature = 21.4 C'),
+    true,
+  );
+  assert.equal(
+    expandedValuesFrame.indexOf('Temperature = 21.4 C') <
+      expandedValuesFrame.indexOf('Status Flags = 3'),
+    true,
+  );
+});
+
 test('runPanelApp can quit via raw data fallback', async () => {
   const input = new FakeInput();
   const output = new FakeOutput();
