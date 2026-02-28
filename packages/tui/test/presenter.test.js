@@ -169,6 +169,74 @@ test('ExplorerPresenter can derive signature, inspect and validate selected sign
   assert.equal(validate.signature, '29:66:2');
 });
 
+test('ExplorerPresenter scaffold infers homey class from inspect summary unless overridden', async () => {
+  let lastOptions;
+  const base = createChildren();
+  const children = {
+    ...base,
+    curation: {
+      ...base.curation,
+      async inspectSignature(_session, signature) {
+        return {
+          signature,
+          totalNodes: 3,
+          outcomeCounts: { curated: 1, generic: 2 },
+          nodes: [
+            {
+              nodeId: 1,
+              name: 'A',
+              homeyClass: 'light',
+              outcome: 'generic',
+              confidence: 'generic',
+              reviewReason: null,
+            },
+            {
+              nodeId: 2,
+              name: 'B',
+              homeyClass: 'light',
+              outcome: 'generic',
+              confidence: 'generic',
+              reviewReason: null,
+            },
+            {
+              nodeId: 3,
+              name: 'C',
+              homeyClass: 'other',
+              outcome: 'curated',
+              confidence: 'curated',
+              reviewReason: null,
+            },
+          ],
+        };
+      },
+      scaffoldFromSignature(signature, options) {
+        lastOptions = options;
+        return {
+          signature,
+          fileHint: 'product-29-66-2.json',
+          generatedAt: new Date().toISOString(),
+          bundle: { schemaVersion: 'product-rules/v1', rules: [] },
+        };
+      },
+    },
+  };
+  const presenter = new ExplorerPresenter(children);
+  await presenter.connect({
+    url: 'ws://127.0.0.1:3000',
+    schemaVersion: 0,
+    includeValues: 'summary',
+    maxValues: 200,
+  });
+  presenter.selectSignature('29:66:2');
+  await presenter.inspectSelectedSignature();
+
+  presenter.createScaffoldFromSignature({});
+  assert.equal(lastOptions.homeyClass, 'light');
+
+  presenter.createScaffoldFromSignature({ homeyClass: 'socket' });
+  assert.equal(lastOptions.homeyClass, 'socket');
+});
+
 test('ExplorerPresenter scaffold draft + write flow', async () => {
   const writes = [];
   const manifests = [];

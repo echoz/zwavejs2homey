@@ -25,7 +25,11 @@ test('parseShellCommand parses signature/inspect/validate commands', () => {
 test('parseShellCommand parses scaffold/log commands', () => {
   assert.deepEqual(parseShellCommand('scaffold preview --product-name Plug'), {
     ok: true,
-    command: { type: 'scaffold-preview', productName: 'Plug' },
+    command: { type: 'scaffold-preview', productName: 'Plug', homeyClass: undefined },
+  });
+  assert.deepEqual(parseShellCommand('scaffold preview --homey-class light'), {
+    ok: true,
+    command: { type: 'scaffold-preview', productName: undefined, homeyClass: 'light' },
   });
   assert.deepEqual(parseShellCommand('scaffold write out.json --force'), {
     ok: true,

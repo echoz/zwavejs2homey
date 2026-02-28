@@ -271,6 +271,7 @@ export async function runApp(
         if (command.type === 'scaffold-preview') {
           const draft = presenter.createScaffoldFromSignature({
             productName: command.productName,
+            homeyClass: command.homeyClass,
           });
           io.log(renderScaffoldDraft(draft));
           continue;

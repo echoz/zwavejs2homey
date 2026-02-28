@@ -7,7 +7,7 @@ export type ShellCommand =
   | { type: 'signature'; signature?: string; fromNodeId?: number }
   | { type: 'inspect'; manifestFile?: string }
   | { type: 'validate'; manifestFile?: string }
-  | { type: 'scaffold-preview'; productName?: string }
+  | { type: 'scaffold-preview'; productName?: string; homeyClass?: string }
   | { type: 'scaffold-write'; filePath?: string; force: boolean }
   | { type: 'manifest-add'; manifestFile?: string; filePath?: string; force: boolean }
   | { type: 'status' }
@@ -112,7 +112,8 @@ export function parseShellCommand(
       const sub = rest[0];
       if (sub === 'preview') {
         const productName = parseFlagValue(rest.slice(1), '--product-name');
-        return { ok: true, command: { type: 'scaffold-preview', productName } };
+        const homeyClass = parseFlagValue(rest.slice(1), '--homey-class');
+        return { ok: true, command: { type: 'scaffold-preview', productName, homeyClass } };
       }
       if (sub === 'write') {
         const filePath = rest.find((token, index) => index > 0 && !token.startsWith('--'));

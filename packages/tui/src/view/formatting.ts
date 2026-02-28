@@ -39,7 +39,7 @@ export function renderShellHelp(): string {
     '  signature [triple] [--from-node <id>]  Set/derive selected signature',
     '  inspect [--manifest <file>]            Inspect selected signature',
     '  validate [--manifest <file>]           Validate selected signature',
-    '  scaffold preview [--product-name "..."] Preview scaffold draft from selected signature',
+    '  scaffold preview [--product-name "..."] [--homey-class <class>] Preview scaffold draft from selected signature',
     '  scaffold write [filePath] [--force]     Write scaffold draft file',
     '  manifest add [filePath] [--manifest <file>] [--force]  Add product rule to manifest',
     '  status                                  Show current workspace snapshot',

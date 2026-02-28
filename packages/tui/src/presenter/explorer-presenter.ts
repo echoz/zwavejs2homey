@@ -201,16 +201,19 @@ export class ExplorerPresenter {
     signature?: string;
     productName?: string;
     ruleIdPrefix?: string;
+    homeyClass?: string;
   }): ScaffoldDraft {
     const signature = options.signature ?? this.state.selectedSignature;
     if (!signature) {
       throw new Error('No signature selected. Use "signature ..." first.');
     }
+    const inferredHomeyClass = options.homeyClass ?? this.inferHomeyClassForSignature(signature);
 
     try {
       const draft = this.children.curation.scaffoldFromSignature(signature, {
         productName: options.productName,
         ruleIdPrefix: options.ruleIdPrefix,
+        homeyClass: inferredHomeyClass,
       });
       this.state.scaffoldDraft = draft;
       this.logInfo(`Prepared scaffold draft for ${signature}`);
@@ -300,6 +303,23 @@ export class ExplorerPresenter {
       throw new Error('No signature selected. Use "signature ..." first.');
     }
     return this.state.selectedSignature;
+  }
+
+  private inferHomeyClassForSignature(signature: string): string | undefined {
+    const summary = this.state.inspectSummary;
+    if (!summary || summary.signature !== signature) return undefined;
+    const counts = new Map<string, number>();
+    for (const node of summary.nodes) {
+      const homeyClass = typeof node.homeyClass === 'string' ? node.homeyClass.trim() : '';
+      if (!homeyClass) continue;
+      counts.set(homeyClass, (counts.get(homeyClass) ?? 0) + 1);
+    }
+    if (counts.size === 0) return undefined;
+    const ranked = [...counts.entries()].sort((a, b) => {
+      if (a[1] !== b[1]) return b[1] - a[1];
+      return a[0].localeCompare(b[0]);
+    });
+    return ranked.find(([homeyClass]) => homeyClass !== 'other')?.[0] ?? ranked[0][0];
   }
 
   private logInfo(message: string): void {

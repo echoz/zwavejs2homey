@@ -519,32 +519,6 @@ function mapOutcomes(results) {
   return outcomes;
 }
 
-function mapToSortedObjectByCountDesc(counter) {
-  return Object.fromEntries(
-    [...counter.entries()].sort((a, b) => {
-      if (a[1] !== b[1]) return b[1] - a[1];
-      return a[0].localeCompare(b[0]);
-    }),
-  );
-}
-
-function parseReasonNumericSuffix(reason, prefix) {
-  if (typeof reason !== 'string' || !reason.startsWith(prefix)) return undefined;
-  const raw = reason.slice(prefix.length);
-  const parsed = Number(raw);
-  return Number.isFinite(parsed) ? parsed : undefined;
-}
-
-function productTripleSignature(deviceFacts) {
-  const manufacturerId = Number(deviceFacts?.manufacturerId);
-  const productType = Number(deviceFacts?.productType);
-  const productId = Number(deviceFacts?.productId);
-  if (![manufacturerId, productType, productId].every((value) => Number.isInteger(value))) {
-    return undefined;
-  }
-  return `${manufacturerId}:${productType}:${productId}`;
-}
-
 function summarizeValidationResults(results, top) {
   const reviewReasonCounts = new Map();
   const unmatchedByRule = new Map();

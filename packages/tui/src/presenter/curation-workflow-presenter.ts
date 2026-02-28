@@ -22,7 +22,7 @@ export interface CurationWorkflowChildPresenterLike {
   ): Promise<ValidationSummary>;
   scaffoldFromSignature(
     signature: string,
-    options?: { productName?: string; ruleIdPrefix?: string },
+    options?: { productName?: string; ruleIdPrefix?: string; homeyClass?: string },
   ): ScaffoldDraft;
   writeScaffoldDraft(
     filePath: string,
@@ -64,7 +64,7 @@ export class CurationWorkflowPresenter implements CurationWorkflowChildPresenter
 
   scaffoldFromSignature(
     signature: string,
-    options: { productName?: string; ruleIdPrefix?: string } = {},
+    options: { productName?: string; ruleIdPrefix?: string; homeyClass?: string } = {},
   ): ScaffoldDraft {
     return this.curationService.scaffoldFromSignature(signature, options);
   }

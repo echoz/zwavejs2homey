@@ -99,7 +99,7 @@ export interface CompilerCurationService {
   ): Promise<ValidationSummary>;
   scaffoldFromSignature(
     signature: string,
-    options?: { productName?: string; ruleIdPrefix?: string },
+    options?: { productName?: string; ruleIdPrefix?: string; homeyClass?: string },
   ): ScaffoldDraft;
 }
 
@@ -229,11 +229,12 @@ export class CompilerCurationServiceImpl implements CompilerCurationService {
 
   scaffoldFromSignature(
     signature: string,
-    options: { productName?: string; ruleIdPrefix?: string } = {},
+    options: { productName?: string; ruleIdPrefix?: string; homeyClass?: string } = {},
   ): ScaffoldDraft {
     const triple = parseSignatureTriple(signature);
     const safeSignature = signature.replace(/:/g, '-');
     const ruleIdPrefix = options.ruleIdPrefix ?? 'product';
+    const homeyClass = options.homeyClass?.trim() || 'other';
     const driverTemplateId = `${ruleIdPrefix}-${safeSignature}`.toLowerCase();
     const ruleId = `${ruleIdPrefix}-${safeSignature}-identity`.toLowerCase();
 
@@ -258,7 +259,7 @@ export class CompilerCurationServiceImpl implements CompilerCurationService {
               {
                 type: 'device-identity',
                 mode: 'replace',
-                homeyClass: 'other',
+                homeyClass,
                 driverTemplateId,
               },
             ],
