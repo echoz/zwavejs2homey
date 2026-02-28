@@ -1,4 +1,3 @@
-import { emitKeypressEvents } from 'node:readline';
 import { createInterface } from 'node:readline/promises';
 import { stdin as defaultStdin, stdout as defaultStdout } from 'node:process';
 import blessed from 'neo-blessed';
@@ -33,7 +32,6 @@ import {
 } from './service/workspace-file-service';
 import { ZwjsExplorerServiceImpl, type ZwjsExplorerService } from './service/zwjs-explorer-service';
 import { parseShellCommand } from './view/command-parser';
-import { parsePanelKeypress, type PanelIntent } from './view/panel-input';
 import {
   annotateNodeValue,
   formatValueSemanticTag,
@@ -225,7 +223,6 @@ interface RunAppDeps {
   stdout?: NodeJS.WriteStream;
   panelOperationTimeoutMs?: number;
   onPanelRender?: (snapshot: PanelRenderSnapshot) => void;
-  panelKeypressSource?: 'auto' | 'input' | 'screen';
 }
 
 export interface PanelRenderSnapshot {
@@ -494,8 +491,8 @@ function renderPanelHelp(mode: SessionConfig['mode']): string {
   ].join('\n');
 }
 
-function formatListRow(index: number, label: string, selected: boolean): string {
-  return `${selected ? '>' : ' '} ${String(index).padStart(3, ' ')} ${label}`;
+function formatListRow(index: number, label: string): string {
+  return `${String(index).padStart(3, ' ')} ${label}`;
 }
 
 function truncateLabel(value: string, max = 64): string {
@@ -548,20 +545,6 @@ function getVisibleWindow<T>(
   return {
     start,
     visible: items.slice(start, start + capacity),
-  };
-}
-
-function getOffsetWindow<T>(
-  items: T[],
-  start: number,
-  capacity: number,
-): { start: number; visible: T[]; maxStart: number } {
-  const maxStart = Math.max(0, items.length - capacity);
-  const clampedStart = Math.min(maxStart, Math.max(0, start));
-  return {
-    start: clampedStart,
-    visible: items.slice(clampedStart, clampedStart + capacity),
-    maxStart,
   };
 }
 
@@ -1080,6 +1063,71 @@ function renderPanelSimulationSummary(summary: SimulationSummary): string {
     .join('\n');
 }
 
+type PanelIntent =
+  | { type: 'noop' }
+  | { type: 'quit' }
+  | { type: 'move-up' }
+  | { type: 'move-down' }
+  | { type: 'move-page-up' }
+  | { type: 'move-page-down' }
+  | { type: 'move-first' }
+  | { type: 'move-last' }
+  | { type: 'switch-pane' }
+  | { type: 'start-filter' }
+  | { type: 'open' }
+  | { type: 'refresh' }
+  | { type: 'inspect' }
+  | { type: 'validate' }
+  | { type: 'simulate'; dryRun: boolean }
+  | { type: 'scaffold-preview' }
+  | { type: 'scaffold-write' }
+  | { type: 'manifest-add' }
+  | { type: 'status' }
+  | { type: 'log' }
+  | { type: 'cancel-operation' }
+  | { type: 'toggle-neighbors' }
+  | { type: 'toggle-values' }
+  | { type: 'toggle-bottom-pane-size' }
+  | { type: 'help' };
+
+function keypressToPanelIntent(
+  char: string,
+  key: { name?: string; ctrl?: boolean; sequence?: string },
+): PanelIntent {
+  const name = (key.name ?? '').toLowerCase();
+  const sequence = (key.sequence ?? '').toLowerCase();
+  const charLower = (char ?? '').toLowerCase();
+  const token = charLower || sequence || name;
+
+  if (key.ctrl && (name === 'c' || charLower === 'c')) return { type: 'quit' };
+  if (name === 'q' || token === 'q' || name === 'escape') return { type: 'quit' };
+  if (name === 'up' || token === 'k') return { type: 'move-up' };
+  if (name === 'down' || token === 'j') return { type: 'move-down' };
+  if (name === 'pageup') return { type: 'move-page-up' };
+  if (name === 'pagedown') return { type: 'move-page-down' };
+  if (name === 'home') return { type: 'move-first' };
+  if (name === 'end') return { type: 'move-last' };
+  if (name === 'tab') return { type: 'switch-pane' };
+  if (token === '/' || name === 'slash') return { type: 'start-filter' };
+  if (name === 'return' || name === 'enter') return { type: 'open' };
+  if (name === 'r' || token === 'r') return { type: 'refresh' };
+  if (name === 'i' || token === 'i') return { type: 'inspect' };
+  if (name === 'v' || token === 'v') return { type: 'validate' };
+  if (name === 'm' || token === 'm') return { type: 'simulate', dryRun: false };
+  if (name === 'd' || token === 'd') return { type: 'simulate', dryRun: true };
+  if (name === 'p' || token === 'p') return { type: 'scaffold-preview' };
+  if (char === 'W') return { type: 'scaffold-write' };
+  if (char === 'A') return { type: 'manifest-add' };
+  if (name === 's' || token === 's') return { type: 'status' };
+  if (name === 'l' || token === 'l') return { type: 'log' };
+  if (name === 'c' || token === 'c') return { type: 'cancel-operation' };
+  if (name === 'n' || token === 'n') return { type: 'toggle-neighbors' };
+  if (name === 'z' || token === 'z') return { type: 'toggle-values' };
+  if (name === 'b' || token === 'b') return { type: 'toggle-bottom-pane-size' };
+  if (name === 'h' || name === '?' || char === '?') return { type: 'help' };
+  return { type: 'noop' };
+}
+
 type PanelFocus = 'left' | 'right' | 'bottom';
 type ConfirmAction = 'scaffold-write' | 'manifest-add';
 
@@ -1145,12 +1193,6 @@ export async function runPanelApp(
 
   const OPERATION_TIMEOUT_MS = Math.max(1, deps.panelOperationTimeoutMs ?? 45_000);
   const WRITE_CONFIRM_WINDOW_MS = 6_000;
-  const keypressSource =
-    deps.panelKeypressSource === 'input' || deps.panelKeypressSource === 'screen'
-      ? deps.panelKeypressSource
-      : deps.stdin
-        ? 'input'
-        : 'screen';
 
   const screen = blessed.screen({
     smartCSR: true,
@@ -1171,7 +1213,7 @@ export async function runPanelApp(
     height: 1,
     tags: false,
   });
-  const leftPane = blessed.box({
+  const leftPane = blessed.list({
     parent: screen,
     top: 1,
     left: 0,
@@ -1179,7 +1221,16 @@ export async function runPanelApp(
     height: '60%',
     border: 'line',
     tags: false,
-    scrollable: false,
+    scrollable: true,
+    alwaysScroll: true,
+    mouse: true,
+    keys: false,
+    vi: false,
+    style: {
+      selected: {
+        inverse: true,
+      },
+    },
   });
   const rightPane = blessed.box({
     parent: screen,
@@ -1189,7 +1240,8 @@ export async function runPanelApp(
     height: '60%',
     border: 'line',
     tags: false,
-    scrollable: false,
+    scrollable: true,
+    alwaysScroll: true,
   });
   const bottomPane = blessed.box({
     parent: screen,
@@ -1199,7 +1251,8 @@ export async function runPanelApp(
     height: '40%',
     tags: false,
     border: 'line',
-    scrollable: false,
+    scrollable: true,
+    alwaysScroll: true,
   });
   const footerPane = blessed.box({
     parent: screen,
@@ -1662,9 +1715,8 @@ export async function runPanelApp(
     const totalItems = entries.length;
     const listCapacity = getLeftPaneCapacity(height, bottomCompact);
     const windowed = getVisibleWindow(entries, selectedIndex, listCapacity);
-    const listLines = windowed.visible.map((entry, visibleIndex) =>
-      formatListRow(entry.rowId, entry.label, windowed.start + visibleIndex === selectedIndex),
-    );
+    const listItems = entries.map((entry) => formatListRow(entry.rowId, entry.label));
+    const listLines = windowed.visible.map((entry) => formatListRow(entry.rowId, entry.label));
     const rangeSuffix =
       totalItems > listCapacity
         ? ` [${windowed.start + 1}-${windowed.start + windowed.visible.length}/${totalItems}]`
@@ -1675,24 +1727,26 @@ export async function runPanelApp(
     const leftTitle = `${isNodesMode ? 'Nodes' : 'Rules'}${rangeSuffix}${filterSuffix}`;
 
     const rightAllLines = splitLines(rightText);
-    const rightWindow = getOffsetWindow(rightAllLines, rightScroll, paneHeights.topContentHeight);
-    rightScroll = rightWindow.start;
+    const rightVisibleCapacity = Math.max(1, paneHeights.topContentHeight);
+    const rightMaxScroll = Math.max(0, rightAllLines.length - rightVisibleCapacity);
+    rightScroll = Math.min(rightMaxScroll, Math.max(0, rightScroll));
+    const rightWindowStart = rightAllLines.length > 0 ? rightScroll + 1 : 0;
+    const rightWindowEnd = Math.min(rightAllLines.length, rightScroll + rightVisibleCapacity);
     const rightRange =
-      rightAllLines.length > paneHeights.topContentHeight
-        ? ` [${rightWindow.start + 1}-${rightWindow.start + rightWindow.visible.length}/${rightAllLines.length}]`
+      rightAllLines.length > rightVisibleCapacity
+        ? ` [${rightWindowStart}-${rightWindowEnd}/${rightAllLines.length}]`
         : '';
     const rightTitle = `${isNodesMode ? 'Node Detail' : 'Rule Detail'}${rightRange}`;
 
     const bottomAllLines = splitLines(bottomText);
-    const bottomWindow = getOffsetWindow(
-      bottomAllLines,
-      bottomScroll,
-      paneHeights.bottomContentHeight,
-    );
-    bottomScroll = bottomWindow.start;
+    const bottomVisibleCapacity = Math.max(1, paneHeights.bottomContentHeight);
+    const bottomMaxScroll = Math.max(0, bottomAllLines.length - bottomVisibleCapacity);
+    bottomScroll = Math.min(bottomMaxScroll, Math.max(0, bottomScroll));
+    const bottomWindowStart = bottomAllLines.length > 0 ? bottomScroll + 1 : 0;
+    const bottomWindowEnd = Math.min(bottomAllLines.length, bottomScroll + bottomVisibleCapacity);
     const bottomRange =
-      bottomAllLines.length > paneHeights.bottomContentHeight
-        ? ` [${bottomWindow.start + 1}-${bottomWindow.start + bottomWindow.visible.length}/${bottomAllLines.length}]`
+      bottomAllLines.length > bottomVisibleCapacity
+        ? ` [${bottomWindowStart}-${bottomWindowEnd}/${bottomAllLines.length}]`
         : '';
     const bottomTitle = bottomCompact ? '' : `Output / Run${bottomRange}`;
 
@@ -1718,13 +1772,24 @@ export async function runPanelApp(
     headerPane.setContent(header);
     footerPane.setContent(footer);
     leftPane.setLabel(` ${leftTitle} `);
-    leftPane.setContent(listLines.join('\n'));
+    leftPane.setItems(listItems);
+    if (entries.length > 0) {
+      leftPane.select(selectedIndex);
+    }
     rightPane.setLabel(` ${rightTitle} `);
-    rightPane.setContent(rightWindow.visible.join('\n'));
+    rightPane.setContent(rightAllLines.join('\n'));
+    rightPane.setScroll(rightScroll);
     if (!bottomCompact && bottomTitle) {
       bottomPane.setLabel(` ${bottomTitle} `);
     }
-    bottomPane.setContent(bottomWindow.visible.join('\n'));
+    if (bottomCompact) {
+      const compactLine = bottomAllLines[bottomScroll] ?? '';
+      bottomPane.setContent(compactLine);
+      bottomPane.setScroll(0);
+    } else {
+      bottomPane.setContent(bottomAllLines.join('\n'));
+      bottomPane.setScroll(bottomScroll);
+    }
 
     deps.onPanelRender?.({
       header,
@@ -1732,9 +1797,11 @@ export async function runPanelApp(
       leftTitle,
       leftLines: listLines,
       rightTitle,
-      rightLines: rightWindow.visible,
+      rightLines: rightAllLines.slice(rightScroll, rightScroll + rightVisibleCapacity),
       bottomTitle,
-      bottomLines: bottomWindow.visible,
+      bottomLines: bottomCompact
+        ? [bottomAllLines[bottomScroll] ?? '']
+        : bottomAllLines.slice(bottomScroll, bottomScroll + bottomVisibleCapacity),
       focusedPane,
       bottomCompact,
     });
@@ -2041,7 +2108,6 @@ export async function runPanelApp(
     }
     clampSelection();
 
-    emitKeypressEvents(input);
     if (input.isTTY && typeof input.setRawMode === 'function') {
       input.setRawMode(true);
     }
@@ -2077,7 +2143,7 @@ export async function runPanelApp(
         char: string,
         key: { name?: string; ctrl?: boolean; sequence?: string },
       ) => {
-        const parsedIntent = parsePanelKeypress(char, key);
+        const parsedIntent = keypressToPanelIntent(char, key);
         if (!filterMode && parsedIntent.type === 'start-filter') {
           filterMode = true;
           setBottomPaneText(
@@ -2088,6 +2154,10 @@ export async function runPanelApp(
         }
         if (filterMode) {
           const name = (key.name ?? '').toLowerCase();
+          if (key.ctrl && name === 'c') {
+            queueIntent({ type: 'quit' });
+            return;
+          }
           if (name === 'escape') {
             filterMode = false;
             setBottomPaneText(
@@ -2142,11 +2212,7 @@ export async function runPanelApp(
 
       const cleanup = () => {
         screen.off('resize', onResize);
-        if (keypressSource === 'screen') {
-          screen.off('keypress', onKeypress);
-        } else {
-          input.off('keypress', onKeypress);
-        }
+        screen.off('keypress', onKeypress);
         if (input.isTTY && typeof input.setRawMode === 'function') {
           input.setRawMode(false);
         }
@@ -2157,11 +2223,7 @@ export async function runPanelApp(
         output.write('\n');
       };
 
-      if (keypressSource === 'screen') {
-        screen.on('keypress', onKeypress);
-      } else {
-        input.on('keypress', onKeypress);
-      }
+      screen.on('keypress', onKeypress);
       screen.on('resize', onResize);
     });
   } finally {

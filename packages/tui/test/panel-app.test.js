@@ -92,6 +92,32 @@ function createPanelDeps(presenter, input, output, extra = {}) {
   };
 }
 
+const keyToData = {
+  up: '\u001b[A',
+  down: '\u001b[B',
+  pageup: '\u001b[5~',
+  pagedown: '\u001b[6~',
+  home: '\u001b[H',
+  end: '\u001b[F',
+  return: '\r',
+  enter: '\r',
+  tab: '\t',
+  backspace: '\u007f',
+  escape: '\u001b',
+  ctrl_c: '\u0003',
+};
+
+function emitInputKey(input, token) {
+  const value = keyToData[token] ?? token;
+  input.emit('data', value);
+}
+
+function emitInputKeys(input, tokens) {
+  for (const token of tokens) {
+    emitInputKey(input, token);
+  }
+}
+
 test('runPanelApp renders panel UI and exits on q', async () => {
   const input = new FakeInput();
   const output = new FakeOutput();
@@ -140,8 +166,7 @@ test('runPanelApp renders panel UI and exits on q', async () => {
   );
 
   setTimeout(() => {
-    input.emit('keypress', '', { name: 'h' });
-    input.emit('keypress', 'q', {});
+    emitInputKeys(input, ['h', 'q']);
   }, 5);
 
   await runPromise;
@@ -200,9 +225,9 @@ test('runPanelApp scrolls list viewport when selection moves beyond visible wind
 
   setTimeout(() => {
     for (let i = 0; i < 24; i += 1) {
-      input.emit('keypress', '', { name: 'down' });
+      emitInputKey(input, 'down');
     }
-    input.emit('keypress', 'q', {});
+    emitInputKey(input, 'q');
   }, 5);
 
   await runPromise;
@@ -255,11 +280,7 @@ test('runPanelApp supports interactive filtering in list pane', async () => {
   );
 
   setTimeout(() => {
-    input.emit('keypress', '/', { name: 'slash' });
-    input.emit('keypress', 'o', {});
-    input.emit('keypress', 'f', {});
-    input.emit('keypress', '', { name: 'return' });
-    input.emit('keypress', 'q', {});
+    emitInputKeys(input, ['/', 'o', 'f', 'return', 'q']);
   }, 5);
 
   await runPromise;
@@ -308,8 +329,7 @@ test('runPanelApp toggles bottom pane between status-bar and full mode', async (
   );
 
   setTimeout(() => {
-    input.emit('keypress', 'b', { name: 'b' });
-    input.emit('keypress', 'q', {});
+    emitInputKeys(input, ['b', 'q']);
   }, 5);
 
   await runPromise;
@@ -398,7 +418,7 @@ test('runPanelApp hydrates visible list identity without opening node detail', a
   );
 
   setTimeout(() => {
-    input.emit('keypress', 'q', {});
+    emitInputKey(input, 'q');
   }, 40);
 
   await runPromise;
@@ -510,11 +530,7 @@ test('runPanelApp toggles neighbors in node detail and shows readable identity l
   );
 
   setTimeout(() => {
-    input.emit('keypress', '', { name: 'return' });
-    input.emit('keypress', 'n', { name: 'n' });
-    input.emit('keypress', 'n', { name: 'n' });
-    input.emit('keypress', 'z', { name: 'z' });
-    input.emit('keypress', 'q', {});
+    emitInputKeys(input, ['return', 'n', 'n', 'z', 'q']);
   }, 5);
 
   await runPromise;
@@ -634,9 +650,7 @@ test('runPanelApp hydrates missing neighbor manufacturer/product from node detai
   );
 
   setTimeout(() => {
-    input.emit('keypress', '', { name: 'return' });
-    input.emit('keypress', 'n', { name: 'n' });
-    input.emit('keypress', 'q', {});
+    emitInputKeys(input, ['return', 'n', 'q']);
   }, 5);
 
   await runPromise;
@@ -738,9 +752,7 @@ test('runPanelApp orders expanded values by relevance', async () => {
   );
 
   setTimeout(() => {
-    input.emit('keypress', '', { name: 'return' });
-    input.emit('keypress', 'z', { name: 'z' });
-    input.emit('keypress', 'q', {});
+    emitInputKeys(input, ['return', 'z', 'q']);
   }, 5);
 
   await runPromise;
@@ -845,11 +857,7 @@ test('runPanelApp scrolls right pane when focused on node detail', async () => {
   );
 
   setTimeout(() => {
-    input.emit('keypress', '', { name: 'return' });
-    input.emit('keypress', 'z', { name: 'z' });
-    input.emit('keypress', '', { name: 'tab' });
-    input.emit('keypress', '', { name: 'pagedown' });
-    input.emit('keypress', 'q', {});
+    emitInputKeys(input, ['return', 'z', 'tab', 'pagedown', 'q']);
   }, 5);
 
   await runPromise;
@@ -905,7 +913,7 @@ test('runPanelApp can quit via ctrl+c keypress intent', async () => {
   );
 
   setTimeout(() => {
-    input.emit('keypress', '', { ctrl: true, name: 'c' });
+    emitInputKey(input, 'ctrl_c');
   }, 5);
 
   await runPromise;
@@ -987,12 +995,7 @@ test('runPanelApp requires double confirmation for write actions', async () => {
   );
 
   setTimeout(() => {
-    input.emit('keypress', 'p', {});
-    input.emit('keypress', 'W', {});
-    input.emit('keypress', 'W', {});
-    input.emit('keypress', 'A', {});
-    input.emit('keypress', 'A', {});
-    input.emit('keypress', 'q', {});
+    emitInputKeys(input, ['p', 'W', 'W', 'A', 'A', 'q']);
   }, 5);
 
   await runPromise;
@@ -1077,13 +1080,13 @@ test('runPanelApp supports cancelling long-running operation', async () => {
   );
 
   setTimeout(() => {
-    input.emit('keypress', 'm', {});
+    emitInputKey(input, 'm');
   }, 5);
   setTimeout(() => {
-    input.emit('keypress', 'c', {});
+    emitInputKey(input, 'c');
   }, 40);
   setTimeout(() => {
-    input.emit('keypress', 'q', {});
+    emitInputKey(input, 'q');
   }, 80);
 
   await runPromise;
@@ -1148,10 +1151,10 @@ test('runPanelApp reports timeout for long-running operation', async () => {
   );
 
   setTimeout(() => {
-    input.emit('keypress', 'm', {});
+    emitInputKey(input, 'm');
   }, 5);
   setTimeout(() => {
-    input.emit('keypress', 'q', {});
+    emitInputKey(input, 'q');
   }, 80);
 
   await runPromise;

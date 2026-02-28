@@ -17,6 +17,8 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
   - migrated panel rendering fully to `neo-blessed` widgets/layout
   - removed custom `panel-layout` renderer path and raw-data fallback quit path
   - updated panel tests to assert render snapshots (renderer-agnostic) while keeping behavior coverage
+  - removed standalone panel key parser module and now route panel actions from `neo-blessed` keypress events directly
+  - switched panel list/detail/bottom panes to native widget scrolling/selection behavior
 
 1. Completed Phase 2 HA import foundation:
    - `discovery.py` subset extractor in `packages/compiler`
