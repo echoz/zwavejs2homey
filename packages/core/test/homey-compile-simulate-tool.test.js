@@ -2,10 +2,10 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 async function loadLib() {
-  return import('../../../tools/homey-compile-loop-lib.mjs');
+  return import('../../../tools/homey-compile-simulate-lib.mjs');
 }
 
-test('compiler loop parseCliArgs validates signature source and loop options', async () => {
+test('compiler simulate parseCliArgs validates signature source and simulate options', async () => {
   const { parseCliArgs } = await loadLib();
 
   assert.equal(parseCliArgs([]).ok, false);
@@ -61,8 +61,8 @@ test('compiler loop parseCliArgs validates signature source and loop options', a
   assert.equal(parsedDiff.command.candidatePolicy, 'pressure');
 });
 
-test('runLoopCommand runs inspect + validate with explicit signature and default manifest fallback', async () => {
-  const { parseCliArgs, runLoopCommand, formatLoopOutput } = await loadLib();
+test('runSimulationCommand runs inspect + validate with explicit signature and default manifest fallback', async () => {
+  const { parseCliArgs, runSimulationCommand, formatSimulationOutput } = await loadLib();
   const parsed = parseCliArgs(['--url', 'ws://x', '--all-nodes', '--signature', '29:66:2']);
   assert.equal(parsed.ok, true);
 
@@ -71,7 +71,7 @@ test('runLoopCommand runs inspect + validate with explicit signature and default
   let inspectRunCount = 0;
   let validateRunCount = 0;
 
-  const result = await runLoopCommand(
+  const result = await runSimulationCommand(
     parsed.command,
     { log: () => {} },
     {
@@ -123,13 +123,13 @@ test('runLoopCommand runs inspect + validate with explicit signature and default
   assert.equal(result.inspect.skipped, false);
   assert.equal(result.validate.gatePassed, true);
   assert.equal(result.validate.reviewNodes, 1);
-  assert.match(formatLoopOutput(result, 'summary'), /Signature: 29:66:2/);
-  assert.match(formatLoopOutput(result, 'markdown'), /# Compiler Loop/);
-  assert.doesNotThrow(() => JSON.parse(formatLoopOutput(result, 'json')));
+  assert.match(formatSimulationOutput(result, 'summary'), /Signature: 29:66:2/);
+  assert.match(formatSimulationOutput(result, 'markdown'), /# Compiler Simulation/);
+  assert.doesNotThrow(() => JSON.parse(formatSimulationOutput(result, 'json')));
 });
 
-test('runLoopCommand resolves signature from backlog and supports --skip-inspect', async () => {
-  const { parseCliArgs, runLoopCommand } = await loadLib();
+test('runSimulationCommand resolves signature from backlog and supports --skip-inspect', async () => {
+  const { parseCliArgs, runSimulationCommand } = await loadLib();
   const parsed = parseCliArgs([
     '--url',
     'ws://x',
@@ -148,7 +148,7 @@ test('runLoopCommand resolves signature from backlog and supports --skip-inspect
   const validateParseCalls = [];
   const backlogCalls = [];
 
-  const result = await runLoopCommand(
+  const result = await runSimulationCommand(
     parsed.command,
     { log: () => {} },
     {
@@ -189,8 +189,8 @@ test('runLoopCommand resolves signature from backlog and supports --skip-inspect
   assert.equal(inspectRunCount, 0);
 });
 
-test('runLoopCommand dry-run resolves and validates commands without executing inspect/validate', async () => {
-  const { parseCliArgs, runLoopCommand } = await loadLib();
+test('runSimulationCommand dry-run resolves and validates commands without executing inspect/validate', async () => {
+  const { parseCliArgs, runSimulationCommand } = await loadLib();
   const parsed = parseCliArgs([
     '--url',
     'ws://x',
@@ -207,7 +207,7 @@ test('runLoopCommand dry-run resolves and validates commands without executing i
   let validateParseCount = 0;
   const logs = [];
 
-  const result = await runLoopCommand(
+  const result = await runSimulationCommand(
     parsed.command,
     { log: (line) => logs.push(line) },
     {

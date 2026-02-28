@@ -459,12 +459,16 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - rewrote `plan/tui-explorer-curation-spec.md` to reset MVP scope (dual roots + no backlog workflow + simulation-first curation)
     - rewrote `plan/tui-implementation-plan.md` with locked section ordering (4A/4B core CLI first, then TUI sections)
     - updated roadmap/current-focus to track reset execution instead of prior slice-complete state
-    - updated architecture/readme notes to mark backlog/loop flows as legacy pending cutover to `compiler:simulate`
+    - updated architecture/readme notes to mark backlog tooling as legacy and document the upcoming simulation-first flow
+96. Completed Section 4A cutover part 1 (`compiler:simulate` rename):
+    - added new `compiler:simulate` CLI command and renamed loop library/wrapper to `homey-compile-simulate*.mjs`
+    - removed `compiler:loop` npm script and loop tool files
+    - updated backlog next command hints to emit `compiler:simulate` guidance
+    - migrated loop-tool regression coverage to `homey-compile-simulate-tool.test.js`
 
 ## Next Tasks
 
 1. Execute Section 4A (core CLI cutover):
-   - introduce `compiler:simulate` as the canonical single-signature orchestration command
    - remove backlog command family and backlog-driven workflow flags
 2. Execute Section 4B (tests/docs/help migration):
    - migrate loop/backlog references to simulate-centric guidance

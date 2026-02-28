@@ -26,7 +26,7 @@ const DIFF_ONLY_FILTERS = new Set([
 ]);
 const NEXT_FALLBACK_MODES = new Set(['summary', 'none']);
 const NEXT_CANDIDATE_POLICIES = new Set(['curation', 'pressure']);
-const LOOP_FORMATS = new Set([
+const SIMULATE_FORMATS = new Set([
   'summary',
   'list',
   'markdown',
@@ -121,7 +121,7 @@ function ensureRulesSourceArgs(argv) {
 export function getUsageText() {
   return [
     'Usage:',
-    '  homey-compile-loop --url ws://host:port (--all-nodes | --node <id>)',
+    '  homey-compile-simulate --url ws://host:port (--all-nodes | --node <id>)',
     '                     [--manifest-file <manifest.json> | --rules-file <rules.json> [--rules-file ...] | --compiled-file <compiled.json>]',
     '                     [--catalog-file <catalog.json>]',
     '                     [--token ...] [--schema-version 0]',
@@ -137,7 +137,7 @@ export function getUsageText() {
     '                     [--format summary|list|markdown|json|json-pretty|json-compact]',
     '',
     'Notes:',
-    '  - Any non-loop flags are forwarded to compiler:inspect-live / compiler:validate-live.',
+    '  - Any non-simulate flags are forwarded to compiler:inspect-live / compiler:validate-live.',
     '  - If no rules source is provided, --manifest-file rules/manifest.json is applied automatically.',
   ].join('\n');
 }
@@ -221,7 +221,7 @@ export function parseCliArgs(argv) {
   }
 
   const format = flags.get('--format') ?? 'summary';
-  if (!LOOP_FORMATS.has(format)) {
+  if (!SIMULATE_FORMATS.has(format)) {
     return { ok: false, error: `Unsupported --format: ${format}` };
   }
 
@@ -272,7 +272,7 @@ function parseOrThrow(argv, parseImpl, stageName) {
   return parsed.command;
 }
 
-export async function runLoopCommand(command, io = console, deps = {}) {
+export async function runSimulationCommand(command, io = console, deps = {}) {
   const runBacklogCommandImpl = deps.runBacklogCommandImpl ?? runBacklogCommand;
   const parseInspectLiveCliImpl = deps.parseInspectLiveCliImpl ?? parseInspectLiveCli;
   const runLiveInspectCommandImpl = deps.runLiveInspectCommandImpl ?? runLiveInspectCommand;
@@ -350,7 +350,7 @@ export async function runLoopCommand(command, io = console, deps = {}) {
   if (command.dryRun) {
     io.log(`Dry run: resolved signature ${signature}`);
     return {
-      kind: 'loop',
+      kind: 'simulate',
       signature,
       selection: selected ?? null,
       dryRun: true,
@@ -376,7 +376,7 @@ export async function runLoopCommand(command, io = console, deps = {}) {
   const validateResult = await runValidateLiveCommandImpl(validateCommand, io, deps);
 
   return {
-    kind: 'loop',
+    kind: 'simulate',
     signature,
     selection: selected ?? null,
     dryRun: false,
@@ -398,7 +398,7 @@ export async function runLoopCommand(command, io = console, deps = {}) {
   };
 }
 
-export function formatLoopOutput(result, format) {
+export function formatSimulationOutput(result, format) {
   if (format === 'json' || format === 'json-pretty') return formatJsonPretty(result);
   if (format === 'json-compact') return formatJsonCompact(result);
 
@@ -408,7 +408,7 @@ export function formatLoopOutput(result, format) {
 
   if (format === 'markdown') {
     return [
-      '# Compiler Loop',
+      '# Compiler Simulation',
       '',
       `- Signature: ${result.signature}`,
       selectedFromBacklog ? `- Backlog-selected signature: ${selectedFromBacklog}` : null,

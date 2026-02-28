@@ -97,7 +97,8 @@
 - [x] Runtime-validation signature-loop wrapper slice: add `compiler:loop` to run backlog selection + targeted inspect + targeted validate in one command
 - [x] Runtime-validation loop/backlog hardening slice: add `compiler:loop --dry-run` and backlog-next loop command hints for faster safe iteration setup
 - [x] Runtime-validation backlog candidate-policy slice: add `--candidate-policy curation|pressure` so next-target selection defaults to curation work and can opt into technical-pressure tuning
-- [ ] Runtime-validation simplification reset: remove backlog tooling and rename signature loop to `compiler:simulate`
+- [x] Runtime-validation simplification reset (part 1): rename signature loop command to `compiler:simulate`
+- [ ] Runtime-validation simplification reset (part 2): remove backlog tooling and backlog-driven workflow flags
 - [x] Decide and document final ownership of generic fallback inference policy (Homey adapter-owned; see ADR 0004)
 - [x] DSL simplification slice 1: support compact scalar matcher syntax with deterministic load-time canonicalization to arrays
 - [x] Decide compiler rule boundary: compile-time rule scope is manifest-owned; non-manifest rules are runtime/Homey-adapter scope (ADR 0005)
@@ -112,7 +113,7 @@
 ## Phase 4: ZWJS Explorer + Curation TUI (In Progress)
 
 - [x] Drafted reset MVP spec and implementation plan (`plan/tui-explorer-curation-spec.md`, `plan/tui-implementation-plan.md`)
-- [ ] Section 4A: core CLI cutover (`compiler:simulate`, remove backlog commands and workflow flags)
+- [ ] Section 4A: core CLI cutover (partially complete: `compiler:simulate` rename done; backlog command/flag removal pending)
 - [ ] Section 4B: migrate tests/docs/help to simulate-centric workflow
 - [ ] Section 5: TUI structural pivot to dual roots (`--url`, `--rules-only`) without backlog
 - [ ] Section 6: rich simulation view integration in nodes and rules stacks

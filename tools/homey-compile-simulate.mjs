@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 import {
-  formatLoopOutput,
+  formatSimulationOutput,
   getUsageText,
   parseCliArgs,
-  runLoopCommand,
-} from './homey-compile-loop-lib.mjs';
+  runSimulationCommand,
+} from './homey-compile-simulate-lib.mjs';
 
 const parsed = parseCliArgs(process.argv.slice(2));
 if (!parsed.ok) {
@@ -13,8 +13,8 @@ if (!parsed.ok) {
 }
 
 try {
-  const result = await runLoopCommand(parsed.command);
-  console.log(formatLoopOutput(result, parsed.command.format));
+  const result = await runSimulationCommand(parsed.command);
+  console.log(formatSimulationOutput(result, parsed.command.format));
 } catch (error) {
   console.error(error?.stack ?? String(error));
   process.exit(1);

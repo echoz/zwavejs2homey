@@ -98,8 +98,9 @@ Current implemented foundation in `packages/compiler`:
     - baseline regression deltas (`--baseline-summary-json-file`, `--max-*-delta`, `--fail-on-reason-delta`)
     - baseline snapshot helper (`--save-baseline-summary-json-file`) to refresh baseline artifacts from the current run
     - artifact retention policy (`--artifact-retention delete-on-pass`) to avoid keeping large generated compiled files after successful runs
-    - legacy backlog artifact/consumer/loop tooling exists in current codebase (`--curation-backlog-json-file`, `compiler:backlog`, `compiler:loop`) and is scheduled for removal during Phase 4 reset Section 4A
-    - Phase 4 reset replacement is a simulation-centric contributor flow (`compiler:simulate`) without backlog dependencies
+    - legacy backlog artifact/consumer tooling still exists in current codebase (`--curation-backlog-json-file`, `compiler:backlog`) and is scheduled for removal during Phase 4 reset Section 4A
+    - signature iteration command has been renamed from `compiler:loop` to `compiler:simulate`
+    - final Phase 4 reset target is a simulation-centric contributor flow without backlog dependencies
     - redacted-share outputs (`--redact-share`, `--redacted-report-file`, `--redacted-summary-json-file`, `--redacted-curation-backlog-json-file`) for PR-safe diagnostics
     - baseline workflow wrapper (`compiler:baseline`) to run capture + zero-delta recheck in one command (including redacted-share support)
     - baseline-enabled markdown reports include delta sections for fast human triage

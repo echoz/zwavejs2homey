@@ -481,10 +481,10 @@ function buildNextCommandHints(signature, backlogFilePath, source) {
       '--signature',
       signature,
     ]),
-    loop: renderCommand([
+    simulate: renderCommand([
       'npm',
       'run',
-      'compiler:loop',
+      'compiler:simulate',
       '--',
       '--url',
       url,
@@ -1125,7 +1125,7 @@ function formatNextResult(result, format) {
       ['Scaffold rule', commands.scaffold ?? ''],
       ['Inspect live', commands.inspectLive ?? ''],
       ['Validate live', commands.validateLive ?? ''],
-      ['Iteration loop', commands.loop ?? ''],
+      ['Iteration simulate', commands.simulate ?? ''],
     ];
     return renderTable(['Field', 'Value'], rows);
   }
@@ -1155,7 +1155,7 @@ function formatNextResult(result, format) {
       `- Scaffold rule: \`${commands.scaffold ?? ''}\``,
       `- Inspect live: \`${commands.inspectLive ?? ''}\``,
       `- Validate live: \`${commands.validateLive ?? ''}\``,
-      `- Iteration loop: \`${commands.loop ?? ''}\``,
+      `- Iteration simulate: \`${commands.simulate ?? ''}\``,
       '',
     ]
       .filter((line) => line !== null)
@@ -1183,7 +1183,7 @@ function formatNextResult(result, format) {
     `  Scaffold rule: ${commands.scaffold ?? ''}`,
     `  Inspect live: ${commands.inspectLive ?? ''}`,
     `  Validate live: ${commands.validateLive ?? ''}`,
-    `  Iteration loop: ${commands.loop ?? ''}`,
+    `  Iteration simulate: ${commands.simulate ?? ''}`,
   ]
     .filter((line) => line !== null)
     .join('\n');

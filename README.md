@@ -84,7 +84,7 @@ Interactive commands:
 - `help`
 - `quit`
 
-Note: `backlog *` commands and `compiler:loop` are scheduled for removal as part of the Phase 4 reset.
+Note: `backlog *` commands are scheduled for removal as part of the Phase 4 reset.
 
 ### Compiler inspection (device facts -> compiled profile)
 
@@ -136,13 +136,13 @@ This emits a `compiled-homey-profiles/v1` artifact.
 - `npm run compiler:backlog -- next --from-file /tmp/baseline.curation-backlog.json --to-file /tmp/current.curation-backlog.json --only worsened --candidate-policy curation --format summary`
 - `npm run compiler:backlog -- next --input-file /tmp/current.curation-backlog.json --pick 1 --format markdown`
 - `npm run compiler:backlog -- next --input-file /tmp/current.curation-backlog.json --candidate-policy pressure --pick 1 --format summary`
-- `npm run compiler:loop -- --url ws://HOST:PORT --all-nodes --manifest-file rules/manifest.json --signature 29:66:2`
-- `npm run compiler:loop -- --url ws://HOST:PORT --all-nodes --from-backlog-file /tmp/baseline.curation-backlog.json --to-backlog-file /tmp/current.curation-backlog.json --only worsened --candidate-policy curation`
-- `npm run compiler:loop -- --url ws://HOST:PORT --all-nodes --backlog-file /tmp/current.curation-backlog.json --dry-run --format markdown`
+- `npm run compiler:simulate -- --url ws://HOST:PORT --all-nodes --manifest-file rules/manifest.json --signature 29:66:2`
+- `npm run compiler:simulate -- --url ws://HOST:PORT --all-nodes --from-backlog-file /tmp/baseline.curation-backlog.json --to-backlog-file /tmp/current.curation-backlog.json --only worsened --candidate-policy curation`
+- `npm run compiler:simulate -- --url ws://HOST:PORT --all-nodes --backlog-file /tmp/current.curation-backlog.json --dry-run --format markdown`
 
-Planned migration note:
+Migration note:
 
-- `compiler:loop` is being replaced by `compiler:simulate`
+- `compiler:loop` has been replaced by `compiler:simulate`
 - backlog artifacts/commands are being removed from contributor workflow
 
 This runs the canonical live validation loop in one command:
@@ -169,7 +169,7 @@ This runs the canonical live validation loop in one command:
 - `compiler:baseline --emit-curation-backlog` also writes baseline/recheck curation backlog artifacts (and redacted variants under `--redact-share`)
 - `compiler:backlog` consumes backlog artifacts for ranked triage (`summary`), regression analysis (`diff`), and starter product-rule snippet generation (`scaffold`)
 - `compiler:backlog next` picks the next signature to curate (diff-first or summary mode) and prints copy/paste scaffold+inspect+validate commands; default `--candidate-policy curation` avoids technical-pressure-only signatures, while `pressure` includes them for optimization passes
-- `compiler:loop` runs one signature end-to-end (optional backlog-driven signature selection, targeted inspect, then targeted validate), with `--dry-run` to preview resolved inspect/validate command lines without network calls
+- `compiler:simulate` runs one signature end-to-end (currently supports explicit signature and legacy backlog-driven signature selection), with `--dry-run` to preview resolved inspect/validate command lines without network calls
 
 Gate setup guide: `docs/compiler-validation-gates.md`
 

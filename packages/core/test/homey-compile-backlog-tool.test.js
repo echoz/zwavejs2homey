@@ -351,7 +351,7 @@ test('backlog next summary mode selects actionable signature and prints command 
   assert.match(result.commands.scaffold, /compiler:backlog -- scaffold/);
   assert.match(result.commands.inspectLive, /compiler:inspect-live -- --url/);
   assert.match(result.commands.validateLive, /compiler:validate-live -- --url/);
-  assert.match(result.commands.loop, /compiler:loop -- --url/);
+  assert.match(result.commands.simulate, /compiler:simulate -- --url/);
   assert.match(formatBacklogOutput(result, 'summary'), /Selected: 29:66:2/);
   assert.match(formatBacklogOutput(result, 'list'), /Field/);
   assert.match(formatBacklogOutput(result, 'markdown'), /# Next Curation Target/);

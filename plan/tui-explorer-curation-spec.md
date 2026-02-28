@@ -71,7 +71,7 @@ Use existing tooling/libs as backend primitives:
 
 - ad-hoc inspect/validate command choreography for contributors
 - legacy backlog-driven prioritization flow in TUI/CLI
-- `compiler:loop` naming (migrates to `compiler:simulate`)
+- legacy `compiler:loop` naming (already replaced by `compiler:simulate`)
 
 ## Safety Model
 
