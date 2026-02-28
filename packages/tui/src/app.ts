@@ -83,7 +83,7 @@ export function getUsageText(): string {
     'Interactive commands:',
     '  list | refresh | show <nodeId>',
     '  signature [<m:p:id>] [--from-node <id>] | inspect | validate',
-    '  scaffold preview [--product-name "..."] | scaffold write [filePath] --force',
+    '  scaffold preview [--product-name "..."] [--homey-class <class>] | scaffold write [filePath] --force',
     '  manifest add [filePath] [--manifest <file>] --force | status',
     '  log [--limit N] | help | quit',
   ].join('\n');

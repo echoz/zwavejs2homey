@@ -70,7 +70,7 @@ Data flow in both stacks:
 - [x] Section 1: scope + guardrails lock (docs/plans)
 - [x] Section 2: startup + dual-root IA lock (docs/plans)
 - [x] Section 3: curation flow lock with simulation center (docs/plans)
-- [ ] Section 4B: tests/docs migration for cutover
+- [x] Section 4B: tests/docs migration for cutover
 - [ ] Section 6: rich simulation integration in both stacks
 - [ ] Section 7: convergence review + final cleanup
 
@@ -91,6 +91,6 @@ Quality gate:
 
 ## Done Criteria
 
-- contributor can complete rule curation from either root using simulation loop
+- contributor can complete rule curation from either root using simulation workflow
 - ZWJS operations remain read-only
 - Homey adapter work remains paused until this reset plan is complete

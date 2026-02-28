@@ -59,7 +59,7 @@ The project is intentionally split into layers:
 - `npm run compiler:tui -- --url ws://HOST:PORT --include-values summary`
 - `npm run compiler:tui -- --url ws://HOST:PORT --start-node 12 --include-values full`
 
-Phase 4 reset (planned, docs/plans locked, implementation pending):
+Phase 4 reset (in progress):
 
 - core CLI cutover first (`compiler:simulate`)
 - panel-first dual-root TUI (`--url` for nodes root, future `--rules-only` for rules root)
@@ -73,7 +73,7 @@ Interactive commands:
 - `signature [<manufacturerId:productType:productId>] [--from-node <id>]`
 - `inspect [--manifest <file>]`
 - `validate [--manifest <file>]`
-- `scaffold preview [--product-name "..."]`
+- `scaffold preview [--product-name "..."] [--homey-class <class>]`
 - `scaffold write [filePath] --force`
 - `manifest add [filePath] [--manifest <file>] --force`
 - `status`
@@ -106,7 +106,7 @@ Compiled-artifact apply mode is now also supported for runtime-style validation:
 
 This emits a `compiled-homey-profiles/v1` artifact.
 
-### Live validation loop (build + apply + markdown summary)
+### Live validation workflow (build + apply + markdown summary)
 
 - `npm run compiler:validate-live -- --help`
 - `npm run compiler:validate-live -- --url ws://HOST:PORT --all-nodes --manifest-file rules/manifest.json`
@@ -124,11 +124,7 @@ This emits a `compiled-homey-profiles/v1` artifact.
 - `npm run compiler:simulate -- --url ws://HOST:PORT --all-nodes --manifest-file rules/manifest.json --signature 29:66:2`
 - `npm run compiler:simulate -- --url ws://HOST:PORT --all-nodes --manifest-file rules/manifest.json --signature 29:66:2 --dry-run --format markdown`
 
-Migration note:
-
-- `compiler:loop` has been replaced by `compiler:simulate`
-
-This runs the canonical live validation loop in one command:
+This runs the canonical live validation workflow in one command:
 
 - builds a compiled artifact from live nodes
 - reapplies that artifact against live nodes (runtime-style)
@@ -145,6 +141,7 @@ This runs the canonical live validation loop in one command:
 - `--artifact-retention delete-on-pass` removes large generated compiled artifacts after successful validation runs
 - `--redact-share` writes PR-safe artifacts (`*.redacted.md`, `*.redacted.json`) with URL/path/node identity redaction
 - redacted output paths can also be set explicitly via `--redacted-report-file` and `--redacted-summary-json-file`
+- unsupported/removed CLI flags fail fast with explicit errors in compiler tools
 - `compiler:baseline` orchestrates baseline capture + immediate recheck in one command and writes timestamped artifacts under `plan/baselines/` by default
 - `compiler:baseline --redact-share` emits redacted baseline/recheck markdown+summary artifacts in the same run (with optional stage-specific redacted path overrides)
 - `compiler:simulate` runs one signature end-to-end from explicit `--signature`, with `--dry-run` to preview resolved inspect/validate command lines without network calls

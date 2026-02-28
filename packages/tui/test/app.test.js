@@ -1,7 +1,11 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { parseCliArgs, runApp } = require('../dist/app');
+const { getUsageText, parseCliArgs, runApp } = require('../dist/app');
+
+test('getUsageText includes scaffold homey-class override', () => {
+  assert.match(getUsageText(), /scaffold preview .*--homey-class <class>/);
+});
 
 test('parseCliArgs parses required and optional fields', () => {
   const parsed = parseCliArgs([
@@ -34,7 +38,7 @@ test('runApp executes interactive command flow through parent+child presenters',
     'show 2',
     'signature --from-node 2',
     'inspect',
-    'scaffold preview --product-name TestProduct',
+    'scaffold preview --product-name TestProduct --homey-class light',
     'scaffold write test-output.json --force',
     'manifest add test-output.json --manifest rules/manifest.json --force',
     'status',
@@ -117,7 +121,8 @@ test('runApp executes interactive command flow through parent+child presenters',
         outcomes: { curated: 1 },
       };
     },
-    scaffoldFromSignature(signature) {
+    scaffoldFromSignature(signature, options) {
+      assert.equal(options.homeyClass, 'light');
       return {
         signature,
         fileHint: 'product-29-66-2.json',

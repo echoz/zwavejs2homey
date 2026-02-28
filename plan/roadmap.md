@@ -104,7 +104,7 @@
 ## Phase 4: ZWJS Explorer + Curation TUI (In Progress)
 
 - [x] Drafted reset MVP spec and implementation plan (`plan/tui-explorer-curation-spec.md`, `plan/tui-implementation-plan.md`)
-- [ ] Section 4B: migrate tests/docs/help to simulate-centric workflow
+- [x] Section 4B: migrate tests/docs/help to simulate-centric workflow
 - [ ] Section 6: rich simulation view integration in nodes and rules stacks
 - [ ] Section 7: convergence review (separate stacks vs shared view primitives)
 - [ ] Keep Homey adapter implementation frozen until Phase 4 reset completion

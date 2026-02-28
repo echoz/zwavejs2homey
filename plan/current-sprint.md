@@ -431,17 +431,19 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - migrated loop-tool regression coverage to `homey-compile-simulate-tool.test.js`
     - simplified `compiler:simulate` to explicit-signature mode only (`--signature` required)
     - updated simulate parser/runtime tests and readme/architecture notes to match signature-only simulate behavior
+90. Completed Section 4B tests/docs/help migration:
+    - enforced strict CLI flag validation across `compiler:validate-live`, `compiler:baseline`, and `compiler:simulate` (unknown/removed flags fail fast with explicit errors)
+    - updated parser regression coverage for removed/unsupported flag cases
+    - aligned user-facing docs/help with simulate-centric wording and scaffold preview class override support
+    - synced roadmap and TUI implementation plan to mark Section 4B complete
 
 ## Next Tasks
 
-1. Execute Section 4A (core CLI cutover):
-2. Execute Section 4B (tests/docs/help migration):
-   - ensure removed commands fail with clear migration hints
-3. Execute Section 5 and Section 6:
+1. Execute Section 6:
    - dual-root TUI structural pivot (`--url` nodes root, `--rules-only` rules root)
-4. Execute Section 7 convergence review:
+2. Execute Section 7 convergence review:
    - decide whether to keep separate stacks or extract shared view primitives
-5. Keep Homey adapter implementation paused until Phase 4 reset is complete
+3. Keep Homey adapter implementation paused until Phase 4 reset is complete
 
 ## Risks / Unknowns
 

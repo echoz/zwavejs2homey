@@ -86,7 +86,7 @@ Current implemented foundation in `packages/compiler`:
   - catalog-aware curation hints, explicit `unknownDeviceReport`, and stable diagnostic device keys
 - Added live compile inspection tooling:
   - `compiler:inspect-live` connects to a ZWJS instance, fetches node details, converts them to compiler device facts, and renders compiled profile results (including list view)
-  - supports signature-targeted loops via `--signature <manufacturerId:productType:productId>` to focus curation on one product family at a time
+  - supports signature-targeted runs via `--signature <manufacturerId:productType:productId>` to focus curation on one product family at a time
   - live inspection/build tooling skips controller-like nodes by default (override with `--include-controller-nodes` for diagnostics)
   - supports both compile-on-the-fly (rule authoring) and compiled-artifact apply mode (runtime-style validation)
   - `compiler:validate-live` runs build + compiled-artifact apply in one pass and writes a markdown validation report (outcomes, review reasons, unmatched/suppressed hotspots)
@@ -98,7 +98,7 @@ Current implemented foundation in `packages/compiler`:
     - baseline regression deltas (`--baseline-summary-json-file`, `--max-*-delta`, `--fail-on-reason-delta`)
     - baseline snapshot helper (`--save-baseline-summary-json-file`) to refresh baseline artifacts from the current run
     - artifact retention policy (`--artifact-retention delete-on-pass`) to avoid keeping large generated compiled files after successful runs
-    - signature iteration command has been renamed from `compiler:loop` to `compiler:simulate`
+    - signature iteration command is `compiler:simulate` (explicit-signature, simulate-centric flow)
     - baseline workflow wrapper (`compiler:baseline`) to run capture + zero-delta recheck in one command (including redacted-share support)
     - baseline-enabled markdown reports include delta sections for fast human triage
   - gate calibration/setup playbook lives in `docs/compiler-validation-gates.md`
