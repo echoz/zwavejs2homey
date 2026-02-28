@@ -90,6 +90,10 @@ test('runPanelApp renders panel UI and exits on q', async () => {
     output.writes.some((line) => line.includes('ZWJS nodes (panel)')),
     true,
   );
+  assert.equal(
+    output.writes.some((line) => line.includes('(unknown / unknown)')),
+    false,
+  );
 });
 
 test('runPanelApp scrolls list viewport when selection moves beyond visible window', async () => {

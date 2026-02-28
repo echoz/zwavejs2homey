@@ -637,6 +637,38 @@ function formatProductLabel(state: Record<string, unknown>): string {
   return name ?? idLabel;
 }
 
+function extractListIdentityFromDetail(detail: NodeDetail | undefined): {
+  manufacturer: string | null;
+  product: string | null;
+} {
+  if (!detail?.state) {
+    return { manufacturer: null, product: null };
+  }
+  const state = detail.state;
+  const deviceConfig = asRecord(state.deviceConfig);
+  const manufacturer =
+    asNonEmptyString(state.manufacturer) ?? asNonEmptyString(deviceConfig?.manufacturer) ?? null;
+  const product =
+    asNonEmptyString(state.product) ??
+    asNonEmptyString(state.productLabel) ??
+    asNonEmptyString(deviceConfig?.label) ??
+    null;
+  return { manufacturer, product };
+}
+
+function formatNodeListLabel(options: {
+  name: string | null;
+  manufacturer: string | null;
+  product: string | null;
+}): string {
+  const name = options.name ?? '(unnamed)';
+  const identityParts = [options.manufacturer, options.product].filter(
+    (part): part is string => part !== null && part.length > 0,
+  );
+  if (identityParts.length === 0) return name;
+  return `${name} (${identityParts.join(' / ')})`;
+}
+
 function formatNeighborValue(value: unknown): string {
   if (typeof value === 'number' && Number.isFinite(value)) return String(value);
   if (typeof value === 'string') return value;
@@ -1103,31 +1135,42 @@ export async function runPanelApp(
 
   function getListEntries(): PanelListEntry[] {
     if (isNodesMode) {
-      const items = nodesPresenter.getState().explorer.items;
+      const snapshot = nodesPresenter.getState();
+      const items = snapshot.explorer.items;
+      const detailCache = snapshot.nodeDetailCache ?? {};
       const filtered = items.filter((node) => {
         if (!filterQuery) return true;
+        const detailIdentity = extractListIdentityFromDetail(detailCache[node.nodeId]);
+        const manufacturer = node.manufacturer ?? detailIdentity.manufacturer;
+        const product = node.product ?? detailIdentity.product;
         const haystack = [
           String(node.nodeId),
           normalizeText(node.name),
-          normalizeText(node.product),
-          normalizeText(node.manufacturer),
+          normalizeText(product),
+          normalizeText(manufacturer),
           normalizeText(node.location),
         ].join(' ');
         return haystack.includes(filterQuery.toLowerCase());
       });
-      return filtered.map((node) => ({
-        kind: 'node',
-        key: `node:${node.nodeId}`,
-        rowId: node.nodeId,
-        label: truncateLabel(
-          [
-            node.name ?? '(unnamed)',
-            `(${node.manufacturer ?? 'unknown'} / ${node.product ?? 'unknown'})`,
-          ].join(' '),
-          96,
-        ),
-        nodeId: node.nodeId,
-      }));
+      return filtered.map((node) => {
+        const detailIdentity = extractListIdentityFromDetail(detailCache[node.nodeId]);
+        const manufacturer = node.manufacturer ?? detailIdentity.manufacturer;
+        const product = node.product ?? detailIdentity.product;
+        return {
+          kind: 'node' as const,
+          key: `node:${node.nodeId}`,
+          rowId: node.nodeId,
+          label: truncateLabel(
+            formatNodeListLabel({
+              name: node.name,
+              manufacturer,
+              product,
+            }),
+            96,
+          ),
+          nodeId: node.nodeId,
+        };
+      });
     }
 
     const items = rulesPresenter.getRules();
