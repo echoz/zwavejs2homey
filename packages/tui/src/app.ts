@@ -1439,6 +1439,15 @@ export async function runPanelApp(
     scrollable: true,
     alwaysScroll: true,
   });
+  const statusPane = blessed.box({
+    parent: screen,
+    top: '60%',
+    left: 0,
+    width: '100%',
+    height: 1,
+    tags: false,
+    wrap: false,
+  });
   const footerPane = blessed.box({
     parent: screen,
     bottom: 0,
@@ -1875,13 +1884,21 @@ export async function runPanelApp(
     bottomPane.top = 1 + topPaneOuterHeight;
     bottomPane.left = 0;
     bottomPane.width = width;
-    bottomPane.height = bottomPaneOuterHeight;
-    (bottomPane as unknown as { border: unknown }).border = bottomCompact ? null : 'line';
+    bottomPane.height = Math.max(5, bottomPaneOuterHeight);
     bottomPane.style = {
       ...(bottomPane.style ?? {}),
       border: { fg: focusedPane === 'bottom' ? 'cyan' : 'gray' },
     };
-    bottomPane.setLabel(bottomCompact ? '' : ' Output / Run ');
+    bottomPane.setLabel(' Output / Run ');
+
+    statusPane.top = 1 + topPaneOuterHeight;
+    statusPane.left = 0;
+    statusPane.width = width;
+    statusPane.height = 1;
+    statusPane.style = {
+      ...(statusPane.style ?? {}),
+      inverse: focusedPane === 'bottom',
+    };
 
     footerPane.top = height - 1;
     footerPane.left = 0;
@@ -1973,9 +1990,12 @@ export async function runPanelApp(
     }
     if (bottomCompact) {
       const compactLine = bottomAllLines[bottomScroll] ?? '';
-      bottomPane.setContent(compactLine);
-      bottomPane.setScroll(0);
+      bottomPane.hide();
+      statusPane.show();
+      statusPane.setContent(compactLine);
     } else {
+      statusPane.hide();
+      bottomPane.show();
       bottomPane.setContent(bottomAllLines.join('\n'));
       bottomPane.setScroll(bottomScroll);
     }
