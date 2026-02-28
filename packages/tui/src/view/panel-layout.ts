@@ -52,10 +52,10 @@ export function renderPanelFrame(model: PanelFrameModel): string {
   const height = Math.max(18, model.height || 30);
   const innerWidth = width - 2;
   const bodyHeight = height - 6; // header + footer + borders
-  const compactBottomHeight = 3; // title + one content row
+  const compactBottomHeight = 2; // one content row + border (no title row)
   const bottomCompact = model.bottomCompact === true;
   const bottomHeight = bottomCompact
-    ? Math.min(Math.max(3, bodyHeight - 8), compactBottomHeight)
+    ? Math.min(Math.max(2, bodyHeight - 8), compactBottomHeight)
     : bodyHeight - Math.max(8, Math.floor(bodyHeight * 0.65));
   const topHeight = bodyHeight - bottomHeight;
   const leftWidth = Math.max(22, Math.floor(innerWidth * 0.35));
@@ -63,7 +63,9 @@ export function renderPanelFrame(model: PanelFrameModel): string {
 
   const leftContentHeight = Math.max(1, topHeight - 2);
   const rightContentHeight = Math.max(1, topHeight - 2);
-  const bottomContentHeight = Math.max(1, bottomHeight - 2);
+  const bottomContentHeight = bottomCompact
+    ? Math.max(1, bottomHeight - 1)
+    : Math.max(1, bottomHeight - 2);
 
   const focused = model.focusedPane ?? 'left';
   const leftTitle = focused === 'left' ? `* ${model.leftTitle}` : model.leftTitle;
@@ -82,8 +84,10 @@ export function renderPanelFrame(model: PanelFrameModel): string {
   }
 
   lines.push(borderLine(width));
-  lines.push(`${V}${fitLine(bottomTitle, innerWidth)}${V}`);
   const bottomContent = normalizeLines(model.bottomLines, bottomContentHeight, innerWidth);
+  if (!bottomCompact) {
+    lines.push(`${V}${fitLine(bottomTitle, innerWidth)}${V}`);
+  }
   for (const row of bottomContent) {
     lines.push(`${V}${row}${V}`);
   }

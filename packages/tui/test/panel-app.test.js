@@ -264,7 +264,7 @@ test('runPanelApp toggles bottom pane between status-bar and full mode', async (
 
   assert.equal(
     output.writes.some((line) => line.includes('Status Bar')),
-    true,
+    false,
   );
   assert.equal(
     output.writes.some((line) => line.includes('Output / Run')),

@@ -503,11 +503,13 @@ function getPanelContentHeightsWithMode(
 } {
   const height = Math.max(18, rows ?? 30);
   const bodyHeight = height - 6;
-  const bottomHeight = bottomCompact ? 3 : bodyHeight - Math.max(8, Math.floor(bodyHeight * 0.65));
+  const bottomHeight = bottomCompact ? 2 : bodyHeight - Math.max(8, Math.floor(bodyHeight * 0.65));
   const topHeight = bodyHeight - bottomHeight;
   return {
     topContentHeight: Math.max(1, topHeight - 2),
-    bottomContentHeight: Math.max(1, bottomHeight - 2),
+    bottomContentHeight: bottomCompact
+      ? Math.max(1, bottomHeight - 1)
+      : Math.max(1, bottomHeight - 2),
   };
 }
 
