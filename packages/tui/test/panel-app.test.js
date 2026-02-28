@@ -587,8 +587,10 @@ test('runPanelApp orders expanded values by relevance', async () => {
     (line) =>
       line.includes('Values: 3 (press z to collapse)') &&
       line.includes('Value Preview (top relevant first):') &&
-      line.includes('Switch = on (99)') &&
-      line.includes('Temperature = 21.4 C') &&
+      line.includes('Switch = on (99) [number,rw] {cap:onoff dir:rw conf:high src:meta}') &&
+      line.includes(
+        'Temperature = 21.4 C [number,r] {cap:measure_temperature dir:r conf:high src:meta}',
+      ) &&
       line.includes('Status Flags = 3'),
   );
   assert.notEqual(expandedValuesFrame, undefined);

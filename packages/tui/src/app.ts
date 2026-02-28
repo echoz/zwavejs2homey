@@ -35,6 +35,11 @@ import { parseShellCommand } from './view/command-parser';
 import { parsePanelDataChunk, parsePanelKeypress, type PanelIntent } from './view/panel-input';
 import { renderPanelFrame } from './view/panel-layout';
 import {
+  annotateNodeValue,
+  formatValueSemanticTag,
+  semanticCapabilityScore,
+} from './view/value-semantics';
+import {
   renderInspectSummary,
   renderRuleDetail,
   renderRuleList,
@@ -776,12 +781,13 @@ function formatNodeValueLine(entry: NodeValueDetail): string {
   ]
     .filter((value) => value !== null)
     .join(' ');
+  const semanticTag = formatValueSemanticTag(annotateNodeValue(entry));
 
   return [
     `- ${identifier}`,
     `  ${truncateValueText(label, 32)} = ${truncateValueText(mappedValueText + unit)}${
       metaBits ? ` [${metaBits}]` : ''
-    }${errors ? ` ${errors}` : ''}`,
+    } ${semanticTag}${errors ? ` ${errors}` : ''}`,
   ].join('\n');
 }
 
@@ -837,6 +843,7 @@ function scoreNodeValue(entry: NodeValueDetail): number {
   if (entry._error !== undefined) return -1000;
   const metadata = asRecord(entry.metadata);
   const states = asRecord(metadata?.states);
+  const semantic = annotateNodeValue(entry);
   const propertyText = `${entry.valueId?.property ?? ''} ${entry.valueId?.propertyKey ?? ''}`
     .trim()
     .toLowerCase();
@@ -850,6 +857,9 @@ function scoreNodeValue(entry: NodeValueDetail): number {
   if (metadata?.readable === true) score += 6;
   if (asNonEmptyString(metadata?.unit)) score += 6;
   score += scoreCommandClass(toCommandClassNumber(entry.valueId?.commandClass));
+  score += semanticCapabilityScore(semantic.capabilityId);
+  if (semantic.confidence === 'high') score += 8;
+  if (semantic.confidence === 'medium') score += 4;
 
   if (
     propertyText.includes('interview') ||
