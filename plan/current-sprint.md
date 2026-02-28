@@ -13,6 +13,12 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 ## Recently Completed
 
+- Latest TUI values UX slices:
+  - added section-level value semantics (`controls`, `sensors`, `events`, `config`, `diagnostic`, `other`)
+  - values pane now renders by subsection in expanded mode and subsection previews in collapsed mode
+  - added numeric subsection toggles (`1`-`6`) to collapse/expand individual value subsections
+  - improved detail readability by reflowing long neighbor/value rows to pane width
+
 - Latest TUI slice:
   - migrated panel rendering fully to `neo-blessed` widgets/layout
   - removed custom `panel-layout` renderer path and raw-data fallback quit path

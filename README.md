@@ -79,6 +79,9 @@ Panel keys (default `--ui panel`):
 - `enter`: open selected node/rule detail
 - `r`: refresh list
 - `i` / `v` / `m` / `d`: inspect / validate / simulate / simulate dry-run
+- `n`: toggle neighbors section in node detail
+- `z`: toggle values section in node detail
+- `1` / `2` / `3` / `4` / `5` / `6`: toggle value subsections (`controls` / `sensors` / `events` / `config` / `diagnostic` / `other`)
 - `p`: scaffold preview
 - `W`: scaffold write (press twice within confirmation window)
 - `A`: manifest add (press twice within confirmation window)

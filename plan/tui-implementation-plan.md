@@ -31,6 +31,8 @@
   - paging + selection persistence
 - [x] richer detail panes:
   - node/rule/simulation drill-down readability
+  - sectioned value detail rendering (`controls`/`sensors`/`events`/`config`/`diagnostic`/`other`)
+  - per-subsection value toggles via numeric keys (`1`-`6`)
 - [x] safer curation write UX:
   - explicit in-panel confirmation flow before writes
 - [x] diagnostics UX:
