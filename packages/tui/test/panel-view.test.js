@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { parsePanelKeypress } = require('../dist/view/panel-input');
+const { parsePanelDataChunk, parsePanelKeypress } = require('../dist/view/panel-input');
 const { renderPanelFrame } = require('../dist/view/panel-layout');
 
 test('parsePanelKeypress maps core keys to intents', () => {
@@ -16,6 +16,14 @@ test('parsePanelKeypress maps core keys to intents', () => {
   assert.deepEqual(parsePanelKeypress('W', { name: 'w' }), { type: 'scaffold-write' });
   assert.deepEqual(parsePanelKeypress('A', { name: 'a' }), { type: 'manifest-add' });
   assert.deepEqual(parsePanelKeypress('', { name: 'x' }), { type: 'noop' });
+});
+
+test('parsePanelDataChunk provides fallback quit intent', () => {
+  assert.deepEqual(parsePanelDataChunk('q'), { type: 'quit' });
+  assert.deepEqual(parsePanelDataChunk('Q'), { type: 'quit' });
+  assert.deepEqual(parsePanelDataChunk('\u001b'), { type: 'quit' });
+  assert.deepEqual(parsePanelDataChunk('\u0003'), { type: 'quit' });
+  assert.equal(parsePanelDataChunk(''), null);
 });
 
 test('renderPanelFrame renders bounded panel text', () => {

@@ -22,6 +22,15 @@ interface KeyLike {
   ctrl?: boolean;
 }
 
+export function parsePanelDataChunk(chunk: string): PanelIntent | null {
+  const value = String(chunk ?? '');
+  if (!value) return null;
+  if (value.includes('\u0003')) return { type: 'quit' }; // Ctrl+C
+  if (value.includes('\u001b')) return { type: 'quit' }; // Escape
+  if (value.toLowerCase().includes('q')) return { type: 'quit' };
+  return null;
+}
+
 export function parsePanelKeypress(char: string, key: KeyLike = {}): PanelIntent {
   const name = (key.name ?? '').toLowerCase();
   const sequence = (key.sequence ?? '').toLowerCase();

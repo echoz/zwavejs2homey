@@ -23,7 +23,7 @@ import {
 } from './service/workspace-file-service';
 import { ZwjsExplorerServiceImpl, type ZwjsExplorerService } from './service/zwjs-explorer-service';
 import { parseShellCommand } from './view/command-parser';
-import { parsePanelKeypress, type PanelIntent } from './view/panel-input';
+import { parsePanelDataChunk, parsePanelKeypress, type PanelIntent } from './view/panel-input';
 import { renderPanelFrame } from './view/panel-layout';
 import {
   renderInspectSummary,
@@ -760,17 +760,16 @@ export async function runPanelApp(
     if (input.isTTY && typeof input.setRawMode === 'function') {
       input.setRawMode(true);
     }
+    if (typeof input.resume === 'function') {
+      input.resume();
+    }
     output.write('\x1b[?25l');
     renderFrame();
 
     await new Promise<void>((resolve) => {
       let inFlight = Promise.resolve();
 
-      const onResize = () => {
-        renderFrame();
-      };
-      const onKeypress = (char: string, key: { name?: string; ctrl?: boolean }) => {
-        const intent = parsePanelKeypress(char, key);
+      const queueIntent = (intent: PanelIntent) => {
         inFlight = inFlight
           .then(async () => {
             await runIntent(intent);
@@ -787,19 +786,43 @@ export async function runPanelApp(
           });
       };
 
+      const onResize = () => {
+        renderFrame();
+      };
+      const onKeypress = (
+        char: string,
+        key: { name?: string; ctrl?: boolean; sequence?: string },
+      ) => {
+        const intent = parsePanelKeypress(char, key);
+        queueIntent(intent);
+      };
+      const onData = (chunk: Buffer | string) => {
+        const fallbackIntent = parsePanelDataChunk(
+          typeof chunk === 'string' ? chunk : chunk.toString('utf8'),
+        );
+        if (fallbackIntent) {
+          queueIntent(fallbackIntent);
+        }
+      };
+
       const cleanup = () => {
         if (typeof (output as any).off === 'function') {
           (output as any).off('resize', onResize);
         }
         input.off('keypress', onKeypress);
+        input.off('data', onData);
         if (input.isTTY && typeof input.setRawMode === 'function') {
           input.setRawMode(false);
+        }
+        if (typeof input.pause === 'function') {
+          input.pause();
         }
         output.write('\x1b[?25h');
         output.write('\n');
       };
 
       input.on('keypress', onKeypress);
+      input.on('data', onData);
       if (typeof (output as any).on === 'function') {
         (output as any).on('resize', onResize);
       }
