@@ -6,7 +6,6 @@ import type {
   ConnectedSessionConfig,
   IncludeValuesMode,
   NodeDetail,
-  NodeSummary,
   NodeValueDetail,
   RuleDetail,
   SessionConfig,
@@ -531,6 +530,12 @@ interface RuleListEntry {
 
 type PanelListEntry = NodeListEntry | RuleListEntry;
 
+interface NeighborIdentity {
+  name: string | null;
+  manufacturer: string | null;
+  product: string | null;
+}
+
 function stringifyCompact(value: unknown): string {
   try {
     if (typeof value === 'string') return value;
@@ -608,7 +613,7 @@ function parseNodeId(value: unknown): number | undefined {
 
 function renderNeighborLines(
   neighbors: unknown,
-  options: { expanded: boolean; neighborLookup?: Map<number, NodeSummary> },
+  options: { expanded: boolean; neighborLookup?: Map<number, NeighborIdentity> },
 ): string[] {
   if (Array.isArray(neighbors)) {
     const values = neighbors.map((value) => formatNeighborValue(value));
@@ -626,8 +631,8 @@ function renderNeighborLines(
         return `- Node ${value}`;
       }
       const name = summary.name ?? '(unnamed)';
-      const manufacturer = summary.manufacturer ?? '-';
-      const product = summary.product ?? '-';
+      const manufacturer = summary.manufacturer ?? 'unknown';
+      const product = summary.product ?? 'unknown';
       return `- Node ${value} | ${name} | ${manufacturer} | ${product}`;
     });
     return [
@@ -808,7 +813,7 @@ function renderPanelNodeDetail(
   options: {
     neighborsExpanded?: boolean;
     valuesExpanded?: boolean;
-    neighborLookup?: Map<number, NodeSummary>;
+    neighborLookup?: Map<number, NeighborIdentity>;
   } = {},
 ): string {
   const state = detail.state ?? {};
@@ -1092,6 +1097,70 @@ export async function runPanelApp(
     return entry.ruleIndex;
   }
 
+  function toNeighborIdentityFromDetail(detail: NodeDetail): NeighborIdentity {
+    const state = detail.state ?? {};
+    const name = asNonEmptyString(state.name) ?? null;
+    const manufacturer = formatManufacturerLabel(state) || null;
+    const product = formatProductLabel(state) || null;
+    return { name, manufacturer, product };
+  }
+
+  function buildNeighborLookup(): Map<number, NeighborIdentity> {
+    const snapshot = nodesPresenter.getState();
+    const map = new Map<number, NeighborIdentity>();
+
+    const explorerItems = snapshot.explorer?.items ?? [];
+    for (const item of explorerItems) {
+      map.set(item.nodeId, {
+        name: item.name,
+        manufacturer: item.manufacturer,
+        product: item.product,
+      });
+    }
+
+    const detailCache = snapshot.nodeDetailCache ?? {};
+    for (const [key, detail] of Object.entries(detailCache)) {
+      const nodeId = Number(key);
+      if (!Number.isInteger(nodeId) || nodeId <= 0 || !detail) continue;
+      const identity = toNeighborIdentityFromDetail(detail);
+      const existing = map.get(nodeId) ?? { name: null, manufacturer: null, product: null };
+      map.set(nodeId, {
+        name: identity.name ?? existing.name,
+        manufacturer: identity.manufacturer ?? existing.manufacturer,
+        product: identity.product ?? existing.product,
+      });
+    }
+
+    return map;
+  }
+
+  async function hydrateNeighborIdentity(): Promise<void> {
+    if (!currentNodeDetail || !Array.isArray(currentNodeDetail.neighbors)) return;
+    const neighborIds = currentNodeDetail.neighbors
+      .map((neighbor) => parseNodeId(neighbor))
+      .filter((value): value is number => value !== undefined);
+    if (neighborIds.length === 0) return;
+
+    const neighborLookup = buildNeighborLookup();
+    const missing = neighborIds.filter((id) => {
+      const identity = neighborLookup.get(id);
+      return !identity || !identity.manufacturer || !identity.product;
+    });
+    if (missing.length === 0) return;
+
+    for (const nodeId of missing.slice(0, 16)) {
+      try {
+        await nodesPresenter.showNodeDetail(nodeId, {
+          selectNode: false,
+          includeValues: 'none',
+          maxValues: 1,
+        });
+      } catch {
+        // Best effort hydration only; keep rendering available info.
+      }
+    }
+  }
+
   function updateNodeDetail(detail: NodeDetail): void {
     const selectedNodeChanged = currentNodeDetail?.nodeId !== detail.nodeId;
     currentNodeDetail = detail;
@@ -1099,9 +1168,7 @@ export async function runPanelApp(
       neighborsExpanded = false;
       valuesExpanded = false;
     }
-    const neighborLookup = isNodesMode
-      ? new Map(nodesPresenter.getState().explorer.items.map((item) => [item.nodeId, item]))
-      : undefined;
+    const neighborLookup = isNodesMode ? buildNeighborLookup() : undefined;
     rightText = renderPanelNodeDetail(detail, {
       neighborsExpanded,
       valuesExpanded,
@@ -1111,9 +1178,7 @@ export async function runPanelApp(
 
   function rerenderCurrentNodeDetail(): void {
     if (!currentNodeDetail || !isNodesMode) return;
-    const neighborLookup = new Map(
-      nodesPresenter.getState().explorer.items.map((item) => [item.nodeId, item]),
-    );
+    const neighborLookup = buildNeighborLookup();
     rightText = renderPanelNodeDetail(currentNodeDetail, {
       neighborsExpanded,
       valuesExpanded,
@@ -1359,6 +1424,9 @@ export async function runPanelApp(
         updateNodeDetail(detail);
       }
       neighborsExpanded = !neighborsExpanded;
+      if (neighborsExpanded) {
+        await hydrateNeighborIdentity();
+      }
       rerenderCurrentNodeDetail();
       bottomText = neighborsExpanded ? 'Expanded neighbors.' : 'Collapsed neighbors.';
       return;

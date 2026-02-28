@@ -1,6 +1,7 @@
 import type {
   AppState,
   ConnectedSessionConfig,
+  IncludeValuesMode,
   NodeDetail,
   NodeSummary,
   ScaffoldDraft,
@@ -110,15 +111,20 @@ export class ExplorerPresenter {
     }
   }
 
-  async showNodeDetail(nodeId: number): Promise<NodeDetail> {
+  async showNodeDetail(
+    nodeId: number,
+    options: { selectNode?: boolean; includeValues?: IncludeValuesMode; maxValues?: number } = {},
+  ): Promise<NodeDetail> {
     this.requireReady();
     const config = this.requireSessionConfig();
-    this.state.explorer.selectedNodeId = nodeId;
+    if (options.selectNode !== false) {
+      this.state.explorer.selectedNodeId = nodeId;
+    }
 
     try {
       const detail = await this.children.explorer.getNodeDetail(nodeId, {
-        includeValues: config.includeValues,
-        maxValues: config.maxValues,
+        includeValues: options.includeValues ?? config.includeValues,
+        maxValues: options.maxValues ?? config.maxValues,
       });
       this.state.nodeDetailCache[nodeId] = detail;
       this.logInfo(`Loaded node ${nodeId} detail`);

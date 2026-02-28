@@ -359,6 +359,116 @@ test('runPanelApp toggles neighbors in node detail and shows readable identity l
   );
 });
 
+test('runPanelApp hydrates missing neighbor manufacturer/product from node detail', async () => {
+  const input = new FakeInput();
+  const output = new FakeOutput();
+  output.columns = 180;
+  const detailByNode = {
+    2: {
+      name: 'Kitchen',
+      ready: true,
+      status: 'alive',
+      manufacturer: 'Zooz',
+      manufacturerId: 634,
+      product: 'Plug',
+      productType: 1,
+      productId: 2,
+    },
+    5: {
+      name: 'Office',
+      ready: true,
+      status: 'alive',
+      manufacturer: 'Aeotec',
+      manufacturerId: 134,
+      product: 'Sensor',
+      productType: 2,
+      productId: 9,
+    },
+    9: {
+      name: 'Living Room',
+      ready: true,
+      status: 'alive',
+      manufacturer: 'Zooz',
+      manufacturerId: 634,
+      product: 'Controller',
+      productType: 4,
+      productId: 8,
+    },
+  };
+  const presenterState = {
+    explorer: {
+      items: [
+        {
+          nodeId: 9,
+          name: 'Living Room',
+          manufacturer: 'Zooz',
+          product: 'Controller',
+        },
+        { nodeId: 2, name: 'Kitchen', manufacturer: null, product: null },
+        { nodeId: 5, name: 'Office', manufacturer: null, product: null },
+      ],
+    },
+    nodeDetailCache: {},
+  };
+  const presenter = {
+    async connect() {},
+    async disconnect() {},
+    getState() {
+      return presenterState;
+    },
+    getStatusSnapshot() {
+      return {
+        mode: 'nodes',
+        connectionState: 'ready',
+        selectedSignature: undefined,
+        cachedNodeCount: 3,
+      };
+    },
+    async showNodeDetail(nodeId) {
+      const detail = {
+        nodeId,
+        state: detailByNode[nodeId] ?? detailByNode[9],
+        neighbors: nodeId === 9 ? [2, 5] : [],
+        notificationEvents: [],
+        values: [],
+      };
+      presenterState.nodeDetailCache[nodeId] = detail;
+      return detail;
+    },
+  };
+
+  const runPromise = runPanelApp(
+    {
+      mode: 'nodes',
+      uiMode: 'panel',
+      manifestFile: 'rules/manifest.json',
+      url: 'ws://127.0.0.1:3000',
+      schemaVersion: 0,
+      includeValues: 'summary',
+      maxValues: 100,
+    },
+    { log: () => {}, error: () => {} },
+    { presenter, stdin: input, stdout: output },
+  );
+
+  setTimeout(() => {
+    input.emit('keypress', '', { name: 'return' });
+    input.emit('keypress', 'n', { name: 'n' });
+    input.emit('keypress', 'q', {});
+  }, 5);
+
+  await runPromise;
+
+  assert.equal(
+    output.writes.some((line) => line.includes('Node 2 | Kitchen | Zooz')),
+    true,
+  );
+  assert.equal(
+    output.writes.some((line) => line.includes('Node 5 | Office | Aeotec')),
+    true,
+  );
+});
+
 test('runPanelApp orders expanded values by relevance', async () => {
   const input = new FakeInput();
   const output = new FakeOutput();
