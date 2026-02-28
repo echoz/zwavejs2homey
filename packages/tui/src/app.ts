@@ -482,7 +482,7 @@ function padOrTruncateText(value: string, width: number): string {
 }
 
 function formatDetailLinesForDisplay(lines: string[], sectionWidth: number): string {
-  const headingPattern = /^(Identity|Telemetry|Neighbors|Values)\b/;
+  const headingPattern = /^(?:[▶▼]\s+)?(Identity|Telemetry|Neighbors|Values)\b/;
   const labelValuePattern = /^([A-Za-z][A-Za-z0-9 _/()\-]*):(.*)$/;
   const rendered: string[] = [];
   for (const line of lines) {
@@ -1150,17 +1150,20 @@ function renderPanelNodeDetail(
     neighborLookup: options.neighborLookup,
     lifelineRoute: detail.lifelineRoute,
   });
+  const neighborsExpanded = options.neighborsExpanded === true;
+  const neighborsDisclosure = neighborsExpanded ? '▼' : '▶';
   const neighborHeaderLine =
     neighborLines[0]?.startsWith('Neighbors:') === true ? neighborLines[0] : null;
   const neighborSectionTitle =
     neighborHeaderLine === null
-      ? 'Neighbors'
-      : neighborHeaderLine.replace(/^Neighbors:\s*/, 'Neighbors ');
+      ? `${neighborsDisclosure} Neighbors`
+      : `${neighborsDisclosure} ${neighborHeaderLine.replace(/^Neighbors:\s*/, 'Neighbors ')}`;
   const neighborBodyLines = neighborHeaderLine ? neighborLines.slice(1) : neighborLines;
   const notificationLines = renderNotificationLines(detail.notificationEvents);
   const values = detail.values ?? [];
   const sortedValues = sortValuesByRelevance(values);
   const valuesExpanded = options.valuesExpanded === true;
+  const valuesDisclosure = valuesExpanded ? '▼' : '▶';
   const interactiveValues = sortedValues.filter((entry) => !isStaticLikeNodeValue(entry));
   const staticValues = sortedValues.filter((entry) => isStaticLikeNodeValue(entry));
   const previewRows = (valuesExpanded ? interactiveValues : interactiveValues.slice(0, 3)).map(
@@ -1169,7 +1172,7 @@ function renderPanelNodeDetail(
   const staticRows = (valuesExpanded ? staticValues : staticValues.slice(0, 2)).map((entry) =>
     formatNodeValueCompactLine(entry),
   );
-  const valuesSectionTitle = `Values ${values.length}${
+  const valuesSectionTitle = `${valuesDisclosure} Values ${values.length}${
     values.length > 0 ? (valuesExpanded ? ' (press z to collapse)' : ' (press z to expand)') : ''
   }`;
 
