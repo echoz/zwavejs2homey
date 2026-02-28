@@ -654,6 +654,24 @@ function asNonEmptyString(value: unknown): string | undefined {
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
+function normalizeIdentityText(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const canonical = trimmed.toLowerCase();
+  switch (canonical) {
+    case 'unknown':
+    case 'n/a':
+    case 'na':
+    case 'none':
+    case 'null':
+    case 'undefined':
+      return null;
+    default:
+      return trimmed;
+  }
+}
+
 function asReadableId(value: unknown): string | undefined {
   if (typeof value === 'number' && Number.isFinite(value)) return String(value);
   return asNonEmptyString(value);
@@ -661,8 +679,10 @@ function asReadableId(value: unknown): string | undefined {
 
 function formatManufacturerLabel(state: Record<string, unknown>): string {
   const deviceConfig = asRecord(state.deviceConfig);
-  const name = asNonEmptyString(state.manufacturer) ?? asNonEmptyString(deviceConfig?.manufacturer);
-  const manufacturerId = asReadableId(state.manufacturerId);
+  const name = normalizeIdentityText(
+    asNonEmptyString(state.manufacturer) ?? asNonEmptyString(deviceConfig?.manufacturer),
+  );
+  const manufacturerId = normalizeIdentityText(asReadableId(state.manufacturerId));
   if (name && manufacturerId) {
     return name.includes(manufacturerId) ? name : `${name} (id ${manufacturerId})`;
   }
@@ -671,12 +691,13 @@ function formatManufacturerLabel(state: Record<string, unknown>): string {
 
 function formatProductLabel(state: Record<string, unknown>): string {
   const deviceConfig = asRecord(state.deviceConfig);
-  const name =
+  const name = normalizeIdentityText(
     asNonEmptyString(state.product) ??
-    asNonEmptyString(state.productLabel) ??
-    asNonEmptyString(deviceConfig?.label);
-  const productType = asReadableId(state.productType);
-  const productId = asReadableId(state.productId);
+      asNonEmptyString(state.productLabel) ??
+      asNonEmptyString(deviceConfig?.label),
+  );
+  const productType = normalizeIdentityText(asReadableId(state.productType));
+  const productId = normalizeIdentityText(asReadableId(state.productId));
   let idLabel = '';
   if (productType && productId) {
     idLabel = `type ${productType}, id ${productId}`;
@@ -773,13 +794,14 @@ function extractListIdentityFromDetail(detail: NodeDetail | undefined): {
   }
   const state = detail.state;
   const deviceConfig = asRecord(state.deviceConfig);
-  const manufacturer =
-    asNonEmptyString(state.manufacturer) ?? asNonEmptyString(deviceConfig?.manufacturer) ?? null;
-  const product =
+  const manufacturer = normalizeIdentityText(
+    asNonEmptyString(state.manufacturer) ?? asNonEmptyString(deviceConfig?.manufacturer),
+  );
+  const product = normalizeIdentityText(
     asNonEmptyString(state.product) ??
-    asNonEmptyString(state.productLabel) ??
-    asNonEmptyString(deviceConfig?.label) ??
-    null;
+      asNonEmptyString(state.productLabel) ??
+      asNonEmptyString(deviceConfig?.label),
+  );
   return { manufacturer, product };
 }
 
@@ -789,9 +811,9 @@ function formatNodeListLabel(options: {
   product: string | null;
 }): string {
   const name = options.name ?? '(unnamed)';
-  const identityParts = [options.manufacturer, options.product].filter(
-    (part): part is string => part !== null && part.length > 0,
-  );
+  const identityParts = [options.manufacturer, options.product]
+    .map((part) => normalizeIdentityText(part))
+    .filter((part): part is string => part !== null && part.length > 0);
   if (identityParts.length === 0) return name;
   return `${name} (${identityParts.join(' / ')})`;
 }
@@ -883,11 +905,17 @@ function renderNeighborLines(
       if (!summary) {
         return `- Node ${value}`;
       }
-      const name = truncateValueText(summary.name ?? '(unnamed)', 28);
-      const manufacturer = truncateValueText(summary.manufacturer ?? 'unknown', 24);
-      const product = truncateValueText(summary.product ?? 'unknown', 24);
+      const name = truncateValueText(normalizeIdentityText(summary.name) ?? '(unnamed)', 28);
+      const manufacturerText = normalizeIdentityText(summary.manufacturer);
+      const manufacturer = manufacturerText ? truncateValueText(manufacturerText, 24) : null;
+      const productText = normalizeIdentityText(summary.product);
+      const product = productText ? truncateValueText(productText, 24) : null;
+      const identity =
+        manufacturer && product
+          ? `${manufacturer} / ${product}`
+          : (manufacturer ?? product ?? 'identity pending');
       const linkQuality = formatNeighborLinkQuality(neighborId, route);
-      return `- Node ${value} | ${name} | ${manufacturer} | ${product} | ${linkQuality}`;
+      return `- Node ${value} | ${name} | ${identity} | ${linkQuality}`;
     });
     return [
       `Neighbors: ${values.length}${values.length > 0 ? ' (n)' : ''}`,
@@ -1475,8 +1503,9 @@ export async function runPanelApp(
       const filtered = items.filter((node) => {
         if (!filterQuery) return true;
         const detailIdentity = extractListIdentityFromDetail(detailCache[node.nodeId]);
-        const manufacturer = node.manufacturer ?? detailIdentity.manufacturer;
-        const product = node.product ?? detailIdentity.product;
+        const manufacturer =
+          normalizeIdentityText(node.manufacturer) ?? detailIdentity.manufacturer;
+        const product = normalizeIdentityText(node.product) ?? detailIdentity.product;
         const haystack = [
           String(node.nodeId),
           normalizeText(node.name),
@@ -1488,8 +1517,9 @@ export async function runPanelApp(
       });
       return filtered.map((node) => {
         const detailIdentity = extractListIdentityFromDetail(detailCache[node.nodeId]);
-        const manufacturer = node.manufacturer ?? detailIdentity.manufacturer;
-        const product = node.product ?? detailIdentity.product;
+        const manufacturer =
+          normalizeIdentityText(node.manufacturer) ?? detailIdentity.manufacturer;
+        const product = normalizeIdentityText(node.product) ?? detailIdentity.product;
         return {
           kind: 'node' as const,
           key: `node:${node.nodeId}`,
@@ -1616,8 +1646,8 @@ export async function runPanelApp(
     const snapshot = nodesPresenter.getState();
     const item = snapshot.explorer.items.find((entry) => entry.nodeId === nodeId);
     const detailIdentity = extractListIdentityFromDetail(snapshot.nodeDetailCache?.[nodeId]);
-    const manufacturer = item?.manufacturer ?? detailIdentity.manufacturer;
-    const product = item?.product ?? detailIdentity.product;
+    const manufacturer = normalizeIdentityText(item?.manufacturer) ?? detailIdentity.manufacturer;
+    const product = normalizeIdentityText(item?.product) ?? detailIdentity.product;
     return !(manufacturer && product);
   }
 
@@ -1679,9 +1709,9 @@ export async function runPanelApp(
 
   function toNeighborIdentityFromDetail(detail: NodeDetail): NeighborIdentity {
     const state = detail.state ?? {};
-    const name = asNonEmptyString(state.name) ?? null;
-    const manufacturer = formatManufacturerLabel(state) || null;
-    const product = formatProductLabel(state) || null;
+    const name = normalizeIdentityText(asNonEmptyString(state.name));
+    const manufacturer = normalizeIdentityText(formatManufacturerLabel(state));
+    const product = normalizeIdentityText(formatProductLabel(state));
     return { name, manufacturer, product };
   }
 
@@ -1692,9 +1722,9 @@ export async function runPanelApp(
     const explorerItems = snapshot.explorer?.items ?? [];
     for (const item of explorerItems) {
       map.set(item.nodeId, {
-        name: item.name,
-        manufacturer: item.manufacturer,
-        product: item.product,
+        name: normalizeIdentityText(item.name),
+        manufacturer: normalizeIdentityText(item.manufacturer),
+        product: normalizeIdentityText(item.product),
       });
     }
 
@@ -1728,7 +1758,7 @@ export async function runPanelApp(
     });
     if (missing.length === 0) return;
 
-    for (const nodeId of missing.slice(0, 16)) {
+    for (const nodeId of missing.slice(0, 64)) {
       try {
         await nodesPresenter.showNodeDetail(nodeId, {
           selectNode: false,

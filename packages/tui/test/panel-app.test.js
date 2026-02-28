@@ -542,14 +542,14 @@ test('runPanelApp toggles neighbors in node detail and shows readable identity l
   assert.equal(rendered.includes('Lifeline route: 2 -> 5 @ 40 kbps'), true);
   assert.equal(
     rendered.includes('Neighbor Nodes:') &&
-      rendered.includes('Node 2 | Kitchen | Zooz | Plug | lifeline hop 1/2 @ 40 kbps'),
+      rendered.includes('Node 2 | Kitchen | Zooz / Plug | lifeline hop 1/2 @ 40 kbps'),
     true,
   );
   assert.equal(
-    rendered.includes('Node 5 | Office | Aeotec | Sensor | lifeline hop 2/2 @ 40 kbps'),
+    rendered.includes('Node 5 | Office | Aeotec / Sensor | lifeline hop 2/2 @ 40 kbps'),
     true,
   );
-  assert.equal(rendered.includes('Node 11 | Hallway | Inovelli | Light | not-on-lifeline'), true);
+  assert.equal(rendered.includes('Node 11 | Hallway | Inovelli / Light | not-on-lifeline'), true);
   assert.equal(rendered.includes('Values 3 (z)'), true);
 });
 
@@ -598,8 +598,8 @@ test('runPanelApp hydrates missing neighbor manufacturer/product from node detai
           manufacturer: 'Zooz',
           product: 'Controller',
         },
-        { nodeId: 2, name: 'Kitchen', manufacturer: null, product: null },
-        { nodeId: 5, name: 'Office', manufacturer: null, product: null },
+        { nodeId: 2, name: 'Kitchen', manufacturer: 'unknown', product: 'unknown' },
+        { nodeId: 5, name: 'Office', manufacturer: 'unknown', product: 'unknown' },
       ],
     },
     nodeDetailCache: {},
@@ -656,6 +656,7 @@ test('runPanelApp hydrates missing neighbor manufacturer/product from node detai
   const rendered = capture.text();
   assert.equal(rendered.includes('Node 2 | Kitchen | Zooz'), true);
   assert.equal(rendered.includes('Node 5 | Office | Aeotec'), true);
+  assert.equal(rendered.includes('unknown | unknown'), false);
 });
 
 test('runPanelApp renders status codes and notifications in human-readable form', async () => {
@@ -828,22 +829,13 @@ test('runPanelApp orders expanded values by relevance', async () => {
   assert.equal(expandedValuesFrame.includes('Values 3 (z)'), true);
   assert.equal(expandedValuesFrame.includes('Live/Control values: 2'), true);
   assert.equal(expandedValuesFrame.includes('Static/Diagnostic values: 1'), true);
-  assert.equal(
-    expandedValuesFrame.includes(
-      'Switch: on (99)',
-    ),
-    true,
-  );
-  assert.equal(
-    expandedValuesFrame.includes(
-      'Temperature: 21.4 C',
-    ),
-    true,
-  );
+  assert.equal(expandedValuesFrame.includes('Switch: on (99)'), true);
+  assert.equal(expandedValuesFrame.includes('Temperature: 21.4 C'), true);
   assert.equal(expandedValuesFrame.includes('[static] Status Flags: 3'), true);
   assert.notEqual(expandedValuesFrame, undefined);
   assert.equal(
-    expandedValuesFrame.indexOf('Switch: on (99)') < expandedValuesFrame.indexOf('Temperature: 21.4 C'),
+    expandedValuesFrame.indexOf('Switch: on (99)') <
+      expandedValuesFrame.indexOf('Temperature: 21.4 C'),
     true,
   );
   assert.equal(
