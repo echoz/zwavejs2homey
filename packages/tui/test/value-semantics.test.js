@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 
 const {
   annotateNodeValue,
+  classifyNodeValueSection,
   classifyNodeValueGroup,
   formatValueSemanticTag,
 } = require('../dist/view/value-semantics');
@@ -118,6 +119,60 @@ test('classifyNodeValueGroup marks writable or mapped values as interactive', ()
     value: 99,
   });
   assert.equal(group, 'interactive');
+});
+
+test('classifyNodeValueSection classifies writable switch as controls', () => {
+  const section = classifyNodeValueSection({
+    valueId: {
+      commandClass: 38,
+      endpoint: 0,
+      property: 'targetValue',
+    },
+    metadata: {
+      label: 'Switch',
+      readable: true,
+      writeable: true,
+      states: { 0: 'off', 99: 'on' },
+    },
+    value: 99,
+  });
+  assert.equal(section, 'controls');
+});
+
+test('classifyNodeValueSection classifies sensor units as sensors', () => {
+  const section = classifyNodeValueSection({
+    valueId: {
+      commandClass: 49,
+      endpoint: 0,
+      property: 'Air temperature',
+    },
+    metadata: {
+      label: 'Temperature',
+      unit: 'C',
+      readable: true,
+      writeable: false,
+    },
+    value: 22.1,
+  });
+  assert.equal(section, 'sensors');
+});
+
+test('classifyNodeValueSection classifies configuration class as config', () => {
+  const section = classifyNodeValueSection({
+    valueId: {
+      commandClass: 112,
+      endpoint: 0,
+      property: 'parameter',
+      propertyKey: 1,
+    },
+    metadata: {
+      label: 'Parameter 1',
+      readable: true,
+      writeable: true,
+    },
+    value: 5,
+  });
+  assert.equal(section, 'config');
 });
 
 test('classifyNodeValueGroup marks status/firmware-like values as static', () => {

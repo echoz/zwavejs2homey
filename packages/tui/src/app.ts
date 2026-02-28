@@ -34,7 +34,8 @@ import { ZwjsExplorerServiceImpl, type ZwjsExplorerService } from './service/zwj
 import { parseShellCommand } from './view/command-parser';
 import {
   annotateNodeValue,
-  classifyNodeValueGroup,
+  classifyNodeValueSection,
+  type ValueSemanticSection,
   semanticCapabilityScore,
 } from './view/value-semantics';
 import {
@@ -524,7 +525,8 @@ function wrapLineToWidth(
 }
 
 function wrapDetailLinesForDisplay(lines: string[], sectionWidth: number): string[] {
-  const headingPattern = /^(?:[▶▼]\s+)?(Identity|Telemetry|Neighbors|Values)\b/;
+  const headingPattern =
+    /^(?:[▶▼]\s+)?(Identity|Telemetry|Neighbors|Values|Controls|Sensors|Events|Config|Diagnostic|Other)\b/;
   const wrapped: string[] = [];
   for (const line of lines) {
     const trimmed = line.trim();
@@ -555,7 +557,8 @@ function wrapDetailLinesForDisplay(lines: string[], sectionWidth: number): strin
 }
 
 function formatDetailLinesForDisplay(lines: string[], sectionWidth: number): string {
-  const headingPattern = /^(?:[▶▼]\s+)?(Identity|Telemetry|Neighbors|Values)\b/;
+  const headingPattern =
+    /^(?:[▶▼]\s+)?(Identity|Telemetry|Neighbors|Values|Controls|Sensors|Events|Config|Diagnostic|Other)\b/;
   const labelValuePattern = /^([A-Za-z][A-Za-z0-9 _/()\-]*):(.*)$/;
   const rendered: string[] = [];
   for (const line of lines) {
@@ -1214,6 +1217,50 @@ function sortValuesByRelevance(values: NodeValueDetail[]): NodeValueDetail[] {
   });
 }
 
+interface ValueSectionDescriptor {
+  id: ValueSemanticSection;
+  title: string;
+  compact: boolean;
+}
+
+const VALUE_SECTION_ORDER: ValueSectionDescriptor[] = [
+  { id: 'controls', title: 'Controls', compact: false },
+  { id: 'sensors', title: 'Sensors', compact: false },
+  { id: 'events', title: 'Events', compact: false },
+  { id: 'config', title: 'Config', compact: true },
+  { id: 'diagnostic', title: 'Diagnostic', compact: true },
+  { id: 'other', title: 'Other', compact: false },
+];
+
+function groupValuesBySection(
+  values: NodeValueDetail[],
+): Map<ValueSemanticSection, NodeValueDetail[]> {
+  const grouped = new Map<ValueSemanticSection, NodeValueDetail[]>();
+  for (const section of VALUE_SECTION_ORDER) {
+    grouped.set(section.id, []);
+  }
+  for (const entry of values) {
+    const section = classifyNodeValueSection(entry);
+    const existing = grouped.get(section);
+    if (existing) {
+      existing.push(entry);
+    } else {
+      grouped.set(section, [entry]);
+    }
+  }
+  return grouped;
+}
+
+function renderCollapsedValuePreview(values: NodeValueDetail[], limit: number): string[] {
+  const top = values.slice(0, limit);
+  return top.map((entry) => {
+    const section = classifyNodeValueSection(entry);
+    return section === 'config' || section === 'diagnostic'
+      ? formatNodeValueCompactLine(entry)
+      : formatNodeValueLine(entry);
+  });
+}
+
 function renderPanelNodeDetail(
   detail: NodeDetail,
   options: {
@@ -1247,17 +1294,38 @@ function renderPanelNodeDetail(
   const sortedValues = sortValuesByRelevance(values);
   const valuesExpanded = options.valuesExpanded === true;
   const valuesDisclosure = valuesExpanded ? '▼' : '▶';
-  const interactiveValues = sortedValues.filter(
-    (entry) => classifyNodeValueGroup(entry) === 'interactive',
-  );
-  const staticValues = sortedValues.filter((entry) => classifyNodeValueGroup(entry) === 'static');
-  const previewRows = (valuesExpanded ? interactiveValues : interactiveValues.slice(0, 3)).map(
-    (entry) => formatNodeValueLine(entry),
-  );
-  const staticRows = (valuesExpanded ? staticValues : staticValues.slice(0, 2)).map((entry) =>
-    formatNodeValueCompactLine(entry),
-  );
+  const valuesBySection = groupValuesBySection(sortedValues);
+  const collapsedPreviewRows = renderCollapsedValuePreview(sortedValues, 5);
+  const nonEmptySectionSummaries = VALUE_SECTION_ORDER.map((section) => {
+    const count = valuesBySection.get(section.id)?.length ?? 0;
+    if (count <= 0) return null;
+    return `${section.title.toLowerCase()} ${count}`;
+  }).filter((value): value is string => value !== null);
+  const expandedSectionLines = VALUE_SECTION_ORDER.flatMap((section) => {
+    const sectionValues = valuesBySection.get(section.id) ?? [];
+    if (sectionValues.length <= 0) return [];
+    const rows = section.compact
+      ? sectionValues.map((entry) => formatNodeValueCompactLine(entry))
+      : sectionValues.map((entry) => formatNodeValueLine(entry));
+    return [`${section.title}: ${sectionValues.length}`, ...rows];
+  });
   const valuesSectionTitle = `${valuesDisclosure} Values ${values.length}${values.length > 0 ? ' (z)' : ''}`;
+  const valuesBodyLines = valuesExpanded
+    ? expandedSectionLines.length > 0
+      ? expandedSectionLines
+      : ['No values available.']
+    : values.length > 0
+      ? [
+          nonEmptySectionSummaries.length > 0
+            ? `Section counts: ${nonEmptySectionSummaries.join(' | ')}`
+            : null,
+          'Top values (relevance first):',
+          ...collapsedPreviewRows,
+          values.length > collapsedPreviewRows.length
+            ? `... ${values.length - collapsedPreviewRows.length} more values (z)`
+            : null,
+        ]
+      : ['No values available.'];
 
   return [
     'Identity',
@@ -1273,22 +1341,7 @@ function renderPanelNodeDetail(
     ...neighborBodyLines,
     '',
     valuesSectionTitle,
-    interactiveValues.length > 0
-      ? valuesExpanded
-        ? `Live/Control values: ${interactiveValues.length}`
-        : 'Top Values (top relevant first):'
-      : null,
-    ...previewRows,
-    !valuesExpanded && interactiveValues.length > previewRows.length
-      ? valuesExpanded
-        ? null
-        : `... ${interactiveValues.length - previewRows.length} more live/control values (z)`
-      : null,
-    staticValues.length > 0 ? `Static/Diagnostic values: ${staticValues.length}` : null,
-    ...staticRows,
-    !valuesExpanded && staticValues.length > staticRows.length
-      ? `... ${staticValues.length - staticRows.length} more static values (z)`
-      : null,
+    ...valuesBodyLines,
   ]
     .filter((line) => line !== null)
     .join('\n');

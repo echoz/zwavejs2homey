@@ -976,8 +976,9 @@ test('runPanelApp orders expanded values by relevance', async () => {
 
   const expandedValuesFrame = capture.text();
   assert.equal(expandedValuesFrame.includes('Values 3 (z)'), true);
-  assert.equal(expandedValuesFrame.includes('Live/Control values: 2'), true);
-  assert.equal(expandedValuesFrame.includes('Static/Diagnostic values: 1'), true);
+  assert.equal(expandedValuesFrame.includes('Controls: 1'), true);
+  assert.equal(expandedValuesFrame.includes('Sensors: 1'), true);
+  assert.equal(expandedValuesFrame.includes('Config: 1'), true);
   assert.equal(expandedValuesFrame.includes('Switch: on (99)'), true);
   assert.equal(expandedValuesFrame.includes('Temperature: 21.4 C'), true);
   assert.equal(expandedValuesFrame.includes('[static] Status Flags: 3'), true);
@@ -992,6 +993,107 @@ test('runPanelApp orders expanded values by relevance', async () => {
       expandedValuesFrame.indexOf('[static] Status Flags: 3'),
     true,
   );
+});
+
+test('runPanelApp shows section counts and top preview when values are collapsed', async () => {
+  const input = new FakeInput();
+  const output = new FakeOutput();
+  output.columns = 140;
+  const presenter = {
+    async connect() {},
+    async disconnect() {},
+    getState() {
+      return {
+        explorer: {
+          items: [{ nodeId: 6, name: 'Dining', manufacturer: 'Zooz', product: 'Dimmer' }],
+        },
+      };
+    },
+    getStatusSnapshot() {
+      return {
+        mode: 'nodes',
+        connectionState: 'ready',
+        selectedSignature: undefined,
+        cachedNodeCount: 1,
+      };
+    },
+    async showNodeDetail(nodeId) {
+      return {
+        nodeId,
+        state: {
+          name: 'Dining',
+          ready: true,
+          status: 'alive',
+          manufacturer: 'Zooz',
+          product: 'Dimmer',
+        },
+        neighbors: [],
+        notificationEvents: [],
+        values: [
+          {
+            valueId: { commandClass: 38, endpoint: 0, property: 'targetValue' },
+            metadata: {
+              label: 'Switch',
+              readable: true,
+              writeable: true,
+              type: 'number',
+              states: { 0: 'off', 99: 'on' },
+            },
+            value: 99,
+          },
+          {
+            valueId: { commandClass: 49, endpoint: 0, property: 'Air temperature' },
+            metadata: {
+              label: 'Temperature',
+              readable: true,
+              writeable: false,
+              type: 'number',
+              unit: 'C',
+            },
+            value: 20.8,
+          },
+          {
+            valueId: { commandClass: 112, endpoint: 0, property: 'statusFlags' },
+            metadata: {
+              label: 'Status Flags',
+              readable: true,
+              writeable: false,
+              type: 'number',
+            },
+            value: 2,
+          },
+        ],
+      };
+    },
+  };
+  const { capture, deps } = createPanelDeps(presenter, input, output);
+
+  const runPromise = runPanelApp(
+    {
+      mode: 'nodes',
+      uiMode: 'panel',
+      manifestFile: 'rules/manifest.json',
+      url: 'ws://127.0.0.1:3000',
+      schemaVersion: 0,
+      includeValues: 'summary',
+      maxValues: 100,
+    },
+    { log: () => {}, error: () => {} },
+    deps,
+  );
+
+  setTimeout(() => {
+    emitInputKeys(input, ['return', 'q']);
+  }, 5);
+
+  await runPromise;
+
+  const rendered = capture.text();
+  assert.equal(rendered.includes('Values 3 (z)'), true);
+  assert.equal(rendered.includes('Section counts: controls 1 | sensors 1 | config 1'), true);
+  assert.equal(rendered.includes('Top values (relevance first):'), true);
+  assert.equal(rendered.includes('Switch: on (99)'), true);
+  assert.equal(rendered.includes('Temperature: 20.8 C'), true);
 });
 
 test('runPanelApp scrolls right pane when focused on node detail', async () => {

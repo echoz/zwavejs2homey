@@ -4,6 +4,13 @@ export type ValueDirection = 'read' | 'write' | 'read-write' | 'unknown';
 export type ValueConfidence = 'high' | 'medium' | 'low';
 export type ValueSemanticSource = 'metadata' | 'heuristic';
 export type ValuePresentationGroup = 'interactive' | 'static';
+export type ValueSemanticSection =
+  | 'controls'
+  | 'sensors'
+  | 'events'
+  | 'config'
+  | 'diagnostic'
+  | 'other';
 
 export interface ValueSemanticAnnotation {
   capabilityId: string | null;
@@ -62,6 +69,15 @@ function inferSensorCapability(text: string, unit: string): string | null {
     return 'measure_pressure';
   }
   return null;
+}
+
+function toCommandClass(entry: NodeValueDetail): number | undefined {
+  return asCommandClassNumber(entry.valueId?.commandClass);
+}
+
+function mergedPropertyText(entry: NodeValueDetail): string {
+  const metadata = asRecord(entry.metadata);
+  return `${asText(entry.valueId?.property)} ${asText(entry.valueId?.propertyKey)} ${asText(metadata?.label)} ${asText(metadata?.description)}`.trim();
 }
 
 export function annotateNodeValue(entry: NodeValueDetail): ValueSemanticAnnotation {
@@ -205,48 +221,100 @@ export function semanticCapabilityScore(capabilityId: string | null): number {
   }
 }
 
-export function classifyNodeValueGroup(entry: NodeValueDetail): ValuePresentationGroup {
+export function classifyNodeValueSection(entry: NodeValueDetail): ValueSemanticSection {
   if (entry._error !== undefined || !entry.valueId) {
-    return 'static';
+    return 'diagnostic';
   }
 
   const metadata = asRecord(entry.metadata);
   const states = asRecord(metadata?.states);
+  const text = mergedPropertyText(entry);
   const unit = asText(metadata?.unit);
-  const propertyText =
-    `${asText(entry.valueId.property)} ${asText(entry.valueId.propertyKey)} ${asText(metadata?.label)}`.trim();
-  const hasStates = states ? Object.keys(states).length > 0 : false;
+  const commandClass = toCommandClass(entry);
   const semantic = annotateNodeValue(entry);
+  const hasStates = states ? Object.keys(states).length > 0 : false;
+  const diagnosticHints = [
+    'interview',
+    'firmware',
+    'version',
+    'status',
+    'health',
+    'protocol',
+    'serial',
+    'sdk',
+    'statistics',
+    'route',
+    'rssi',
+  ];
+  const configHints = [
+    'configuration',
+    'config',
+    'parameter',
+    'setpoint',
+    'threshold',
+    'offset',
+    'calibration',
+    'protection',
+  ];
 
-  if (semantic.direction === 'write' || semantic.direction === 'read-write') return 'interactive';
-  if (hasStates) return 'interactive';
-  if (unit.length > 0) return 'interactive';
+  if (commandClass === 112 || hasAny(text, configHints)) return 'config';
+  if (commandClass === 114 || commandClass === 115 || hasAny(text, diagnosticHints)) {
+    return 'diagnostic';
+  }
 
   const capability = semantic.capabilityId;
   if (
-    capability &&
-    capability !== 'measure_generic' &&
-    capability !== 'number_value' &&
-    capability !== 'alarm_generic'
+    capability === 'measure_temperature' ||
+    capability === 'measure_humidity' ||
+    capability === 'measure_luminance' ||
+    capability === 'measure_power' ||
+    capability === 'meter_power' ||
+    capability === 'measure_voltage' ||
+    capability === 'measure_current' ||
+    capability === 'measure_pressure' ||
+    capability === 'measure_battery' ||
+    capability === 'measure_generic'
   ) {
-    return 'interactive';
+    return 'sensors';
+  }
+  if (
+    capability === 'alarm_motion' ||
+    capability === 'alarm_contact' ||
+    capability === 'alarm_smoke' ||
+    capability === 'alarm_water' ||
+    capability === 'alarm_tamper' ||
+    capability === 'alarm_generic' ||
+    capability === 'button_action'
+  ) {
+    return 'events';
+  }
+  if (
+    capability === 'onoff' ||
+    capability === 'dim' ||
+    capability === 'windowcoverings_set' ||
+    capability === 'locked' ||
+    capability === 'enum_select' ||
+    capability === 'number_value'
+  ) {
+    return 'controls';
   }
 
-  const staticHints = [
-    'status',
-    'interview',
-    'manufacturer',
-    'product',
-    'firmware',
-    'version',
-    'protocol',
-    'serial',
-    'hardware',
-    'powerlevel',
-    'zwaveplus',
-    'sdk',
-  ];
+  if (commandClass === 49 || commandClass === 50 || commandClass === 128 || unit.length > 0) {
+    return 'sensors';
+  }
+  if (commandClass === 48 || commandClass === 91 || commandClass === 113) return 'events';
+  if (commandClass === 37 || commandClass === 38 || commandClass === 98 || commandClass === 121) {
+    return 'controls';
+  }
+  if (semantic.direction === 'write' || semantic.direction === 'read-write' || hasStates) {
+    return 'controls';
+  }
 
-  if (hasAny(propertyText, staticHints)) return 'static';
+  return 'other';
+}
+
+export function classifyNodeValueGroup(entry: NodeValueDetail): ValuePresentationGroup {
+  const section = classifyNodeValueSection(entry);
+  if (section === 'config' || section === 'diagnostic') return 'static';
   return 'interactive';
 }
