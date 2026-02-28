@@ -225,6 +225,7 @@ interface RunAppDeps {
   stdout?: NodeJS.WriteStream;
   panelOperationTimeoutMs?: number;
   onPanelRender?: (snapshot: PanelRenderSnapshot) => void;
+  panelKeypressSource?: 'auto' | 'input' | 'screen';
 }
 
 export interface PanelRenderSnapshot {
@@ -1144,6 +1145,12 @@ export async function runPanelApp(
 
   const OPERATION_TIMEOUT_MS = Math.max(1, deps.panelOperationTimeoutMs ?? 45_000);
   const WRITE_CONFIRM_WINDOW_MS = 6_000;
+  const keypressSource =
+    deps.panelKeypressSource === 'input' || deps.panelKeypressSource === 'screen'
+      ? deps.panelKeypressSource
+      : deps.stdin
+        ? 'input'
+        : 'screen';
 
   const screen = blessed.screen({
     smartCSR: true,
@@ -2135,7 +2142,11 @@ export async function runPanelApp(
 
       const cleanup = () => {
         screen.off('resize', onResize);
-        input.off('keypress', onKeypress);
+        if (keypressSource === 'screen') {
+          screen.off('keypress', onKeypress);
+        } else {
+          input.off('keypress', onKeypress);
+        }
         if (input.isTTY && typeof input.setRawMode === 'function') {
           input.setRawMode(false);
         }
@@ -2146,7 +2157,11 @@ export async function runPanelApp(
         output.write('\n');
       };
 
-      input.on('keypress', onKeypress);
+      if (keypressSource === 'screen') {
+        screen.on('keypress', onKeypress);
+      } else {
+        input.on('keypress', onKeypress);
+      }
       screen.on('resize', onResize);
     });
   } finally {
