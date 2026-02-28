@@ -34,6 +34,11 @@ test('parseCliArgs validates baseline workflow inputs', async () => {
     parseCliArgs(['--url', 'ws://x', '--all-nodes', '--fail-on-reason-delta', 'broken']).ok,
     false,
   );
+  assert.equal(parseCliArgs(['--url', 'ws://x', '--all-nodes', '--unknown-flag']).ok, false);
+  assert.equal(
+    parseCliArgs(['--url', 'ws://x', '--all-nodes', '--emit-curation-backlog']).ok,
+    false,
+  );
 
   const parsed = parseCliArgs(['--url', 'ws://x', '--all-nodes'], {
     nowDate: new Date('2026-02-27T00:00:00.000Z'),

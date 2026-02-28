@@ -5,6 +5,38 @@ import {
   runValidateLiveCommand,
 } from './homey-compile-validate-live-lib.mjs';
 
+const ALLOWED_CLI_FLAGS = new Set([
+  '--help',
+  '-h',
+  '--url',
+  '--all-nodes',
+  '--node',
+  '--manifest-file',
+  '--rules-file',
+  '--catalog-file',
+  '--token',
+  '--schema-version',
+  '--include-values',
+  '--max-values',
+  '--include-controller-nodes',
+  '--output-dir',
+  '--stamp',
+  '--artifact-retention',
+  '--redact-share',
+  '--baseline-redacted-report-file',
+  '--baseline-redacted-summary-json-file',
+  '--recheck-redacted-report-file',
+  '--recheck-redacted-summary-json-file',
+  '--gate-profile-file',
+  '--max-review-delta',
+  '--max-generic-delta',
+  '--max-empty-delta',
+  '--fail-on-reason-delta',
+  '--top',
+  '--skip-recheck',
+  '--print-effective-gates',
+]);
+
 function parseFlagMap(argv) {
   const flags = new Map();
   for (let i = 0; i < argv.length; i += 1) {
@@ -33,6 +65,19 @@ function collectRepeatedFlag(argv, flagName) {
     if (argv[i].startsWith(`${flagName}=`)) values.push(argv[i].split('=', 2)[1]);
   }
   return values;
+}
+
+function hasFlagOccurrence(argv, flagName) {
+  return argv.some((token) => token === flagName || token.startsWith(`${flagName}=`));
+}
+
+function findUnsupportedLongFlag(argv, allowedFlags) {
+  for (const token of argv) {
+    if (!token.startsWith('--')) continue;
+    const [key] = token.split('=', 2);
+    if (!allowedFlags.has(key)) return key;
+  }
+  return undefined;
 }
 
 function resolveFilePath(filePath) {
@@ -99,6 +144,27 @@ export function getUsageText() {
 
 export function parseCliArgs(argv, options = {}) {
   if (argv.includes('--help') || argv.includes('-h')) return { ok: false, error: getUsageText() };
+
+  const removedBacklogFlags = [
+    '--emit-curation-backlog',
+    '--baseline-curation-backlog-json-file',
+    '--recheck-curation-backlog-json-file',
+    '--baseline-redacted-curation-backlog-json-file',
+    '--recheck-redacted-curation-backlog-json-file',
+  ];
+  const usedRemovedBacklogFlag = removedBacklogFlags.find((flagName) =>
+    hasFlagOccurrence(argv, flagName),
+  );
+  if (usedRemovedBacklogFlag) {
+    return {
+      ok: false,
+      error: `${usedRemovedBacklogFlag} is no longer supported (backlog artifacts were removed from compiler:baseline)`,
+    };
+  }
+  const unsupportedFlag = findUnsupportedLongFlag(argv, ALLOWED_CLI_FLAGS);
+  if (unsupportedFlag) {
+    return { ok: false, error: `Unsupported flag: ${unsupportedFlag}` };
+  }
 
   const flags = parseFlagMap(argv);
   const url = flags.get('--url');

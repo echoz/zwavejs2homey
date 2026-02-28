@@ -28,6 +28,17 @@ test('parseCliArgs validates required live inputs and rules source modes', async
     ]).ok,
     false,
   );
+  assert.equal(parseCliArgs(['--url', 'ws://x', '--all-nodes', '--unknown-flag']).ok, false);
+  assert.equal(
+    parseCliArgs([
+      '--url',
+      'ws://x',
+      '--all-nodes',
+      '--curation-backlog-json-file',
+      '/tmp/compiled-live.curation-backlog.json',
+    ]).ok,
+    false,
+  );
 
   const parsedDefault = parseCliArgs(['--url', 'ws://x', '--all-nodes'], {
     defaultManifestFile: path.join(fixturesDir, 'rule-manifest-with-ha-generated.json'),

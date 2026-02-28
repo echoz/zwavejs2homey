@@ -9,6 +9,10 @@ test('compiler simulate parseCliArgs validates signature source and simulate opt
   const { parseCliArgs } = await loadLib();
 
   assert.equal(parseCliArgs([]).ok, false);
+  assert.equal(parseCliArgs(['--unknown-flag']).ok, false);
+  assert.equal(parseCliArgs(['--signature', '29:66:2', '--backlog-file', 'x.json']).ok, false);
+  assert.equal(parseCliArgs(['--signature', '29:66:2', '--pick', '2']).ok, false);
+  assert.equal(parseCliArgs(['--from-backlog-file', 'a.json']).ok, false);
   assert.equal(parseCliArgs(['--signature', 'bad-signature']).ok, false);
   const parsedSignature = parseCliArgs([
     '--signature',

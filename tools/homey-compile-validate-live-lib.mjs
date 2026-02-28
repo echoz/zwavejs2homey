@@ -8,6 +8,44 @@ import { formatJsonPretty } from './output-format-lib.mjs';
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DEFAULT_RULE_MANIFEST_FILE = path.join(REPO_ROOT, 'rules', 'manifest.json');
 const ARTIFACT_RETENTION_MODES = new Set(['keep', 'delete-on-pass']);
+const ALLOWED_CLI_FLAGS = new Set([
+  '--help',
+  '-h',
+  '--url',
+  '--all-nodes',
+  '--node',
+  '--manifest-file',
+  '--rules-file',
+  '--compiled-file',
+  '--catalog-file',
+  '--token',
+  '--schema-version',
+  '--include-values',
+  '--max-values',
+  '--include-controller-nodes',
+  '--signature',
+  '--artifact-file',
+  '--artifact-retention',
+  '--report-file',
+  '--summary-json-file',
+  '--redact-share',
+  '--redacted-report-file',
+  '--redacted-summary-json-file',
+  '--save-baseline-summary-json-file',
+  '--gate-profile-file',
+  '--baseline-summary-json-file',
+  '--max-review-nodes',
+  '--max-generic-nodes',
+  '--max-empty-nodes',
+  '--fail-on-reason',
+  '--max-review-delta',
+  '--max-generic-delta',
+  '--max-empty-delta',
+  '--fail-on-reason-delta',
+  '--print-effective-gates',
+  '--top',
+  '--input-summary-json-file',
+]);
 
 function parseFlagMap(argv) {
   const flags = new Map();
@@ -41,6 +79,15 @@ function collectRepeatedFlag(argv, flagName) {
 
 function hasFlagOccurrence(argv, flagName) {
   return argv.some((token) => token === flagName || token.startsWith(`${flagName}=`));
+}
+
+function findUnsupportedLongFlag(argv, allowedFlags) {
+  for (const token of argv) {
+    if (!token.startsWith('--')) continue;
+    const [key] = token.split('=', 2);
+    if (!allowedFlags.has(key)) return key;
+  }
+  return undefined;
 }
 
 function resolveFilePath(filePath) {
@@ -1016,6 +1063,24 @@ export function getUsageText() {
 
 export function parseCliArgs(argv, options = {}) {
   if (argv.includes('--help') || argv.includes('-h')) return { ok: false, error: getUsageText() };
+
+  const removedBacklogFlags = [
+    '--curation-backlog-json-file',
+    '--redacted-curation-backlog-json-file',
+  ];
+  const usedRemovedBacklogFlag = removedBacklogFlags.find((flagName) =>
+    hasFlagOccurrence(argv, flagName),
+  );
+  if (usedRemovedBacklogFlag) {
+    return {
+      ok: false,
+      error: `${usedRemovedBacklogFlag} is no longer supported (backlog artifacts were removed from compiler:validate-live)`,
+    };
+  }
+  const unsupportedFlag = findUnsupportedLongFlag(argv, ALLOWED_CLI_FLAGS);
+  if (unsupportedFlag) {
+    return { ok: false, error: `Unsupported flag: ${unsupportedFlag}` };
+  }
 
   const flags = parseFlagMap(argv);
   const inputSummaryJsonFileFlag = flags.get('--input-summary-json-file');

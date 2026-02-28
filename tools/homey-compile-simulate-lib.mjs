@@ -21,6 +21,47 @@ const SIMULATE_FORMATS = new Set([
   'json-pretty',
   'json-compact',
 ]);
+const ALLOWED_CLI_FLAGS = new Set([
+  '--help',
+  '-h',
+  '--url',
+  '--all-nodes',
+  '--node',
+  '--manifest-file',
+  '--rules-file',
+  '--compiled-file',
+  '--catalog-file',
+  '--token',
+  '--schema-version',
+  '--include-values',
+  '--max-values',
+  '--include-controller-nodes',
+  '--signature',
+  '--artifact-file',
+  '--artifact-retention',
+  '--report-file',
+  '--summary-json-file',
+  '--redact-share',
+  '--redacted-report-file',
+  '--redacted-summary-json-file',
+  '--save-baseline-summary-json-file',
+  '--gate-profile-file',
+  '--baseline-summary-json-file',
+  '--max-review-nodes',
+  '--max-generic-nodes',
+  '--max-empty-nodes',
+  '--fail-on-reason',
+  '--max-review-delta',
+  '--max-generic-delta',
+  '--max-empty-delta',
+  '--fail-on-reason-delta',
+  '--print-effective-gates',
+  '--top',
+  '--skip-inspect',
+  '--inspect-format',
+  '--dry-run',
+  '--format',
+]);
 
 function parseFlagMap(argv) {
   const flags = new Map();
@@ -45,6 +86,15 @@ function parseFlagMap(argv) {
 
 function hasFlagOccurrence(argv, flagName) {
   return argv.some((token) => token === flagName || token.startsWith(`${flagName}=`));
+}
+
+function findUnsupportedLongFlag(argv, allowedFlags) {
+  for (const token of argv) {
+    if (!token.startsWith('--')) continue;
+    const [key] = token.split('=', 2);
+    if (!allowedFlags.has(key)) return key;
+  }
+  return undefined;
 }
 
 function stripFlags(argv, stripSet) {
@@ -118,6 +168,29 @@ export function getUsageText() {
 
 export function parseCliArgs(argv) {
   if (argv.includes('--help') || argv.includes('-h')) return { ok: false, error: getUsageText() };
+
+  const removedBacklogFlags = [
+    '--backlog-file',
+    '--from-backlog-file',
+    '--to-backlog-file',
+    '--only',
+    '--candidate-policy',
+    '--fallback',
+    '--pick',
+  ];
+  const usedRemovedBacklogFlag = removedBacklogFlags.find((flagName) =>
+    hasFlagOccurrence(argv, flagName),
+  );
+  if (usedRemovedBacklogFlag) {
+    return {
+      ok: false,
+      error: `${usedRemovedBacklogFlag} is no longer supported; provide --signature instead`,
+    };
+  }
+  const unsupportedFlag = findUnsupportedLongFlag(argv, ALLOWED_CLI_FLAGS);
+  if (unsupportedFlag) {
+    return { ok: false, error: `Unsupported flag: ${unsupportedFlag}` };
+  }
 
   const flags = parseFlagMap(argv);
   const signature = flags.get('--signature');
