@@ -915,9 +915,9 @@ function renderNeighborLines(
       if (!summary) {
         return `- Node ${value}`;
       }
-      const name = summary.name ?? '(unnamed)';
-      const manufacturer = summary.manufacturer ?? 'unknown';
-      const product = summary.product ?? 'unknown';
+      const name = truncateValueText(summary.name ?? '(unnamed)', 28);
+      const manufacturer = truncateValueText(summary.manufacturer ?? 'unknown', 24);
+      const product = truncateValueText(summary.product ?? 'unknown', 24);
       const linkQuality = formatNeighborLinkQuality(neighborId, route);
       return `- Node ${value} | ${name} | ${manufacturer} | ${product} | ${linkQuality}`;
     });
@@ -1456,6 +1456,7 @@ export async function runPanelApp(
     tags: true,
     scrollable: true,
     alwaysScroll: true,
+    wrap: false,
   });
   const bottomPane = blessed.box({
     parent: screen,

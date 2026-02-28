@@ -948,13 +948,23 @@ test('runPanelApp can scroll past large neighbors block to values section', asyn
   const input = new FakeInput();
   const output = new FakeOutput();
   output.rows = 24;
+  const neighborIds = Array.from({ length: 450 }, (_, index) => 1000 + index);
+  const neighborItems = neighborIds.map((nodeId) => ({
+    nodeId,
+    name: `VeryLongNeighborNodeName-${nodeId}-Segment-Alpha-Beta-Gamma`,
+    manufacturer: `Manufacturer-${nodeId}-With-Long-Descriptor`,
+    product: `Product-${nodeId}-Extended-Model-Name`,
+  }));
   const presenter = {
     async connect() {},
     async disconnect() {},
     getState() {
       return {
         explorer: {
-          items: [{ nodeId: 21, name: 'Hallway', manufacturer: 'Zooz', product: 'Switch' }],
+          items: [
+            { nodeId: 21, name: 'Hallway', manufacturer: 'Zooz', product: 'Switch' },
+            ...neighborItems,
+          ],
         },
       };
     },
@@ -976,7 +986,7 @@ test('runPanelApp can scroll past large neighbors block to values section', asyn
           manufacturer: 'Zooz',
           product: 'Switch',
         },
-        neighbors: Array.from({ length: 450 }, (_, index) => index + 1),
+        neighbors: neighborIds,
         notificationEvents: [],
         values: [
           {
