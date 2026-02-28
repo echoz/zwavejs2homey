@@ -944,6 +944,87 @@ test('runPanelApp scrolls right pane when focused on node detail', async () => {
   assert.equal(rendered.includes('Property 16'), true);
 });
 
+test('runPanelApp can scroll past large neighbors block to values section', async () => {
+  const input = new FakeInput();
+  const output = new FakeOutput();
+  output.rows = 24;
+  const presenter = {
+    async connect() {},
+    async disconnect() {},
+    getState() {
+      return {
+        explorer: {
+          items: [{ nodeId: 21, name: 'Hallway', manufacturer: 'Zooz', product: 'Switch' }],
+        },
+      };
+    },
+    getStatusSnapshot() {
+      return {
+        mode: 'nodes',
+        connectionState: 'ready',
+        selectedSignature: undefined,
+        cachedNodeCount: 1,
+      };
+    },
+    async showNodeDetail(nodeId) {
+      return {
+        nodeId,
+        state: {
+          name: 'Hallway',
+          ready: true,
+          status: 4,
+          manufacturer: 'Zooz',
+          product: 'Switch',
+        },
+        neighbors: Array.from({ length: 450 }, (_, index) => index + 1),
+        notificationEvents: [],
+        values: [
+          {
+            valueId: { commandClass: 38, endpoint: 0, property: 'targetValue' },
+            metadata: {
+              label: 'Switch',
+              readable: true,
+              writeable: true,
+              type: 'number',
+              states: { 0: 'off', 99: 'on' },
+            },
+            value: 99,
+          },
+        ],
+      };
+    },
+  };
+  const { capture, deps } = createPanelDeps(presenter, input, output);
+
+  const runPromise = runPanelApp(
+    {
+      mode: 'nodes',
+      uiMode: 'panel',
+      manifestFile: 'rules/manifest.json',
+      url: 'ws://127.0.0.1:3000',
+      schemaVersion: 0,
+      includeValues: 'summary',
+      maxValues: 100,
+    },
+    { log: () => {}, error: () => {} },
+    deps,
+  );
+
+  setTimeout(() => {
+    emitInputKeys(input, ['return', 'n', 'tab']);
+    for (let i = 0; i < 40; i += 1) {
+      emitInputKey(input, 'pagedown');
+    }
+    emitInputKey(input, 'q');
+  }, 5);
+
+  await runPromise;
+
+  const rendered = capture.text();
+  assert.equal(rendered.includes('Values 1 (z)'), true);
+  assert.equal(rendered.includes('Switch = on (99)'), true);
+});
+
 test('runPanelApp can quit via ctrl+c keypress intent', async () => {
   const input = new FakeInput();
   const output = new FakeOutput();

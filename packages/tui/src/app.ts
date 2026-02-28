@@ -469,8 +469,14 @@ export async function runApp(
   }
 }
 
-function splitLines(value: string): string[] {
-  return value.split('\n').slice(0, 400);
+function splitLines(value: string, options?: { maxLines?: number }): string[] {
+  const lines = value.split('\n');
+  const maxLines = options?.maxLines;
+  if (!maxLines || lines.length <= maxLines) {
+    return lines;
+  }
+  const hiddenCount = lines.length - maxLines;
+  return [...lines.slice(0, maxLines), `... ${hiddenCount} more line(s) truncated`];
 }
 
 function padOrTruncateText(value: string, width: number): string {
