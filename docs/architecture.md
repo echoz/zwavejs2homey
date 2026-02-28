@@ -151,6 +151,7 @@ Reset architecture direction:
   - rules root (`--rules-only [--manifest-file ...]`)
 - simulation-centric curation flow in both roots
 - current status: panel-first runtime is implemented as default (`--ui panel`) with shell fallback (`--ui shell`)
+- panel renderer implementation is now fully `neo-blessed`-based (custom frame-string renderer removed)
 
 Implementation structure (current direction):
 

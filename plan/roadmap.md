@@ -107,6 +107,7 @@
 - [x] Section 4B: migrate tests/docs/help to simulate-centric workflow
 - [x] Section 6A: dual-root shell workflow parity (nodes/rules + simulate)
 - [x] Section 6B: panel-first rich UI integration in nodes and rules stacks
+- [x] Panel renderer migration: full `neo-blessed` adoption (custom panel-frame renderer removed)
 - [ ] Section 7: convergence review (separate stacks vs shared view primitives)
 - [ ] Keep Homey adapter implementation frozen until Phase 4 reset completion
 

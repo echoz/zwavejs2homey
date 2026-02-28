@@ -37,6 +37,10 @@
   - clear long-run progress states
   - timeout/cancel behavior for live operations
 - [x] panel test expansion for Section 6B behavior
+- [x] panel renderer cutover:
+  - runtime rendering uses `neo-blessed` widgets/layout only
+  - removed custom string-frame renderer path (`panel-layout`)
+  - panel tests consume render snapshots from `runPanelApp` (renderer-agnostic assertions)
 
 Section 7 does not start until all 6B slices above are complete.
 
@@ -67,6 +71,7 @@ Start with separate mode stacks, then evaluate convergence:
 Data flow in both stacks:
 
 - intent -> presenter -> services -> tooling/core -> presenter -> view model -> view
+- panel rendering implementation: `neo-blessed` (widget tree + terminal layout)
 
 ## State Model (High Level)
 

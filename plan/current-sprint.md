@@ -13,6 +13,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 ## Recently Completed
 
+- Latest TUI slice:
+  - migrated panel rendering fully to `neo-blessed` widgets/layout
+  - removed custom `panel-layout` renderer path and raw-data fallback quit path
+  - updated panel tests to assert render snapshots (renderer-agnostic) while keeping behavior coverage
+
 1. Completed Phase 2 HA import foundation:
    - `discovery.py` subset extractor in `packages/compiler`
    - extracted and generated HA artifact contracts

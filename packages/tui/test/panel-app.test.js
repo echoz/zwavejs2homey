@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { EventEmitter } = require('node:events');
+const { Writable } = require('node:stream');
 
 const { runPanelApp } = require('../dist/app');
 
@@ -8,26 +9,87 @@ class FakeInput extends EventEmitter {
   constructor() {
     super();
     this.isTTY = true;
+    this.readable = true;
+    this.writable = true;
+    this.fd = 0;
     this.rawModes = [];
+    this.resumed = false;
+    this.paused = false;
   }
 
   setRawMode(value) {
     this.rawModes.push(value);
   }
+
+  resume() {
+    this.resumed = true;
+    this.paused = false;
+  }
+
+  pause() {
+    this.paused = true;
+    this.resumed = false;
+  }
 }
 
-class FakeOutput extends EventEmitter {
+class FakeOutput extends Writable {
   constructor() {
     super();
+    this.isTTY = true;
+    this.readable = true;
+    this.writable = true;
+    this.fd = 1;
     this.columns = 96;
     this.rows = 28;
     this.writes = [];
   }
 
-  write(value) {
-    this.writes.push(String(value));
-    return true;
+  _write(chunk, _encoding, callback) {
+    this.writes.push(String(chunk));
+    callback();
   }
+}
+
+function createRenderCapture() {
+  const snapshots = [];
+  return {
+    snapshots,
+    onPanelRender(snapshot) {
+      snapshots.push(snapshot);
+    },
+    text() {
+      return snapshots
+        .map((snapshot) =>
+          [
+            snapshot.header,
+            snapshot.leftTitle,
+            ...snapshot.leftLines,
+            snapshot.rightTitle,
+            ...snapshot.rightLines,
+            snapshot.bottomTitle,
+            ...snapshot.bottomLines,
+            snapshot.footer,
+          ]
+            .filter((line) => line && line.length > 0)
+            .join('\n'),
+        )
+        .join('\n---\n');
+    },
+  };
+}
+
+function createPanelDeps(presenter, input, output, extra = {}) {
+  const capture = createRenderCapture();
+  return {
+    capture,
+    deps: {
+      presenter,
+      stdin: input,
+      stdout: output,
+      onPanelRender: capture.onPanelRender,
+      ...extra,
+    },
+  };
 }
 
 test('runPanelApp renders panel UI and exits on q', async () => {
@@ -61,6 +123,7 @@ test('runPanelApp renders panel UI and exits on q', async () => {
       };
     },
   };
+  const { capture, deps } = createPanelDeps(presenter, input, output);
 
   const runPromise = runPanelApp(
     {
@@ -73,7 +136,7 @@ test('runPanelApp renders panel UI and exits on q', async () => {
       maxValues: 100,
     },
     { log: () => {}, error: () => {} },
-    { presenter, stdin: input, stdout: output },
+    deps,
   );
 
   setTimeout(() => {
@@ -85,15 +148,11 @@ test('runPanelApp renders panel UI and exits on q', async () => {
 
   assert.equal(presenter.connectCalls, 1);
   assert.equal(presenter.disconnectCalls, 1);
-  assert.deepEqual(input.rawModes, [true, false]);
-  assert.equal(
-    output.writes.some((line) => line.includes('ZWJS nodes (panel)')),
-    true,
-  );
-  assert.equal(
-    output.writes.some((line) => line.includes('(unknown / unknown)')),
-    false,
-  );
+  assert.equal(input.rawModes.includes(true), true);
+  assert.equal(input.rawModes.includes(false), true);
+  const rendered = capture.text();
+  assert.equal(rendered.includes('ZWJS nodes (panel)'), true);
+  assert.equal(rendered.includes('(unknown / unknown)'), false);
 });
 
 test('runPanelApp scrolls list viewport when selection moves beyond visible window', async () => {
@@ -123,6 +182,7 @@ test('runPanelApp scrolls list viewport when selection moves beyond visible wind
       };
     },
   };
+  const { capture, deps } = createPanelDeps(presenter, input, output);
 
   const runPromise = runPanelApp(
     {
@@ -135,7 +195,7 @@ test('runPanelApp scrolls list viewport when selection moves beyond visible wind
       maxValues: 100,
     },
     { log: () => {}, error: () => {} },
-    { presenter, stdin: input, stdout: output },
+    deps,
   );
 
   setTimeout(() => {
@@ -147,14 +207,9 @@ test('runPanelApp scrolls list viewport when selection moves beyond visible wind
 
   await runPromise;
 
-  assert.equal(
-    output.writes.some((line) => line.includes('Nodes [')),
-    true,
-  );
-  assert.equal(
-    output.writes.some((line) => line.includes('Node-25')),
-    true,
-  );
+  const rendered = capture.text();
+  assert.equal(rendered.includes('Nodes ['), true);
+  assert.equal(rendered.includes('Node-25'), true);
 });
 
 test('runPanelApp supports interactive filtering in list pane', async () => {
@@ -183,6 +238,7 @@ test('runPanelApp supports interactive filtering in list pane', async () => {
       };
     },
   };
+  const { capture, deps } = createPanelDeps(presenter, input, output);
 
   const runPromise = runPanelApp(
     {
@@ -195,7 +251,7 @@ test('runPanelApp supports interactive filtering in list pane', async () => {
       maxValues: 100,
     },
     { log: () => {}, error: () => {} },
-    { presenter, stdin: input, stdout: output },
+    deps,
   );
 
   setTimeout(() => {
@@ -208,14 +264,9 @@ test('runPanelApp supports interactive filtering in list pane', async () => {
 
   await runPromise;
 
-  assert.equal(
-    output.writes.some((line) => line.includes('Filter applied: of')),
-    true,
-  );
-  assert.equal(
-    output.writes.some((line) => line.includes('Office')),
-    true,
-  );
+  const rendered = capture.text();
+  assert.equal(rendered.includes('Filter applied: of'), true);
+  assert.equal(rendered.includes('Office'), true);
 });
 
 test('runPanelApp toggles bottom pane between status-bar and full mode', async () => {
@@ -240,6 +291,7 @@ test('runPanelApp toggles bottom pane between status-bar and full mode', async (
       };
     },
   };
+  const { capture, deps } = createPanelDeps(presenter, input, output);
 
   const runPromise = runPanelApp(
     {
@@ -252,7 +304,7 @@ test('runPanelApp toggles bottom pane between status-bar and full mode', async (
       maxValues: 100,
     },
     { log: () => {}, error: () => {} },
-    { presenter, stdin: input, stdout: output },
+    deps,
   );
 
   setTimeout(() => {
@@ -262,20 +314,10 @@ test('runPanelApp toggles bottom pane between status-bar and full mode', async (
 
   await runPromise;
 
-  assert.equal(
-    output.writes.some((line) => line.includes('Status Bar')),
-    false,
-  );
-  assert.equal(
-    output.writes.some((line) => line.includes('Output / Run')),
-    true,
-  );
-  assert.equal(
-    output.writes.some((line) =>
-      line.includes('Bottom pane expanded. Press b for status-bar mode.'),
-    ),
-    true,
-  );
+  const rendered = capture.text();
+  assert.equal(rendered.includes('Status Bar'), false);
+  assert.equal(rendered.includes('Output / Run'), true);
+  assert.equal(rendered.includes('Bottom pane expanded. Press b for status-bar mode.'), true);
 });
 
 test('runPanelApp hydrates visible list identity without opening node detail', async () => {
@@ -339,6 +381,7 @@ test('runPanelApp hydrates visible list identity without opening node detail', a
       return detail;
     },
   };
+  const { capture, deps } = createPanelDeps(presenter, input, output);
 
   const runPromise = runPanelApp(
     {
@@ -351,7 +394,7 @@ test('runPanelApp hydrates visible list identity without opening node detail', a
       maxValues: 100,
     },
     { log: () => {}, error: () => {} },
-    { presenter, stdin: input, stdout: output },
+    deps,
   );
 
   setTimeout(() => {
@@ -360,14 +403,9 @@ test('runPanelApp hydrates visible list identity without opening node detail', a
 
   await runPromise;
 
-  assert.equal(
-    output.writes.some((line) => line.includes('Kitchen (Zooz / Switch)')),
-    true,
-  );
-  assert.equal(
-    output.writes.some((line) => line.includes('Office (Aeotec / Sensor)')),
-    true,
-  );
+  const rendered = capture.text();
+  assert.equal(rendered.includes('Kitchen (Zooz / Switch)'), true);
+  assert.equal(rendered.includes('Office (Aeotec / Sensor)'), true);
 });
 
 test('runPanelApp toggles neighbors in node detail and shows readable identity labels', async () => {
@@ -455,6 +493,7 @@ test('runPanelApp toggles neighbors in node detail and shows readable identity l
       };
     },
   };
+  const { capture, deps } = createPanelDeps(presenter, input, output);
 
   const runPromise = runPanelApp(
     {
@@ -467,7 +506,7 @@ test('runPanelApp toggles neighbors in node detail and shows readable identity l
       maxValues: 100,
     },
     { log: () => {}, error: () => {} },
-    { presenter, stdin: input, stdout: output },
+    deps,
   );
 
   setTimeout(() => {
@@ -480,54 +519,24 @@ test('runPanelApp toggles neighbors in node detail and shows readable identity l
 
   await runPromise;
 
+  const rendered = capture.text();
+  assert.equal(rendered.includes('Manufacturer: Zooz (id 634)'), true);
+  assert.equal(rendered.includes('Product: ZEN32 Scene Controller (type 4, id 8)'), true);
+  assert.equal(rendered.includes('Neighbors: 3 (press n to expand)'), true);
+  assert.equal(rendered.includes('Neighbors: 3 (press n to collapse)'), true);
+  assert.equal(rendered.includes('Lifeline route: 2 -> 5 @ 40 kbps'), true);
   assert.equal(
-    output.writes.some((line) => line.includes('Manufacturer: Zooz (id 634)')),
+    rendered.includes('Neighbor Nodes:') &&
+      rendered.includes('Node 2 | Kitchen | Zooz | Plug | lifeline hop 1/2 @ 40 kbps'),
     true,
   );
   assert.equal(
-    output.writes.some((line) => line.includes('Product: ZEN32 Scene Controller (type 4, id 8)')),
+    rendered.includes('Node 5 | Office | Aeotec | Sensor | lifeline hop 2/2 @ 40 kbps'),
     true,
   );
-  assert.equal(
-    output.writes.some((line) => line.includes('Neighbors: 3 (press n to expand)')),
-    true,
-  );
-  assert.equal(
-    output.writes.some((line) => line.includes('Neighbors: 3 (press n to collapse)')),
-    true,
-  );
-  assert.equal(
-    output.writes.some((line) => line.includes('Lifeline route: 2 -> 5 @ 40 kbps')),
-    true,
-  );
-  assert.equal(
-    output.writes.some(
-      (line) =>
-        line.includes('Neighbor Nodes:') &&
-        line.includes('Node 2 | Kitchen | Zooz | Plug | lifeline hop 1/2 @ 40 kbps'),
-    ),
-    true,
-  );
-  assert.equal(
-    output.writes.some((line) =>
-      line.includes('Node 5 | Office | Aeotec | Sensor | lifeline hop 2/2 @ 40 kbps'),
-    ),
-    true,
-  );
-  assert.equal(
-    output.writes.some((line) =>
-      line.includes('Node 11 | Hallway | Inovelli | Light | not-on-lifeline'),
-    ),
-    true,
-  );
-  assert.equal(
-    output.writes.some((line) => line.includes('Values: 3 (press z to expand)')),
-    true,
-  );
-  assert.equal(
-    output.writes.some((line) => line.includes('Values: 3 (press z to collapse)')),
-    true,
-  );
+  assert.equal(rendered.includes('Node 11 | Hallway | Inovelli | Light | not-on-lifeline'), true);
+  assert.equal(rendered.includes('Values: 3 (press z to expand)'), true);
+  assert.equal(rendered.includes('Values: 3 (press z to collapse)'), true);
 });
 
 test('runPanelApp hydrates missing neighbor manufacturer/product from node detail', async () => {
@@ -608,6 +617,7 @@ test('runPanelApp hydrates missing neighbor manufacturer/product from node detai
       return detail;
     },
   };
+  const { capture, deps } = createPanelDeps(presenter, input, output);
 
   const runPromise = runPanelApp(
     {
@@ -620,7 +630,7 @@ test('runPanelApp hydrates missing neighbor manufacturer/product from node detai
       maxValues: 100,
     },
     { log: () => {}, error: () => {} },
-    { presenter, stdin: input, stdout: output },
+    deps,
   );
 
   setTimeout(() => {
@@ -631,14 +641,9 @@ test('runPanelApp hydrates missing neighbor manufacturer/product from node detai
 
   await runPromise;
 
-  assert.equal(
-    output.writes.some((line) => line.includes('Node 2 | Kitchen | Zooz')),
-    true,
-  );
-  assert.equal(
-    output.writes.some((line) => line.includes('Node 5 | Office | Aeotec')),
-    true,
-  );
+  const rendered = capture.text();
+  assert.equal(rendered.includes('Node 2 | Kitchen | Zooz'), true);
+  assert.equal(rendered.includes('Node 5 | Office | Aeotec'), true);
 });
 
 test('runPanelApp orders expanded values by relevance', async () => {
@@ -716,6 +721,7 @@ test('runPanelApp orders expanded values by relevance', async () => {
       };
     },
   };
+  const { capture, deps } = createPanelDeps(presenter, input, output);
 
   const runPromise = runPanelApp(
     {
@@ -728,7 +734,7 @@ test('runPanelApp orders expanded values by relevance', async () => {
       maxValues: 100,
     },
     { log: () => {}, error: () => {} },
-    { presenter, stdin: input, stdout: output },
+    deps,
   );
 
   setTimeout(() => {
@@ -739,16 +745,22 @@ test('runPanelApp orders expanded values by relevance', async () => {
 
   await runPromise;
 
-  const expandedValuesFrame = output.writes.find(
-    (line) =>
-      line.includes('Values: 3 (press z to collapse)') &&
-      line.includes('Value Preview (top relevant first):') &&
-      line.includes('Switch = on (99) [number,rw] {cap:onoff dir:rw conf:high src:meta}') &&
-      line.includes(
-        'Temperature = 21.4 C [number,r] {cap:measure_temperature dir:r conf:high src:meta}',
-      ) &&
-      line.includes('Status Flags = 3'),
+  const expandedValuesFrame = capture.text();
+  assert.equal(expandedValuesFrame.includes('Values: 3 (press z to collapse)'), true);
+  assert.equal(expandedValuesFrame.includes('Value Preview (top relevant first):'), true);
+  assert.equal(
+    expandedValuesFrame.includes(
+      'Switch = on (99) [number,rw] {cap:onoff dir:rw conf:high src:meta}',
+    ),
+    true,
   );
+  assert.equal(
+    expandedValuesFrame.includes(
+      'Temperature = 21.4 C [number,r] {cap:measure_temperature dir:r conf:high src:meta}',
+    ),
+    true,
+  );
+  assert.equal(expandedValuesFrame.includes('Status Flags = 3'), true);
   assert.notEqual(expandedValuesFrame, undefined);
   assert.equal(
     expandedValuesFrame.indexOf('Switch = on (99)') <
@@ -816,6 +828,7 @@ test('runPanelApp scrolls right pane when focused on node detail', async () => {
       };
     },
   };
+  const { capture, deps } = createPanelDeps(presenter, input, output);
 
   const runPromise = runPanelApp(
     {
@@ -828,7 +841,7 @@ test('runPanelApp scrolls right pane when focused on node detail', async () => {
       maxValues: 100,
     },
     { log: () => {}, error: () => {} },
-    { presenter, stdin: input, stdout: output },
+    deps,
   );
 
   setTimeout(() => {
@@ -841,12 +854,10 @@ test('runPanelApp scrolls right pane when focused on node detail', async () => {
 
   await runPromise;
 
+  const rendered = capture.text();
   const ranges = [];
-  for (const frame of output.writes) {
-    const match = frame.match(/Node Detail \[(\d+)-(\d+)\/(\d+)\]/);
-    if (match) {
-      ranges.push(Number(match[1]));
-    }
+  for (const match of rendered.matchAll(/Node Detail \[(\d+)-(\d+)\/(\d+)\]/g)) {
+    ranges.push(Number(match[1]));
   }
   assert.equal(ranges.length > 0, true);
   assert.equal(
@@ -855,7 +866,7 @@ test('runPanelApp scrolls right pane when focused on node detail', async () => {
   );
 });
 
-test('runPanelApp can quit via raw data fallback', async () => {
+test('runPanelApp can quit via ctrl+c keypress intent', async () => {
   const input = new FakeInput();
   const output = new FakeOutput();
   const presenter = {
@@ -877,6 +888,7 @@ test('runPanelApp can quit via raw data fallback', async () => {
       };
     },
   };
+  const { capture, deps } = createPanelDeps(presenter, input, output);
 
   const runPromise = runPanelApp(
     {
@@ -889,19 +901,17 @@ test('runPanelApp can quit via raw data fallback', async () => {
       maxValues: 100,
     },
     { log: () => {}, error: () => {} },
-    { presenter, stdin: input, stdout: output },
+    deps,
   );
 
   setTimeout(() => {
-    input.emit('data', 'q');
+    input.emit('keypress', '', { ctrl: true, name: 'c' });
   }, 5);
 
   await runPromise;
 
-  assert.equal(
-    output.writes.some((line) => line.includes('ZWJS nodes (panel)')),
-    true,
-  );
+  const rendered = capture.text();
+  assert.equal(rendered.includes('ZWJS nodes (panel)'), true);
 });
 
 test('runPanelApp requires double confirmation for write actions', async () => {
@@ -960,6 +970,7 @@ test('runPanelApp requires double confirmation for write actions', async () => {
       };
     },
   };
+  const { capture, deps } = createPanelDeps(presenter, input, output);
 
   const runPromise = runPanelApp(
     {
@@ -972,7 +983,7 @@ test('runPanelApp requires double confirmation for write actions', async () => {
       maxValues: 100,
     },
     { log: () => {}, error: () => {} },
-    { presenter, stdin: input, stdout: output },
+    deps,
   );
 
   setTimeout(() => {
@@ -988,14 +999,9 @@ test('runPanelApp requires double confirmation for write actions', async () => {
 
   assert.equal(presenter.writeCalls, 1);
   assert.equal(presenter.manifestCalls, 1);
-  assert.equal(
-    output.writes.some((line) => line.includes('Confirm scaffold write')),
-    true,
-  );
-  assert.equal(
-    output.writes.some((line) => line.includes('Confirm manifest add')),
-    true,
-  );
+  const rendered = capture.text();
+  assert.equal(rendered.includes('Confirm scaffold write'), true);
+  assert.equal(rendered.includes('Confirm manifest add'), true);
 });
 
 test('runPanelApp supports cancelling long-running operation', async () => {
@@ -1054,6 +1060,7 @@ test('runPanelApp supports cancelling long-running operation', async () => {
       });
     },
   };
+  const { capture, deps } = createPanelDeps(presenter, input, output);
 
   const runPromise = runPanelApp(
     {
@@ -1066,7 +1073,7 @@ test('runPanelApp supports cancelling long-running operation', async () => {
       maxValues: 100,
     },
     { log: () => {}, error: () => {} },
-    { presenter, stdin: input, stdout: output },
+    deps,
   );
 
   setTimeout(() => {
@@ -1081,10 +1088,8 @@ test('runPanelApp supports cancelling long-running operation', async () => {
 
   await runPromise;
 
-  assert.equal(
-    output.writes.some((line) => line.includes('Cancel requested for')),
-    true,
-  );
+  const rendered = capture.text();
+  assert.equal(rendered.includes('Cancel requested for'), true);
 });
 
 test('runPanelApp reports timeout for long-running operation', async () => {
@@ -1124,6 +1129,9 @@ test('runPanelApp reports timeout for long-running operation', async () => {
       return await new Promise(() => {});
     },
   };
+  const { capture, deps } = createPanelDeps(presenter, input, output, {
+    panelOperationTimeoutMs: 30,
+  });
 
   const runPromise = runPanelApp(
     {
@@ -1136,7 +1144,7 @@ test('runPanelApp reports timeout for long-running operation', async () => {
       maxValues: 100,
     },
     { log: () => {}, error: () => {} },
-    { presenter, stdin: input, stdout: output, panelOperationTimeoutMs: 30 },
+    deps,
   );
 
   setTimeout(() => {
@@ -1148,8 +1156,6 @@ test('runPanelApp reports timeout for long-running operation', async () => {
 
   await runPromise;
 
-  assert.equal(
-    output.writes.some((line) => line.toLowerCase().includes('timed out')),
-    true,
-  );
+  const rendered = capture.text();
+  assert.equal(rendered.toLowerCase().includes('timed out'), true);
 });

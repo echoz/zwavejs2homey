@@ -1,6 +1,7 @@
 import { emitKeypressEvents } from 'node:readline';
 import { createInterface } from 'node:readline/promises';
 import { stdin as defaultStdin, stdout as defaultStdout } from 'node:process';
+import blessed from 'neo-blessed';
 
 import type {
   ConnectedSessionConfig,
@@ -32,8 +33,7 @@ import {
 } from './service/workspace-file-service';
 import { ZwjsExplorerServiceImpl, type ZwjsExplorerService } from './service/zwjs-explorer-service';
 import { parseShellCommand } from './view/command-parser';
-import { parsePanelDataChunk, parsePanelKeypress, type PanelIntent } from './view/panel-input';
-import { renderPanelFrame } from './view/panel-layout';
+import { parsePanelKeypress, type PanelIntent } from './view/panel-input';
 import {
   annotateNodeValue,
   formatValueSemanticTag,
@@ -224,6 +224,20 @@ interface RunAppDeps {
   stdin?: NodeJS.ReadStream;
   stdout?: NodeJS.WriteStream;
   panelOperationTimeoutMs?: number;
+  onPanelRender?: (snapshot: PanelRenderSnapshot) => void;
+}
+
+export interface PanelRenderSnapshot {
+  header: string;
+  footer: string;
+  leftTitle: string;
+  leftLines: string[];
+  rightTitle: string;
+  rightLines: string[];
+  bottomTitle: string;
+  bottomLines: string[];
+  focusedPane: PanelFocus;
+  bottomCompact: boolean;
 }
 
 export async function runApp(
@@ -502,14 +516,15 @@ function getPanelContentHeightsWithMode(
   bottomContentHeight: number;
 } {
   const height = Math.max(18, rows ?? 30);
-  const bodyHeight = height - 6;
-  const bottomHeight = bottomCompact ? 2 : bodyHeight - Math.max(8, Math.floor(bodyHeight * 0.65));
-  const topHeight = bodyHeight - bottomHeight;
+  const bodyHeight = Math.max(6, height - 2); // header + footer rows
+  const expandedBottomHeight = Math.max(5, Math.floor(bodyHeight * 0.32));
+  const bottomHeight = bottomCompact
+    ? 1
+    : Math.min(Math.max(5, expandedBottomHeight), Math.max(5, bodyHeight - 4));
+  const topHeight = Math.max(4, bodyHeight - bottomHeight);
   return {
-    topContentHeight: Math.max(1, topHeight - 2),
-    bottomContentHeight: bottomCompact
-      ? Math.max(1, bottomHeight - 1)
-      : Math.max(1, bottomHeight - 2),
+    topContentHeight: Math.max(1, topHeight - 2), // pane border rows
+    bottomContentHeight: bottomCompact ? 1 : Math.max(1, bottomHeight - 2), // bottom border rows
   };
 }
 
@@ -1130,6 +1145,64 @@ export async function runPanelApp(
   const OPERATION_TIMEOUT_MS = Math.max(1, deps.panelOperationTimeoutMs ?? 45_000);
   const WRITE_CONFIRM_WINDOW_MS = 6_000;
 
+  const screen = blessed.screen({
+    smartCSR: true,
+    dockBorders: true,
+    autoPadding: false,
+    fullUnicode: true,
+    terminal: 'xterm-256color',
+    input: input as any,
+    output: output as any,
+  });
+  screen.title = `ZWJS ${config.mode}`;
+
+  const headerPane = blessed.box({
+    parent: screen,
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: 1,
+    tags: false,
+  });
+  const leftPane = blessed.box({
+    parent: screen,
+    top: 1,
+    left: 0,
+    width: '35%',
+    height: '60%',
+    border: 'line',
+    tags: false,
+    scrollable: false,
+  });
+  const rightPane = blessed.box({
+    parent: screen,
+    top: 1,
+    left: '35%',
+    width: '65%',
+    height: '60%',
+    border: 'line',
+    tags: false,
+    scrollable: false,
+  });
+  const bottomPane = blessed.box({
+    parent: screen,
+    top: '60%',
+    left: 0,
+    width: '100%',
+    height: '40%',
+    tags: false,
+    border: 'line',
+    scrollable: false,
+  });
+  const footerPane = blessed.box({
+    parent: screen,
+    bottom: 0,
+    left: 0,
+    width: '100%',
+    height: 1,
+    tags: false,
+  });
+
   function setRightPaneText(value: string): void {
     rightText = value;
     rightScroll = 0;
@@ -1235,8 +1308,24 @@ export async function runPanelApp(
     selectedItemKey = entries[selectedIndex]?.key;
   }
 
+  function getPanelRows(): number {
+    const rows =
+      typeof (screen as { rows?: unknown }).rows === 'number'
+        ? (screen as { rows: number }).rows
+        : output.rows;
+    return Math.max(18, rows ?? 30);
+  }
+
+  function getPanelCols(): number {
+    const cols =
+      typeof (screen as { cols?: unknown }).cols === 'number'
+        ? (screen as { cols: number }).cols
+        : output.columns;
+    return Math.max(80, cols ?? 120);
+  }
+
   function moveSelectionByPage(multiplier: number): void {
-    const pageSize = getLeftPaneCapacity(output.rows, bottomCompact);
+    const pageSize = getLeftPaneCapacity(getPanelRows(), bottomCompact);
     moveSelection(pageSize * multiplier);
   }
 
@@ -1285,7 +1374,7 @@ export async function runPanelApp(
       (entry): entry is NodeListEntry => entry.kind === 'node',
     );
     if (entries.length === 0) return;
-    const capacity = getLeftPaneCapacity(output.rows, bottomCompact);
+    const capacity = getLeftPaneCapacity(getPanelRows(), bottomCompact);
     const windowed = getVisibleWindow(entries, selectedIndex, capacity);
     for (const entry of windowed.visible) {
       if (entry.nodeId === currentNodeDetail?.nodeId) continue;
@@ -1514,12 +1603,57 @@ export async function runPanelApp(
 
   function renderFrame(): void {
     clampSelection();
-    const width = output.columns ?? 120;
-    const height = output.rows ?? 36;
-    const paneHeights = getPanelContentHeightsWithMode(output.rows, bottomCompact);
+    const width = getPanelCols();
+    const height = getPanelRows();
+    const paneHeights = getPanelContentHeightsWithMode(height, bottomCompact);
+    const topPaneOuterHeight = paneHeights.topContentHeight + 2;
+    const bottomPaneOuterHeight = bottomCompact ? 1 : paneHeights.bottomContentHeight + 2;
+    const leftWidth = Math.max(28, Math.floor(width * 0.35));
+    const rightWidth = Math.max(24, width - leftWidth);
+
+    headerPane.top = 0;
+    headerPane.left = 0;
+    headerPane.width = width;
+    headerPane.height = 1;
+
+    leftPane.top = 1;
+    leftPane.left = 0;
+    leftPane.width = leftWidth;
+    leftPane.height = topPaneOuterHeight;
+
+    rightPane.top = 1;
+    rightPane.left = leftWidth;
+    rightPane.width = rightWidth;
+    rightPane.height = topPaneOuterHeight;
+
+    bottomPane.top = 1 + topPaneOuterHeight;
+    bottomPane.left = 0;
+    bottomPane.width = width;
+    bottomPane.height = bottomPaneOuterHeight;
+    (bottomPane as unknown as { border: unknown }).border = bottomCompact ? null : 'line';
+    bottomPane.style = {
+      ...(bottomPane.style ?? {}),
+      border: { fg: focusedPane === 'bottom' ? 'cyan' : 'gray' },
+    };
+    bottomPane.setLabel(bottomCompact ? '' : ' Output / Run ');
+
+    footerPane.top = height - 1;
+    footerPane.left = 0;
+    footerPane.width = width;
+    footerPane.height = 1;
+
+    leftPane.style = {
+      ...(leftPane.style ?? {}),
+      border: { fg: focusedPane === 'left' ? 'cyan' : 'gray' },
+    };
+    rightPane.style = {
+      ...(rightPane.style ?? {}),
+      border: { fg: focusedPane === 'right' ? 'cyan' : 'gray' },
+    };
+
     const entries = getListEntries();
     const totalItems = entries.length;
-    const listCapacity = getLeftPaneCapacity(output.rows, bottomCompact);
+    const listCapacity = getLeftPaneCapacity(height, bottomCompact);
     const windowed = getVisibleWindow(entries, selectedIndex, listCapacity);
     const listLines = windowed.visible.map((entry, visibleIndex) =>
       formatListRow(entry.rowId, entry.label, windowed.start + visibleIndex === selectedIndex),
@@ -1553,7 +1687,7 @@ export async function runPanelApp(
       bottomAllLines.length > paneHeights.bottomContentHeight
         ? ` [${bottomWindow.start + 1}-${bottomWindow.start + bottomWindow.visible.length}/${bottomAllLines.length}]`
         : '';
-    const bottomTitle = `${bottomCompact ? 'Status Bar' : 'Output / Run'}${bottomRange}`;
+    const bottomTitle = bottomCompact ? '' : `Output / Run${bottomRange}`;
 
     const status = isNodesMode
       ? nodesPresenter.getStatusSnapshot()
@@ -1572,9 +1706,20 @@ export async function runPanelApp(
       ? `Filter mode: type to search | backspace delete | enter apply | esc apply${statusSuffix}`
       : `q quit | arrows move | pgup/pgdn page | / filter | enter open | i/v/m loop | n neighbors | z values | b bottom-size | c cancel${statusSuffix}`;
 
-    const frame = renderPanelFrame({
-      width,
-      height,
+    requestVisibleListIdentityHydration();
+
+    headerPane.setContent(header);
+    footerPane.setContent(footer);
+    leftPane.setLabel(` ${leftTitle} `);
+    leftPane.setContent(listLines.join('\n'));
+    rightPane.setLabel(` ${rightTitle} `);
+    rightPane.setContent(rightWindow.visible.join('\n'));
+    if (!bottomCompact && bottomTitle) {
+      bottomPane.setLabel(` ${bottomTitle} `);
+    }
+    bottomPane.setContent(bottomWindow.visible.join('\n'));
+
+    deps.onPanelRender?.({
       header,
       footer,
       leftTitle,
@@ -1587,9 +1732,7 @@ export async function runPanelApp(
       bottomCompact,
     });
 
-    requestVisibleListIdentityHydration();
-    output.write('\x1b[2J\x1b[H');
-    output.write(frame);
+    screen.render();
   }
 
   async function runIntent(intent: PanelIntent): Promise<void> {
@@ -1629,7 +1772,7 @@ export async function runPanelApp(
       if (focusedPane === 'left') {
         moveSelectionByPage(-1);
       } else {
-        const paneHeights = getPanelContentHeightsWithMode(output.rows, bottomCompact);
+        const paneHeights = getPanelContentHeightsWithMode(getPanelRows(), bottomCompact);
         const delta =
           focusedPane === 'right' ? paneHeights.topContentHeight : paneHeights.bottomContentHeight;
         if (focusedPane === 'right') {
@@ -1644,7 +1787,7 @@ export async function runPanelApp(
       if (focusedPane === 'left') {
         moveSelectionByPage(1);
       } else {
-        const paneHeights = getPanelContentHeightsWithMode(output.rows, bottomCompact);
+        const paneHeights = getPanelContentHeightsWithMode(getPanelRows(), bottomCompact);
         const delta =
           focusedPane === 'right' ? paneHeights.topContentHeight : paneHeights.bottomContentHeight;
         if (focusedPane === 'right') {
@@ -1898,7 +2041,6 @@ export async function runPanelApp(
     if (typeof input.resume === 'function') {
       input.resume();
     }
-    output.write('\x1b[?25l');
     renderFrame();
 
     await new Promise<void>((resolve) => {
@@ -1990,38 +2132,22 @@ export async function runPanelApp(
         }
         queueIntent(parsedIntent);
       };
-      const onData = (chunk: Buffer | string) => {
-        const value = typeof chunk === 'string' ? chunk : chunk.toString('utf8');
-        const fallbackIntent = parsePanelDataChunk(value);
-        if (fallbackIntent) {
-          if (filterMode && (value === 'q' || value === 'Q')) {
-            return;
-          }
-          queueIntent(fallbackIntent);
-        }
-      };
 
       const cleanup = () => {
-        if (typeof (output as any).off === 'function') {
-          (output as any).off('resize', onResize);
-        }
+        screen.off('resize', onResize);
         input.off('keypress', onKeypress);
-        input.off('data', onData);
         if (input.isTTY && typeof input.setRawMode === 'function') {
           input.setRawMode(false);
         }
         if (typeof input.pause === 'function') {
           input.pause();
         }
-        output.write('\x1b[?25h');
+        screen.destroy();
         output.write('\n');
       };
 
       input.on('keypress', onKeypress);
-      input.on('data', onData);
-      if (typeof (output as any).on === 'function') {
-        (output as any).on('resize', onResize);
-      }
+      screen.on('resize', onResize);
     });
   } finally {
     if (isNodesMode) {

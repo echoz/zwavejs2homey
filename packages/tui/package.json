@@ -8,11 +8,13 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "rm -rf dist && tsc -p tsconfig.json",
     "test": "npm run build && node --test test/*.test.js"
   },
   "dependencies": {
-    "@zwavejs2homey/core": "0.1.0"
+    "@types/blessed": "^0.1.27",
+    "@zwavejs2homey/core": "0.1.0",
+    "neo-blessed": "^0.2.0"
   },
   "devDependencies": {
     "typescript": "^5.9.3"
