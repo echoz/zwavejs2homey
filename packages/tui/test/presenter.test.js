@@ -20,6 +20,12 @@ function createChildren(overrides = {}) {
           values: [],
         };
       },
+      async getNodeValueDetail(_nodeId, valueId) {
+        return {
+          valueId,
+          value: true,
+        };
+      },
     },
     curation: {
       deriveSignatureFromNodeDetail() {
@@ -191,6 +197,60 @@ test('ExplorerPresenter can derive signature, inspect and validate selected sign
   assert.equal(validate.signature, '29:66:2');
   const simulate = await presenter.simulateSelectedSignature();
   assert.equal(simulate.signature, '29:66:2');
+});
+
+test('ExplorerPresenter fetchNodeValue merges a single value into cached node detail', async () => {
+  const children = createChildren({
+    explorer: {
+      async connect() {},
+      async disconnect() {},
+      async listNodes() {
+        return [{ nodeId: 8, name: 'Lock' }];
+      },
+      async getNodeDetail(nodeId) {
+        return {
+          nodeId,
+          state: { name: 'Lock' },
+          neighbors: [],
+          notificationEvents: [],
+          values: [
+            {
+              valueId: { commandClass: 99, endpoint: 0, property: 'userCode', propertyKey: 1 },
+              metadata: { label: 'User Code 1' },
+            },
+          ],
+        };
+      },
+      async getNodeValueDetail(_nodeId, valueId) {
+        return {
+          valueId,
+          metadata: { label: 'User Code 1' },
+          value: '1234',
+          timestamp: 111,
+        };
+      },
+    },
+  });
+  const presenter = new ExplorerPresenter(children);
+  await presenter.connect({
+    mode: 'nodes',
+    manifestFile: 'rules/manifest.json',
+    url: 'ws://127.0.0.1:3000',
+    schemaVersion: 0,
+    includeValues: 'summary',
+    maxValues: 200,
+  });
+  const detail = await presenter.showNodeDetail(8);
+  assert.equal(detail.values[0].value, undefined);
+
+  const updated = await presenter.fetchNodeValue(8, {
+    commandClass: 99,
+    endpoint: 0,
+    property: 'userCode',
+    propertyKey: 1,
+  });
+  assert.equal(updated.values.length, 1);
+  assert.equal(updated.values[0].value, '1234');
 });
 
 test('ExplorerPresenter scaffold infers homey class from inspect summary unless overridden', async () => {

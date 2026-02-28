@@ -117,6 +117,14 @@ test('ZwjsExplorerServiceImpl connects, lists nodes, shows details, and disconne
   });
   assert.equal(detailNoLink.lifelineRoute, undefined);
 
+  const valueDetail = await service.getNodeValueDetail(2, {
+    commandClass: 37,
+    endpoint: 0,
+    property: 'currentValue',
+  });
+  assert.equal(valueDetail.value, true);
+  assert.equal(valueDetail.timestamp, 123);
+
   await service.disconnect();
   assert.equal(fakeClient.stopCalls, 1);
 });

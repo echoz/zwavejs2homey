@@ -983,7 +983,8 @@ test('runPanelApp orders expanded values by relevance', async () => {
   assert.equal(expandedValuesFrame.includes('Temperature: 21.4 C'), true);
   assert.equal(expandedValuesFrame.includes('Status Flags: 3'), true);
   assert.equal(expandedValuesFrame.includes('dir read-write'), true);
-  assert.equal(expandedValuesFrame.includes('map onoff (high)'), true);
+  assert.equal(expandedValuesFrame.includes('map onoff'), true);
+  assert.equal(expandedValuesFrame.includes('conf high'), true);
   assert.notEqual(expandedValuesFrame, undefined);
   assert.equal(
     expandedValuesFrame.indexOf('Switch: on (99)') <
@@ -995,6 +996,291 @@ test('runPanelApp orders expanded values by relevance', async () => {
       expandedValuesFrame.indexOf('Status Flags: 3'),
     true,
   );
+});
+
+test('runPanelApp explains missing value as summary-mode not fetched', async () => {
+  const input = new FakeInput();
+  const output = new FakeOutput();
+  output.columns = 140;
+  const presenter = {
+    async connect() {},
+    async disconnect() {},
+    getState() {
+      return {
+        explorer: {
+          items: [{ nodeId: 24, name: 'Front Door', manufacturer: 'Yale', product: 'Lock' }],
+        },
+      };
+    },
+    getStatusSnapshot() {
+      return {
+        mode: 'nodes',
+        connectionState: 'ready',
+        selectedSignature: undefined,
+        cachedNodeCount: 1,
+      };
+    },
+    async showNodeDetail(nodeId) {
+      return {
+        nodeId,
+        state: {
+          name: 'Front Door',
+          ready: true,
+          status: 'alive',
+          manufacturer: 'Yale',
+          product: 'Lock',
+        },
+        neighbors: [],
+        notificationEvents: [],
+        values: [
+          {
+            valueId: { commandClass: 99, endpoint: 0, property: 'userCode', propertyKey: 1 },
+            metadata: {
+              label: 'User Code 1',
+              readable: true,
+              writeable: true,
+              type: 'string',
+            },
+            value: undefined,
+          },
+        ],
+      };
+    },
+  };
+  const { capture, deps } = createPanelDeps(presenter, input, output);
+
+  const runPromise = runPanelApp(
+    {
+      mode: 'nodes',
+      uiMode: 'panel',
+      manifestFile: 'rules/manifest.json',
+      url: 'ws://127.0.0.1:3000',
+      schemaVersion: 0,
+      includeValues: 'summary',
+      maxValues: 100,
+    },
+    { log: () => {}, error: () => {} },
+    deps,
+  );
+
+  setTimeout(() => {
+    emitInputKeys(input, ['return', 'z', 'q']);
+  }, 5);
+
+  await runPromise;
+
+  const rendered = capture.text();
+  assert.equal(rendered.includes('User Code 1: <not fetched: summary mode>'), true);
+});
+
+test('runPanelApp fetches only the selected value with enter in node detail', async () => {
+  const input = new FakeInput();
+  const output = new FakeOutput();
+  output.columns = 140;
+  const detailCalls = [];
+  const valueFetchCalls = [];
+  let currentDetail = null;
+  const presenter = {
+    async connect() {},
+    async disconnect() {},
+    getState() {
+      return {
+        explorer: {
+          items: [{ nodeId: 24, name: 'Front Door', manufacturer: 'Yale', product: 'Lock' }],
+        },
+      };
+    },
+    getStatusSnapshot() {
+      return {
+        mode: 'nodes',
+        connectionState: 'ready',
+        selectedSignature: undefined,
+        cachedNodeCount: 1,
+      };
+    },
+    async showNodeDetail(nodeId, options = {}) {
+      detailCalls.push(options);
+      currentDetail = {
+        nodeId,
+        state: {
+          name: 'Front Door',
+          ready: true,
+          status: 'alive',
+          manufacturer: 'Yale',
+          product: 'Lock',
+        },
+        neighbors: [],
+        notificationEvents: [],
+        values: [
+          {
+            valueId: { commandClass: 99, endpoint: 0, property: 'userCode', propertyKey: 1 },
+            metadata: {
+              label: 'User Code 1',
+              readable: true,
+              writeable: true,
+              type: 'string',
+            },
+            value: undefined,
+          },
+          {
+            valueId: { commandClass: 99, endpoint: 0, property: 'userCode', propertyKey: 2 },
+            metadata: {
+              label: 'User Code 2',
+              readable: true,
+              writeable: true,
+              type: 'string',
+            },
+            value: undefined,
+          },
+        ],
+      };
+      return currentDetail;
+    },
+    async fetchNodeValue(nodeId, valueId) {
+      valueFetchCalls.push({ nodeId, valueId });
+      if (!currentDetail || currentDetail.nodeId !== nodeId) {
+        throw new Error('node detail not loaded');
+      }
+      currentDetail = {
+        ...currentDetail,
+        values: currentDetail.values.map((value) =>
+          value.valueId.propertyKey === valueId.propertyKey ? { ...value, value: '5678' } : value,
+        ),
+      };
+      return currentDetail;
+    },
+  };
+  const { capture, deps } = createPanelDeps(presenter, input, output);
+
+  const runPromise = runPanelApp(
+    {
+      mode: 'nodes',
+      uiMode: 'panel',
+      manifestFile: 'rules/manifest.json',
+      url: 'ws://127.0.0.1:3000',
+      schemaVersion: 0,
+      includeValues: 'summary',
+      maxValues: 100,
+    },
+    { log: () => {}, error: () => {} },
+    deps,
+  );
+
+  setTimeout(() => {
+    emitInputKeys(input, ['return', 'z', 'tab', 'down', 'return']);
+  }, 5);
+  setTimeout(() => {
+    emitInputKey(input, 'q');
+  }, 40);
+
+  await runPromise;
+
+  assert.equal(valueFetchCalls.length >= 1, true);
+  assert.equal(
+    valueFetchCalls.every((call) => call.valueId.propertyKey === 2),
+    true,
+  );
+  assert.equal(
+    detailCalls.some((call) => call && call.includeValues === 'full'),
+    false,
+  );
+  const fullFrame = [...capture.snapshots]
+    .reverse()
+    .find((snapshot) => snapshot.rightLines.join('\n').includes('User Code 2: 5678'));
+  assert.notEqual(fullFrame, undefined);
+  const frameText = fullFrame.rightLines.join('\n');
+  assert.equal(frameText.includes('> User Code 2: 5678'), true);
+  assert.equal(frameText.includes('User Code 1: <not fetched: summary mode>'), true);
+  assert.equal(
+    frameText.indexOf('User Code 1: <not fetched: summary mode>') <
+      frameText.indexOf('User Code 2: 5678'),
+    true,
+  );
+});
+
+test('runPanelApp can fetch full node values with uppercase F', async () => {
+  const input = new FakeInput();
+  const output = new FakeOutput();
+  output.columns = 140;
+  const detailCalls = [];
+  const presenter = {
+    async connect() {},
+    async disconnect() {},
+    getState() {
+      return {
+        explorer: {
+          items: [{ nodeId: 24, name: 'Front Door', manufacturer: 'Yale', product: 'Lock' }],
+        },
+      };
+    },
+    getStatusSnapshot() {
+      return {
+        mode: 'nodes',
+        connectionState: 'ready',
+        selectedSignature: undefined,
+        cachedNodeCount: 1,
+      };
+    },
+    async showNodeDetail(nodeId, options = {}) {
+      detailCalls.push(options);
+      const full = options.includeValues === 'full';
+      return {
+        nodeId,
+        state: {
+          name: 'Front Door',
+          ready: true,
+          status: 'alive',
+          manufacturer: 'Yale',
+          product: 'Lock',
+        },
+        neighbors: [],
+        notificationEvents: [],
+        values: [
+          {
+            valueId: { commandClass: 99, endpoint: 0, property: 'userCode', propertyKey: 1 },
+            metadata: {
+              label: 'User Code 1',
+              readable: true,
+              writeable: true,
+              type: 'string',
+            },
+            value: full ? '1234' : undefined,
+          },
+        ],
+      };
+    },
+  };
+  const { capture, deps } = createPanelDeps(presenter, input, output);
+
+  const runPromise = runPanelApp(
+    {
+      mode: 'nodes',
+      uiMode: 'panel',
+      manifestFile: 'rules/manifest.json',
+      url: 'ws://127.0.0.1:3000',
+      schemaVersion: 0,
+      includeValues: 'summary',
+      maxValues: 100,
+    },
+    { log: () => {}, error: () => {} },
+    deps,
+  );
+
+  setTimeout(() => {
+    emitInputKeys(input, ['return', 'F', 'z']);
+  }, 5);
+  setTimeout(() => {
+    emitInputKey(input, 'q');
+  }, 40);
+
+  await runPromise;
+
+  assert.equal(
+    detailCalls.some((call) => call && call.includeValues === 'full'),
+    true,
+  );
+  const rendered = capture.text();
+  assert.equal(rendered.includes('User Code 1: 1234'), true);
 });
 
 test('runPanelApp toggles individual value subsections with numeric keys', async () => {
@@ -1089,6 +1375,128 @@ test('runPanelApp toggles individual value subsections with numeric keys', async
   assert.equal(frameText.includes('▶ Sensors: 1 (2)'), true);
   assert.equal(frameText.includes('Temperature: 22.3 C'), false);
   assert.equal(frameText.includes('Switch: on (99)'), true);
+});
+
+test('runPanelApp shows profile provenance when compiled value attribution is available', async () => {
+  const input = new FakeInput();
+  const output = new FakeOutput();
+  output.columns = 140;
+  output.rows = 42;
+  const presenter = {
+    async connect() {},
+    async disconnect() {},
+    getState() {
+      return {
+        sessionConfig: {
+          mode: 'nodes',
+          uiMode: 'panel',
+          manifestFile: 'rules/manifest.json',
+          url: 'ws://127.0.0.1:3000',
+          schemaVersion: 0,
+          includeValues: 'summary',
+          maxValues: 100,
+        },
+        explorer: {
+          items: [{ nodeId: 42, name: 'Kitchen', manufacturer: 'Zooz', product: 'Switch' }],
+        },
+      };
+    },
+    getStatusSnapshot() {
+      return {
+        mode: 'nodes',
+        connectionState: 'ready',
+        selectedSignature: undefined,
+        cachedNodeCount: 1,
+      };
+    },
+    async showNodeDetail(nodeId) {
+      return {
+        nodeId,
+        state: {
+          name: 'Kitchen',
+          ready: true,
+          status: 'alive',
+          manufacturer: 'Zooz',
+          product: 'Switch',
+        },
+        neighbors: [],
+        notificationEvents: [],
+        values: [
+          {
+            valueId: { commandClass: 38, endpoint: 0, property: 'targetValue' },
+            metadata: {
+              label: 'Switch',
+              readable: true,
+              writeable: true,
+              type: 'number',
+              states: { 0: 'off', 99: 'on' },
+            },
+            value: 99,
+          },
+          {
+            valueId: { commandClass: 49, endpoint: 0, property: 'Air temperature' },
+            metadata: {
+              label: 'Temperature',
+              readable: true,
+              writeable: false,
+              type: 'number',
+              unit: 'C',
+            },
+            value: 21.9,
+          },
+        ],
+      };
+    },
+  };
+  const curationService = {
+    async inspectNodeCompiledValueAttribution() {
+      return {
+        nodeId: 42,
+        valueAttributions: {
+          '38:0:targetValue:': [
+            {
+              capabilityId: 'onoff',
+              mappingRole: 'inbound',
+              provenanceLayer: 'project-product',
+              provenanceRuleId: 'profile-switch',
+              provenanceAction: 'replace',
+            },
+          ],
+        },
+      };
+    },
+  };
+  const { capture, deps } = createPanelDeps(presenter, input, output, { curationService });
+
+  const runPromise = runPanelApp(
+    {
+      mode: 'nodes',
+      uiMode: 'panel',
+      manifestFile: 'rules/manifest.json',
+      url: 'ws://127.0.0.1:3000',
+      schemaVersion: 0,
+      includeValues: 'summary',
+      maxValues: 100,
+    },
+    { log: () => {}, error: () => {} },
+    deps,
+  );
+
+  setTimeout(() => {
+    emitInputKeys(input, ['return', 'z']);
+  }, 5);
+  setTimeout(() => {
+    emitInputKey(input, 'q');
+  }, 40);
+
+  await runPromise;
+
+  const rendered = capture.text();
+  assert.equal(rendered.includes('map onoff (inbound)'), true);
+  assert.equal(rendered.includes('src profile'), true);
+  assert.equal(rendered.includes('rule project-product:profile-switch'), true);
+  assert.equal(rendered.includes('Temperature: 21.9 C'), true);
+  assert.equal(rendered.includes('src heuristic-fallback'), true);
 });
 
 test('runPanelApp shows section counts and top preview when values are collapsed', async () => {
@@ -1282,6 +1690,125 @@ test('runPanelApp scrolls right pane when focused on node detail', async () => {
     true,
   );
   assert.equal(rendered.includes('Property 16'), true);
+});
+
+test('runPanelApp keeps selected value visible while moving down in right pane', async () => {
+  const input = new FakeInput();
+  const output = new FakeOutput();
+  output.rows = 18;
+  const presenter = {
+    async connect() {},
+    async disconnect() {},
+    getState() {
+      return {
+        explorer: {
+          items: [{ nodeId: 4, name: 'Bedroom', product: 'Dimmer' }],
+        },
+      };
+    },
+    getStatusSnapshot() {
+      return {
+        mode: 'nodes',
+        connectionState: 'ready',
+        selectedSignature: undefined,
+        cachedNodeCount: 1,
+      };
+    },
+    async showNodeDetail(nodeId) {
+      return {
+        nodeId,
+        state: {
+          name: 'Bedroom',
+          ready: true,
+          status: 'alive',
+          manufacturer: 'Inovelli',
+          manufacturerId: 4655,
+          product: 'Dimmer',
+          productType: 1,
+          productId: 2,
+        },
+        neighbors: [1, 2],
+        notificationEvents: [],
+        values: Array.from({ length: 32 }, (_, index) => ({
+          valueId: {
+            commandClass: 112,
+            endpoint: 0,
+            property: `prop-${index + 1}`,
+          },
+          metadata: {
+            label: `Property ${index + 1}`,
+            readable: true,
+            writeable: false,
+            type: 'number',
+          },
+          value: index,
+        })),
+      };
+    },
+  };
+  const { capture, deps } = createPanelDeps(presenter, input, output);
+
+  const runPromise = runPanelApp(
+    {
+      mode: 'nodes',
+      uiMode: 'panel',
+      manifestFile: 'rules/manifest.json',
+      url: 'ws://127.0.0.1:3000',
+      schemaVersion: 0,
+      includeValues: 'summary',
+      maxValues: 100,
+    },
+    { log: () => {}, error: () => {} },
+    deps,
+  );
+
+  setTimeout(() => {
+    emitInputKeys(input, [
+      'return',
+      'z',
+      'tab',
+      'down',
+      'down',
+      'down',
+      'down',
+      'down',
+      'down',
+      'down',
+      'down',
+      'down',
+      'down',
+      'down',
+      'down',
+      'down',
+      'down',
+      'down',
+      'down',
+      'down',
+      'down',
+      'down',
+      'down',
+      'down',
+      'down',
+      'down',
+      'down',
+      'down',
+      'q',
+    ]);
+  }, 5);
+
+  await runPromise;
+
+  const selectedFrame = [...capture.snapshots]
+    .reverse()
+    .find((snapshot) => snapshot.rightLines.join('\n').includes('> Property 26:'));
+  assert.notEqual(selectedFrame, undefined);
+  assert.equal(
+    selectedFrame.rightLines.some((line) => line.includes('> Property 26:')),
+    true,
+  );
+  const rangeMatch = selectedFrame.rightTitle.match(/Detail \[(\d+)-(\d+)\/(\d+)\]/);
+  assert.notEqual(rangeMatch, null);
+  assert.equal(Number(rangeMatch[1]) > 1, true);
 });
 
 test('runPanelApp can scroll past large neighbors block to values section', async () => {

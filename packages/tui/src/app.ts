@@ -6,6 +6,7 @@ import type {
   ConnectedSessionConfig,
   IncludeValuesMode,
   NodeDetail,
+  NodeValueProfileAttribution,
   NodeValueDetail,
   RuleDetail,
   SessionConfig,
@@ -572,6 +573,13 @@ function formatDetailLinesForDisplay(lines: string[], sectionWidth: number): str
       rendered.push(`{bold}{inverse}${headingText}{/inverse}{/bold}`);
       continue;
     }
+    if (line.startsWith('> ')) {
+      const isDetailLine = line.startsWith('>   ');
+      const visibleLine = isDetailLine ? `  ${line.slice(4)}` : `- ${line.slice(2)}`;
+      const highlighted = padOrTruncateText(visibleLine, sectionWidth);
+      rendered.push(`{black-fg}{green-bg}{bold}${highlighted}{/bold}{/green-bg}{/black-fg}`);
+      continue;
+    }
     if (trimmed.startsWith('Static/Diagnostic values:')) {
       rendered.push(`{yellow-fg}${line}{/yellow-fg}`);
       continue;
@@ -589,6 +597,13 @@ function formatDetailLinesForDisplay(lines: string[], sectionWidth: number): str
       rendered.push(`{gray-fg}${line}{/gray-fg}`);
       continue;
     }
+    if (line.startsWith('- ')) {
+      const bulletLabelMatch = line.slice(2).match(/^([^:]+):(.*)$/);
+      if (bulletLabelMatch) {
+        rendered.push(`- {bold}${bulletLabelMatch[1]}:{/bold}${bulletLabelMatch[2]}`);
+        continue;
+      }
+    }
     rendered.push(line);
   }
   return rendered.join('\n');
@@ -601,7 +616,7 @@ function renderPanelHelp(mode: SessionConfig['mode']): string {
       : 'enter=open rule, i/v/m use selected rule signature';
   return [
     'Keys: up/down move/scroll focused pane | pgup/pgdn page | home/end jump | / filter | tab switch pane',
-    'enter open | r refresh',
+    'enter open/fetch selected value (right pane) | up/down selects values (right+values) | F fetch full values | r refresh',
     'i inspect | v validate | m simulate | d simulate(dry-run) | p scaffold-preview',
     'n toggle neighbors in node detail',
     'z toggle values in node detail',
@@ -1028,7 +1043,75 @@ function formatReadableValue(value: unknown): string {
   return stringifyCompact(value);
 }
 
-function formatValueEntryBase(entry: NodeValueDetail): {
+function valueIdShapeKey(valueId: {
+  commandClass: string | number;
+  endpoint?: string | number;
+  property: string | number;
+  propertyKey?: string | number;
+}): string {
+  const endpoint =
+    typeof valueId.endpoint === 'number'
+      ? String(valueId.endpoint)
+      : typeof valueId.endpoint === 'string' && valueId.endpoint.trim().length > 0
+        ? valueId.endpoint.trim()
+        : '0';
+  const propertyKey =
+    valueId.propertyKey === null || valueId.propertyKey === undefined
+      ? ''
+      : String(valueId.propertyKey);
+  return [String(valueId.commandClass), endpoint, String(valueId.property), propertyKey].join(':');
+}
+
+function profileMappingRolePriority(role: NodeValueProfileAttribution['mappingRole']): number {
+  switch (role) {
+    case 'inbound':
+      return 3;
+    case 'outbound':
+      return 2;
+    case 'watcher':
+      return 1;
+    default:
+      return 0;
+  }
+}
+
+function selectBestProfileAttribution(
+  valueId: NodeValueDetail['valueId'],
+  profileByValueKey?: Map<string, NodeValueProfileAttribution[]>,
+): NodeValueProfileAttribution | null {
+  if (!valueId || !profileByValueKey) return null;
+  const entries = profileByValueKey.get(valueIdShapeKey(valueId));
+  if (!entries || entries.length === 0) return null;
+  return [...entries].sort((a, b) => {
+    const roleDelta =
+      profileMappingRolePriority(b.mappingRole) - profileMappingRolePriority(a.mappingRole);
+    if (roleDelta !== 0) return roleDelta;
+    return a.capabilityId.localeCompare(b.capabilityId);
+  })[0];
+}
+
+function formatProfileSourceLabel(attribution: NodeValueProfileAttribution): string {
+  const layer = attribution.provenanceLayer?.trim() || 'profile';
+  const ruleId = attribution.provenanceRuleId?.trim();
+  return ruleId ? `${layer}:${ruleId}` : layer;
+}
+
+function describeMissingValueReason(
+  entry: NodeValueDetail,
+  metadata: Record<string, unknown> | null,
+  valueFetchMode: IncludeValuesMode,
+): string {
+  if (entry.valueError !== undefined) return 'unavailable: read error';
+  if (valueFetchMode === 'summary') return 'not fetched: summary mode';
+  if (valueFetchMode === 'none') return 'not fetched';
+  if (metadata?.readable === false) return 'not readable';
+  return 'no reported value';
+}
+
+function formatValueEntryBase(
+  entry: NodeValueDetail,
+  valueFetchMode: IncludeValuesMode,
+): {
   label: string;
   renderedValue: string;
   identifier: string;
@@ -1041,17 +1124,23 @@ function formatValueEntryBase(entry: NodeValueDetail): {
   const valueId = entry.valueId;
   const metadata = asRecord(entry.metadata);
   const states = asRecord(metadata?.states);
-  const rawValueText = formatReadableValue(entry.value);
+  const rawValueText =
+    entry.value === undefined
+      ? `<${describeMissingValueReason(entry, metadata, valueFetchMode)}>`
+      : formatReadableValue(entry.value);
   const mappedValue =
     states && entry.value !== undefined
       ? (states[String(entry.value)] ?? states[String(Number(entry.value))])
       : undefined;
   const renderedValue =
-    typeof mappedValue === 'string' && mappedValue.trim().length > 0
+    entry.value !== undefined && typeof mappedValue === 'string' && mappedValue.trim().length > 0
       ? `${mappedValue} (${rawValueText})`
       : rawValueText;
   const unit =
-    metadata && typeof metadata.unit === 'string' && metadata.unit.trim().length > 0
+    entry.value !== undefined &&
+    metadata &&
+    typeof metadata.unit === 'string' &&
+    metadata.unit.trim().length > 0
       ? ` ${metadata.unit}`
       : '';
   const label =
@@ -1085,40 +1174,63 @@ function formatValueEntryBase(entry: NodeValueDetail): {
   };
 }
 
-function formatNodeValueLine(entry: NodeValueDetail): string {
+function formatNodeValueLine(
+  entry: NodeValueDetail,
+  valueFetchMode: IncludeValuesMode,
+  profileByValueKey?: Map<string, NodeValueProfileAttribution[]>,
+  selected = false,
+): string {
   if (entry._error !== undefined) {
     return `- value-error: ${truncateValueText(stringifyCompact(entry._error))}`;
   }
 
-  const valueBase = formatValueEntryBase(entry);
+  const valueBase = formatValueEntryBase(entry, valueFetchMode);
   if (!valueBase) return '- value: <missing valueId>';
+  const profileAttribution = selectBestProfileAttribution(entry.valueId, profileByValueKey);
+  const sourceLabel = profileAttribution ? 'profile' : 'heuristic-fallback';
+  const mapLabel = profileAttribution
+    ? `${profileAttribution.capabilityId} (${profileAttribution.mappingRole})`
+    : (valueBase.semantic.capabilityId ?? 'unmapped');
+  const confidenceLabel = profileAttribution ? 'high' : valueBase.semantic.confidence;
 
-  const semanticLabel = valueBase.semantic.capabilityId
-    ? `${valueBase.semantic.capabilityId} (${valueBase.semantic.confidence})`
-    : 'unmapped';
   const detailBits = [
     `id ${valueBase.identifier}`,
     `dir ${valueBase.semantic.direction}`,
     valueBase.type ? `type ${valueBase.type}` : null,
-    `map ${semanticLabel}`,
-    `src ${valueBase.semantic.source}`,
+    `map ${mapLabel}`,
+    `conf ${confidenceLabel}`,
+    `src ${sourceLabel}`,
+    profileAttribution ? `rule ${formatProfileSourceLabel(profileAttribution)}` : null,
   ].filter((bit): bit is string => bit !== null);
+  const lead = selected ? '> ' : '- ';
+  const detailLead = selected ? '>   ' : '  ';
 
   return [
-    `- ${valueBase.label}: ${valueBase.renderedValue}`,
-    `  ${detailBits.join(' | ')}`,
-    valueBase.errors.length > 0 ? `  errors: ${valueBase.errors.join(' | ')}` : null,
+    `${lead}${valueBase.label}: ${valueBase.renderedValue}`,
+    `${detailLead}${detailBits.join(' | ')}`,
+    valueBase.errors.length > 0 ? `${detailLead}errors: ${valueBase.errors.join(' | ')}` : null,
   ].join('\n');
 }
 
-function formatNodeValueCompactLine(entry: NodeValueDetail): string {
+function formatNodeValueCompactLine(
+  entry: NodeValueDetail,
+  valueFetchMode: IncludeValuesMode,
+  profileByValueKey?: Map<string, NodeValueProfileAttribution[]>,
+  selected = false,
+): string {
   if (entry._error !== undefined) {
     return `- value-error: ${truncateValueText(stringifyCompact(entry._error))}`;
   }
 
-  const valueBase = formatValueEntryBase(entry);
+  const valueBase = formatValueEntryBase(entry, valueFetchMode);
   if (!valueBase) return '- value: <missing valueId>';
-  return `- ${valueBase.label}: ${valueBase.renderedValue}`;
+  const profileAttribution = selectBestProfileAttribution(entry.valueId, profileByValueKey);
+  const mapLabel = profileAttribution
+    ? `${profileAttribution.capabilityId}/${profileAttribution.mappingRole}`
+    : (valueBase.semantic.capabilityId ?? 'unmapped');
+  const confidenceLabel = profileAttribution ? 'high' : valueBase.semantic.confidence;
+  const sourceLabel = profileAttribution ? 'profile' : 'heuristic';
+  return `${selected ? '>' : '-'} ${valueBase.label}: ${valueBase.renderedValue} [${mapLabel} | conf:${confidenceLabel} | src:${sourceLabel}]`;
 }
 
 function valueIdKey(entry: NodeValueDetail): string {
@@ -1179,7 +1291,6 @@ function scoreNodeValue(entry: NodeValueDetail): number {
     .toLowerCase();
 
   let score = 0;
-  if (entry.value !== undefined) score += 8;
   if (asNonEmptyString(metadata?.label)) score += 14;
   if (asNonEmptyString(metadata?.description)) score += 3;
   if (states && Object.keys(states).length > 0) score += 20;
@@ -1249,19 +1360,42 @@ function groupValuesBySection(
   return grouped;
 }
 
-function renderCollapsedValuePreview(values: NodeValueDetail[], limit: number): string[] {
+function renderCollapsedValuePreview(
+  values: NodeValueDetail[],
+  limit: number,
+  valueFetchMode: IncludeValuesMode,
+  profileByValueKey?: Map<string, NodeValueProfileAttribution[]>,
+): string[] {
   const top = values.slice(0, limit);
   return top.map((entry) => {
     const section = classifyNodeValueSection(entry);
     return section === 'config' || section === 'diagnostic'
-      ? formatNodeValueCompactLine(entry)
-      : formatNodeValueLine(entry);
+      ? formatNodeValueCompactLine(entry, valueFetchMode, profileByValueKey)
+      : formatNodeValueLine(entry, valueFetchMode, profileByValueKey);
   });
+}
+
+function flattenVisibleValuesBySection(
+  valuesBySection: Map<ValueSemanticSection, NodeValueDetail[]>,
+  collapsedSections: Set<ValueSemanticSection>,
+): NodeValueDetail[] {
+  const visible: NodeValueDetail[] = [];
+  for (const section of VALUE_SECTION_ORDER) {
+    if (collapsedSections.has(section.id)) continue;
+    const sectionValues = valuesBySection.get(section.id) ?? [];
+    for (const entry of sectionValues) {
+      if (!entry.valueId) continue;
+      visible.push(entry);
+    }
+  }
+  return visible;
 }
 
 function renderCollapsedSectionPreview(
   valuesBySection: Map<ValueSemanticSection, NodeValueDetail[]>,
   collapsedSections: Set<ValueSemanticSection>,
+  valueFetchMode: IncludeValuesMode,
+  profileByValueKey?: Map<string, NodeValueProfileAttribution[]>,
 ): string[] {
   const sections = VALUE_SECTION_ORDER.flatMap((section) => {
     const sectionValues = valuesBySection.get(section.id) ?? [];
@@ -1272,7 +1406,7 @@ function renderCollapsedSectionPreview(
     const previewLimit = section.compact ? 1 : 2;
     const previewRows = sectionValues
       .slice(0, previewLimit)
-      .map((entry) => formatNodeValueCompactLine(entry));
+      .map((entry) => formatNodeValueCompactLine(entry, valueFetchMode, profileByValueKey));
     return [
       sectionTitle,
       ...previewRows,
@@ -1290,6 +1424,9 @@ function renderPanelNodeDetail(
     neighborsExpanded?: boolean;
     valuesExpanded?: boolean;
     collapsedValueSections?: Set<ValueSemanticSection>;
+    valueFetchMode?: IncludeValuesMode;
+    profileByValueKey?: Map<string, NodeValueProfileAttribution[]>;
+    selectedValueKey?: string;
     neighborLookup?: Map<number, NeighborIdentity>;
   } = {},
 ): string {
@@ -1319,11 +1456,21 @@ function renderPanelNodeDetail(
   const valuesExpanded = options.valuesExpanded === true;
   const valuesDisclosure = valuesExpanded ? '▼' : '▶';
   const collapsedValueSections = options.collapsedValueSections ?? new Set<ValueSemanticSection>();
+  const valueFetchMode = options.valueFetchMode ?? 'summary';
+  const profileByValueKey = options.profileByValueKey;
+  const selectedValueKey = options.selectedValueKey;
   const valuesBySection = groupValuesBySection(sortedValues);
-  const collapsedPreviewRows = renderCollapsedValuePreview(sortedValues, 5);
+  const collapsedPreviewRows = renderCollapsedValuePreview(
+    sortedValues,
+    5,
+    valueFetchMode,
+    profileByValueKey,
+  );
   const collapsedSectionRows = renderCollapsedSectionPreview(
     valuesBySection,
     collapsedValueSections,
+    valueFetchMode,
+    profileByValueKey,
   );
   const expandedSectionLines = VALUE_SECTION_ORDER.flatMap((section) => {
     const sectionValues = valuesBySection.get(section.id) ?? [];
@@ -1332,8 +1479,20 @@ function renderPanelNodeDetail(
     const sectionTitle = `${collapsed ? '▶' : '▼'} ${section.title}: ${sectionValues.length} (${section.toggleKey})`;
     if (collapsed) return [sectionTitle];
     const rows = section.compact
-      ? sectionValues.map((entry) => formatNodeValueCompactLine(entry))
-      : sectionValues.map((entry) => formatNodeValueLine(entry));
+      ? sectionValues.map((entry) => {
+          const selected =
+            selectedValueKey !== undefined &&
+            entry.valueId !== undefined &&
+            valueIdShapeKey(entry.valueId) === selectedValueKey;
+          return formatNodeValueCompactLine(entry, valueFetchMode, profileByValueKey, selected);
+        })
+      : sectionValues.map((entry) => {
+          const selected =
+            selectedValueKey !== undefined &&
+            entry.valueId !== undefined &&
+            valueIdShapeKey(entry.valueId) === selectedValueKey;
+          return formatNodeValueLine(entry, valueFetchMode, profileByValueKey, selected);
+        });
     return [sectionTitle, ...rows];
   });
   const valuesSectionTitle = `${valuesDisclosure} Values ${values.length}${values.length > 0 ? ' (z)' : ''}`;
@@ -1451,6 +1610,7 @@ type PanelIntent =
   | { type: 'switch-pane' }
   | { type: 'start-filter' }
   | { type: 'open' }
+  | { type: 'fetch-full-values' }
   | { type: 'refresh' }
   | { type: 'inspect' }
   | { type: 'validate' }
@@ -1487,6 +1647,7 @@ function keypressToPanelIntent(
   if (name === 'tab') return { type: 'switch-pane' };
   if (token === '/' || name === 'slash') return { type: 'start-filter' };
   if (name === 'return' || name === 'enter') return { type: 'open' };
+  if (char === 'F') return { type: 'fetch-full-values' };
   if (name === 'r' || token === 'r') return { type: 'refresh' };
   if (name === 'i' || token === 'i') return { type: 'inspect' };
   if (name === 'v' || token === 'v') return { type: 'validate' };
@@ -1559,6 +1720,13 @@ export async function runPanelApp(
   let neighborsExpanded = false;
   let valuesExpanded = false;
   const collapsedValueSections = new Set<ValueSemanticSection>();
+  const nodeValueFetchModeOverride = new Map<number, IncludeValuesMode>();
+  const nodeSelectedValueKeyByNode = new Map<number, string>();
+  const nodeValueProfileAttributionCache = new Map<
+    number,
+    Map<string, NodeValueProfileAttribution[]>
+  >();
+  const nodeValueProfileAttributionInFlight = new Set<number>();
   let bottomText = renderPanelHelp(config.mode);
   let bottomScroll = 0;
   let bottomCompact = true;
@@ -1911,6 +2079,136 @@ export async function runPanelApp(
     return map;
   }
 
+  function resolveNodeValueProfileAttribution(
+    nodeId: number | undefined,
+  ): Map<string, NodeValueProfileAttribution[]> | undefined {
+    if (!nodeId) return undefined;
+    return nodeValueProfileAttributionCache.get(nodeId);
+  }
+
+  function resolveValueFetchMode(nodeId: number | undefined): IncludeValuesMode {
+    if (!nodeId) return config.includeValues;
+    return nodeValueFetchModeOverride.get(nodeId) ?? config.includeValues;
+  }
+
+  function getVisibleNodeValues(detail: NodeDetail): NodeValueDetail[] {
+    const values = Array.isArray(detail.values) ? detail.values : [];
+    const sortedValues = sortValuesByRelevance(values);
+    const grouped = groupValuesBySection(sortedValues);
+    return flattenVisibleValuesBySection(grouped, collapsedValueSections);
+  }
+
+  function getSelectedNodeValueKey(nodeId: number | undefined): string | undefined {
+    if (!nodeId) return undefined;
+    return nodeSelectedValueKeyByNode.get(nodeId);
+  }
+
+  function ensureSelectedNodeValueKey(detail: NodeDetail): void {
+    const nodeId = detail.nodeId;
+    const visible = getVisibleNodeValues(detail);
+    if (visible.length === 0) {
+      nodeSelectedValueKeyByNode.delete(nodeId);
+      return;
+    }
+    const selectedKey = nodeSelectedValueKeyByNode.get(nodeId);
+    if (selectedKey && visible.some((entry) => valueIdKey(entry) === selectedKey)) {
+      return;
+    }
+    nodeSelectedValueKeyByNode.set(nodeId, valueIdKey(visible[0]));
+  }
+
+  function moveSelectedNodeValue(delta: -1 | 1): string | null {
+    if (!currentNodeDetail) return null;
+    const visible = getVisibleNodeValues(currentNodeDetail);
+    if (visible.length === 0) return null;
+    const nodeId = currentNodeDetail.nodeId;
+    const currentKey = nodeSelectedValueKeyByNode.get(nodeId);
+    const currentIndex = currentKey
+      ? visible.findIndex((entry) => valueIdKey(entry) === currentKey)
+      : -1;
+    const baseIndex = currentIndex >= 0 ? currentIndex : 0;
+    const nextIndex = Math.max(0, Math.min(visible.length - 1, baseIndex + delta));
+    const nextEntry = visible[nextIndex];
+    const nextKey = valueIdKey(nextEntry);
+    nodeSelectedValueKeyByNode.set(nodeId, nextKey);
+    return nextKey;
+  }
+
+  function resolveSelectedNodeValue(detail: NodeDetail): NodeValueDetail | null {
+    const values = getVisibleNodeValues(detail);
+    if (values.length === 0) return null;
+    const selectedKey = nodeSelectedValueKeyByNode.get(detail.nodeId);
+    if (!selectedKey) return values[0];
+    return values.find((entry) => valueIdKey(entry) === selectedKey) ?? values[0];
+  }
+
+  function getRightPaneContentWidth(): number {
+    const width = getPanelCols();
+    const leftWidth = Math.max(28, Math.floor(width * 0.35));
+    const rightWidth = Math.max(24, width - leftWidth);
+    return Math.max(1, rightWidth - 2);
+  }
+
+  function ensureSelectedValueVisible(): void {
+    if (!isNodesMode || !currentNodeDetail || !valuesExpanded) return;
+    const selectedKey = getSelectedNodeValueKey(currentNodeDetail.nodeId);
+    if (!selectedKey) return;
+    const rightAllLines = wrapDetailLinesForDisplay(
+      splitLines(rightText),
+      getRightPaneContentWidth(),
+    );
+    const selectedLineIndex = rightAllLines.findIndex((line) => /^> [^\s]/.test(line));
+    if (selectedLineIndex < 0) return;
+    const paneHeights = getPanelContentHeightsWithMode(getPanelRows(), bottomCompact);
+    const visible = Math.max(1, paneHeights.topContentHeight);
+    if (selectedLineIndex < rightScroll) {
+      rightScroll = selectedLineIndex;
+      return;
+    }
+    if (selectedLineIndex >= rightScroll + visible) {
+      rightScroll = selectedLineIndex - visible + 1;
+    }
+  }
+
+  async function hydrateNodeValueProfileAttribution(nodeId: number): Promise<void> {
+    if (!isNodesMode) return;
+    if (nodeValueProfileAttributionCache.has(nodeId)) return;
+    if (nodeValueProfileAttributionInFlight.has(nodeId)) return;
+    const sessionState = nodesPresenter.getState().sessionConfig;
+    if (!sessionState || typeof sessionState.url !== 'string' || sessionState.url.length === 0) {
+      return;
+    }
+    if (
+      typeof (curationService as { inspectNodeCompiledValueAttribution?: unknown })
+        .inspectNodeCompiledValueAttribution !== 'function'
+    ) {
+      return;
+    }
+
+    nodeValueProfileAttributionInFlight.add(nodeId);
+    try {
+      const attribution = await curationService.inspectNodeCompiledValueAttribution(
+        sessionState as ConnectedSessionConfig,
+        nodeId,
+      );
+      const byValueKey = new Map<string, NodeValueProfileAttribution[]>();
+      for (const [key, rows] of Object.entries(attribution.valueAttributions ?? {})) {
+        if (!Array.isArray(rows) || rows.length === 0) continue;
+        byValueKey.set(key, rows);
+      }
+      nodeValueProfileAttributionCache.set(nodeId, byValueKey);
+    } catch {
+      // best-effort attribution; fall back to heuristic semantics.
+      nodeValueProfileAttributionCache.set(nodeId, new Map());
+    } finally {
+      nodeValueProfileAttributionInFlight.delete(nodeId);
+      if (currentNodeDetail?.nodeId === nodeId) {
+        rerenderCurrentNodeDetail();
+        renderFrame();
+      }
+    }
+  }
+
   async function hydrateNeighborIdentity(): Promise<void> {
     if (!currentNodeDetail || !Array.isArray(currentNodeDetail.neighbors)) return;
     const neighborIds = currentNodeDetail.neighbors
@@ -1947,24 +2245,37 @@ export async function runPanelApp(
       valuesExpanded = false;
       collapsedValueSections.clear();
     }
+    ensureSelectedNodeValueKey(detail);
     const neighborLookup = isNodesMode ? buildNeighborLookup() : undefined;
+    const profileByValueKey = resolveNodeValueProfileAttribution(detail.nodeId);
+    const selectedValueKey = getSelectedNodeValueKey(detail.nodeId);
     setRightPaneText(
       renderPanelNodeDetail(detail, {
         neighborsExpanded,
         valuesExpanded,
         collapsedValueSections,
+        valueFetchMode: resolveValueFetchMode(detail.nodeId),
+        profileByValueKey,
+        selectedValueKey,
         neighborLookup,
       }),
     );
+    void hydrateNodeValueProfileAttribution(detail.nodeId);
   }
 
   function rerenderCurrentNodeDetail(): void {
     if (!currentNodeDetail || !isNodesMode) return;
+    ensureSelectedNodeValueKey(currentNodeDetail);
     const neighborLookup = buildNeighborLookup();
+    const profileByValueKey = resolveNodeValueProfileAttribution(currentNodeDetail.nodeId);
+    const selectedValueKey = getSelectedNodeValueKey(currentNodeDetail.nodeId);
     rightText = renderPanelNodeDetail(currentNodeDetail, {
       neighborsExpanded,
       valuesExpanded,
       collapsedValueSections,
+      valueFetchMode: resolveValueFetchMode(currentNodeDetail.nodeId),
+      profileByValueKey,
+      selectedValueKey,
       neighborLookup,
     });
   }
@@ -2171,7 +2482,7 @@ export async function runPanelApp(
         : '';
     const footer = filterMode
       ? `Filter mode: type to search | backspace delete | enter apply | esc apply${statusSuffix}`
-      : `q quit | arrows move | pgup/pgdn page | / filter | enter open | i/v/m loop | n neighbors | z values | 1-6 subsections | b bottom-size | c cancel${statusSuffix}`;
+      : `q quit | arrows move/scroll | pgup/pgdn page | / filter | enter open/fetch-selected | F fetch-full | i/v/m loop | n neighbors | z values | 1-6 subsections | b bottom-size | c cancel${statusSuffix}`;
 
     requestVisibleListIdentityHydration();
 
@@ -2235,7 +2546,13 @@ export async function runPanelApp(
       if (focusedPane === 'left') {
         moveSelection(-1);
       } else if (focusedPane === 'right') {
-        rightScroll = Math.max(0, rightScroll - 1);
+        if (isNodesMode && valuesExpanded && currentNodeDetail) {
+          moveSelectedNodeValue(-1);
+          rerenderCurrentNodeDetail();
+          ensureSelectedValueVisible();
+        } else {
+          rightScroll = Math.max(0, rightScroll - 1);
+        }
       } else {
         bottomScroll = Math.max(0, bottomScroll - 1);
       }
@@ -2245,7 +2562,13 @@ export async function runPanelApp(
       if (focusedPane === 'left') {
         moveSelection(1);
       } else if (focusedPane === 'right') {
-        rightScroll += 1;
+        if (isNodesMode && valuesExpanded && currentNodeDetail) {
+          moveSelectedNodeValue(1);
+          rerenderCurrentNodeDetail();
+          ensureSelectedValueVisible();
+        } else {
+          rightScroll += 1;
+        }
       } else {
         bottomScroll += 1;
       }
@@ -2322,7 +2645,36 @@ export async function runPanelApp(
       if (isNodesMode) {
         const nodeId = getSelectedNodeId();
         if (!nodeId) throw new Error('No node selected');
-        const detail = await nodesPresenter.showNodeDetail(nodeId);
+        const isRightDetailOpen =
+          focusedPane === 'right' && currentNodeDetail?.nodeId === nodeId && valuesExpanded;
+        if (isRightDetailOpen) {
+          const selectedValue = currentNodeDetail
+            ? resolveSelectedNodeValue(currentNodeDetail)
+            : null;
+          if (selectedValue?.valueId) {
+            if (
+              typeof (nodesPresenter as { fetchNodeValue?: unknown }).fetchNodeValue === 'function'
+            ) {
+              const detail = await nodesPresenter.fetchNodeValue(nodeId, selectedValue.valueId);
+              const metadata = asRecord(selectedValue.metadata);
+              const label =
+                asNonEmptyString(metadata?.label) ??
+                asNonEmptyString(metadata?.description) ??
+                valueIdKey(selectedValue);
+              updateNodeDetail(detail);
+              setBottomPaneText(`Fetched value ${label} for node ${nodeId}.`);
+              return;
+            }
+            setBottomPaneText('Value-level fetch is unavailable in this presenter.');
+            return;
+          }
+          setBottomPaneText('No selectable value. Expand a values subsection first.');
+          return;
+        }
+        const detail = await nodesPresenter.showNodeDetail(nodeId, {
+          includeValues: resolveValueFetchMode(nodeId),
+          maxValues: config.maxValues,
+        });
         updateNodeDetail(detail);
       } else {
         const ruleIndex = getSelectedRuleIndex();
@@ -2333,6 +2685,25 @@ export async function runPanelApp(
         collapsedValueSections.clear();
         setRightPaneText(renderPanelRuleDetail(rulesPresenter.showRuleDetail(ruleIndex)));
       }
+      return;
+    }
+    if (intent.type === 'fetch-full-values') {
+      if (!isNodesMode) {
+        setBottomPaneText('Full value fetch is only available in nodes mode.');
+        return;
+      }
+      const nodeId = getSelectedNodeId();
+      if (!nodeId) {
+        setBottomPaneText('No node selected.');
+        return;
+      }
+      const detail = await nodesPresenter.showNodeDetail(nodeId, {
+        includeValues: 'full',
+        maxValues: config.maxValues,
+      });
+      nodeValueFetchModeOverride.set(nodeId, 'full');
+      updateNodeDetail(detail);
+      setBottomPaneText(`Fetched full values for node ${nodeId}.`);
       return;
     }
     if (intent.type === 'refresh') {
@@ -2347,6 +2718,8 @@ export async function runPanelApp(
             neighborsExpanded = false;
             valuesExpanded = false;
             collapsedValueSections.clear();
+            nodeValueFetchModeOverride.clear();
+            nodeSelectedValueKeyByNode.clear();
             setRightPaneText('');
           } else {
             rerenderCurrentNodeDetail();
@@ -2370,7 +2743,10 @@ export async function runPanelApp(
           setBottomPaneText('Open a node first.');
           return;
         }
-        const detail = await nodesPresenter.showNodeDetail(nodeId);
+        const detail = await nodesPresenter.showNodeDetail(nodeId, {
+          includeValues: resolveValueFetchMode(nodeId),
+          maxValues: config.maxValues,
+        });
         updateNodeDetail(detail);
       }
       neighborsExpanded = !neighborsExpanded;
@@ -2392,7 +2768,10 @@ export async function runPanelApp(
           setBottomPaneText('Open a node first.');
           return;
         }
-        const detail = await nodesPresenter.showNodeDetail(nodeId);
+        const detail = await nodesPresenter.showNodeDetail(nodeId, {
+          includeValues: resolveValueFetchMode(nodeId),
+          maxValues: config.maxValues,
+        });
         updateNodeDetail(detail);
       }
       valuesExpanded = !valuesExpanded;
@@ -2411,7 +2790,10 @@ export async function runPanelApp(
           setBottomPaneText('Open a node first.');
           return;
         }
-        const detail = await nodesPresenter.showNodeDetail(nodeId);
+        const detail = await nodesPresenter.showNodeDetail(nodeId, {
+          includeValues: resolveValueFetchMode(nodeId),
+          maxValues: config.maxValues,
+        });
         updateNodeDetail(detail);
       }
       const section = VALUE_SECTION_BY_TOGGLE_KEY.get(intent.key);

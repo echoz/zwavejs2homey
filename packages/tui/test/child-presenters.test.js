@@ -10,6 +10,7 @@ test('ExplorerSessionPresenter delegates explorer operations to service', async 
     disconnectCalls: 0,
     listCalls: 0,
     detailCalls: 0,
+    valueDetailCalls: 0,
     async connect() {
       this.connectCalls += 1;
     },
@@ -23,6 +24,10 @@ test('ExplorerSessionPresenter delegates explorer operations to service', async 
     async getNodeDetail(nodeId) {
       this.detailCalls += 1;
       return { nodeId, state: {}, neighbors: [], notificationEvents: [], values: [] };
+    },
+    async getNodeValueDetail(_nodeId, valueId) {
+      this.valueDetailCalls += 1;
+      return { valueId, value: true };
     },
   };
 
@@ -39,11 +44,18 @@ test('ExplorerSessionPresenter delegates explorer operations to service', async 
   assert.equal(nodes.length, 1);
   const detail = await presenter.getNodeDetail(7);
   assert.equal(detail.nodeId, 7);
+  const value = await presenter.getNodeValueDetail(7, {
+    commandClass: 37,
+    endpoint: 0,
+    property: 'currentValue',
+  });
+  assert.equal(value.value, true);
   await presenter.disconnect();
   assert.equal(service.connectCalls, 1);
   assert.equal(service.disconnectCalls, 1);
   assert.equal(service.listCalls, 1);
   assert.equal(service.detailCalls, 1);
+  assert.equal(service.valueDetailCalls, 1);
 });
 
 test('CurationWorkflowPresenter delegates curation calls and enforces confirmations', async () => {

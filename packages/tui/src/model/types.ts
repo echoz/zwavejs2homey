@@ -51,6 +51,22 @@ export interface NodeValueDetail {
   _error?: unknown;
 }
 
+export type NodeValueProfileMappingRole = 'inbound' | 'outbound' | 'watcher';
+
+export interface NodeValueProfileAttribution {
+  capabilityId: string;
+  mappingRole: NodeValueProfileMappingRole;
+  directionality?: string | null;
+  provenanceLayer?: string | null;
+  provenanceRuleId?: string | null;
+  provenanceAction?: string | null;
+}
+
+export interface NodeCompiledValueAttribution {
+  nodeId: number;
+  valueAttributions: Record<string, NodeValueProfileAttribution[]>;
+}
+
 export interface NodeDetail {
   nodeId: number;
   state: Record<string, unknown> | null;

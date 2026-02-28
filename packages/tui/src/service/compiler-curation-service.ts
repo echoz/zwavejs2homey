@@ -16,7 +16,9 @@ import { normalizeCompilerDeviceFactsFromZwjsDetail } from '../../../../tools/zw
 
 import type {
   ConnectedSessionConfig,
+  NodeCompiledValueAttribution,
   NodeDetail,
+  NodeValueProfileAttribution,
   ScaffoldDraft,
   SimulationSummary,
   SignatureInspectSummary,
@@ -48,6 +50,113 @@ function parseInspectJson(lines: string[]): unknown {
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(`Failed to parse inspect output: ${message}`);
   }
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
+function asValueIdKey(value: unknown): string | null {
+  const record = asRecord(value);
+  if (!record) return null;
+  const commandClass = record.commandClass;
+  const property = record.property;
+  if (
+    (typeof commandClass !== 'number' && typeof commandClass !== 'string') ||
+    (typeof property !== 'number' && typeof property !== 'string')
+  ) {
+    return null;
+  }
+  const endpoint = record.endpoint;
+  const propertyKey = record.propertyKey;
+  const endpointText =
+    typeof endpoint === 'number' && Number.isFinite(endpoint)
+      ? String(endpoint)
+      : typeof endpoint === 'string' && endpoint.trim().length > 0
+        ? endpoint.trim()
+        : '0';
+  const propertyKeyText =
+    propertyKey === null || propertyKey === undefined ? '' : String(propertyKey);
+  return [String(commandClass), endpointText, String(property), propertyKeyText].join(':');
+}
+
+function pushValueAttribution(
+  valueAttributions: Record<string, NodeValueProfileAttribution[]>,
+  valueIdKey: string | null,
+  entry: NodeValueProfileAttribution,
+): void {
+  if (!valueIdKey) return;
+  const list = valueAttributions[valueIdKey] ?? [];
+  list.push(entry);
+  valueAttributions[valueIdKey] = list;
+}
+
+function extractNodeCompiledValueAttribution(
+  nodeId: number,
+  parsed: unknown,
+): NodeCompiledValueAttribution {
+  const valueAttributions: Record<string, NodeValueProfileAttribution[]> = {};
+  const parsedRecord = asRecord(parsed);
+  const results = Array.isArray(parsedRecord?.results) ? parsedRecord?.results : [];
+  const selectedRow =
+    results.find((row) => {
+      const rowRecord = asRecord(row);
+      const rowNode = asRecord(rowRecord?.node);
+      return Number(rowNode?.nodeId) === nodeId;
+    }) ?? results[0];
+  const rowRecord = asRecord(selectedRow);
+  const compiledRecord = asRecord(rowRecord?.compiled);
+  const profileRecord = asRecord(compiledRecord?.profile);
+  const capabilities = Array.isArray(profileRecord?.capabilities)
+    ? profileRecord?.capabilities
+    : [];
+
+  for (const capabilityRaw of capabilities) {
+    const capability = asRecord(capabilityRaw);
+    if (!capability || typeof capability.capabilityId !== 'string') continue;
+    const provenance = asRecord(capability.provenance);
+    const inbound = asRecord(capability.inboundMapping);
+    if (inbound && inbound.kind === 'value') {
+      pushValueAttribution(valueAttributions, asValueIdKey(inbound.selector), {
+        capabilityId: capability.capabilityId,
+        mappingRole: 'inbound',
+        directionality:
+          typeof capability.directionality === 'string' ? capability.directionality : null,
+        provenanceLayer: typeof provenance?.layer === 'string' ? provenance.layer : null,
+        provenanceRuleId: typeof provenance?.ruleId === 'string' ? provenance.ruleId : null,
+        provenanceAction: typeof provenance?.action === 'string' ? provenance.action : null,
+      });
+
+      const watchers = Array.isArray(inbound.watchers) ? inbound.watchers : [];
+      for (const watcher of watchers) {
+        pushValueAttribution(valueAttributions, asValueIdKey(watcher), {
+          capabilityId: capability.capabilityId,
+          mappingRole: 'watcher',
+          directionality:
+            typeof capability.directionality === 'string' ? capability.directionality : null,
+          provenanceLayer: typeof provenance?.layer === 'string' ? provenance.layer : null,
+          provenanceRuleId: typeof provenance?.ruleId === 'string' ? provenance.ruleId : null,
+          provenanceAction: typeof provenance?.action === 'string' ? provenance.action : null,
+        });
+      }
+    }
+
+    const outbound = asRecord(capability.outboundMapping);
+    if (outbound && outbound.kind === 'set_value') {
+      pushValueAttribution(valueAttributions, asValueIdKey(outbound.target), {
+        capabilityId: capability.capabilityId,
+        mappingRole: 'outbound',
+        directionality:
+          typeof capability.directionality === 'string' ? capability.directionality : null,
+        provenanceLayer: typeof provenance?.layer === 'string' ? provenance.layer : null,
+        provenanceRuleId: typeof provenance?.ruleId === 'string' ? provenance.ruleId : null,
+        provenanceAction: typeof provenance?.action === 'string' ? provenance.action : null,
+      });
+    }
+  }
+
+  return { nodeId, valueAttributions };
 }
 
 function countOutcomes(results: unknown[]): Record<string, number> {
@@ -114,6 +223,11 @@ export interface CompilerCurationService {
       inspectFormat?: string;
     },
   ): Promise<SimulationSummary>;
+  inspectNodeCompiledValueAttribution(
+    session: ConnectedSessionConfig,
+    nodeId: number,
+    options?: { manifestFile?: string; includeControllerNodes?: boolean },
+  ): Promise<NodeCompiledValueAttribution>;
   scaffoldFromSignature(
     signature: string,
     options?: { productName?: string; ruleIdPrefix?: string; homeyClass?: string },
@@ -317,6 +431,39 @@ export class CompilerCurationServiceImpl implements CompilerCurationService {
           ? result.validate.summaryJsonFile
           : null,
     };
+  }
+
+  async inspectNodeCompiledValueAttribution(
+    session: ConnectedSessionConfig,
+    nodeId: number,
+    options: { manifestFile?: string; includeControllerNodes?: boolean } = {},
+  ): Promise<NodeCompiledValueAttribution> {
+    const manifestFile = resolveDefaultManifestFile(options.manifestFile ?? session.manifestFile);
+    const parsed = parseInspectLiveCliArgs([
+      '--url',
+      session.url,
+      '--node',
+      String(nodeId),
+      '--manifest-file',
+      manifestFile,
+      '--format',
+      'json-compact',
+      '--include-values',
+      session.includeValues,
+      '--max-values',
+      String(session.maxValues),
+      ...(session.token ? ['--token', session.token] : []),
+      '--schema-version',
+      String(session.schemaVersion),
+      ...(options.includeControllerNodes ? ['--include-controller-nodes'] : []),
+    ]);
+    if (!parsed.ok) {
+      throw new Error(parsed.error);
+    }
+
+    const logs: string[] = [];
+    await runLiveInspectCommand(parsed.command, { log: (line: string) => logs.push(line) });
+    return extractNodeCompiledValueAttribution(nodeId, parseInspectJson(logs));
   }
 
   scaffoldFromSignature(

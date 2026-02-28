@@ -3,12 +3,14 @@ import type {
   ConnectedSessionConfig,
   IncludeValuesMode,
   NodeDetail,
+  NodeValueDetail,
   NodeSummary,
   ScaffoldDraft,
   SimulationSummary,
   SignatureInspectSummary,
   StatusSnapshot,
   ValidationSummary,
+  ValueIdShape,
 } from '../model/types';
 import type { CurationWorkflowChildPresenterLike } from './curation-workflow-presenter';
 import type { ExplorerSessionChildPresenterLike } from './explorer-session-presenter';
@@ -25,6 +27,37 @@ function nowIso(): string {
 function toErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
   return String(error);
+}
+
+function stableValueIdKey(valueId: ValueIdShape): string {
+  return [
+    String(valueId.commandClass),
+    String(valueId.endpoint ?? 0),
+    String(valueId.property),
+    valueId.propertyKey == null ? '' : String(valueId.propertyKey),
+  ].join(':');
+}
+
+function stableNodeValueKey(value: NodeValueDetail): string {
+  if (!value.valueId) return 'missing';
+  return stableValueIdKey(value.valueId);
+}
+
+function mergeNodeValues(
+  existing: NodeValueDetail[],
+  incoming: NodeValueDetail,
+): NodeValueDetail[] {
+  const incomingKey = stableNodeValueKey(incoming);
+  let replaced = false;
+  const merged = existing.map((entry) => {
+    if (stableNodeValueKey(entry) !== incomingKey) return entry;
+    replaced = true;
+    return incoming;
+  });
+  if (!replaced) {
+    merged.push(incoming);
+  }
+  return merged;
 }
 
 export class ExplorerPresenter {
@@ -139,6 +172,42 @@ export class ExplorerPresenter {
       const message = toErrorMessage(error);
       this.state.lastError = message;
       this.logError(`Node detail failed for ${nodeId}: ${message}`);
+      throw error;
+    }
+  }
+
+  async fetchNodeValue(nodeId: number, valueId: ValueIdShape): Promise<NodeDetail> {
+    this.requireReady();
+    this.requireSessionConfig();
+
+    try {
+      const valueDetail = await this.children.explorer.getNodeValueDetail(nodeId, valueId);
+      const cachedDetail = this.state.nodeDetailCache[nodeId];
+      let baseDetail: NodeDetail;
+      if (cachedDetail) {
+        baseDetail = cachedDetail;
+      } else {
+        baseDetail = await this.showNodeDetail(nodeId, {
+          selectNode: false,
+          includeValues: 'none',
+          maxValues: 1,
+          includeLinkQuality: false,
+        });
+      }
+      const existingValues = Array.isArray(baseDetail.values) ? baseDetail.values : [];
+      const mergedDetail: NodeDetail = {
+        ...baseDetail,
+        values: mergeNodeValues(existingValues, valueDetail),
+      };
+      this.state.nodeDetailCache[nodeId] = mergedDetail;
+      this.logInfo(`Loaded node ${nodeId} value ${stableValueIdKey(valueId)}`);
+      return mergedDetail;
+    } catch (error) {
+      const message = toErrorMessage(error);
+      this.state.lastError = message;
+      this.logError(
+        `Node value fetch failed for ${nodeId} (${stableValueIdKey(valueId)}): ${message}`,
+      );
       throw error;
     }
   }

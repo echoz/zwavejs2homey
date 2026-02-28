@@ -11,6 +11,7 @@ import type {
   IncludeValuesMode,
   NodeDetail,
   NodeSummary,
+  NodeValueDetail,
   ValueIdShape,
 } from '../model/types';
 
@@ -66,6 +67,7 @@ export interface ZwjsExplorerService {
   connect(config: ConnectedSessionConfig): Promise<void>;
   disconnect(): Promise<void>;
   listNodes(): Promise<NodeSummary[]>;
+  getNodeValueDetail(nodeId: number, valueId: ValueIdShape): Promise<NodeValueDetail>;
   getNodeDetail(
     nodeId: number,
     options?: {
@@ -222,32 +224,19 @@ export class ZwjsExplorerServiceImpl implements ZwjsExplorerService {
     detail.values = [];
 
     for (const valueId of valueIds) {
-      const [metadataRes, valueRes, tsRes] =
-        includeValues === 'summary'
-          ? await Promise.all([
-              client.getNodeValueMetadata(nodeId, valueId),
-              Promise.resolve(null),
-              Promise.resolve(null),
-            ])
-          : await Promise.all([
-              client.getNodeValueMetadata(nodeId, valueId),
-              client.getNodeValue(nodeId, valueId),
-              client.getNodeValueTimestamp(nodeId, valueId),
-            ]);
-
-      detail.values.push({
-        valueId,
-        metadata: metadataRes && metadataRes.success ? metadataRes.result : undefined,
-        metadataError: metadataRes && !metadataRes.success ? metadataRes.error : undefined,
-        value: valueRes && valueRes.success ? extractZwjsNodeValue(valueRes.result) : undefined,
-        valueEnvelope: valueRes && valueRes.success ? valueRes.result : undefined,
-        valueError: valueRes && !valueRes.success ? valueRes.error : undefined,
-        timestamp: tsRes && tsRes.success ? tsRes.result : undefined,
-        timestampError: tsRes && !tsRes.success ? tsRes.error : undefined,
-      });
+      detail.values.push(
+        await this.loadNodeValueDetail(client, nodeId, valueId, {
+          includeRuntimeData: includeValues === 'full',
+        }),
+      );
     }
 
     return detail;
+  }
+
+  async getNodeValueDetail(nodeId: number, valueId: ValueIdShape): Promise<NodeValueDetail> {
+    const client = this.requireClient();
+    return this.loadNodeValueDetail(client, nodeId, valueId, { includeRuntimeData: true });
   }
 
   private requireClient(): ZwjsClient {
@@ -271,5 +260,31 @@ export class ZwjsExplorerServiceImpl implements ZwjsExplorerService {
     }
     const maybeError = isObject(result) && 'error' in result ? result.error : result;
     throw new Error(`getNodeList failed: ${JSON.stringify(maybeError)}`);
+  }
+
+  private async loadNodeValueDetail(
+    client: ZwjsClient,
+    nodeId: number,
+    valueId: ValueIdShape,
+    options: { includeRuntimeData: boolean },
+  ): Promise<NodeValueDetail> {
+    const [metadataRes, valueRes, tsRes] = options.includeRuntimeData
+      ? await Promise.all([
+          client.getNodeValueMetadata(nodeId, valueId),
+          client.getNodeValue(nodeId, valueId),
+          client.getNodeValueTimestamp(nodeId, valueId),
+        ])
+      : await Promise.all([client.getNodeValueMetadata(nodeId, valueId), null, null]);
+
+    return {
+      valueId,
+      metadata: metadataRes && metadataRes.success ? metadataRes.result : undefined,
+      metadataError: metadataRes && !metadataRes.success ? metadataRes.error : undefined,
+      value: valueRes && valueRes.success ? extractZwjsNodeValue(valueRes.result) : undefined,
+      valueEnvelope: valueRes && valueRes.success ? valueRes.result : undefined,
+      valueError: valueRes && !valueRes.success ? valueRes.error : undefined,
+      timestamp: tsRes && tsRes.success ? tsRes.result : undefined,
+      timestampError: tsRes && !tsRes.success ? tsRes.error : undefined,
+    };
   }
 }

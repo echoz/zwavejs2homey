@@ -3,6 +3,8 @@ import type {
   IncludeValuesMode,
   NodeDetail,
   NodeSummary,
+  NodeValueDetail,
+  ValueIdShape,
 } from '../model/types';
 import type { ZwjsExplorerService } from '../service/zwjs-explorer-service';
 
@@ -10,6 +12,7 @@ export interface ExplorerSessionChildPresenterLike {
   connect(config: ConnectedSessionConfig): Promise<void>;
   disconnect(): Promise<void>;
   listNodes(): Promise<NodeSummary[]>;
+  getNodeValueDetail(nodeId: number, valueId: ValueIdShape): Promise<NodeValueDetail>;
   getNodeDetail(
     nodeId: number,
     options?: {
@@ -33,6 +36,10 @@ export class ExplorerSessionPresenter implements ExplorerSessionChildPresenterLi
 
   async listNodes(): Promise<NodeSummary[]> {
     return this.service.listNodes();
+  }
+
+  async getNodeValueDetail(nodeId: number, valueId: ValueIdShape): Promise<NodeValueDetail> {
+    return this.service.getNodeValueDetail(nodeId, valueId);
   }
 
   async getNodeDetail(
