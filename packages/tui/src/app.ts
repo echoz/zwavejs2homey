@@ -473,6 +473,33 @@ function splitLines(value: string): string[] {
   return value.split('\n').slice(0, 400);
 }
 
+function formatDetailLinesForDisplay(lines: string[]): string {
+  const sectionHeadings = new Set(['Overview', 'Identity', 'Telemetry', 'Neighbors', 'Values']);
+  const rendered: string[] = [];
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.length === 0) {
+      rendered.push('');
+      continue;
+    }
+    if (sectionHeadings.has(trimmed)) {
+      rendered.push(`{bold}{cyan-fg}${trimmed}{/cyan-fg}{/bold}`);
+      rendered.push('{gray-fg}--------------------------------{/gray-fg}');
+      continue;
+    }
+    if (trimmed.startsWith('Static/Diagnostic values:')) {
+      rendered.push(`{yellow-fg}${line}{/yellow-fg}`);
+      continue;
+    }
+    if (trimmed.startsWith('- [static]')) {
+      rendered.push(`{gray-fg}${line}{/gray-fg}`);
+      continue;
+    }
+    rendered.push(line);
+  }
+  return rendered.join('\n');
+}
+
 function renderPanelHelp(mode: SessionConfig['mode']): string {
   const sourceHint =
     mode === 'nodes'
@@ -961,6 +988,42 @@ function formatNodeValueLine(entry: NodeValueDetail): string {
   ].join('\n');
 }
 
+function formatNodeValueCompactLine(entry: NodeValueDetail): string {
+  if (entry._error !== undefined) {
+    return `- [static] value-error: ${truncateValueText(stringifyCompact(entry._error))}`;
+  }
+
+  const valueId = entry.valueId;
+  if (!valueId) return '- [static] value: <missing valueId>';
+
+  const metadata = asRecord(entry.metadata);
+  const states = asRecord(metadata?.states);
+  const rawValueText = formatReadableValue(entry.value);
+  const mappedValue =
+    states && entry.value !== undefined
+      ? (states[String(entry.value)] ?? states[String(Number(entry.value))])
+      : undefined;
+  const mappedValueText =
+    typeof mappedValue === 'string' && mappedValue.trim().length > 0
+      ? `${mappedValue} (${rawValueText})`
+      : rawValueText;
+  const unit =
+    metadata && typeof metadata.unit === 'string' && metadata.unit.trim().length > 0
+      ? ` ${metadata.unit}`
+      : '';
+  const label =
+    metadata && typeof metadata.label === 'string' && metadata.label.trim().length > 0
+      ? metadata.label.trim()
+      : String(valueId.property);
+  const identifier = `CC ${valueId.commandClass} ep ${valueId.endpoint ?? 0} ${String(valueId.property)}${
+    valueId.propertyKey != null ? `/${String(valueId.propertyKey)}` : ''
+  }`;
+
+  return `- [static] ${identifier} ${truncateValueText(label, 24)} = ${truncateValueText(
+    mappedValueText + unit,
+  )}`;
+}
+
 function valueIdKey(entry: NodeValueDetail): string {
   if (!entry.valueId) return 'missing';
   const valueId = entry.valueId;
@@ -1079,10 +1142,11 @@ function renderPanelNodeDetail(
     (entry) => formatNodeValueLine(entry),
   );
   const staticRows = (valuesExpanded ? staticValues : staticValues.slice(0, 2)).map((entry) =>
-    formatNodeValueLine(entry),
+    formatNodeValueCompactLine(entry),
   );
 
   return [
+    'Overview',
     `Node ${detail.nodeId}`,
     '',
     'Identity',
@@ -1364,7 +1428,7 @@ export async function runPanelApp(
     width: '65%',
     height: '60%',
     border: 'line',
-    tags: false,
+    tags: true,
     scrollable: true,
     alwaysScroll: true,
   });
@@ -1902,7 +1966,7 @@ export async function runPanelApp(
       leftPane.select(selectedIndex);
     }
     rightPane.setLabel(` ${rightTitle} `);
-    rightPane.setContent(rightAllLines.join('\n'));
+    rightPane.setContent(formatDetailLinesForDisplay(rightAllLines));
     rightPane.setScroll(rightScroll);
     if (!bottomCompact && bottomTitle) {
       bottomPane.setLabel(` ${bottomTitle} `);
