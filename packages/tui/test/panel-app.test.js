@@ -538,8 +538,7 @@ test('runPanelApp toggles neighbors in node detail and shows readable identity l
   const rendered = capture.text();
   assert.equal(rendered.includes('Manufacturer: Zooz (id 634)'), true);
   assert.equal(rendered.includes('Product: ZEN32 Scene Controller (type 4, id 8)'), true);
-  assert.equal(rendered.includes('Neighbors 3 (press n to expand)'), true);
-  assert.equal(rendered.includes('Neighbors 3 (press n to collapse)'), true);
+  assert.equal(rendered.includes('Neighbors 3 (n)'), true);
   assert.equal(rendered.includes('Lifeline route: 2 -> 5 @ 40 kbps'), true);
   assert.equal(
     rendered.includes('Neighbor Nodes:') &&
@@ -551,8 +550,7 @@ test('runPanelApp toggles neighbors in node detail and shows readable identity l
     true,
   );
   assert.equal(rendered.includes('Node 11 | Hallway | Inovelli | Light | not-on-lifeline'), true);
-  assert.equal(rendered.includes('Values 3 (press z to expand)'), true);
-  assert.equal(rendered.includes('Values 3 (press z to collapse)'), true);
+  assert.equal(rendered.includes('Values 3 (z)'), true);
 });
 
 test('runPanelApp hydrates missing neighbor manufacturer/product from node detail', async () => {
@@ -827,7 +825,7 @@ test('runPanelApp orders expanded values by relevance', async () => {
   await runPromise;
 
   const expandedValuesFrame = capture.text();
-  assert.equal(expandedValuesFrame.includes('Values 3 (press z to collapse)'), true);
+  assert.equal(expandedValuesFrame.includes('Values 3 (z)'), true);
   assert.equal(expandedValuesFrame.includes('Live/Control values: 2'), true);
   assert.equal(expandedValuesFrame.includes('Static/Diagnostic values: 1'), true);
   assert.equal(

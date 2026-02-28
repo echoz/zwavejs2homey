@@ -898,10 +898,9 @@ function renderNeighborLines(
   if (Array.isArray(neighbors)) {
     const values = neighbors.map((value) => formatNeighborValue(value));
     if (!options.expanded) {
-      return [`Neighbors: ${values.length}${values.length > 0 ? ' (press n to expand)' : ''}`];
+      return [`Neighbors: ${values.length}${values.length > 0 ? ' (n)' : ''}`];
     }
-    const maxNeighborLines = 24;
-    const rows = values.slice(0, maxNeighborLines).map((value, index) => {
+    const rows = values.map((value, index) => {
       const neighborId = parseNodeId(neighbors[index]);
       if (neighborId === undefined) {
         return `- Node ${value}`;
@@ -917,13 +916,10 @@ function renderNeighborLines(
       return `- Node ${value} | ${name} | ${manufacturer} | ${product} | ${linkQuality}`;
     });
     return [
-      `Neighbors: ${values.length}${values.length > 0 ? ' (press n to collapse)' : ''}`,
+      `Neighbors: ${values.length}${values.length > 0 ? ' (n)' : ''}`,
       formatLifelineRouteSummary(route),
       values.length > 0 ? 'Neighbor Nodes:' : 'Neighbor Nodes: (none)',
       ...rows,
-      values.length > maxNeighborLines
-        ? `... ${values.length - maxNeighborLines} more neighbors`
-        : null,
     ].filter((line): line is string => line !== null);
   }
   const record = asRecord(neighbors);
@@ -1172,9 +1168,7 @@ function renderPanelNodeDetail(
   const staticRows = (valuesExpanded ? staticValues : staticValues.slice(0, 2)).map((entry) =>
     formatNodeValueCompactLine(entry),
   );
-  const valuesSectionTitle = `${valuesDisclosure} Values ${values.length}${
-    values.length > 0 ? (valuesExpanded ? ' (press z to collapse)' : ' (press z to expand)') : ''
-  }`;
+  const valuesSectionTitle = `${valuesDisclosure} Values ${values.length}${values.length > 0 ? ' (z)' : ''}`;
 
   return [
     'Identity',
@@ -1199,12 +1193,12 @@ function renderPanelNodeDetail(
     !valuesExpanded && interactiveValues.length > previewRows.length
       ? valuesExpanded
         ? null
-        : `... ${interactiveValues.length - previewRows.length} more live/control values (press z to expand)`
+        : `... ${interactiveValues.length - previewRows.length} more live/control values (z)`
       : null,
     staticValues.length > 0 ? `Static/Diagnostic values: ${staticValues.length}` : null,
     ...staticRows,
     !valuesExpanded && staticValues.length > staticRows.length
-      ? `... ${staticValues.length - staticRows.length} more static values (press z to expand)`
+      ? `... ${staticValues.length - staticRows.length} more static values (z)`
       : null,
   ]
     .filter((line) => line !== null)
