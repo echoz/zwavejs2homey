@@ -759,7 +759,7 @@ test('runPanelApp orders expanded values by relevance', async () => {
 
   const expandedValuesFrame = capture.text();
   assert.equal(expandedValuesFrame.includes('Values: 3 (press z to collapse)'), true);
-  assert.equal(expandedValuesFrame.includes('Value Preview (top relevant first):'), true);
+  assert.equal(expandedValuesFrame.includes('Values (top relevant first):'), true);
   assert.equal(
     expandedValuesFrame.includes(
       'Switch = on (99) [number,rw] {cap:onoff dir:rw conf:high src:meta}',
@@ -872,6 +872,7 @@ test('runPanelApp scrolls right pane when focused on node detail', async () => {
     ranges.some((start) => start > 1),
     true,
   );
+  assert.equal(rendered.includes('Property 16'), true);
 });
 
 test('runPanelApp can quit via ctrl+c keypress intent', async () => {

@@ -965,7 +965,7 @@ function renderPanelNodeDetail(
   const values = detail.values ?? [];
   const sortedValues = sortValuesByRelevance(values);
   const valuesExpanded = options.valuesExpanded === true;
-  const previewLimit = valuesExpanded ? 12 : 3;
+  const previewLimit = valuesExpanded ? sortedValues.length : 3;
   const previewRows = sortedValues
     .slice(0, previewLimit)
     .map((entry) => formatNodeValueLine(entry));
@@ -983,13 +983,13 @@ function renderPanelNodeDetail(
     }`,
     values.length > 0
       ? valuesExpanded
-        ? 'Value Preview (top relevant first):'
+        ? 'Values (top relevant first):'
         : 'Top Values (top relevant first):'
       : null,
     ...previewRows,
     sortedValues.length > previewRows.length
       ? valuesExpanded
-        ? `... ${sortedValues.length - previewRows.length} more values`
+        ? null
         : `... ${sortedValues.length - previewRows.length} more values (press z to expand)`
       : null,
   ]
