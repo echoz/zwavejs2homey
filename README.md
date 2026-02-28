@@ -53,11 +53,17 @@ The project is intentionally split into layers:
 - `npm run zwjs:inspect -- nodes list --url ws://HOST:PORT --format table`
 - `npm run zwjs:inspect -- nodes show <nodeId> --url ws://HOST:PORT --format json --include-values full`
 
-### ZWJS Explorer TUI (Phase 4 Slices 1-5)
+### ZWJS Explorer TUI (Current Shell + Reset Plan)
 
 - `npm run compiler:tui -- --help`
 - `npm run compiler:tui -- --url ws://HOST:PORT --include-values summary`
 - `npm run compiler:tui -- --url ws://HOST:PORT --start-node 12 --include-values full`
+
+Phase 4 reset (planned, docs/plans locked, implementation pending):
+
+- core CLI cutover first (`compiler:simulate`, remove backlog tooling)
+- panel-first dual-root TUI (`--url` for nodes root, future `--rules-only` for rules root)
+- contributor workflow centers on signature simulation in both roots
 
 Interactive commands:
 
@@ -77,6 +83,8 @@ Interactive commands:
 - `log [--limit N]`
 - `help`
 - `quit`
+
+Note: `backlog *` commands and `compiler:loop` are scheduled for removal as part of the Phase 4 reset.
 
 ### Compiler inspection (device facts -> compiled profile)
 
@@ -131,6 +139,11 @@ This emits a `compiled-homey-profiles/v1` artifact.
 - `npm run compiler:loop -- --url ws://HOST:PORT --all-nodes --manifest-file rules/manifest.json --signature 29:66:2`
 - `npm run compiler:loop -- --url ws://HOST:PORT --all-nodes --from-backlog-file /tmp/baseline.curation-backlog.json --to-backlog-file /tmp/current.curation-backlog.json --only worsened --candidate-policy curation`
 - `npm run compiler:loop -- --url ws://HOST:PORT --all-nodes --backlog-file /tmp/current.curation-backlog.json --dry-run --format markdown`
+
+Planned migration note:
+
+- `compiler:loop` is being replaced by `compiler:simulate`
+- backlog artifacts/commands are being removed from contributor workflow
 
 This runs the canonical live validation loop in one command:
 

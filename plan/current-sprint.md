@@ -7,10 +7,10 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 ## In Progress
 
-- Phase 4 TUI completion push (before Homey adapter implementation):
-  - finish remaining compiler phase-3 backlog items
-  - implement ZWJS Explorer + Curation TUI MVP slices
-  - pause new Homey adapter design decisions until Phase 4 milestones are complete
+- Phase 4 reset execution (before Homey adapter implementation):
+  - cut over core CLI contracts first (`compiler:simulate`, backlog removal)
+  - follow with dual-root rich TUI implementation (`--url` nodes root, `--rules-only` rules root)
+  - keep Homey adapter implementation paused until reset sections are complete
 
 ## Recently Completed
 
@@ -446,16 +446,35 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - manifest helper deduplicates existing entries and enforces layer consistency for product entries
     - added workspace status snapshot command (`status`) for fast iteration context
     - expanded tests for manifest confirmation/delegation and status/command parsing coverage
+94. Locked Phase 4 reset plan and navigation decisions:
+    - core CLI contract changes now execute before TUI follow-up work
+    - accepted hard rename from `compiler:loop` to `compiler:simulate`
+    - accepted backlog removal from contributor workflow (TUI + CLI surface)
+    - locked dual-root startup model:
+      - `--url` => live nodes root
+      - `--rules-only` (+ optional `--manifest-file`) => rules root
+    - locked simulation-centric curation flow for both roots, with rich simulation result view in TUI
+    - locked implementation sequencing and convergence checkpoint (`plan/tui-implementation-plan.md`)
+95. Synced docs/plans with the Phase 4 reset direction:
+    - rewrote `plan/tui-explorer-curation-spec.md` to reset MVP scope (dual roots + no backlog workflow + simulation-first curation)
+    - rewrote `plan/tui-implementation-plan.md` with locked section ordering (4A/4B core CLI first, then TUI sections)
+    - updated roadmap/current-focus to track reset execution instead of prior slice-complete state
+    - updated architecture/readme notes to mark backlog/loop flows as legacy pending cutover to `compiler:simulate`
 
 ## Next Tasks
 
-1. Run live playtesting pass against your ZWJS instance and capture UX feedback:
-   - verify inspect/validate/scaffold/manifest loop speed and error ergonomics
-2. Add light UX polish pass for discoverability:
-   - add a compact status snapshot command (selected node/signature/backlog/scaffold draft)
-   - improve shell help with common end-to-end flow examples
-3. Keep project-generic rules minimal/provisional; generic fallback inference policy remains adapter-owned (ADR 0004)
-4. Decide whether to start Homey adapter implementation now that Phase 4 TUI MVP is complete
+1. Execute Section 4A (core CLI cutover):
+   - introduce `compiler:simulate` as the canonical single-signature orchestration command
+   - remove backlog command family and backlog-driven workflow flags
+2. Execute Section 4B (tests/docs/help migration):
+   - migrate loop/backlog references to simulate-centric guidance
+   - ensure removed commands fail with clear migration hints
+3. Execute Section 5 and Section 6:
+   - dual-root TUI structural pivot (`--url` nodes root, `--rules-only` rules root)
+   - remove backlog UI/actions and add rich simulation views in both roots
+4. Execute Section 7 convergence review:
+   - decide whether to keep separate stacks or extract shared view primitives
+5. Keep Homey adapter implementation paused until Phase 4 reset is complete
 
 ## Risks / Unknowns
 

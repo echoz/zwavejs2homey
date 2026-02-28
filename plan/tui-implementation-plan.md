@@ -1,113 +1,104 @@
-# ZWJS Explorer + Curation TUI Implementation Plan
+# ZWJS Explorer + Curation TUI Implementation Plan (Reset)
 
 ## Scope and Guardrails
 
-- Phase: 4 (must complete before Homey adapter implementation work starts)
-- Goal: implement a contributor-focused TUI that orchestrates existing compiler/ZWJS workflows
+- Phase: 4 (must complete before Homey adapter implementation resumes)
+- Goal: deliver a panel-first dual-root TUI over existing compiler/ZWJS workflows
 - Non-goals:
-  - no compiler behavior changes
-  - no ZWJS mutation commands in MVP
-  - no Homey adapter runtime curation UI
+  - no ZWJS mutation behavior
+  - no backlog feature set
+  - no compiler semantic redesign in this phase
 - Safety:
-  - default read-only network behavior
-  - file writes only under allowed rule paths with explicit confirmation
+  - network interactions are read-only
+  - local writes only under allowed rule paths
+  - local writes require explicit confirmation
 
-## Screen Flow
+## Execution Order (Locked)
 
-1. `Connect`
-2. `Node List`
-3. `Node Detail`
-4. `Signature Workspace`
-5. `Scaffold Preview`
-6. `Validation Result`
-7. `Backlog` (optional)
-8. `Run Log` (visible across flows)
+1. **Core CLI contract cutover**
+   - rename `compiler:loop` -> `compiler:simulate` (hard rename)
+   - remove backlog command family and backlog-driven workflow flags
+2. **Core tests/docs migration**
+   - replace loop/backlog docs/tests with simulate-centric guidance
+3. **TUI structural pivot**
+   - startup routing: `--url` (nodes root) or `--rules-only` (rules root)
+   - remove backlog UI/actions
+4. **Simulate integration**
+   - add rich simulation result view in both roots
+5. **Convergence review**
+   - evaluate separate stacks vs shared view primitives
 
-Primary flow:
+## Startup and Root Flows
 
-- `Connect -> Node List -> Node Detail -> Signature Workspace -> Validation Result`
+- `--url ws://HOST:PORT` -> nodes-root stack
+- `--rules-only [--manifest-file <path>]` -> rules-root stack
+- default manifest in rules-only mode: `rules/manifest.json`
 
-Optional branches:
+### Nodes Root
 
-- `Signature Workspace -> Scaffold Preview`
-- `Backlog -> Signature Workspace`
+- nodes list -> node detail -> signature context -> inspect/validate/scaffold/simulate
 
-## Architecture
+### Rules Root
 
-Use a strict data-driven layering model:
+- manifest-driven rule list -> rule detail/create -> signature context -> simulate
 
-1. View (`packages/tui/src/view/*`)
-   - pure render/input
-   - no business logic
-2. Parent presenter (`packages/tui/src/presenter/*`)
-   - handles intents, state transitions, loading/error behavior
-   - maps use-case results to view models
-3. Child presenters (`packages/tui/src/presenter/*`)
-   - encapsulate grouped multi-step workflows (explorer session, curation workflow)
-   - keep parent presenter lean while avoiding an extra coordinator layer
-4. Services (`packages/tui/src/service/*`)
-   - typed orchestration wrapper over existing tooling/libs
-   - normalized return/error contracts
-5. Core (existing `tools/*-lib.mjs`, compiler/core APIs)
-   - domain/protocol/compiler work only
+## Architecture Direction
 
-Data flow:
+Start with separate mode stacks, then evaluate convergence:
 
-- `Intent -> Parent Presenter -> Child Presenter -> Services -> Core -> Parent Presenter -> ViewModel -> View`
+1. nodes stack: mode-specific views + presenters
+2. rules stack: mode-specific views + presenters
+3. shared services/core adapters where practical
+4. no coordinator layer
+5. run convergence review after both simulate flows are complete
 
-## State Model
+Data flow in both stacks:
 
-Single in-memory state with these top-level sections:
+- intent -> presenter -> services -> tooling/core -> presenter -> view model -> view
 
+## State Model (High Level)
+
+- `mode` (`nodes` | `rules`)
 - `sessionConfig`
-- `connectionState`
-- `nodes`
-- `nodeDetailCache`
-- `signatureContext`
-- `workspace`
-- `validation`
-- `backlog`
+- `connectionState` (for nodes mode)
+- `selectedNodeId`
+- `selectedRuleFile`
+- `selectedSignature`
+- `scaffoldDraft`
+- `validationSummary`
+- `simulationSummary`
 - `runLog`
 
-## Implementation Slices
+## Implementation Sections
 
-- [x] Slice 1: app shell + connect + node list/detail (read-only)
-- [x] Slice 2: signature workspace + compiled inspect view
-- [x] Slice 3: scaffold preview + guarded write flow
-- [x] Slice 4: targeted validate action + result panels
-- [x] Slice 5: optional backlog panel + next-target picker
-- [x] Slice 6: manifest helper + run-log polish
-
-## Package and Module Layout
-
-- `packages/tui/src/app.ts`
-- `packages/tui/src/model/*`
-- `packages/tui/src/view/*`
-- `packages/tui/src/presenter/*`
-- `packages/tui/src/service/*`
-- `tools/homey-compile-tui.mjs` (thin launcher)
+- [x] Section 1: scope + guardrails lock (docs/plans)
+- [x] Section 2: startup + dual-root IA lock (docs/plans)
+- [x] Section 3: curation flow lock with simulation center (docs/plans)
+- [ ] Section 4A: core CLI cutover (`simulate`, remove backlog)
+- [ ] Section 4B: tests/docs migration for cutover
+- [ ] Section 5: dual-stack TUI structure without backlog
+- [ ] Section 6: rich simulation integration in both stacks
+- [ ] Section 7: convergence review + final cleanup
 
 ## Testing Strategy
 
-Per slice:
+Per section:
 
-- presenter transition tests
-- service adapter tests with mocked core/tool calls
-- at least one app-level happy-path smoke test
+- parser/command contract tests for CLI cutover
+- presenter/service tests for nodes and rules stacks
+- app-level flow tests for:
+  - nodes-root curation with simulation
+  - rules-root curation with simulation
+- regression tests for removed commands (`compiler:loop`, backlog commands) with clear failure messaging
 
 Quality gate:
 
-- `npm run check` green before merge/commit
-- docs/plan sync updated in same slice
-
-## Commit Strategy
-
-- one commit per slice with descriptive message
-- include tests and doc sync in each slice commit
+- `npm run check` must remain green
+- docs/plan sync in same slice as behavior changes
 
 ## Done Criteria
 
-- contributor can connect, inspect nodes, select signature, scaffold rule, and run targeted validation from one UI flow
-- backlog-assisted target picking works (optional panel)
-- no ZWJS mutation capabilities introduced
-- existing non-TUI CLI workflows remain unchanged
+- contributor can complete rule curation from either root using simulation loop
+- no backlog references in contributor-facing TUI/CLI docs/help
+- ZWJS operations remain read-only
+- Homey adapter work remains paused until this reset plan is complete

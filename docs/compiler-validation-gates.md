@@ -2,6 +2,11 @@
 
 This document explains how to configure `compiler:validate-live` quality gates so live validation is repeatable and catches meaningful regressions.
 
+Phase 4 reset note:
+
+- backlog-oriented outputs/commands documented here are legacy and scheduled for removal during Section 4A
+- simulation-centric signature iteration (`compiler:simulate`) is the planned replacement workflow
+
 ## Purpose
 
 `compiler:validate-live` already produces:

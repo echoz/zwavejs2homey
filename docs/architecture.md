@@ -98,11 +98,10 @@ Current implemented foundation in `packages/compiler`:
     - baseline regression deltas (`--baseline-summary-json-file`, `--max-*-delta`, `--fail-on-reason-delta`)
     - baseline snapshot helper (`--save-baseline-summary-json-file`) to refresh baseline artifacts from the current run
     - artifact retention policy (`--artifact-retention delete-on-pass`) to avoid keeping large generated compiled files after successful runs
-    - curation backlog artifact (`--curation-backlog-json-file`) to rank per-signature rule-authoring priorities from live validation output
-    - backlog consumer CLI (`compiler:backlog`) for triage listing, baseline/current backlog diffs, starter product-rule scaffolds, and `next` command-hint generation for the next curation target (`--candidate-policy curation|pressure`)
-    - signature iteration wrapper (`compiler:loop`) to run backlog-driven signature selection + targeted inspect + targeted validate in one command (or preview with `--dry-run`)
+    - legacy backlog artifact/consumer/loop tooling exists in current codebase (`--curation-backlog-json-file`, `compiler:backlog`, `compiler:loop`) and is scheduled for removal during Phase 4 reset Section 4A
+    - Phase 4 reset replacement is a simulation-centric contributor flow (`compiler:simulate`) without backlog dependencies
     - redacted-share outputs (`--redact-share`, `--redacted-report-file`, `--redacted-summary-json-file`, `--redacted-curation-backlog-json-file`) for PR-safe diagnostics
-    - baseline workflow wrapper (`compiler:baseline`) to run capture + zero-delta recheck in one command (including redacted-share + backlog parity via `--redact-share` and `--emit-curation-backlog`)
+    - baseline workflow wrapper (`compiler:baseline`) to run capture + zero-delta recheck in one command (including redacted-share support)
     - baseline-enabled markdown reports include delta sections for fast human triage
   - gate calibration/setup playbook lives in `docs/compiler-validation-gates.md`
 - Added compiler artifact build foundation:
@@ -139,39 +138,38 @@ Reference plan:
 - `plan/homey-translation-compiler-plan.md`
 - `plan/tui-implementation-plan.md`
 
-## Phase 4 TUI Architecture (In Progress)
+## Phase 4 TUI Architecture (Reset In Progress)
 
-The ZWJS Explorer + Curation TUI is a workflow layer that sits above existing compiler/ZWJS tooling.
+Phase 4 is now executing a reset sequence:
 
-Layering contract:
+1. core CLI contract cutover first (`compiler:simulate`, backlog removal)
+2. test/docs/help migration for that cutover
+3. dual-root rich TUI implementation on top of the updated CLI/tooling contracts
 
-1. view: terminal rendering and input only
-2. parent presenter: UI business logic, state transitions, view-model mapping
-3. child presenters: grouped multi-step workflow presenters used by the parent presenter
-4. services: typed use-case wrappers over existing libs/tools
-5. core/tooling: existing compiler/ZWJS domain logic
+Reset architecture direction:
 
-Data flow:
+- two startup roots:
+  - nodes root (`--url ws://...`)
+  - rules root (`--rules-only [--manifest-file ...]`)
+- no backlog feature in contributor-facing workflow
+- simulation-centric curation flow in both roots
 
-- intent -> parent presenter -> child presenter -> services -> core/tooling -> parent presenter -> view-model -> view
+Implementation structure (current direction):
 
-Guardrails:
+1. separate nodes stack (views + presenters)
+2. separate rules stack (views + presenters)
+3. shared services/core adapters where practical
+4. convergence review after both stacks are complete (optional view-layer de-duplication)
 
-- no ZWJS mutation behavior in MVP
-- no compiler semantics changes from TUI work
-- Homey adapter implementation remains paused until Phase 4 is complete
+Data flow remains:
 
-Current implemented slices:
+- intent -> presenter -> services -> core/tooling -> presenter -> view-model -> view
 
-- Slices 1-5 delivered in `packages/tui`:
-- Slices 1-6 delivered in `packages/tui`:
-  - read-only connect/list/show explorer flow
-  - signature selection/derivation + inspect/validate actions
-  - backlog load/pick workflow
-  - scaffold preview + guarded write flow
-  - manifest helper for product rule registration
-  - interactive shell command loop (`npm run compiler:tui`) with run-log view
-  - parent+child presenter/service layering with package-local regression tests
+Guardrails remain:
+
+- no ZWJS mutation behavior in this phase
+- no compiler semantic redesign in this phase
+- Homey adapter implementation remains paused until Phase 4 reset completion
 
 ## Runtime Flow (Target)
 

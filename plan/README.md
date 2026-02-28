@@ -7,5 +7,5 @@ Suggested contents:
 - roadmap.md
 - milestones.md
 - current-sprint.md
-- backlog.md
+- work-items.md
 - YYYY-MM-DD-\*.md (session plans / notes)

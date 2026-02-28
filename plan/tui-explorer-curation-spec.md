@@ -1,121 +1,98 @@
-# ZWJS Explorer + Curation TUI Spec (MVP)
+# ZWJS Explorer + Curation TUI Spec (Reset MVP)
 
 ## Summary
 
-Build one terminal UI that unifies:
+Build a rich terminal UI that supports two contributor-first entry points:
 
-- ZWJS instance exploration (nodes/values/signatures)
-- Rule curation workflow (scaffold -> edit -> validate loop)
+- live-node curation from a ZWJS instance
+- rules-first curation from the manifest
 
-The TUI is the primary UX. Existing CLI commands remain backend primitives.
+The TUI is panel-first, while CLI remains equally supported.
 
 ## Goals
 
-- Make contribution workflow discoverable without memorizing CLI flags
-- Make single-device curation the default path
-- Keep backlog as optional prioritization view (not required)
-- Preserve existing deterministic compiler contracts
+- make single-signature curation fast and obvious
+- keep ZWJS access read-only from this workflow
+- keep local rule/manifest authoring guarded and explicit
+- use one simulation-oriented diagnostic loop for both entry points
 
-## Non-Goals (MVP)
+## Non-Goals (Reset MVP)
 
-- No replacement of compiler/core logic
-- No destructive ZWJS operations by default
-- No Homey runtime curation UI yet
-- No graphical app; terminal-only
+- no ZWJS mutation commands
+- no backlog queue or backlog artifact workflow
+- no compiler semantic redesign
+- no Homey runtime curation UI
+
+## Startup Contract
+
+- `npm run compiler:tui -- --url ws://HOST:PORT ...` -> **Nodes Root**
+- `npm run compiler:tui -- --rules-only [--manifest-file <path>] ...` -> **Rules Root**
+- `--rules-only` defaults manifest to `rules/manifest.json`
+- no connect screen in this MVP shape
 
 ## User Workflows
 
-### A) Explore a ZWJS instance
+### A) Curate from live nodes (Nodes Root)
 
-1. Connect to `ws://HOST:PORT`
-2. List nodes with key metadata
-3. Select node -> inspect values and identity
-4. Show derived product signature and command classes
+1. open node list
+2. inspect node detail and derive/select signature
+3. run inspect/validate for signature context
+4. scaffold/edit product rules
+5. run simulation diagnostics
+6. iterate until outcome is acceptable
 
-### B) Curate one product
+### B) Curate from rule files (Rules Root)
 
-1. Pick a node/signature
-2. Open compiled profile summary + review reasons
-3. Scaffold `product-rules/v1` bundle
-4. Edit rule file
-5. Run targeted validate loop for that signature
-6. Repeat until curated outcome is acceptable
+1. open manifest-driven rules list
+2. inspect rule detail or create new rule
+3. select/bind target signature
+4. run simulation diagnostics
+5. adjust rules and iterate
 
-### C) Optional prioritization
+## Information Architecture
 
-1. Generate/Load backlog artifact
-2. View ranked signatures
-3. Pick next target from list
-
-## Information Architecture (Screens)
-
-1. `Connect`
-2. `Node List`
-3. `Node Detail`
-4. `Signature Workspace`
-5. `Rule Scaffold Preview`
-6. `Validation Result`
-7. `Backlog` (optional tab/panel)
-8. `Run Log`
+1. `Nodes Root` (list)
+2. `Node Detail`
+3. `Rules Root` (manifest list)
+4. `Rule Detail / Create`
+5. `Simulation Result`
+6. `Run Log`
 
 ## Backend Integration
 
-Use existing tools/libs as backend, wrapped by the TUI flow:
+Use existing tooling/libs as backend primitives:
 
 - `zwjs:inspect` (node discovery/detail)
-- `compiler:inspect-live` (compiled outcome inspection)
-- `compiler:validate-live` (validation + reasons)
-- `compiler:backlog` (optional queueing/scaffold helper)
-- `compiler:loop` (targeted iteration)
-
-Prefer direct library calls where available; fallback to command invocation only when needed.
+- `compiler:inspect-live` (signature-focused inspect)
+- `compiler:validate-live` (signature-focused validate)
+- `compiler:simulate` (single-signature inspect+validate orchestration; replaces `compiler:loop`)
 
 ## What This Replaces
 
-The TUI replaces manual command choreography for day-to-day contribution.
-
-Primary replacement:
-
-- `compiler:backlog summary|next|scaffold` + `compiler:loop` as a manual sequence
-- ad-hoc command copy/paste from README
-
-Still retained (advanced/automation):
-
-- raw CLI commands for CI, scripting, and power users
-- validation gates and baseline/delta workflows
-
-## Replacement Mapping
-
-- `Explore nodes`:
-  - Before: `zwjs:inspect nodes list/show`
-  - TUI: `Node List` + `Node Detail`
-- `Pick next curation target`:
-  - Before: `compiler:backlog next`
-  - TUI: `Backlog` selection (optional)
-- `Scaffold product bundle`:
-  - Before: `compiler:backlog scaffold`
-  - TUI: `Scaffold` action
-- `Iterate on one signature`:
-  - Before: `compiler:loop --signature ...`
-  - TUI: `Validate` action in `Signature Workspace`
+- ad-hoc inspect/validate command choreography for contributors
+- legacy backlog-driven prioritization flow in TUI/CLI
+- `compiler:loop` naming (migrates to `compiler:simulate`)
 
 ## Safety Model
 
-- Default read-only network behavior
-- File writes only under repo rule paths (`rules/`, `plan/` artifacts as configured)
-- Explicit confirmation before writing scaffold files or manifest updates
+- ZWJS transport remains read-only
+- local writes allowed only for repo rule paths
+- scaffold/manifest writes require explicit confirmation
+- workflow errors are non-fatal and should keep the session alive
 
-## MVP Slices
+## Delivery Order (Locked)
 
-1. `Slice 1`: App shell + connect + node list/detail (read-only)
-2. `Slice 2`: Signature workspace + compiled profile inspect view
-3. `Slice 3`: Scaffold preview + write product bundle file
-4. `Slice 4`: Targeted validate action + result panels
-5. `Slice 5`: Optional backlog panel + next-target picker
-6. `Slice 6`: Manifest update helper + run log polish
+1. core CLI cutover first (`simulate` rename + backlog removal)
+2. tests/docs migration for that cutover
+3. TUI structural pivot (dual roots, no backlog)
+4. simulate integration in both root workflows
+5. convergence review for optional view/presenter de-duplication
 
 ## Success Criteria
 
-- New contributor can curate one product without reading full CLI docs
-- Single-signature iteration completes in one screen flow
-- Existing `npm run check` remains green after TUI-assisted edits
+- contributor can complete curation iteration from either root without leaving the TUI:
+  - pick target signature
+  - scaffold/update rules
+  - run simulation and review diagnostics
+- no backlog concepts remain in contributor UX
+- no ZWJS mutation capabilities introduced

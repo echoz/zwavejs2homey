@@ -2,9 +2,9 @@
 
 ## Current Focus (Active)
 
-- [x] Finish remaining Phase 3 compiler backlog (`DSL simplification slice 2` + final review/fix pass)
-- [x] Complete Phase 4 TUI MVP slices 1-6 (`plan/tui-explorer-curation-spec.md`, `plan/tui-implementation-plan.md`)
-- [ ] Hold new Homey adapter design/implementation slices until Phase 4 checkpoint is complete
+- [ ] Phase 4 reset: perform core CLI cutover before TUI follow-up work (`compiler:simulate`, backlog removal)
+- [ ] Phase 4 reset: ship dual-root panel TUI flow (`--url` nodes root, `--rules-only` rules root)
+- [ ] Hold new Homey adapter design/implementation slices until Phase 4 reset checkpoint is complete
 
 ## Phase 1: Foundation (Completed)
 
@@ -97,6 +97,7 @@
 - [x] Runtime-validation signature-loop wrapper slice: add `compiler:loop` to run backlog selection + targeted inspect + targeted validate in one command
 - [x] Runtime-validation loop/backlog hardening slice: add `compiler:loop --dry-run` and backlog-next loop command hints for faster safe iteration setup
 - [x] Runtime-validation backlog candidate-policy slice: add `--candidate-policy curation|pressure` so next-target selection defaults to curation work and can opt into technical-pressure tuning
+- [ ] Runtime-validation simplification reset: remove backlog tooling and rename signature loop to `compiler:simulate`
 - [x] Decide and document final ownership of generic fallback inference policy (Homey adapter-owned; see ADR 0004)
 - [x] DSL simplification slice 1: support compact scalar matcher syntax with deterministic load-time canonicalization to arrays
 - [x] Decide compiler rule boundary: compile-time rule scope is manifest-owned; non-manifest rules are runtime/Homey-adapter scope (ADR 0005)
@@ -110,14 +111,13 @@
 
 ## Phase 4: ZWJS Explorer + Curation TUI (In Progress)
 
-- [x] Draft unified ZWJS Explorer + Curation TUI MVP spec (`plan/tui-explorer-curation-spec.md`)
-- [x] Implement TUI slice 1: app shell + connect + node list/detail (read-only)
-- [x] Implement TUI slice 2: signature workspace + compiled inspect view
-- [x] Implement TUI slice 3: scaffold preview + guarded write flow
-- [x] Implement TUI slice 4: targeted validate action + result panels
-- [x] Implement TUI slice 5: optional backlog panel + next-target picker
-- [x] Implement TUI slice 6: manifest helper + run-log polish
-- [ ] Keep Homey adapter implementation frozen until TUI checkpoint completion
+- [x] Drafted reset MVP spec and implementation plan (`plan/tui-explorer-curation-spec.md`, `plan/tui-implementation-plan.md`)
+- [ ] Section 4A: core CLI cutover (`compiler:simulate`, remove backlog commands and workflow flags)
+- [ ] Section 4B: migrate tests/docs/help to simulate-centric workflow
+- [ ] Section 5: TUI structural pivot to dual roots (`--url`, `--rules-only`) without backlog
+- [ ] Section 6: rich simulation view integration in nodes and rules stacks
+- [ ] Section 7: convergence review (separate stacks vs shared view primitives)
+- [ ] Keep Homey adapter implementation frozen until Phase 4 reset completion
 
 ## Phase 5: Homey Adapter MVP (Next Major Area)
 
