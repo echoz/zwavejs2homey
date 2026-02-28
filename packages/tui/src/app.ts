@@ -473,7 +473,15 @@ function splitLines(value: string): string[] {
   return value.split('\n').slice(0, 400);
 }
 
-function formatDetailLinesForDisplay(lines: string[]): string {
+function padOrTruncateText(value: string, width: number): string {
+  if (width <= 0) return '';
+  if (value.length === width) return value;
+  if (value.length < width) return value.padEnd(width, ' ');
+  if (width === 1) return value.slice(0, 1);
+  return `${value.slice(0, width - 1)}~`;
+}
+
+function formatDetailLinesForDisplay(lines: string[], sectionWidth: number): string {
   const headingPattern = /^(Identity|Telemetry|Neighbors|Values)\b/;
   const rendered: string[] = [];
   for (const line of lines) {
@@ -483,8 +491,8 @@ function formatDetailLinesForDisplay(lines: string[]): string {
       continue;
     }
     if (headingPattern.test(trimmed)) {
-      rendered.push(`{bold}{inverse} ${trimmed} {/inverse}{/bold}`);
-      rendered.push('{gray-fg}--------------------------------{/gray-fg}');
+      const headingText = padOrTruncateText(` ${trimmed} `, sectionWidth);
+      rendered.push(`{bold}{inverse}${headingText}{/inverse}{/bold}`);
       continue;
     }
     if (trimmed.startsWith('Static/Diagnostic values:')) {
@@ -1863,6 +1871,7 @@ export async function runPanelApp(
     const bottomPaneOuterHeight = bottomCompact ? 1 : paneHeights.bottomContentHeight + 2;
     const leftWidth = Math.max(28, Math.floor(width * 0.35));
     const rightWidth = Math.max(24, width - leftWidth);
+    const rightContentWidth = Math.max(1, rightWidth - 2);
 
     headerPane.top = 0;
     headerPane.left = 0;
@@ -1973,7 +1982,7 @@ export async function runPanelApp(
       leftPane.select(selectedIndex);
     }
     rightPane.setLabel(` ${rightTitle} `);
-    rightPane.setContent(formatDetailLinesForDisplay(rightAllLines));
+    rightPane.setContent(formatDetailLinesForDisplay(rightAllLines, rightContentWidth));
     rightPane.setScroll(rightScroll);
     if (!bottomCompact && bottomTitle) {
       bottomPane.setLabel(` ${bottomTitle} `);
