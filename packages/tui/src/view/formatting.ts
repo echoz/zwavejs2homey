@@ -1,5 +1,4 @@
 import type {
-  BacklogSummary,
   NodeDetail,
   NodeSummary,
   ScaffoldDraft,
@@ -40,10 +39,7 @@ export function renderShellHelp(): string {
     '  signature [triple] [--from-node <id>]  Set/derive selected signature',
     '  inspect [--manifest <file>]            Inspect selected signature',
     '  validate [--manifest <file>]           Validate selected signature',
-    '  backlog load <file> [--top N]          Load backlog summary',
-    '  backlog show                            Show loaded backlog entries',
-    '  backlog pick [rank]                     Select signature from loaded backlog',
-    '  scaffold preview [--product-name "..."] Preview scaffold draft from backlog',
+    '  scaffold preview [--product-name "..."] Preview scaffold draft from selected signature',
     '  scaffold write [filePath] [--force]     Write scaffold draft file',
     '  manifest add [filePath] [--manifest <file>] [--force]  Add product rule to manifest',
     '  status                                  Show current workspace snapshot',
@@ -169,34 +165,6 @@ export function renderValidationSummary(summary: ValidationSummary): string {
     .join('\n');
 }
 
-export function renderBacklogSummary(summary: BacklogSummary): string {
-  const lines = [
-    `Backlog file: ${summary.filePath}`,
-    `Signatures: ${summary.totalSignatures}`,
-    `Total nodes: ${summary.totalNodes}`,
-    `Review nodes: ${summary.reviewNodes}`,
-  ];
-  if (!summary.entries.length) {
-    lines.push('No entries in summary window.');
-    return lines.join('\n');
-  }
-
-  const rows = summary.entries.map((entry) => [
-    String(entry.rank),
-    entry.signature,
-    String(entry.nodeCount),
-    String(entry.reviewNodeCount),
-    String(entry.genericNodeCount),
-    String(entry.emptyNodeCount),
-    entry.topReason ?? '',
-  ]);
-  lines.push('');
-  lines.push(
-    renderTable(['Rank', 'Signature', 'Nodes', 'Review', 'Generic', 'Empty', 'Top reason'], rows),
-  );
-  return lines.join('\n');
-}
-
 export function renderScaffoldDraft(draft: ScaffoldDraft): string {
   return [
     `Scaffold signature: ${draft.signature}`,
@@ -234,7 +202,6 @@ export function renderStatusSnapshot(status: StatusSnapshot): string {
     `Selected node: ${status.selectedNodeId ?? '-'}`,
     `Selected signature: ${status.selectedSignature ?? '-'}`,
     `Cached nodes: ${status.cachedNodeCount}`,
-    `Backlog file: ${status.backlogFile ?? '-'}`,
     `Scaffold draft: ${status.scaffoldFileHint ?? '-'}`,
   ].join('\n');
 }

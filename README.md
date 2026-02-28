@@ -61,7 +61,7 @@ The project is intentionally split into layers:
 
 Phase 4 reset (planned, docs/plans locked, implementation pending):
 
-- core CLI cutover first (`compiler:simulate`, remove backlog tooling)
+- core CLI cutover first (`compiler:simulate`)
 - panel-first dual-root TUI (`--url` for nodes root, future `--rules-only` for rules root)
 - contributor workflow centers on signature simulation in both roots
 
@@ -73,9 +73,6 @@ Interactive commands:
 - `signature [<manufacturerId:productType:productId>] [--from-node <id>]`
 - `inspect [--manifest <file>]`
 - `validate [--manifest <file>]`
-- `backlog load <file> [--top N]`
-- `backlog show`
-- `backlog pick [rank]`
 - `scaffold preview [--product-name "..."]`
 - `scaffold write [filePath] --force`
 - `manifest add [filePath] [--manifest <file>] --force`
@@ -83,8 +80,6 @@ Interactive commands:
 - `log [--limit N]`
 - `help`
 - `quit`
-
-Note: `backlog *` commands are scheduled for removal as part of the Phase 4 reset.
 
 ### Compiler inspection (device facts -> compiled profile)
 
@@ -124,18 +119,14 @@ This emits a `compiled-homey-profiles/v1` artifact.
 - `npm run compiler:validate-live -- --url ws://HOST:PORT --all-nodes --baseline-summary-json-file /tmp/compiled-live.baseline.summary.json --max-review-delta 1 --max-generic-delta 0 --fail-on-reason-delta known-device-unmapped:0`
 - `npm run compiler:validate-live -- --url ws://HOST:PORT --all-nodes --save-baseline-summary-json-file /tmp/compiled-live.baseline.summary.json --artifact-retention delete-on-pass`
 - `npm run compiler:validate-live -- --url ws://HOST:PORT --all-nodes --summary-json-file /tmp/compiled-live.summary.json --redact-share`
-- `npm run compiler:validate-live -- --url ws://HOST:PORT --all-nodes --curation-backlog-json-file /tmp/compiled-live.curation-backlog.json --redact-share`
-- `npm run compiler:validate-live -- --url ws://HOST:PORT --all-nodes --signature 29:66:2 --manifest-file rules/manifest.json --curation-backlog-json-file /tmp/compiled-live.curation-backlog.json`
 - `npm run compiler:baseline -- --url ws://HOST:PORT --all-nodes --manifest-file rules/manifest.json`
 - `npm run compiler:baseline -- --url ws://HOST:PORT --all-nodes --manifest-file rules/manifest.json --redact-share`
-- `npm run compiler:baseline -- --url ws://HOST:PORT --all-nodes --manifest-file rules/manifest.json --emit-curation-backlog --redact-share`
 - `npm run compiler:simulate -- --url ws://HOST:PORT --all-nodes --manifest-file rules/manifest.json --signature 29:66:2`
 - `npm run compiler:simulate -- --url ws://HOST:PORT --all-nodes --manifest-file rules/manifest.json --signature 29:66:2 --dry-run --format markdown`
 
 Migration note:
 
 - `compiler:loop` has been replaced by `compiler:simulate`
-- backlog artifacts/commands are being removed from contributor workflow
 
 This runs the canonical live validation loop in one command:
 
@@ -154,11 +145,8 @@ This runs the canonical live validation loop in one command:
 - `--artifact-retention delete-on-pass` removes large generated compiled artifacts after successful validation runs
 - `--redact-share` writes PR-safe artifacts (`*.redacted.md`, `*.redacted.json`) with URL/path/node identity redaction
 - redacted output paths can also be set explicitly via `--redacted-report-file` and `--redacted-summary-json-file`
-- `--curation-backlog-json-file` writes a ranked per-signature curation queue (review/generic pressure + reasons + sample nodes) to guide next rule slices
-- when backlog output is enabled with `--redact-share`, a redacted backlog file is also emitted (default `*.redacted.json`, overridable via `--redacted-curation-backlog-json-file`)
 - `compiler:baseline` orchestrates baseline capture + immediate recheck in one command and writes timestamped artifacts under `plan/baselines/` by default
 - `compiler:baseline --redact-share` emits redacted baseline/recheck markdown+summary artifacts in the same run (with optional stage-specific redacted path overrides)
-- `compiler:baseline --emit-curation-backlog` also writes baseline/recheck curation backlog artifacts (and redacted variants under `--redact-share`) while backlog tooling decommissioning is in progress
 - `compiler:simulate` runs one signature end-to-end from explicit `--signature`, with `--dry-run` to preview resolved inspect/validate command lines without network calls
 
 Gate setup guide: `docs/compiler-validation-gates.md`

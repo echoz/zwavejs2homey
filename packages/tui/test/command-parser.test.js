@@ -22,19 +22,7 @@ test('parseShellCommand parses signature/inspect/validate commands', () => {
   });
 });
 
-test('parseShellCommand parses backlog/scaffold/log commands', () => {
-  assert.deepEqual(parseShellCommand('backlog load /tmp/backlog.json --top 5'), {
-    ok: true,
-    command: { type: 'backlog-load', filePath: '/tmp/backlog.json', top: 5 },
-  });
-  assert.deepEqual(parseShellCommand('backlog show'), {
-    ok: true,
-    command: { type: 'backlog-show' },
-  });
-  assert.deepEqual(parseShellCommand('backlog pick 2'), {
-    ok: true,
-    command: { type: 'backlog-pick', rank: 2 },
-  });
+test('parseShellCommand parses scaffold/log commands', () => {
   assert.deepEqual(parseShellCommand('scaffold preview --product-name Plug'), {
     ok: true,
     command: { type: 'scaffold-preview', productName: 'Plug' },
@@ -69,10 +57,6 @@ test('parseShellCommand rejects malformed input', () => {
   assert.deepEqual(parseShellCommand('signature invalid'), {
     ok: false,
     error: 'signature must be <manufacturerId:productType:productId>',
-  });
-  assert.deepEqual(parseShellCommand('backlog load'), {
-    ok: false,
-    error: 'backlog load requires a file path',
   });
   assert.deepEqual(parseShellCommand('unknown cmd'), {
     ok: false,

@@ -41,25 +41,7 @@ function createChildren(overrides = {}) {
           outcomes: { curated: 1 },
         };
       },
-      loadBacklogSummary(filePath) {
-        return {
-          filePath,
-          totalSignatures: 1,
-          totalNodes: 1,
-          reviewNodes: 1,
-          entries: [
-            {
-              rank: 1,
-              signature: '29:66:2',
-              nodeCount: 1,
-              reviewNodeCount: 1,
-              genericNodeCount: 0,
-              emptyNodeCount: 0,
-            },
-          ],
-        };
-      },
-      scaffoldFromBacklog(_backlogFile, signature) {
+      scaffoldFromSignature(signature) {
         return {
           signature,
           fileHint: 'product-29-66-2.json',
@@ -187,7 +169,7 @@ test('ExplorerPresenter can derive signature, inspect and validate selected sign
   assert.equal(validate.signature, '29:66:2');
 });
 
-test('ExplorerPresenter backlog + scaffold draft + write flow', async () => {
+test('ExplorerPresenter scaffold draft + write flow', async () => {
   const writes = [];
   const manifests = [];
   const base = createChildren();
@@ -209,10 +191,8 @@ test('ExplorerPresenter backlog + scaffold draft + write flow', async () => {
   };
   const presenter = new ExplorerPresenter(children);
 
-  const backlog = presenter.loadBacklog('/tmp/backlog.json');
-  assert.equal(backlog.entries.length, 1);
-  presenter.selectSignature(backlog.entries[0].signature);
-  const draft = presenter.createScaffoldFromBacklog({});
+  presenter.selectSignature('29:66:2');
+  const draft = presenter.createScaffoldFromSignature({});
   assert.equal(draft.signature, '29:66:2');
   const written = presenter.writeScaffoldDraft(undefined, { confirm: true });
   assert.equal(written, '/abs/product-29-66-2.json');

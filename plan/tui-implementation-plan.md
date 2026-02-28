@@ -6,7 +6,6 @@
 - Goal: deliver a panel-first dual-root TUI over existing compiler/ZWJS workflows
 - Non-goals:
   - no ZWJS mutation behavior
-  - no backlog feature set
   - no compiler semantic redesign in this phase
 - Safety:
   - network interactions are read-only
@@ -17,12 +16,9 @@
 
 1. **Core CLI contract cutover**
    - rename `compiler:loop` -> `compiler:simulate` (hard rename)
-   - remove backlog command family and backlog-driven workflow flags
 2. **Core tests/docs migration**
-   - replace loop/backlog docs/tests with simulate-centric guidance
 3. **TUI structural pivot**
    - startup routing: `--url` (nodes root) or `--rules-only` (rules root)
-   - remove backlog UI/actions
 4. **Simulate integration**
    - add rich simulation result view in both roots
 5. **Convergence review**
@@ -74,9 +70,7 @@ Data flow in both stacks:
 - [x] Section 1: scope + guardrails lock (docs/plans)
 - [x] Section 2: startup + dual-root IA lock (docs/plans)
 - [x] Section 3: curation flow lock with simulation center (docs/plans)
-- [ ] Section 4A: core CLI cutover (rename complete; backlog command + simulate backlog mode removed; validate/baseline backlog flags pending)
 - [ ] Section 4B: tests/docs migration for cutover
-- [ ] Section 5: dual-stack TUI structure without backlog
 - [ ] Section 6: rich simulation integration in both stacks
 - [ ] Section 7: convergence review + final cleanup
 
@@ -89,7 +83,6 @@ Per section:
 - app-level flow tests for:
   - nodes-root curation with simulation
   - rules-root curation with simulation
-- regression tests for removed commands (`compiler:loop`, backlog commands) with clear failure messaging
 
 Quality gate:
 
@@ -99,6 +92,5 @@ Quality gate:
 ## Done Criteria
 
 - contributor can complete rule curation from either root using simulation loop
-- no backlog references in contributor-facing TUI/CLI docs/help
 - ZWJS operations remain read-only
 - Homey adapter work remains paused until this reset plan is complete

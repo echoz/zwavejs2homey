@@ -47,37 +47,38 @@ Rule changes should produce portable, reviewable evidence.
 
 If you just want to contribute rules, use this loop:
 
-1. Generate a curation backlog from live data:
+1. Find a target node/signature from live data:
 
 ```bash
-npm run compiler:validate-live -- --url ws://HOST:PORT --all-nodes --manifest-file rules/manifest.json --curation-backlog-json-file /tmp/curation-backlog.json
+npm run zwjs:inspect -- nodes list --url ws://HOST:PORT --format table
+npm run zwjs:inspect -- nodes show <nodeId> --url ws://HOST:PORT --format json --include-values full
 ```
 
-2. Pick the next target signature:
+2. Run one-signature simulation:
 
 ```bash
-npm run compiler:backlog -- next --input-file /tmp/curation-backlog.json --candidate-policy curation --format summary
+npm run compiler:simulate -- --url ws://HOST:PORT --all-nodes --manifest-file rules/manifest.json --signature <manufacturer:productType:productId> --format markdown
 ```
 
-3. Generate a starter product bundle:
+3. Generate a starter product bundle in TUI:
 
 ```bash
-npm run compiler:backlog -- scaffold --input-file /tmp/curation-backlog.json --signature <manufacturer:productType:productId> --product-name "Vendor Model" --format json-pretty
+npm run compiler:tui -- --url ws://HOST:PORT --include-values summary
+# then in TUI:
+# signature <manufacturer:productType:productId>
+# scaffold preview --product-name "Vendor Model"
+# scaffold write rules/project/product/product-<manufacturer>-<productType>-<productId>.json --force
 ```
 
-4. Save scaffold output to:
+4. Add the new file to `rules/manifest.json` with layer `project-product`.
 
-- `rules/project/product/product-<manufacturer>-<productType>-<productId>.json`
-
-5. Add the new file to `rules/manifest.json` with layer `project-product`.
-
-6. Iterate quickly on one signature:
+5. Iterate quickly on one signature:
 
 ```bash
-npm run compiler:loop -- --url ws://HOST:PORT --all-nodes --manifest-file rules/manifest.json --signature <manufacturer:productType:productId>
+npm run compiler:simulate -- --url ws://HOST:PORT --all-nodes --manifest-file rules/manifest.json --signature <manufacturer:productType:productId>
 ```
 
-7. Final verify:
+6. Final verify:
 
 ```bash
 npm run check
@@ -156,7 +157,6 @@ TUI workflow shortcuts (inside `compiler:tui`):
 
 - `show <nodeId>` then `signature --from-node <nodeId>`
 - `inspect` and `validate`
-- `backlog load <file>`, `backlog pick [rank]`
 - `scaffold preview` then `scaffold write <filePath> --force`
 - `manifest add <filePath> --force` to register the product rule in `rules/manifest.json`
 
@@ -177,14 +177,6 @@ Compiler boundary:
 - Prefer manifest-driven commands (`--manifest-file` or default manifest) for canonical compile/validate workflows.
 - For manifest-scoped compile-time files, do not set per-rule `layer`; layer is owned by manifest entry.
 - For product bundles, target is owned by bundle context; do not set per-rule target overrides.
-
-Backlog mental model:
-
-- `compiler:validate-live --curation-backlog-json-file ...` creates ranked curation work.
-- `compiler:backlog summary` shows current queue.
-- `compiler:backlog next` selects the next signature to work on.
-- `compiler:backlog scaffold` generates a starting product bundle.
-- `compiler:loop` runs one signature end-to-end while iterating.
 
 ### 4) Add Portable Regression Coverage
 

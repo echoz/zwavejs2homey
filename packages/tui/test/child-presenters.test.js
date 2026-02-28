@@ -55,10 +55,7 @@ test('CurationWorkflowPresenter delegates curation calls and enforces confirmati
     async validateSignature(_session, signature) {
       return { signature, totalNodes: 1, reviewNodes: 0, outcomes: { curated: 1 } };
     },
-    loadBacklogSummary(filePath) {
-      return { filePath, totalSignatures: 1, totalNodes: 1, reviewNodes: 1, entries: [] };
-    },
-    scaffoldFromBacklog(_filePath, signature) {
+    scaffoldFromSignature(signature) {
       return {
         signature,
         fileHint: 'product.json',

@@ -34,8 +34,6 @@ test('runApp executes interactive command flow through parent+child presenters',
     'show 2',
     'signature --from-node 2',
     'inspect',
-    'backlog load /tmp/backlog.json --top 5',
-    'backlog pick 1',
     'scaffold preview --product-name TestProduct',
     'scaffold write test-output.json --force',
     'manifest add test-output.json --manifest rules/manifest.json --force',
@@ -119,25 +117,7 @@ test('runApp executes interactive command flow through parent+child presenters',
         outcomes: { curated: 1 },
       };
     },
-    loadBacklogSummary(filePath) {
-      return {
-        filePath,
-        totalSignatures: 1,
-        totalNodes: 1,
-        reviewNodes: 1,
-        entries: [
-          {
-            rank: 1,
-            signature: '29:66:2',
-            nodeCount: 1,
-            reviewNodeCount: 1,
-            genericNodeCount: 0,
-            emptyNodeCount: 0,
-          },
-        ],
-      };
-    },
-    scaffoldFromBacklog(_filePath, signature) {
+    scaffoldFromSignature(signature) {
       return {
         signature,
         fileHint: 'product-29-66-2.json',

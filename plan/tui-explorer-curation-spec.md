@@ -19,7 +19,6 @@ The TUI is panel-first, while CLI remains equally supported.
 ## Non-Goals (Reset MVP)
 
 - no ZWJS mutation commands
-- no backlog queue or backlog artifact workflow
 - no compiler semantic redesign
 - no Homey runtime curation UI
 
@@ -70,7 +69,6 @@ Use existing tooling/libs as backend primitives:
 ## What This Replaces
 
 - ad-hoc inspect/validate command choreography for contributors
-- legacy backlog-driven prioritization flow in TUI/CLI
 - legacy `compiler:loop` naming (already replaced by `compiler:simulate`)
 
 ## Safety Model
@@ -82,11 +80,9 @@ Use existing tooling/libs as backend primitives:
 
 ## Delivery Order (Locked)
 
-1. core CLI cutover first (`simulate` rename + backlog removal)
 2. tests/docs migration for that cutover
-3. TUI structural pivot (dual roots, no backlog)
-4. simulate integration in both root workflows
-5. convergence review for optional view/presenter de-duplication
+3. simulate integration in both root workflows
+4. convergence review for optional view/presenter de-duplication
 
 ## Success Criteria
 
@@ -94,5 +90,4 @@ Use existing tooling/libs as backend primitives:
   - pick target signature
   - scaffold/update rules
   - run simulation and review diagnostics
-- no backlog concepts remain in contributor UX
 - no ZWJS mutation capabilities introduced

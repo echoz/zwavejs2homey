@@ -124,8 +124,7 @@ export function parseCliArgs(argv) {
   if (!signature) {
     return {
       ok: false,
-      error:
-        'Missing --signature <manufacturerId:productType:productId>; backlog-driven signature selection has been removed',
+      error: 'Missing --signature <manufacturerId:productType:productId>',
     };
   }
   if (!/^\d+:\d+:\d+$/.test(signature)) {
@@ -135,23 +134,6 @@ export function parseCliArgs(argv) {
         '--signature must be a product triple in decimal format: <manufacturerId:productType:productId>',
     };
   }
-  const removedBacklogFlags = [
-    '--backlog-file',
-    '--from-backlog-file',
-    '--to-backlog-file',
-    '--only',
-    '--candidate-policy',
-    '--fallback',
-    '--pick',
-  ];
-  const usedRemovedFlag = removedBacklogFlags.find((flagName) => hasFlagOccurrence(argv, flagName));
-  if (usedRemovedFlag) {
-    return {
-      ok: false,
-      error: `${usedRemovedFlag} is no longer supported; provide --signature instead`,
-    };
-  }
-
   const inspectFormat = flags.get('--inspect-format') ?? 'list';
   if (inspectFormat !== 'list' && !isSupportedDiagnosticFormat(inspectFormat)) {
     return { ok: false, error: `Unsupported --inspect-format: ${inspectFormat}` };
@@ -252,7 +234,6 @@ export async function runSimulationCommand(command, io = console, deps = {}) {
         commandLine: validateCommandLine,
         reportFile: validateCommand.reportFile ?? null,
         summaryJsonFile: validateCommand.summaryJsonFile ?? null,
-        curationBacklogJsonFile: validateCommand.curationBacklogJsonFile ?? null,
         gatePassed: null,
         outcomes: {},
         reviewNodes: 0,
@@ -277,7 +258,6 @@ export async function runSimulationCommand(command, io = console, deps = {}) {
       commandLine: validateCommandLine,
       reportFile: validateCommand.reportFile ?? null,
       summaryJsonFile: validateCommand.summaryJsonFile ?? null,
-      curationBacklogJsonFile: validateCommand.curationBacklogJsonFile ?? null,
       gatePassed: validateResult?.gateResult?.passed === true,
       outcomes: validateResult?.summary?.outcomes ?? {},
       reviewNodes: validateResult?.summary?.reviewNodes ?? 0,
@@ -313,9 +293,6 @@ export function formatSimulationOutput(result, format) {
       result.validate?.summaryJsonFile
         ? `- Validation summary JSON: ${result.validate.summaryJsonFile}`
         : null,
-      result.validate?.curationBacklogJsonFile
-        ? `- Curation backlog JSON: ${result.validate.curationBacklogJsonFile}`
-        : null,
       '',
     ]
       .filter((line) => line !== null)
@@ -338,9 +315,6 @@ export function formatSimulationOutput(result, format) {
     result.validate?.reportFile ? `Validation report: ${result.validate.reportFile}` : null,
     result.validate?.summaryJsonFile
       ? `Validation summary JSON: ${result.validate.summaryJsonFile}`
-      : null,
-    result.validate?.curationBacklogJsonFile
-      ? `Curation backlog JSON: ${result.validate.curationBacklogJsonFile}`
       : null,
   ]
     .filter((line) => line !== null)

@@ -7,9 +7,6 @@ export type ShellCommand =
   | { type: 'signature'; signature?: string; fromNodeId?: number }
   | { type: 'inspect'; manifestFile?: string }
   | { type: 'validate'; manifestFile?: string }
-  | { type: 'backlog-load'; filePath: string; top?: number }
-  | { type: 'backlog-show' }
-  | { type: 'backlog-pick'; rank?: number }
   | { type: 'scaffold-preview'; productName?: string }
   | { type: 'scaffold-write'; filePath?: string; force: boolean }
   | { type: 'manifest-add'; manifestFile?: string; filePath?: string; force: boolean }
@@ -110,38 +107,6 @@ export function parseShellCommand(
           manifestFile: parseFlagValue(rest, '--manifest'),
         },
       };
-    }
-    if (name === 'backlog') {
-      const sub = rest[0];
-      if (sub === 'load') {
-        const filePath = rest[1];
-        if (!filePath) {
-          return { ok: false, error: 'backlog load requires a file path' };
-        }
-        const topRaw = parseFlagValue(rest.slice(2), '--top');
-        return {
-          ok: true,
-          command: {
-            type: 'backlog-load',
-            filePath,
-            top: topRaw ? parsePositiveInteger(topRaw, '--top') : undefined,
-          },
-        };
-      }
-      if (sub === 'show') {
-        return { ok: true, command: { type: 'backlog-show' } };
-      }
-      if (sub === 'pick') {
-        const rankRaw = rest[1];
-        return {
-          ok: true,
-          command: {
-            type: 'backlog-pick',
-            rank: rankRaw ? parsePositiveInteger(rankRaw, 'rank') : undefined,
-          },
-        };
-      }
-      return { ok: false, error: 'backlog requires subcommand: load|show|pick' };
     }
     if (name === 'scaffold') {
       const sub = rest[0];

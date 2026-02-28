@@ -1,5 +1,4 @@
 import type {
-  BacklogSummary,
   NodeDetail,
   ScaffoldDraft,
   SessionConfig,
@@ -21,9 +20,7 @@ export interface CurationWorkflowChildPresenterLike {
     signature: string,
     options?: { manifestFile?: string; includeControllerNodes?: boolean },
   ): Promise<ValidationSummary>;
-  loadBacklogSummary(backlogFile: string, options?: { top?: number }): BacklogSummary;
-  scaffoldFromBacklog(
-    backlogFile: string,
+  scaffoldFromSignature(
     signature: string,
     options?: { productName?: string; ruleIdPrefix?: string },
   ): ScaffoldDraft;
@@ -65,16 +62,11 @@ export class CurationWorkflowPresenter implements CurationWorkflowChildPresenter
     return this.curationService.validateSignature(session, signature, options);
   }
 
-  loadBacklogSummary(backlogFile: string, options: { top?: number } = {}): BacklogSummary {
-    return this.curationService.loadBacklogSummary(backlogFile, options);
-  }
-
-  scaffoldFromBacklog(
-    backlogFile: string,
+  scaffoldFromSignature(
     signature: string,
     options: { productName?: string; ruleIdPrefix?: string } = {},
   ): ScaffoldDraft {
-    return this.curationService.scaffoldFromBacklog(backlogFile, signature, options);
+    return this.curationService.scaffoldFromSignature(signature, options);
   }
 
   writeScaffoldDraft(

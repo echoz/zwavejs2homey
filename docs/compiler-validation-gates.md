@@ -4,8 +4,6 @@ This document explains how to configure `compiler:validate-live` quality gates s
 
 Phase 4 reset note:
 
-- backlog consumer command is removed from CLI surface (`compiler:backlog`)
-- backlog artifact flags in validate/baseline are legacy and pending removal
 - simulation-centric signature iteration (`compiler:simulate`) is the replacement workflow
 
 ## Purpose
@@ -106,10 +104,8 @@ Supported profile fields:
 - `artifactFile`
 - `reportFile`
 - `summaryJsonFile`
-- `curationBacklogJsonFile`
 - `redactedReportFile`
 - `redactedSummaryJsonFile`
-- `redactedCurationBacklogJsonFile`
 
 Precedence is deterministic:
 
@@ -175,8 +171,6 @@ Optional:
 - add `--artifact-retention delete-on-pass` to auto-delete generated compiled artifacts when validation passes
 - add `--signature <manufacturerId:productType:productId>` to focus validation and gate checks on a single product signature
 - add `--redact-share` to emit PR-safe markdown/summary artifacts with URL/path/node-identity redaction
-- use `--redacted-report-file` / `--redacted-summary-json-file` / `--redacted-curation-backlog-json-file` to control where redacted outputs are written
-- add `--curation-backlog-json-file /tmp/compiled-live.curation-backlog.json` to write a ranked per-signature curation queue for rule authoring
 
 ## Baseline Helper Command
 
@@ -196,17 +190,11 @@ Default behavior:
 - runs recheck against that baseline with strict zero deltas (`max * delta = 0`)
 - defaults artifact retention to `delete-on-pass` to avoid large compiled-file buildup
 - supports `--redact-share` to emit baseline/recheck redacted markdown/summary outputs in one workflow
-- supports `--emit-curation-backlog` to emit baseline/recheck curation backlog JSON artifacts in one workflow
 - supports stage-specific redacted output overrides:
   - `--baseline-redacted-report-file`
   - `--baseline-redacted-summary-json-file`
-  - `--baseline-redacted-curation-backlog-json-file`
   - `--recheck-redacted-report-file`
   - `--recheck-redacted-summary-json-file`
-  - `--recheck-redacted-curation-backlog-json-file`
-- supports stage-specific backlog output overrides:
-  - `--baseline-curation-backlog-json-file`
-  - `--recheck-curation-backlog-json-file`
 
 ## Suggested Workflow
 

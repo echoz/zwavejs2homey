@@ -22,7 +22,6 @@ import {
 import { ZwjsExplorerServiceImpl, type ZwjsExplorerService } from './service/zwjs-explorer-service';
 import { parseShellCommand } from './view/command-parser';
 import {
-  renderBacklogSummary,
   renderInspectSummary,
   renderNodeDetail,
   renderNodeList,
@@ -84,7 +83,6 @@ export function getUsageText(): string {
     'Interactive commands:',
     '  list | refresh | show <nodeId>',
     '  signature [<m:p:id>] [--from-node <id>] | inspect | validate',
-    '  backlog load <file> [--top N] | backlog show | backlog pick [rank]',
     '  scaffold preview [--product-name "..."] | scaffold write [filePath] --force',
     '  manifest add [filePath] [--manifest <file>] --force | status',
     '  log [--limit N] | help | quit',
@@ -270,34 +268,8 @@ export async function runApp(
           io.log(renderValidationSummary(summary));
           continue;
         }
-        if (command.type === 'backlog-load') {
-          const summary = presenter.loadBacklog(command.filePath, { top: command.top });
-          io.log(renderBacklogSummary(summary));
-          continue;
-        }
-        if (command.type === 'backlog-show') {
-          const summary = presenter.getState().backlogSummary;
-          io.log(summary ? renderBacklogSummary(summary) : 'Backlog is not loaded.');
-          continue;
-        }
-        if (command.type === 'backlog-pick') {
-          const summary = presenter.getState().backlogSummary;
-          if (!summary || summary.entries.length === 0) {
-            io.error('Backlog is not loaded or has no entries.');
-            continue;
-          }
-          const rank = command.rank ?? 1;
-          const entry = summary.entries.find((candidate) => candidate.rank === rank);
-          if (!entry) {
-            io.error(`Backlog rank ${rank} is not present.`);
-            continue;
-          }
-          presenter.selectSignature(entry.signature);
-          io.log(renderSignatureSelected(entry.signature));
-          continue;
-        }
         if (command.type === 'scaffold-preview') {
-          const draft = presenter.createScaffoldFromBacklog({
+          const draft = presenter.createScaffoldFromSignature({
             productName: command.productName,
           });
           io.log(renderScaffoldDraft(draft));

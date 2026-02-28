@@ -44,16 +44,11 @@ test('parseCliArgs validates baseline workflow inputs', async () => {
   assert.equal(parsed.command.maxReviewDelta, 0);
   assert.equal(parsed.command.maxGenericDelta, 0);
   assert.equal(parsed.command.maxEmptyDelta, 0);
-  assert.equal(parsed.command.emitCurationBacklog, false);
-  assert.equal(parsed.command.baselineCurationBacklogJsonFile, undefined);
-  assert.equal(parsed.command.recheckCurationBacklogJsonFile, undefined);
   assert.equal(parsed.command.redactShare, false);
   assert.equal(parsed.command.baselineRedactedReportFile, undefined);
   assert.equal(parsed.command.baselineRedactedSummaryJsonFile, undefined);
-  assert.equal(parsed.command.baselineRedactedCurationBacklogJsonFile, undefined);
   assert.equal(parsed.command.recheckRedactedReportFile, undefined);
   assert.equal(parsed.command.recheckRedactedSummaryJsonFile, undefined);
-  assert.equal(parsed.command.recheckRedactedCurationBacklogJsonFile, undefined);
   assert.equal(parsed.command.skipRecheck, false);
   assert.equal(parsed.command.outputDir.endsWith(path.join('plan', 'baselines')), true);
 
@@ -113,35 +108,6 @@ test('parseCliArgs validates baseline workflow inputs', async () => {
     '/tmp/recheck.redacted.json',
   );
 
-  const parsedBacklog = parseCliArgs([
-    '--url',
-    'ws://x',
-    '--all-nodes',
-    '--emit-curation-backlog',
-    '--baseline-curation-backlog-json-file',
-    '/tmp/base.curation-backlog.json',
-    '--recheck-curation-backlog-json-file',
-    '/tmp/recheck.curation-backlog.json',
-    '--redact-share',
-    '--baseline-redacted-curation-backlog-json-file',
-    '/tmp/base.curation-backlog.redacted.json',
-  ]);
-  assert.equal(parsedBacklog.ok, true);
-  assert.equal(parsedBacklog.command.emitCurationBacklog, true);
-  assert.equal(
-    parsedBacklog.command.baselineCurationBacklogJsonFile,
-    '/tmp/base.curation-backlog.json',
-  );
-  assert.equal(
-    parsedBacklog.command.recheckCurationBacklogJsonFile,
-    '/tmp/recheck.curation-backlog.json',
-  );
-  assert.equal(
-    parsedBacklog.command.baselineRedactedCurationBacklogJsonFile,
-    '/tmp/base.curation-backlog.redacted.json',
-  );
-  assert.equal(parsedBacklog.command.recheckRedactedCurationBacklogJsonFile, undefined);
-
   assert.equal(
     parseCliArgs([
       '--url',
@@ -157,32 +123,9 @@ test('parseCliArgs validates baseline workflow inputs', async () => {
       '--url',
       'ws://x',
       '--all-nodes',
-      '--baseline-curation-backlog-json-file',
-      '/tmp/base.curation-backlog.json',
-    ]).ok,
-    false,
-  );
-  assert.equal(
-    parseCliArgs([
-      '--url',
-      'ws://x',
-      '--all-nodes',
       '--skip-recheck',
-      '--redact-share',
       '--recheck-redacted-report-file',
       '/tmp/recheck.redacted.md',
-    ]).ok,
-    false,
-  );
-  assert.equal(
-    parseCliArgs([
-      '--url',
-      'ws://x',
-      '--all-nodes',
-      '--skip-recheck',
-      '--emit-curation-backlog',
-      '--recheck-curation-backlog-json-file',
-      '/tmp/recheck.curation-backlog.json',
     ]).ok,
     false,
   );
@@ -212,16 +155,11 @@ test('runBaselineWorkflowCommand orchestrates baseline capture and recheck', asy
       outputDir: tmpDir,
       stamp: '2026-02-27',
       artifactRetention: 'delete-on-pass',
-      emitCurationBacklog: false,
-      baselineCurationBacklogJsonFile: undefined,
-      recheckCurationBacklogJsonFile: undefined,
       redactShare: false,
       baselineRedactedReportFile: undefined,
       baselineRedactedSummaryJsonFile: undefined,
-      baselineRedactedCurationBacklogJsonFile: undefined,
       recheckRedactedReportFile: undefined,
       recheckRedactedSummaryJsonFile: undefined,
-      recheckRedactedCurationBacklogJsonFile: undefined,
       maxReviewDelta: 0,
       maxGenericDelta: 0,
       maxEmptyDelta: 0,
@@ -274,7 +212,7 @@ test('runBaselineWorkflowCommand orchestrates baseline capture and recheck', asy
   );
 });
 
-test('runBaselineWorkflowCommand passes redacted and backlog output args to validate-live stages', async () => {
+test('runBaselineWorkflowCommand passes redacted output args to validate-live stages', async () => {
   const { runBaselineWorkflowCommand } = await loadLib();
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zwjs2homey-baseline-redact-'));
   const parseCalls = [];
@@ -296,16 +234,11 @@ test('runBaselineWorkflowCommand passes redacted and backlog output args to vali
       outputDir: tmpDir,
       stamp: '2026-02-27',
       artifactRetention: 'delete-on-pass',
-      emitCurationBacklog: true,
-      baselineCurationBacklogJsonFile: undefined,
-      recheckCurationBacklogJsonFile: '/tmp/recheck-custom.curation-backlog.json',
       redactShare: true,
       baselineRedactedReportFile: undefined,
       baselineRedactedSummaryJsonFile: undefined,
-      baselineRedactedCurationBacklogJsonFile: undefined,
       recheckRedactedReportFile: '/tmp/recheck-custom.redacted.md',
       recheckRedactedSummaryJsonFile: '/tmp/recheck-custom.redacted.json',
-      recheckRedactedCurationBacklogJsonFile: '/tmp/recheck-custom.curation-backlog.redacted.json',
       maxReviewDelta: 0,
       maxGenericDelta: 0,
       maxEmptyDelta: 0,
@@ -328,25 +261,14 @@ test('runBaselineWorkflowCommand passes redacted and backlog output args to vali
   assert.equal(parseCalls[0].includes('--redact-share'), true);
   assert.equal(parseCalls[0].includes('--redacted-report-file'), true);
   assert.equal(parseCalls[0].includes('--redacted-summary-json-file'), true);
-  assert.equal(parseCalls[0].includes('--curation-backlog-json-file'), true);
-  assert.equal(parseCalls[0].includes('--redacted-curation-backlog-json-file'), true);
   assert.equal(
     parseCalls[0].includes(path.join(tmpDir, '2026-02-27.validation.redacted.md')),
     true,
   );
   assert.equal(parseCalls[0].includes(path.join(tmpDir, '2026-02-27.summary.redacted.json')), true);
-  assert.equal(parseCalls[0].includes(path.join(tmpDir, '2026-02-27.curation-backlog.json')), true);
-  assert.equal(
-    parseCalls[0].includes(path.join(tmpDir, '2026-02-27.curation-backlog.redacted.json')),
-    true,
-  );
   assert.equal(parseCalls[1].includes('--redact-share'), true);
-  assert.equal(parseCalls[1].includes('--curation-backlog-json-file'), true);
-  assert.equal(parseCalls[1].includes('--redacted-curation-backlog-json-file'), true);
   assert.equal(parseCalls[1].includes('/tmp/recheck-custom.redacted.md'), true);
   assert.equal(parseCalls[1].includes('/tmp/recheck-custom.redacted.json'), true);
-  assert.equal(parseCalls[1].includes('/tmp/recheck-custom.curation-backlog.json'), true);
-  assert.equal(parseCalls[1].includes('/tmp/recheck-custom.curation-backlog.redacted.json'), true);
 });
 
 test('runBaselineWorkflowCommand supports skip-recheck', async () => {
@@ -371,16 +293,11 @@ test('runBaselineWorkflowCommand supports skip-recheck', async () => {
       outputDir: tmpDir,
       stamp: 's',
       artifactRetention: 'delete-on-pass',
-      emitCurationBacklog: false,
-      baselineCurationBacklogJsonFile: undefined,
-      recheckCurationBacklogJsonFile: undefined,
       redactShare: false,
       baselineRedactedReportFile: undefined,
       baselineRedactedSummaryJsonFile: undefined,
-      baselineRedactedCurationBacklogJsonFile: undefined,
       recheckRedactedReportFile: undefined,
       recheckRedactedSummaryJsonFile: undefined,
-      recheckRedactedCurationBacklogJsonFile: undefined,
       maxReviewDelta: 0,
       maxGenericDelta: 0,
       maxEmptyDelta: 0,

@@ -1,6 +1,5 @@
 import path from 'node:path';
 
-import { runBacklogCommand } from '../../../../tools/homey-compile-backlog-lib.mjs';
 import {
   parseCliArgs as parseInspectLiveCliArgs,
   runLiveInspectCommand,
@@ -12,7 +11,6 @@ import {
 import { normalizeCompilerDeviceFactsFromZwjsDetail } from '../../../../tools/zwjs-to-compiler-facts-lib.mjs';
 
 import type {
-  BacklogSummary,
   NodeDetail,
   ScaffoldDraft,
   SessionConfig,
@@ -71,6 +69,22 @@ function resolveDefaultManifestFile(manifestFile?: string): string {
   return path.resolve(process.cwd(), 'rules/manifest.json');
 }
 
+function parseSignatureTriple(signature: string): {
+  manufacturerId: number;
+  productType: number;
+  productId: number;
+} {
+  const match = /^(\d+):(\d+):(\d+)$/.exec(signature);
+  if (!match) {
+    throw new Error('Signature must be <manufacturerId:productType:productId> in decimal format');
+  }
+  return {
+    manufacturerId: Number(match[1]),
+    productType: Number(match[2]),
+    productId: Number(match[3]),
+  };
+}
+
 export interface CompilerCurationService {
   deriveSignatureFromNodeDetail(detail: NodeDetail): string | null;
   inspectSignature(
@@ -83,9 +97,7 @@ export interface CompilerCurationService {
     signature: string,
     options?: { manifestFile?: string; includeControllerNodes?: boolean },
   ): Promise<ValidationSummary>;
-  loadBacklogSummary(backlogFile: string, options?: { top?: number }): BacklogSummary;
-  scaffoldFromBacklog(
-    backlogFile: string,
+  scaffoldFromSignature(
     signature: string,
     options?: { productName?: string; ruleIdPrefix?: string },
   ): ScaffoldDraft;
@@ -215,65 +227,45 @@ export class CompilerCurationServiceImpl implements CompilerCurationService {
     };
   }
 
-  loadBacklogSummary(backlogFile: string, options: { top?: number } = {}): BacklogSummary {
-    const result = runBacklogCommand({
-      subcommand: 'summary',
-      inputFile: backlogFile,
-      top: options.top ?? 10,
-      format: 'json-compact',
-    });
-
-    if (result.kind !== 'summary') {
-      throw new Error(`Unexpected backlog result kind: ${String(result.kind)}`);
-    }
-
-    return {
-      filePath: result.filePath,
-      totalSignatures: Number(result.totals?.signatures ?? 0),
-      totalNodes: Number(result.totals?.totalNodes ?? 0),
-      reviewNodes: Number(result.totals?.reviewNodes ?? 0),
-      entries: Array.isArray(result.entries)
-        ? result.entries.map((entry: any) => ({
-            rank: Number(entry.rank),
-            signature: String(entry.signature),
-            nodeCount: Number(entry.nodeCount ?? 0),
-            reviewNodeCount: Number(entry.reviewNodeCount ?? 0),
-            genericNodeCount: Number(entry.genericNodeCount ?? 0),
-            emptyNodeCount: Number(entry.emptyNodeCount ?? 0),
-            topReason:
-              typeof entry.actionableReasonCounts === 'object' && entry.actionableReasonCounts
-                ? Object.entries(entry.actionableReasonCounts).sort(
-                    (a, b) => Number(b[1]) - Number(a[1]),
-                  )[0]?.[0]
-                : undefined,
-          }))
-        : [],
-    };
-  }
-
-  scaffoldFromBacklog(
-    backlogFile: string,
+  scaffoldFromSignature(
     signature: string,
     options: { productName?: string; ruleIdPrefix?: string } = {},
   ): ScaffoldDraft {
-    const result = runBacklogCommand({
-      subcommand: 'scaffold',
-      inputFile: backlogFile,
-      signature,
-      ruleIdPrefix: options.ruleIdPrefix ?? 'product',
-      productName: options.productName,
-      format: 'json-compact',
-    });
-
-    if (result.kind !== 'scaffold') {
-      throw new Error(`Unexpected scaffold result kind: ${String(result.kind)}`);
-    }
+    const triple = parseSignatureTriple(signature);
+    const safeSignature = signature.replace(/:/g, '-');
+    const ruleIdPrefix = options.ruleIdPrefix ?? 'product';
+    const driverTemplateId = `${ruleIdPrefix}-${safeSignature}`.toLowerCase();
+    const ruleId = `${ruleIdPrefix}-${safeSignature}-identity`.toLowerCase();
 
     return {
-      signature: result.signature,
-      fileHint: result.fileHint,
-      bundle: result.templateBundle,
-      generatedAt: result.generatedAt,
+      signature,
+      fileHint: `rules/project/product/product-${safeSignature}.json`,
+      bundle: {
+        schemaVersion: 'product-rules/v1',
+        ...(options.productName ? { name: options.productName } : {}),
+        target: {
+          manufacturerId: triple.manufacturerId,
+          productType: triple.productType,
+          productId: triple.productId,
+        },
+        rules: [
+          {
+            ruleId,
+            value: {
+              readable: true,
+            },
+            actions: [
+              {
+                type: 'device-identity',
+                mode: 'replace',
+                homeyClass: 'other',
+                driverTemplateId,
+              },
+            ],
+          },
+        ],
+      },
+      generatedAt: new Date().toISOString(),
     };
   }
 }

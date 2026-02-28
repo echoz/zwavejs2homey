@@ -15,7 +15,6 @@ Use schema-first authoring with existing stable identifiers and diagnostics:
 
 - stable product signature (`manufacturerId:productType:productId`)
 - compiler inspect/validate diagnostics
-- backlog/scaffold helpers for incremental rule work
 
 ## Consequences
 

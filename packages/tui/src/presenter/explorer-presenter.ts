@@ -1,6 +1,5 @@
 import type {
   AppState,
-  BacklogSummary,
   NodeDetail,
   NodeSummary,
   ScaffoldDraft,
@@ -51,9 +50,6 @@ export class ExplorerPresenter {
             ...this.state.validationSummary,
             outcomes: { ...this.state.validationSummary.outcomes },
           }
-        : undefined,
-      backlogSummary: this.state.backlogSummary
-        ? { ...this.state.backlogSummary, entries: [...this.state.backlogSummary.entries] }
         : undefined,
       scaffoldDraft: this.state.scaffoldDraft
         ? {
@@ -201,39 +197,18 @@ export class ExplorerPresenter {
     }
   }
 
-  loadBacklog(backlogFile: string, options: { top?: number } = {}): BacklogSummary {
-    try {
-      const summary = this.children.curation.loadBacklogSummary(backlogFile, options);
-      this.state.backlogSummary = summary;
-      this.logInfo(
-        `Loaded backlog (${summary.entries.length}/${summary.totalSignatures} signatures shown)`,
-      );
-      return summary;
-    } catch (error) {
-      const message = toErrorMessage(error);
-      this.state.lastError = message;
-      this.logError(`Backlog load failed: ${message}`);
-      throw error;
-    }
-  }
-
-  createScaffoldFromBacklog(options: {
-    backlogFile?: string;
+  createScaffoldFromSignature(options: {
     signature?: string;
     productName?: string;
     ruleIdPrefix?: string;
   }): ScaffoldDraft {
-    const backlogFile = options.backlogFile ?? this.state.backlogSummary?.filePath;
-    if (!backlogFile) {
-      throw new Error('Backlog file is not set. Run "backlog load <file>" first.');
-    }
     const signature = options.signature ?? this.state.selectedSignature;
     if (!signature) {
       throw new Error('No signature selected. Use "signature ..." first.');
     }
 
     try {
-      const draft = this.children.curation.scaffoldFromBacklog(backlogFile, signature, {
+      const draft = this.children.curation.scaffoldFromSignature(signature, {
         productName: options.productName,
         ruleIdPrefix: options.ruleIdPrefix,
       });
@@ -299,7 +274,6 @@ export class ExplorerPresenter {
       selectedNodeId: this.state.explorer.selectedNodeId,
       selectedSignature: this.state.selectedSignature,
       cachedNodeCount: this.state.explorer.items.length,
-      backlogFile: this.state.backlogSummary?.filePath,
       scaffoldFileHint: this.state.scaffoldDraft?.fileHint,
     };
   }

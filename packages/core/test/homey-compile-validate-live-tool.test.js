@@ -93,24 +93,6 @@ test('parseCliArgs validates required live inputs and rules source modes', async
     '/tmp/compiled-live.validation.summary.redacted.json',
   );
 
-  const parsedBacklog = parseCliArgs([
-    '--url',
-    'ws://x',
-    '--all-nodes',
-    '--curation-backlog-json-file',
-    '/tmp/compiled-live.curation-backlog.json',
-    '--redact-share',
-  ]);
-  assert.equal(parsedBacklog.ok, true);
-  assert.equal(
-    parsedBacklog.command.curationBacklogJsonFile,
-    '/tmp/compiled-live.curation-backlog.json',
-  );
-  assert.equal(
-    parsedBacklog.command.redactedCurationBacklogJsonFile,
-    '/tmp/compiled-live.curation-backlog.redacted.json',
-  );
-
   assert.equal(
     parseCliArgs(['--url', 'ws://x', '--all-nodes', '--artifact-retention', 'bad']).ok,
     false,
@@ -186,16 +168,6 @@ test('parseCliArgs validates required live inputs and rules source modes', async
     ]).ok,
     false,
   );
-  assert.equal(
-    parseCliArgs([
-      '--input-summary-json-file',
-      '/tmp/compiled-live.summary.json',
-      '--curation-backlog-json-file',
-      '/tmp/compiled-live.curation-backlog.json',
-    ]).ok,
-    false,
-  );
-
   assert.equal(
     parseCliArgs([
       '--input-summary-json-file',
@@ -311,8 +283,6 @@ test('parseCliArgs validates required live inputs and rules source modes', async
         baselineSummaryJsonFile: './output/baseline.summary.json',
         redactedReportFile: './output/report.redacted.md',
         redactedSummaryJsonFile: './output/summary.redacted.json',
-        curationBacklogJsonFile: './output/curation-backlog.json',
-        redactedCurationBacklogJsonFile: './output/curation-backlog.redacted.json',
         artifactFile: './output/artifact.json',
         reportFile: './output/report.md',
         summaryJsonFile: './output/summary.json',
@@ -367,14 +337,6 @@ test('parseCliArgs validates required live inputs and rules source modes', async
     parsedFromGateProfile.command.redactedSummaryJsonFile,
     path.join(gateProfileDir, 'output', 'summary.redacted.json'),
   );
-  assert.equal(
-    parsedFromGateProfile.command.curationBacklogJsonFile,
-    path.join(gateProfileDir, 'output', 'curation-backlog.json'),
-  );
-  assert.equal(
-    parsedFromGateProfile.command.redactedCurationBacklogJsonFile,
-    path.join(gateProfileDir, 'output', 'curation-backlog.redacted.json'),
-  );
 
   const parsedGateProfileCliOverride = parseCliArgs(
     [
@@ -420,14 +382,6 @@ test('parseCliArgs validates required live inputs and rules source modes', async
   assert.equal(
     parsedGateProfileCliOverride.command.reportFile,
     path.join(gateProfileDir, 'output', 'report.md'),
-  );
-  assert.equal(
-    parsedGateProfileCliOverride.command.curationBacklogJsonFile,
-    path.join(gateProfileDir, 'output', 'curation-backlog.json'),
-  );
-  assert.equal(
-    parsedGateProfileCliOverride.command.redactedCurationBacklogJsonFile,
-    path.join(gateProfileDir, 'output', 'curation-backlog.redacted.json'),
   );
 
   const badGateProfileFile = path.join(gateProfileDir, 'bad-profile.json');
@@ -633,19 +587,14 @@ test('runValidateLiveCommand can delete built artifact on pass with delete-on-pa
   );
 });
 
-test('runValidateLiveCommand writes redacted share artifacts and curation backlog when requested', async () => {
+test('runValidateLiveCommand writes redacted share artifacts when requested', async () => {
   const { runValidateLiveCommand } = await loadLib();
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zwjs2homey-validate-live-redacted-'));
   const artifactFile = path.join(tmpDir, 'compiled-live.json');
   const reportFile = path.join(tmpDir, 'compiled-live.validation.md');
   const summaryJsonFile = path.join(tmpDir, 'compiled-live.summary.json');
-  const curationBacklogJsonFile = path.join(tmpDir, 'compiled-live.curation-backlog.json');
   const redactedReportFile = path.join(tmpDir, 'compiled-live.validation.redacted.md');
   const redactedSummaryJsonFile = path.join(tmpDir, 'compiled-live.summary.redacted.json');
-  const redactedCurationBacklogJsonFile = path.join(
-    tmpDir,
-    'compiled-live.curation-backlog.redacted.json',
-  );
   const logs = [];
 
   await runValidateLiveCommand(
@@ -669,11 +618,9 @@ test('runValidateLiveCommand writes redacted share artifacts and curation backlo
       artifactRetention: 'keep',
       reportFile,
       summaryJsonFile,
-      curationBacklogJsonFile,
       redactShare: true,
       redactedReportFile,
       redactedSummaryJsonFile,
-      redactedCurationBacklogJsonFile,
       saveBaselineSummaryJsonFile: undefined,
       gateProfileFile: '/tmp/gates/live.profile.json',
       maxReviewNodes: undefined,
@@ -768,8 +715,6 @@ test('runValidateLiveCommand writes redacted share artifacts and curation backlo
 
   assert.equal(fs.existsSync(redactedReportFile), true);
   assert.equal(fs.existsSync(redactedSummaryJsonFile), true);
-  assert.equal(fs.existsSync(curationBacklogJsonFile), true);
-  assert.equal(fs.existsSync(redactedCurationBacklogJsonFile), true);
 
   const redactedMarkdown = fs.readFileSync(redactedReportFile, 'utf8');
   assert.match(redactedMarkdown, /ZWJS URL: REDACTED_URL/);
@@ -783,43 +728,12 @@ test('runValidateLiveCommand writes redacted share artifacts and curation backlo
   assert.equal(redactedSummary.source.gateProfileFile, 'live.profile.json');
   assert.equal(redactedSummary.gates.configured.gateProfileFile, 'live.profile.json');
   assert.equal(redactedSummary.redaction.mode, 'share');
-
-  const curationBacklog = JSON.parse(fs.readFileSync(curationBacklogJsonFile, 'utf8'));
-  assert.equal(curationBacklog.schemaVersion, 'curation-backlog/v1');
-  assert.equal(curationBacklog.counts.totalNodes, 2);
-  assert.equal(curationBacklog.counts.reviewNodes, 1);
-  assert.equal(Array.isArray(curationBacklog.entries), true);
-  assert.equal(curationBacklog.entries.length, 1);
-  assert.equal(curationBacklog.entries[0].signature, '29:66:2');
-  assert.equal(curationBacklog.entries[0].reviewNodeCount, 1);
-  assert.equal(
-    curationBacklog.entries[0].actionableReasonCounts['known-device-generic-fallback'],
-    1,
-  );
-  assert.equal(curationBacklog.entries[0].pressure.suppressedFillActionsTotal > 0, true);
-
-  const redactedBacklog = JSON.parse(fs.readFileSync(redactedCurationBacklogJsonFile, 'utf8'));
-  assert.equal(redactedBacklog.source.url, 'REDACTED_URL');
-  assert.equal(
-    redactedBacklog.source.curationBacklogJsonFile,
-    'compiled-live.curation-backlog.json',
-  );
-  assert.equal(redactedBacklog.redaction.mode, 'share');
-  assert.equal(redactedBacklog.entries[0].sampleNodes[0].name, 'REDACTED_NODE_NAME');
   assert.equal(
     logs.some((line) => /Redacted validation report:/.test(line)),
     true,
   );
   assert.equal(
     logs.some((line) => /Redacted summary JSON:/.test(line)),
-    true,
-  );
-  assert.equal(
-    logs.some((line) => /Curation backlog JSON:/.test(line)),
-    true,
-  );
-  assert.equal(
-    logs.some((line) => /Redacted curation backlog JSON:/.test(line)),
     true,
   );
 });
@@ -1087,8 +1001,6 @@ test('runValidateLiveCommand prints effective gates when requested', async () =>
   assert.equal(effectiveJson.outputs.artifactFile, artifactFile);
   assert.equal(effectiveJson.outputs.reportFile, reportFile);
   assert.equal(effectiveJson.outputs.summaryJsonFile, null);
-  assert.equal(effectiveJson.outputs.curationBacklogJsonFile, null);
-  assert.equal(effectiveJson.outputs.redactedCurationBacklogJsonFile, null);
   assert.equal(logs.length, 6);
 });
 

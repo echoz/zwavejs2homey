@@ -9,10 +9,7 @@ test('compiler simulate parseCliArgs validates signature source and simulate opt
   const { parseCliArgs } = await loadLib();
 
   assert.equal(parseCliArgs([]).ok, false);
-  assert.equal(parseCliArgs(['--signature', '29:66:2', '--backlog-file', 'x.json']).ok, false);
-  assert.equal(parseCliArgs(['--signature', '29:66:2', '--pick', '2']).ok, false);
   assert.equal(parseCliArgs(['--signature', 'bad-signature']).ok, false);
-  assert.equal(parseCliArgs(['--from-backlog-file', 'a.json']).ok, false);
   const parsedSignature = parseCliArgs([
     '--signature',
     '29:66:2',
@@ -58,7 +55,6 @@ test('runSimulationCommand runs inspect + validate with explicit signature and d
           command: {
             reportFile: '/tmp/compiled-live.validation.md',
             summaryJsonFile: '/tmp/compiled-live.summary.json',
-            curationBacklogJsonFile: '/tmp/compiled-live.curation-backlog.json',
           },
         };
       },

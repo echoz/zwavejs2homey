@@ -2,7 +2,6 @@
 
 ## Current Focus (Active)
 
-- [ ] Phase 4 reset: perform core CLI cutover before TUI follow-up work (`compiler:simulate`, backlog removal)
 - [ ] Phase 4 reset: ship dual-root panel TUI flow (`--url` nodes root, `--rules-only` rules root)
 - [ ] Hold new Homey adapter design/implementation slices until Phase 4 reset checkpoint is complete
 
@@ -89,16 +88,8 @@
 - [x] Runtime-validation baseline-wrapper slice: add `compiler:baseline` helper command to run baseline capture + zero-delta recheck as one workflow
 - [x] Runtime-validation redacted-share slice: add `--redact-share` + explicit redacted output flags for PR-safe markdown/summary artifacts
 - [x] Runtime-validation baseline-wrapper redaction parity slice: add `compiler:baseline --redact-share` and stage-specific redacted output path overrides
-- [x] Runtime-validation curation-backlog slice: add `--curation-backlog-json-file` (+ redacted variant) to produce ranked per-signature curation queues from live validation runs
-- [x] Runtime-validation baseline-wrapper backlog parity slice: add `compiler:baseline --emit-curation-backlog` and stage-specific backlog path overrides (including redacted variants)
-- [x] Runtime-validation backlog consumer slice: add `compiler:backlog` (`summary`/`diff`/`scaffold`) to turn backlog artifacts into prioritized curation work queues
 - [x] Runtime-validation signature-targeted loop slice: add `--signature` filtering to `compiler:inspect-live` and `compiler:validate-live` for focused per-product iteration
-- [x] Runtime-validation backlog-next helper slice: add `compiler:backlog next` (summary/diff modes) to pick the next signature and print runnable scaffold/inspect/validate command hints
-- [x] Runtime-validation signature-loop wrapper slice: add `compiler:loop` to run backlog selection + targeted inspect + targeted validate in one command
-- [x] Runtime-validation loop/backlog hardening slice: add `compiler:loop --dry-run` and backlog-next loop command hints for faster safe iteration setup
-- [x] Runtime-validation backlog candidate-policy slice: add `--candidate-policy curation|pressure` so next-target selection defaults to curation work and can opt into technical-pressure tuning
 - [x] Runtime-validation simplification reset (part 1): rename signature loop command to `compiler:simulate`
-- [ ] Runtime-validation simplification reset (part 2): remove remaining backlog artifact flags from validate/baseline flows (backlog command + simulate backlog selection already removed)
 - [x] Decide and document final ownership of generic fallback inference policy (Homey adapter-owned; see ADR 0004)
 - [x] DSL simplification slice 1: support compact scalar matcher syntax with deterministic load-time canonicalization to arrays
 - [x] Decide compiler rule boundary: compile-time rule scope is manifest-owned; non-manifest rules are runtime/Homey-adapter scope (ADR 0005)
@@ -113,9 +104,7 @@
 ## Phase 4: ZWJS Explorer + Curation TUI (In Progress)
 
 - [x] Drafted reset MVP spec and implementation plan (`plan/tui-explorer-curation-spec.md`, `plan/tui-implementation-plan.md`)
-- [ ] Section 4A: core CLI cutover (partially complete: `compiler:simulate` rename done; backlog command removed; remaining work is validate/baseline backlog flag removal)
 - [ ] Section 4B: migrate tests/docs/help to simulate-centric workflow
-- [ ] Section 5: TUI structural pivot to dual roots (`--url`, `--rules-only`) without backlog
 - [ ] Section 6: rich simulation view integration in nodes and rules stacks
 - [ ] Section 7: convergence review (separate stacks vs shared view primitives)
 - [ ] Keep Homey adapter implementation frozen until Phase 4 reset completion

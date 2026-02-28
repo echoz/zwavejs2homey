@@ -81,24 +81,6 @@ export interface ValidationSummary {
   artifactFile?: string;
 }
 
-export interface BacklogEntrySummary {
-  rank: number;
-  signature: string;
-  nodeCount: number;
-  reviewNodeCount: number;
-  genericNodeCount: number;
-  emptyNodeCount: number;
-  topReason?: string;
-}
-
-export interface BacklogSummary {
-  filePath: string;
-  totalSignatures: number;
-  totalNodes: number;
-  reviewNodes: number;
-  entries: BacklogEntrySummary[];
-}
-
 export interface ScaffoldDraft {
   signature: string;
   fileHint: string;
@@ -120,7 +102,6 @@ export interface AppState {
   selectedSignature?: string;
   inspectSummary?: SignatureInspectSummary;
   validationSummary?: ValidationSummary;
-  backlogSummary?: BacklogSummary;
   scaffoldDraft?: ScaffoldDraft;
   lastError?: string;
   runLog: RunLogEntry[];
@@ -131,6 +112,5 @@ export interface StatusSnapshot {
   selectedNodeId?: number;
   selectedSignature?: string;
   cachedNodeCount: number;
-  backlogFile?: string;
   scaffoldFileHint?: string;
 }

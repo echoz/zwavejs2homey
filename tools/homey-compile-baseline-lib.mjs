@@ -71,14 +71,6 @@ function makeRedactedSummaryPath(summaryJsonFile) {
   return `${summaryJsonFile}.redacted.json`;
 }
 
-function makeRedactedBacklogPath(backlogJsonFile) {
-  if (!backlogJsonFile) return undefined;
-  if (backlogJsonFile.endsWith('.json')) {
-    return backlogJsonFile.replace(/\.json$/, '.redacted.json');
-  }
-  return `${backlogJsonFile}.redacted.json`;
-}
-
 export function getUsageText() {
   return [
     'Usage:',
@@ -91,16 +83,11 @@ export function getUsageText() {
     '                        [--output-dir <plan/baselines>]',
     '                        [--stamp <YYYY-MM-DD>]',
     '                        [--artifact-retention keep|delete-on-pass]',
-    '                        [--emit-curation-backlog]',
-    '                        [--baseline-curation-backlog-json-file <baseline.curation-backlog.json>]',
-    '                        [--recheck-curation-backlog-json-file <recheck.curation-backlog.json>]',
     '                        [--redact-share]',
     '                        [--baseline-redacted-report-file <baseline.validation.redacted.md>]',
     '                        [--baseline-redacted-summary-json-file <baseline.summary.redacted.json>]',
-    '                        [--baseline-redacted-curation-backlog-json-file <baseline.curation-backlog.redacted.json>]',
     '                        [--recheck-redacted-report-file <recheck.validation.redacted.md>]',
     '                        [--recheck-redacted-summary-json-file <recheck.summary.redacted.json>]',
-    '                        [--recheck-redacted-curation-backlog-json-file <recheck.curation-backlog.redacted.json>]',
     '                        [--gate-profile-file <validation-gates.json>]',
     '                        [--max-review-delta N] [--max-generic-delta N] [--max-empty-delta N]',
     '                        [--fail-on-reason-delta <reason>:<delta> ...]',
@@ -201,70 +188,37 @@ export function parseCliArgs(argv, options = {}) {
     };
   }
 
-  const emitCurationBacklog = flags.has('--emit-curation-backlog');
   const redactShare = flags.has('--redact-share');
-  let baselineCurationBacklogJsonFile;
-  let recheckCurationBacklogJsonFile;
   let baselineRedactedReportFile;
   let baselineRedactedSummaryJsonFile;
-  let baselineRedactedCurationBacklogJsonFile;
   let recheckRedactedReportFile;
   let recheckRedactedSummaryJsonFile;
-  let recheckRedactedCurationBacklogJsonFile;
   try {
-    baselineCurationBacklogJsonFile = parsePathFlag(flags, '--baseline-curation-backlog-json-file');
-    recheckCurationBacklogJsonFile = parsePathFlag(flags, '--recheck-curation-backlog-json-file');
     baselineRedactedReportFile = parsePathFlag(flags, '--baseline-redacted-report-file');
     baselineRedactedSummaryJsonFile = parsePathFlag(flags, '--baseline-redacted-summary-json-file');
-    baselineRedactedCurationBacklogJsonFile = parsePathFlag(
-      flags,
-      '--baseline-redacted-curation-backlog-json-file',
-    );
     recheckRedactedReportFile = parsePathFlag(flags, '--recheck-redacted-report-file');
     recheckRedactedSummaryJsonFile = parsePathFlag(flags, '--recheck-redacted-summary-json-file');
-    recheckRedactedCurationBacklogJsonFile = parsePathFlag(
-      flags,
-      '--recheck-redacted-curation-backlog-json-file',
-    );
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     return { ok: false, error: reason };
   }
 
   if (
-    !emitCurationBacklog &&
-    (baselineCurationBacklogJsonFile ||
-      recheckCurationBacklogJsonFile ||
-      baselineRedactedCurationBacklogJsonFile ||
-      recheckRedactedCurationBacklogJsonFile)
-  ) {
-    return {
-      ok: false,
-      error:
-        'Curation backlog path flags require --emit-curation-backlog (--baseline-curation-backlog-json-file / --recheck-curation-backlog-json-file / --baseline-redacted-curation-backlog-json-file / --recheck-redacted-curation-backlog-json-file)',
-    };
-  }
-  if (
     !redactShare &&
     (baselineRedactedReportFile ||
       baselineRedactedSummaryJsonFile ||
-      baselineRedactedCurationBacklogJsonFile ||
       recheckRedactedReportFile ||
-      recheckRedactedSummaryJsonFile ||
-      recheckRedactedCurationBacklogJsonFile)
+      recheckRedactedSummaryJsonFile)
   ) {
     return {
       ok: false,
       error:
-        'Redacted path flags require --redact-share (--baseline-redacted-report-file / --baseline-redacted-summary-json-file / --baseline-redacted-curation-backlog-json-file / --recheck-redacted-report-file / --recheck-redacted-summary-json-file / --recheck-redacted-curation-backlog-json-file)',
+        'Redacted path flags require --redact-share (--baseline-redacted-report-file / --baseline-redacted-summary-json-file / --recheck-redacted-report-file / --recheck-redacted-summary-json-file)',
     };
   }
   if (
     flags.has('--skip-recheck') &&
-    (recheckCurationBacklogJsonFile !== undefined ||
-      recheckRedactedReportFile !== undefined ||
-      recheckRedactedSummaryJsonFile !== undefined ||
-      recheckRedactedCurationBacklogJsonFile !== undefined)
+    (recheckRedactedReportFile !== undefined || recheckRedactedSummaryJsonFile !== undefined)
   ) {
     return {
       ok: false,
@@ -294,16 +248,11 @@ export function parseCliArgs(argv, options = {}) {
       outputDir,
       stamp,
       artifactRetention,
-      emitCurationBacklog,
-      baselineCurationBacklogJsonFile,
-      recheckCurationBacklogJsonFile,
       redactShare,
       baselineRedactedReportFile,
       baselineRedactedSummaryJsonFile,
-      baselineRedactedCurationBacklogJsonFile,
       recheckRedactedReportFile,
       recheckRedactedSummaryJsonFile,
-      recheckRedactedCurationBacklogJsonFile,
       maxReviewDelta,
       maxGenericDelta,
       maxEmptyDelta,
@@ -354,15 +303,9 @@ export async function runBaselineWorkflowCommand(command, io = console, deps = {
     baselineReport: `${prefix}.validation.md`,
     baselineSummary: `${prefix}.summary.json`,
     baselineSnapshot: `${prefix}.baseline.summary.json`,
-    baselineCurationBacklog: command.emitCurationBacklog
-      ? (command.baselineCurationBacklogJsonFile ?? `${prefix}.curation-backlog.json`)
-      : undefined,
     recheckCompiled: `${prefix}.recheck.compiled.json`,
     recheckReport: `${prefix}.recheck.validation.md`,
     recheckSummary: `${prefix}.recheck.summary.json`,
-    recheckCurationBacklog: command.emitCurationBacklog
-      ? (command.recheckCurationBacklogJsonFile ?? `${prefix}.recheck.curation-backlog.json`)
-      : undefined,
     baselineRedactedReport: command.redactShare
       ? (command.baselineRedactedReportFile ?? makeRedactedReportPath(`${prefix}.validation.md`))
       : undefined,
@@ -370,13 +313,6 @@ export async function runBaselineWorkflowCommand(command, io = console, deps = {
       ? (command.baselineRedactedSummaryJsonFile ??
         makeRedactedSummaryPath(`${prefix}.summary.json`))
       : undefined,
-    baselineRedactedCurationBacklog:
-      command.redactShare && command.emitCurationBacklog
-        ? (command.baselineRedactedCurationBacklogJsonFile ??
-          makeRedactedBacklogPath(
-            command.baselineCurationBacklogJsonFile ?? `${prefix}.curation-backlog.json`,
-          ))
-        : undefined,
     recheckRedactedReport: command.redactShare
       ? (command.recheckRedactedReportFile ??
         makeRedactedReportPath(`${prefix}.recheck.validation.md`))
@@ -385,13 +321,6 @@ export async function runBaselineWorkflowCommand(command, io = console, deps = {
       ? (command.recheckRedactedSummaryJsonFile ??
         makeRedactedSummaryPath(`${prefix}.recheck.summary.json`))
       : undefined,
-    recheckRedactedCurationBacklog:
-      command.redactShare && command.emitCurationBacklog
-        ? (command.recheckRedactedCurationBacklogJsonFile ??
-          makeRedactedBacklogPath(
-            command.recheckCurationBacklogJsonFile ?? `${prefix}.recheck.curation-backlog.json`,
-          ))
-        : undefined,
   };
 
   const common = buildCommonValidateArgs(command);
@@ -416,15 +345,6 @@ export async function runBaselineWorkflowCommand(command, io = console, deps = {
     if (paths.baselineRedactedSummary) {
       baselineArgs.push('--redacted-summary-json-file', paths.baselineRedactedSummary);
     }
-    if (paths.baselineRedactedCurationBacklog) {
-      baselineArgs.push(
-        '--redacted-curation-backlog-json-file',
-        paths.baselineRedactedCurationBacklog,
-      );
-    }
-  }
-  if (paths.baselineCurationBacklog) {
-    baselineArgs.push('--curation-backlog-json-file', paths.baselineCurationBacklog);
   }
 
   io.log(`Baseline workflow stamp: ${command.stamp}`);
@@ -466,15 +386,6 @@ export async function runBaselineWorkflowCommand(command, io = console, deps = {
       if (paths.recheckRedactedSummary) {
         recheckArgs.push('--redacted-summary-json-file', paths.recheckRedactedSummary);
       }
-      if (paths.recheckRedactedCurationBacklog) {
-        recheckArgs.push(
-          '--redacted-curation-backlog-json-file',
-          paths.recheckRedactedCurationBacklog,
-        );
-      }
-    }
-    if (paths.recheckCurationBacklog) {
-      recheckArgs.push('--curation-backlog-json-file', paths.recheckCurationBacklog);
     }
     if (command.gateProfileFile) {
       recheckArgs.push('--gate-profile-file', command.gateProfileFile);
@@ -493,30 +404,18 @@ export async function runBaselineWorkflowCommand(command, io = console, deps = {
   }
 
   io.log(`Baseline summary: ${paths.baselineSnapshot}`);
-  if (paths.baselineCurationBacklog) {
-    io.log(`Baseline curation backlog: ${paths.baselineCurationBacklog}`);
-  }
   if (command.redactShare && paths.baselineRedactedReport) {
     io.log(`Baseline redacted report: ${paths.baselineRedactedReport}`);
   }
   if (command.redactShare && paths.baselineRedactedSummary) {
     io.log(`Baseline redacted summary: ${paths.baselineRedactedSummary}`);
   }
-  if (command.redactShare && paths.baselineRedactedCurationBacklog) {
-    io.log(`Baseline redacted curation backlog: ${paths.baselineRedactedCurationBacklog}`);
-  }
   if (!command.skipRecheck) io.log(`Recheck summary: ${paths.recheckSummary}`);
-  if (!command.skipRecheck && paths.recheckCurationBacklog) {
-    io.log(`Recheck curation backlog: ${paths.recheckCurationBacklog}`);
-  }
   if (!command.skipRecheck && command.redactShare && paths.recheckRedactedReport) {
     io.log(`Recheck redacted report: ${paths.recheckRedactedReport}`);
   }
   if (!command.skipRecheck && command.redactShare && paths.recheckRedactedSummary) {
     io.log(`Recheck redacted summary: ${paths.recheckRedactedSummary}`);
-  }
-  if (!command.skipRecheck && command.redactShare && paths.recheckRedactedCurationBacklog) {
-    io.log(`Recheck redacted curation backlog: ${paths.recheckRedactedCurationBacklog}`);
   }
   return { paths, baselineResult, recheckResult };
 }
