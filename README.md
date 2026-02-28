@@ -129,16 +129,8 @@ This emits a `compiled-homey-profiles/v1` artifact.
 - `npm run compiler:baseline -- --url ws://HOST:PORT --all-nodes --manifest-file rules/manifest.json`
 - `npm run compiler:baseline -- --url ws://HOST:PORT --all-nodes --manifest-file rules/manifest.json --redact-share`
 - `npm run compiler:baseline -- --url ws://HOST:PORT --all-nodes --manifest-file rules/manifest.json --emit-curation-backlog --redact-share`
-- `npm run compiler:backlog -- summary --input-file /tmp/compiled-live.curation-backlog.json --format list`
-- `npm run compiler:backlog -- diff --from-file /tmp/baseline.curation-backlog.json --to-file /tmp/current.curation-backlog.json --only worsened --format markdown`
-- `npm run compiler:backlog -- scaffold --input-file /tmp/compiled-live.curation-backlog.json --signature 29:66:2 --product-name "Leviton ZW15S" --format json-pretty`
-- `npm run compiler:backlog -- next --from-file /tmp/baseline.curation-backlog.json --to-file /tmp/current.curation-backlog.json --only worsened --format summary`
-- `npm run compiler:backlog -- next --from-file /tmp/baseline.curation-backlog.json --to-file /tmp/current.curation-backlog.json --only worsened --candidate-policy curation --format summary`
-- `npm run compiler:backlog -- next --input-file /tmp/current.curation-backlog.json --pick 1 --format markdown`
-- `npm run compiler:backlog -- next --input-file /tmp/current.curation-backlog.json --candidate-policy pressure --pick 1 --format summary`
 - `npm run compiler:simulate -- --url ws://HOST:PORT --all-nodes --manifest-file rules/manifest.json --signature 29:66:2`
-- `npm run compiler:simulate -- --url ws://HOST:PORT --all-nodes --from-backlog-file /tmp/baseline.curation-backlog.json --to-backlog-file /tmp/current.curation-backlog.json --only worsened --candidate-policy curation`
-- `npm run compiler:simulate -- --url ws://HOST:PORT --all-nodes --backlog-file /tmp/current.curation-backlog.json --dry-run --format markdown`
+- `npm run compiler:simulate -- --url ws://HOST:PORT --all-nodes --manifest-file rules/manifest.json --signature 29:66:2 --dry-run --format markdown`
 
 Migration note:
 
@@ -166,10 +158,8 @@ This runs the canonical live validation loop in one command:
 - when backlog output is enabled with `--redact-share`, a redacted backlog file is also emitted (default `*.redacted.json`, overridable via `--redacted-curation-backlog-json-file`)
 - `compiler:baseline` orchestrates baseline capture + immediate recheck in one command and writes timestamped artifacts under `plan/baselines/` by default
 - `compiler:baseline --redact-share` emits redacted baseline/recheck markdown+summary artifacts in the same run (with optional stage-specific redacted path overrides)
-- `compiler:baseline --emit-curation-backlog` also writes baseline/recheck curation backlog artifacts (and redacted variants under `--redact-share`)
-- `compiler:backlog` consumes backlog artifacts for ranked triage (`summary`), regression analysis (`diff`), and starter product-rule snippet generation (`scaffold`)
-- `compiler:backlog next` picks the next signature to curate (diff-first or summary mode) and prints copy/paste scaffold+inspect+validate commands; default `--candidate-policy curation` avoids technical-pressure-only signatures, while `pressure` includes them for optimization passes
-- `compiler:simulate` runs one signature end-to-end (currently supports explicit signature and legacy backlog-driven signature selection), with `--dry-run` to preview resolved inspect/validate command lines without network calls
+- `compiler:baseline --emit-curation-backlog` also writes baseline/recheck curation backlog artifacts (and redacted variants under `--redact-share`) while backlog tooling decommissioning is in progress
+- `compiler:simulate` runs one signature end-to-end from explicit `--signature`, with `--dry-run` to preview resolved inspect/validate command lines without network calls
 
 Gate setup guide: `docs/compiler-validation-gates.md`
 

@@ -465,11 +465,16 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - removed `compiler:loop` npm script and loop tool files
     - updated backlog next command hints to emit `compiler:simulate` guidance
     - migrated loop-tool regression coverage to `homey-compile-simulate-tool.test.js`
+97. Completed Section 4A cutover part 2A (remove backlog command surface + simulate backlog mode):
+    - removed `compiler:backlog` npm script and CLI wrapper entrypoint
+    - simplified `compiler:simulate` to explicit-signature mode only (`--signature` required)
+    - removed backlog-driven simulate flags (`--backlog-file`, `--from-backlog-file`, `--to-backlog-file`, `--only`, `--candidate-policy`, `--fallback`, `--pick`)
+    - updated simulate parser/runtime tests and readme/architecture notes to match signature-only simulate behavior
 
 ## Next Tasks
 
 1. Execute Section 4A (core CLI cutover):
-   - remove backlog command family and backlog-driven workflow flags
+   - remove remaining backlog artifact flags from `compiler:validate-live` and `compiler:baseline`
 2. Execute Section 4B (tests/docs/help migration):
    - migrate loop/backlog references to simulate-centric guidance
    - ensure removed commands fail with clear migration hints

@@ -348,7 +348,7 @@ test('backlog next summary mode selects actionable signature and prints command 
   assert.equal(result.candidatePolicy, 'curation');
   assert.equal(result.selected.signature, '29:66:2');
   assert.equal(result.candidateCount, 1);
-  assert.match(result.commands.scaffold, /compiler:backlog -- scaffold/);
+  assert.match(result.commands.scaffold, /backlog CLI removed/);
   assert.match(result.commands.inspectLive, /compiler:inspect-live -- --url/);
   assert.match(result.commands.validateLive, /compiler:validate-live -- --url/);
   assert.match(result.commands.simulate, /compiler:simulate -- --url/);

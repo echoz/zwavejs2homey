@@ -442,19 +442,7 @@ function buildNextCommandHints(signature, backlogFilePath, source) {
   const ruleInputArgs = buildSourceRuleInputArgs(source);
 
   return {
-    scaffold: renderCommand([
-      'npm',
-      'run',
-      'compiler:backlog',
-      '--',
-      'scaffold',
-      '--input-file',
-      backlogFilePath,
-      '--signature',
-      signature,
-      '--format',
-      'json-pretty',
-    ]),
+    scaffold: 'n/a (backlog CLI removed)',
     inspectLive: renderCommand([
       'npm',
       'run',

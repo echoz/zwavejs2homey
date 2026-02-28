@@ -10,20 +10,9 @@ test('compiler simulate parseCliArgs validates signature source and simulate opt
 
   assert.equal(parseCliArgs([]).ok, false);
   assert.equal(parseCliArgs(['--signature', '29:66:2', '--backlog-file', 'x.json']).ok, false);
+  assert.equal(parseCliArgs(['--signature', '29:66:2', '--pick', '2']).ok, false);
   assert.equal(parseCliArgs(['--signature', 'bad-signature']).ok, false);
-  assert.equal(parseCliArgs(['--signature', '29:66:2', '--candidate-policy', 'bad']).ok, false);
   assert.equal(parseCliArgs(['--from-backlog-file', 'a.json']).ok, false);
-  assert.equal(
-    parseCliArgs([
-      '--from-backlog-file',
-      'a.json',
-      '--to-backlog-file',
-      'b.json',
-      '--fallback',
-      'bad',
-    ]).ok,
-    false,
-  );
   const parsedSignature = parseCliArgs([
     '--signature',
     '29:66:2',
@@ -39,26 +28,6 @@ test('compiler simulate parseCliArgs validates signature source and simulate opt
   assert.equal(parsedSignature.ok, true);
   assert.equal(parsedSignature.command.dryRun, true);
   assert.equal(parsedSignature.command.forwardedArgv.includes('--dry-run'), false);
-  const parsedDiff = parseCliArgs([
-    '--from-backlog-file',
-    'a.json',
-    '--to-backlog-file',
-    'b.json',
-    '--only',
-    'worsened',
-    '--fallback',
-    'summary',
-    '--candidate-policy',
-    'pressure',
-    '--pick',
-    '2',
-    '--url',
-    'ws://x',
-    '--all-nodes',
-  ]);
-  assert.equal(parsedDiff.ok, true);
-  assert.equal(parsedDiff.command.backlogMode, 'diff');
-  assert.equal(parsedDiff.command.candidatePolicy, 'pressure');
 });
 
 test('runSimulationCommand runs inspect + validate with explicit signature and default manifest fallback', async () => {
@@ -128,38 +97,25 @@ test('runSimulationCommand runs inspect + validate with explicit signature and d
   assert.doesNotThrow(() => JSON.parse(formatSimulationOutput(result, 'json')));
 });
 
-test('runSimulationCommand resolves signature from backlog and supports --skip-inspect', async () => {
+test('runSimulationCommand supports --skip-inspect with explicit signature', async () => {
   const { parseCliArgs, runSimulationCommand } = await loadLib();
   const parsed = parseCliArgs([
     '--url',
     'ws://x',
     '--all-nodes',
-    '--from-backlog-file',
-    '/tmp/base.backlog.json',
-    '--to-backlog-file',
-    '/tmp/current.backlog.json',
-    '--only',
-    'worsened',
+    '--signature',
+    '77:2:9',
     '--skip-inspect',
   ]);
   assert.equal(parsed.ok, true);
 
   let inspectRunCount = 0;
   const validateParseCalls = [];
-  const backlogCalls = [];
 
   const result = await runSimulationCommand(
     parsed.command,
     { log: () => {} },
     {
-      runBacklogCommandImpl: (command) => {
-        backlogCalls.push(command);
-        return {
-          kind: 'next',
-          selectionMode: 'diff',
-          selected: { signature: '77:2:9', topReason: 'known-device-unmapped' },
-        };
-      },
       parseInspectLiveCliImpl: () => {
         throw new Error('inspect parse should not be called when --skip-inspect is set');
       },
@@ -177,11 +133,6 @@ test('runSimulationCommand resolves signature from backlog and supports --skip-i
     },
   );
 
-  assert.equal(backlogCalls.length, 1);
-  assert.equal(backlogCalls[0].subcommand, 'next');
-  assert.equal(backlogCalls[0].mode, 'diff');
-  assert.equal(backlogCalls[0].only, 'worsened');
-  assert.equal(backlogCalls[0].candidatePolicy, 'curation');
   assert.equal(validateParseCalls.length, 1);
   assert.equal(validateParseCalls[0].includes('77:2:9'), true);
   assert.equal(result.signature, '77:2:9');

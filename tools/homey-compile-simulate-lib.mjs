@@ -4,7 +4,6 @@ import {
   formatJsonPretty,
   isSupportedDiagnosticFormat,
 } from './output-format-lib.mjs';
-import { runBacklogCommand } from './homey-compile-backlog-lib.mjs';
 import {
   parseCliArgs as parseInspectLiveCli,
   runLiveInspectCommand,
@@ -14,18 +13,6 @@ import {
   runValidateLiveCommand,
 } from './homey-compile-validate-live-lib.mjs';
 
-const DIFF_ONLY_FILTERS = new Set([
-  'all',
-  'worsened',
-  'improved',
-  'neutral',
-  'added',
-  'removed',
-  'changed',
-  'unchanged',
-]);
-const NEXT_FALLBACK_MODES = new Set(['summary', 'none']);
-const NEXT_CANDIDATE_POLICIES = new Set(['curation', 'pressure']);
 const SIMULATE_FORMATS = new Set([
   'summary',
   'list',
@@ -54,15 +41,6 @@ function parseFlagMap(argv) {
     }
   }
   return flags;
-}
-
-function parsePositiveInt(rawValue, flagName, defaultValue) {
-  const value = rawValue ?? String(defaultValue);
-  const parsed = Number.parseInt(value, 10);
-  if (!Number.isInteger(parsed) || parsed < 1) {
-    throw new Error(`${flagName} must be a positive integer (received: ${String(value)})`);
-  }
-  return parsed;
 }
 
 function hasFlagOccurrence(argv, flagName) {
@@ -127,11 +105,7 @@ export function getUsageText() {
     '                     [--token ...] [--schema-version 0]',
     '                     [--include-values none|summary|full] [--max-values N]',
     '                     [--include-controller-nodes]',
-    '                     [--signature <manufacturerId:productType:productId> | --backlog-file <curation-backlog.json> | (--from-backlog-file <baseline.json> --to-backlog-file <current.json>)]',
-    '                     [--only worsened|improved|neutral|added|removed|changed|unchanged|all]',
-    '                     [--candidate-policy curation|pressure]',
-    '                     [--fallback summary|none]',
-    '                     [--pick N]',
+    '                     --signature <manufacturerId:productType:productId>',
     '                     [--skip-inspect] [--inspect-format list|summary|markdown|json|json-pretty|json-compact|ndjson]',
     '                     [--dry-run]',
     '                     [--format summary|list|markdown|json|json-pretty|json-compact]',
@@ -146,72 +120,35 @@ export function parseCliArgs(argv) {
   if (argv.includes('--help') || argv.includes('-h')) return { ok: false, error: getUsageText() };
 
   const flags = parseFlagMap(argv);
-  let pick;
-  try {
-    pick = parsePositiveInt(flags.get('--pick'), '--pick', 1);
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    return { ok: false, error: reason };
-  }
-
   const signature = flags.get('--signature');
-  if (signature !== undefined && !/^\d+:\d+:\d+$/.test(signature)) {
+  if (!signature) {
+    return {
+      ok: false,
+      error:
+        'Missing --signature <manufacturerId:productType:productId>; backlog-driven signature selection has been removed',
+    };
+  }
+  if (!/^\d+:\d+:\d+$/.test(signature)) {
     return {
       ok: false,
       error:
         '--signature must be a product triple in decimal format: <manufacturerId:productType:productId>',
     };
   }
-  const backlogFile = flags.get('--backlog-file');
-  const fromBacklogFile = flags.get('--from-backlog-file');
-  const toBacklogFile = flags.get('--to-backlog-file');
-  const hasDiffBacklogFlags = Boolean(fromBacklogFile || toBacklogFile);
-  const signatureModeCount =
-    (signature ? 1 : 0) + (backlogFile ? 1 : 0) + (hasDiffBacklogFlags ? 1 : 0);
-
-  if (signatureModeCount === 0) {
+  const removedBacklogFlags = [
+    '--backlog-file',
+    '--from-backlog-file',
+    '--to-backlog-file',
+    '--only',
+    '--candidate-policy',
+    '--fallback',
+    '--pick',
+  ];
+  const usedRemovedFlag = removedBacklogFlags.find((flagName) => hasFlagOccurrence(argv, flagName));
+  if (usedRemovedFlag) {
     return {
       ok: false,
-      error:
-        'Provide one signature source: --signature, --backlog-file, or --from-backlog-file + --to-backlog-file',
-    };
-  }
-  if (signatureModeCount > 1) {
-    return {
-      ok: false,
-      error:
-        'Use only one signature source: --signature, --backlog-file, or --from-backlog-file + --to-backlog-file',
-    };
-  }
-  if (hasDiffBacklogFlags && (!fromBacklogFile || !toBacklogFile)) {
-    return {
-      ok: false,
-      error: 'Diff backlog mode requires both --from-backlog-file and --to-backlog-file',
-    };
-  }
-  if (!hasDiffBacklogFlags && flags.has('--only')) {
-    return { ok: false, error: '--only is only supported with diff backlog mode' };
-  }
-  if (!hasDiffBacklogFlags && flags.has('--fallback')) {
-    return { ok: false, error: '--fallback is only supported with diff backlog mode' };
-  }
-
-  const only = flags.get('--only') ?? 'worsened';
-  if (!DIFF_ONLY_FILTERS.has(only)) {
-    return { ok: false, error: `Unsupported --only: ${only}` };
-  }
-  const fallback = flags.get('--fallback') ?? 'summary';
-  if (!NEXT_FALLBACK_MODES.has(fallback)) {
-    return {
-      ok: false,
-      error: `Unsupported --fallback: ${fallback} (expected summary|none)`,
-    };
-  }
-  const candidatePolicy = flags.get('--candidate-policy') ?? 'curation';
-  if (!NEXT_CANDIDATE_POLICIES.has(candidatePolicy)) {
-    return {
-      ok: false,
-      error: `Unsupported --candidate-policy: ${candidatePolicy} (expected curation|pressure)`,
+      error: `${usedRemovedFlag} is no longer supported; provide --signature instead`,
     };
   }
 
@@ -229,13 +166,6 @@ export function parseCliArgs(argv) {
     '--help',
     '-h',
     '--signature',
-    '--backlog-file',
-    '--from-backlog-file',
-    '--to-backlog-file',
-    '--only',
-    '--candidate-policy',
-    '--fallback',
-    '--pick',
     '--skip-inspect',
     '--inspect-format',
     '--dry-run',
@@ -247,14 +177,6 @@ export function parseCliArgs(argv) {
     ok: true,
     command: {
       signature,
-      backlogFile,
-      fromBacklogFile,
-      toBacklogFile,
-      backlogMode: backlogFile ? 'summary' : hasDiffBacklogFlags ? 'diff' : null,
-      only,
-      candidatePolicy,
-      fallback,
-      pick,
       skipInspect: flags.has('--skip-inspect'),
       dryRun: flags.has('--dry-run'),
       inspectFormat,
@@ -273,47 +195,15 @@ function parseOrThrow(argv, parseImpl, stageName) {
 }
 
 export async function runSimulationCommand(command, io = console, deps = {}) {
-  const runBacklogCommandImpl = deps.runBacklogCommandImpl ?? runBacklogCommand;
   const parseInspectLiveCliImpl = deps.parseInspectLiveCliImpl ?? parseInspectLiveCli;
   const runLiveInspectCommandImpl = deps.runLiveInspectCommandImpl ?? runLiveInspectCommand;
   const parseValidateLiveCliImpl = deps.parseValidateLiveCliImpl ?? parseValidateLiveCli;
   const runValidateLiveCommandImpl = deps.runValidateLiveCommandImpl ?? runValidateLiveCommand;
 
-  let selected;
-  let signature = command.signature;
-  if (!signature) {
-    const nextCommand =
-      command.backlogMode === 'summary'
-        ? {
-            subcommand: 'next',
-            mode: 'summary',
-            inputFile: command.backlogFile,
-            candidatePolicy: command.candidatePolicy,
-            pick: command.pick,
-            format: 'summary',
-          }
-        : {
-            subcommand: 'next',
-            mode: 'diff',
-            fromFile: command.fromBacklogFile,
-            toFile: command.toBacklogFile,
-            only: command.only,
-            candidatePolicy: command.candidatePolicy,
-            fallback: command.fallback,
-            pick: command.pick,
-            format: 'summary',
-          };
-    selected = runBacklogCommandImpl(nextCommand);
-    signature = selected?.selected?.signature;
-    if (!signature) {
-      throw new Error('Failed to resolve signature from backlog selection');
-    }
-    io.log(`Selected signature: ${signature}`);
-    io.log(`Selection mode: ${selected.selectionMode}`);
-  }
+  const signature = command.signature;
 
   const withSignature = [...command.forwardedArgv, '--signature', signature];
-  const loopArgs = ensureRulesSourceArgs(withSignature);
+  const simulateArgs = ensureRulesSourceArgs(withSignature);
   const inspectCommandLine = command.skipInspect
     ? null
     : renderCommand([
@@ -321,7 +211,7 @@ export async function runSimulationCommand(command, io = console, deps = {}) {
         'run',
         'compiler:inspect-live',
         '--',
-        ...loopArgs,
+        ...simulateArgs,
         '--format',
         command.inspectFormat,
       ]);
@@ -330,13 +220,13 @@ export async function runSimulationCommand(command, io = console, deps = {}) {
     'run',
     'compiler:validate-live',
     '--',
-    ...loopArgs,
+    ...simulateArgs,
   ]);
 
   let inspectCommand;
   if (!command.skipInspect) {
     inspectCommand = parseOrThrow(
-      [...loopArgs, '--format', command.inspectFormat],
+      [...simulateArgs, '--format', command.inspectFormat],
       parseInspectLiveCliImpl,
       'inspect',
     );
@@ -346,13 +236,12 @@ export async function runSimulationCommand(command, io = console, deps = {}) {
     }
   }
 
-  const validateCommand = parseOrThrow(loopArgs, parseValidateLiveCliImpl, 'validate');
+  const validateCommand = parseOrThrow(simulateArgs, parseValidateLiveCliImpl, 'validate');
   if (command.dryRun) {
     io.log(`Dry run: resolved signature ${signature}`);
     return {
       kind: 'simulate',
       signature,
-      selection: selected ?? null,
       dryRun: true,
       inspect: {
         skipped: command.skipInspect,
@@ -378,7 +267,6 @@ export async function runSimulationCommand(command, io = console, deps = {}) {
   return {
     kind: 'simulate',
     signature,
-    selection: selected ?? null,
     dryRun: false,
     inspect: {
       skipped: command.skipInspect,
@@ -402,8 +290,6 @@ export function formatSimulationOutput(result, format) {
   if (format === 'json' || format === 'json-pretty') return formatJsonPretty(result);
   if (format === 'json-compact') return formatJsonCompact(result);
 
-  const selectedFromBacklog = result.selection?.selected?.signature;
-  const selectedTopReason = result.selection?.selected?.topReason ?? '';
   const outcomeSummary = buildOutcomeSummary(result.validate?.outcomes);
 
   if (format === 'markdown') {
@@ -411,11 +297,6 @@ export function formatSimulationOutput(result, format) {
       '# Compiler Simulation',
       '',
       `- Signature: ${result.signature}`,
-      selectedFromBacklog ? `- Backlog-selected signature: ${selectedFromBacklog}` : null,
-      selectedTopReason ? `- Backlog top reason: ${selectedTopReason}` : null,
-      result.selection?.candidatePolicy
-        ? `- Backlog candidate policy: ${result.selection.candidatePolicy}`
-        : null,
       `- Dry run: ${result.dryRun ? 'yes' : 'no'}`,
       `- Inspect skipped: ${result.inspect?.skipped ? 'yes' : 'no'}`,
       `- Validate gate passed: ${result.validate?.gatePassed === null ? 'n/a' : result.validate?.gatePassed ? 'yes' : 'no'}`,
@@ -443,11 +324,6 @@ export function formatSimulationOutput(result, format) {
 
   return [
     `Signature: ${result.signature}`,
-    selectedFromBacklog ? `Backlog-selected signature: ${selectedFromBacklog}` : null,
-    selectedTopReason ? `Backlog top reason: ${selectedTopReason}` : null,
-    result.selection?.candidatePolicy
-      ? `Backlog candidate policy: ${result.selection.candidatePolicy}`
-      : null,
     `Dry run: ${result.dryRun ? 'yes' : 'no'}`,
     `Inspect skipped: ${result.inspect?.skipped ? 'yes' : 'no'}`,
     `Validate gate passed: ${result.validate?.gatePassed === null ? 'n/a' : result.validate?.gatePassed ? 'yes' : 'no'}`,

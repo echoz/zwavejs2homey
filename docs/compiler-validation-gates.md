@@ -4,8 +4,9 @@ This document explains how to configure `compiler:validate-live` quality gates s
 
 Phase 4 reset note:
 
-- backlog-oriented outputs/commands documented here are legacy and scheduled for removal during Section 4A
-- simulation-centric signature iteration (`compiler:simulate`) is the planned replacement workflow
+- backlog consumer command is removed from CLI surface (`compiler:backlog`)
+- backlog artifact flags in validate/baseline are legacy and pending removal
+- simulation-centric signature iteration (`compiler:simulate`) is the replacement workflow
 
 ## Purpose
 
@@ -212,7 +213,6 @@ Default behavior:
 1. Keep one baseline summary JSON per network snapshot in `plan/` or `docs/`.
 2. Update thresholds only when network composition or mapping policy changes.
 3. Treat threshold changes as reviewed config changes, not routine edits.
-4. Use backlog consumers to prioritize curation work:
-   - `npm run compiler:backlog -- summary --input-file /tmp/compiled-live.curation-backlog.json --format list`
-   - `npm run compiler:backlog -- diff --from-file /tmp/baseline.curation-backlog.json --to-file /tmp/current.curation-backlog.json --only worsened --format markdown`
-   - `npm run compiler:backlog -- scaffold --input-file /tmp/compiled-live.curation-backlog.json --signature <manufacturer:productType:productId> --format json-pretty`
+4. Prefer signature-targeted simulation for curation iteration:
+   - `npm run compiler:simulate -- --url ws://HOST:PORT --all-nodes --manifest-file rules/manifest.json --signature <manufacturer:productType:productId>`
+   - `npm run compiler:simulate -- --url ws://HOST:PORT --all-nodes --manifest-file rules/manifest.json --signature <manufacturer:productType:productId> --dry-run --format markdown`

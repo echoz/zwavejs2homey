@@ -74,7 +74,7 @@ Data flow in both stacks:
 - [x] Section 1: scope + guardrails lock (docs/plans)
 - [x] Section 2: startup + dual-root IA lock (docs/plans)
 - [x] Section 3: curation flow lock with simulation center (docs/plans)
-- [ ] Section 4A: core CLI cutover (rename complete; backlog removal pending)
+- [ ] Section 4A: core CLI cutover (rename complete; backlog command + simulate backlog mode removed; validate/baseline backlog flags pending)
 - [ ] Section 4B: tests/docs migration for cutover
 - [ ] Section 5: dual-stack TUI structure without backlog
 - [ ] Section 6: rich simulation integration in both stacks
