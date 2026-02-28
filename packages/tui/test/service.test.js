@@ -73,6 +73,8 @@ test('ZwjsExplorerServiceImpl connects, lists nodes, shows details, and disconne
   });
 
   await service.connect({
+    mode: 'nodes',
+    manifestFile: 'rules/manifest.json',
     url: 'ws://127.0.0.1:3000',
     schemaVersion: 0,
     includeValues: 'summary',

@@ -1,8 +1,13 @@
-import type { IncludeValuesMode, NodeDetail, NodeSummary, SessionConfig } from '../model/types';
+import type {
+  ConnectedSessionConfig,
+  IncludeValuesMode,
+  NodeDetail,
+  NodeSummary,
+} from '../model/types';
 import type { ZwjsExplorerService } from '../service/zwjs-explorer-service';
 
 export interface ExplorerSessionChildPresenterLike {
-  connect(config: SessionConfig): Promise<void>;
+  connect(config: ConnectedSessionConfig): Promise<void>;
   disconnect(): Promise<void>;
   listNodes(): Promise<NodeSummary[]>;
   getNodeDetail(
@@ -14,7 +19,7 @@ export interface ExplorerSessionChildPresenterLike {
 export class ExplorerSessionPresenter implements ExplorerSessionChildPresenterLike {
   constructor(private readonly service: ZwjsExplorerService) {}
 
-  async connect(config: SessionConfig): Promise<void> {
+  async connect(config: ConnectedSessionConfig): Promise<void> {
     await this.service.connect(config);
   }
 

@@ -436,14 +436,23 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - updated parser regression coverage for removed/unsupported flag cases
     - aligned user-facing docs/help with simulate-centric wording and scaffold preview class override support
     - synced roadmap and TUI implementation plan to mark Section 4B complete
+91. Completed Phase 4 Section 6 (dual-root simulation integration):
+    - added TUI startup routing with explicit mode in session config:
+      - nodes root (`--url ...`)
+      - rules root (`--rules-only [--manifest-file ...]` with optional `--url` for live simulation)
+    - added rules stack support:
+      - manifest rule listing and rule detail inspection
+      - signature selection from rule targets (`signature --from-rule <index>`)
+    - integrated `simulate` command across both roots, wired to `compiler:simulate` via curation service
+    - expanded renderers/help for rules root and simulation summaries
+    - extended tests: parser/app/rules-presenter/workspace-file-service coverage for dual-root + simulate flow
+    - synced roadmap and implementation plan to mark Section 6 complete
 
 ## Next Tasks
 
-1. Execute Section 6:
-   - dual-root TUI structural pivot (`--url` nodes root, `--rules-only` rules root)
-2. Execute Section 7 convergence review:
+1. Execute Section 7 convergence review:
    - decide whether to keep separate stacks or extract shared view primitives
-3. Keep Homey adapter implementation paused until Phase 4 reset is complete
+2. Keep Homey adapter implementation paused until Phase 4 reset is complete
 
 ## Risks / Unknowns
 

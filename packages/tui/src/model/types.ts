@@ -1,14 +1,21 @@
 export type IncludeValuesMode = 'none' | 'summary' | 'full';
+export type SessionMode = 'nodes' | 'rules';
 
 export type ConnectionState = 'disconnected' | 'connecting' | 'ready' | 'error';
 
 export interface SessionConfig {
-  url: string;
+  mode: SessionMode;
+  manifestFile: string;
+  url?: string;
   token?: string;
   schemaVersion: number;
   includeValues: IncludeValuesMode;
   maxValues: number;
   startNode?: number;
+}
+
+export interface ConnectedSessionConfig extends SessionConfig {
+  url: string;
 }
 
 export interface ValueIdShape {
@@ -81,11 +88,43 @@ export interface ValidationSummary {
   artifactFile?: string;
 }
 
+export interface SimulationSummary {
+  signature: string;
+  dryRun: boolean;
+  inspectSkipped: boolean;
+  inspectFormat: string;
+  inspectCommandLine: string | null;
+  validateCommandLine: string;
+  gatePassed: boolean | null;
+  totalNodes: number;
+  reviewNodes: number;
+  outcomes: Record<string, number>;
+  reportFile: string | null;
+  summaryJsonFile: string | null;
+}
+
 export interface ScaffoldDraft {
   signature: string;
   fileHint: string;
   bundle: Record<string, unknown>;
   generatedAt: string;
+}
+
+export interface RuleSummary {
+  index: number;
+  filePath: string;
+  layer: string;
+  name: string | null;
+  signature: string | null;
+  ruleCount: number;
+  exists: boolean;
+  loadError?: string;
+}
+
+export interface RuleDetail extends RuleSummary {
+  manifestFile: string;
+  absoluteFilePath: string;
+  content: Record<string, unknown> | null;
 }
 
 export interface ExplorerState {
@@ -102,14 +141,17 @@ export interface AppState {
   selectedSignature?: string;
   inspectSummary?: SignatureInspectSummary;
   validationSummary?: ValidationSummary;
+  simulationSummary?: SimulationSummary;
   scaffoldDraft?: ScaffoldDraft;
   lastError?: string;
   runLog: RunLogEntry[];
 }
 
 export interface StatusSnapshot {
+  mode?: SessionMode;
   connectionState: ConnectionState;
   selectedNodeId?: number;
+  selectedRuleIndex?: number;
   selectedSignature?: string;
   cachedNodeCount: number;
   scaffoldFileHint?: string;

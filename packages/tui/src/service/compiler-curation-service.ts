@@ -8,12 +8,17 @@ import {
   parseCliArgs as parseValidateLiveCliArgs,
   runValidateLiveCommand,
 } from '../../../../tools/homey-compile-validate-live-lib.mjs';
+import {
+  parseCliArgs as parseSimulateCliArgs,
+  runSimulationCommand,
+} from '../../../../tools/homey-compile-simulate-lib.mjs';
 import { normalizeCompilerDeviceFactsFromZwjsDetail } from '../../../../tools/zwjs-to-compiler-facts-lib.mjs';
 
 import type {
+  ConnectedSessionConfig,
   NodeDetail,
   ScaffoldDraft,
-  SessionConfig,
+  SimulationSummary,
   SignatureInspectSummary,
   ValidationSummary,
 } from '../model/types';
@@ -88,15 +93,26 @@ function parseSignatureTriple(signature: string): {
 export interface CompilerCurationService {
   deriveSignatureFromNodeDetail(detail: NodeDetail): string | null;
   inspectSignature(
-    session: SessionConfig,
+    session: ConnectedSessionConfig,
     signature: string,
     options?: { manifestFile?: string; includeControllerNodes?: boolean },
   ): Promise<SignatureInspectSummary>;
   validateSignature(
-    session: SessionConfig,
+    session: ConnectedSessionConfig,
     signature: string,
     options?: { manifestFile?: string; includeControllerNodes?: boolean },
   ): Promise<ValidationSummary>;
+  simulateSignature(
+    session: ConnectedSessionConfig,
+    signature: string,
+    options?: {
+      manifestFile?: string;
+      includeControllerNodes?: boolean;
+      skipInspect?: boolean;
+      dryRun?: boolean;
+      inspectFormat?: string;
+    },
+  ): Promise<SimulationSummary>;
   scaffoldFromSignature(
     signature: string,
     options?: { productName?: string; ruleIdPrefix?: string; homeyClass?: string },
@@ -117,11 +133,11 @@ export class CompilerCurationServiceImpl implements CompilerCurationService {
   }
 
   async inspectSignature(
-    session: SessionConfig,
+    session: ConnectedSessionConfig,
     signature: string,
     options: { manifestFile?: string; includeControllerNodes?: boolean } = {},
   ): Promise<SignatureInspectSummary> {
-    const manifestFile = resolveDefaultManifestFile(options.manifestFile);
+    const manifestFile = resolveDefaultManifestFile(options.manifestFile ?? session.manifestFile);
     const parsed = parseInspectLiveCliArgs([
       '--url',
       session.url,
@@ -186,11 +202,11 @@ export class CompilerCurationServiceImpl implements CompilerCurationService {
   }
 
   async validateSignature(
-    session: SessionConfig,
+    session: ConnectedSessionConfig,
     signature: string,
     options: { manifestFile?: string; includeControllerNodes?: boolean } = {},
   ): Promise<ValidationSummary> {
-    const manifestFile = resolveDefaultManifestFile(options.manifestFile);
+    const manifestFile = resolveDefaultManifestFile(options.manifestFile ?? session.manifestFile);
     const parsed = parseValidateLiveCliArgs([
       '--url',
       session.url,
@@ -224,6 +240,68 @@ export class CompilerCurationServiceImpl implements CompilerCurationService {
         typeof parsed.command.reportFile === 'string' ? parsed.command.reportFile : undefined,
       artifactFile:
         typeof parsed.command.artifactFile === 'string' ? parsed.command.artifactFile : undefined,
+    };
+  }
+
+  async simulateSignature(
+    session: ConnectedSessionConfig,
+    signature: string,
+    options: {
+      manifestFile?: string;
+      includeControllerNodes?: boolean;
+      skipInspect?: boolean;
+      dryRun?: boolean;
+      inspectFormat?: string;
+    } = {},
+  ): Promise<SimulationSummary> {
+    const manifestFile = resolveDefaultManifestFile(options.manifestFile ?? session.manifestFile);
+    const parsed = parseSimulateCliArgs([
+      '--url',
+      session.url,
+      '--all-nodes',
+      '--manifest-file',
+      manifestFile,
+      '--signature',
+      signature,
+      '--include-values',
+      session.includeValues,
+      '--max-values',
+      String(session.maxValues),
+      '--schema-version',
+      String(session.schemaVersion),
+      ...(session.token ? ['--token', session.token] : []),
+      ...(options.includeControllerNodes ? ['--include-controller-nodes'] : []),
+      ...(options.skipInspect ? ['--skip-inspect'] : []),
+      ...(options.dryRun ? ['--dry-run'] : []),
+      ...(options.inspectFormat ? ['--inspect-format', options.inspectFormat] : []),
+    ]);
+    if (!parsed.ok) {
+      throw new Error(parsed.error);
+    }
+
+    const result = await runSimulationCommand(parsed.command, { log: () => {} });
+    return {
+      signature,
+      dryRun: result.dryRun === true,
+      inspectSkipped: result.inspect?.skipped === true,
+      inspectFormat: String(result.inspect?.format ?? 'list'),
+      inspectCommandLine:
+        typeof result.inspect?.commandLine === 'string' ? result.inspect.commandLine : null,
+      validateCommandLine: String(result.validate?.commandLine ?? ''),
+      gatePassed:
+        typeof result.validate?.gatePassed === 'boolean' ? result.validate.gatePassed : null,
+      totalNodes: Number(result.validate?.totalNodes ?? 0),
+      reviewNodes: Number(result.validate?.reviewNodes ?? 0),
+      outcomes:
+        result.validate?.outcomes && typeof result.validate.outcomes === 'object'
+          ? { ...result.validate.outcomes }
+          : {},
+      reportFile:
+        typeof result.validate?.reportFile === 'string' ? result.validate.reportFile : null,
+      summaryJsonFile:
+        typeof result.validate?.summaryJsonFile === 'string'
+          ? result.validate.summaryJsonFile
+          : null,
     };
   }
 

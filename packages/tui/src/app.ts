@@ -1,7 +1,7 @@
 import { createInterface } from 'node:readline/promises';
 import { stdin as defaultStdin, stdout as defaultStdout } from 'node:process';
 
-import type { IncludeValuesMode, SessionConfig } from './model/types';
+import type { ConnectedSessionConfig, IncludeValuesMode, SessionConfig } from './model/types';
 import {
   CurationWorkflowPresenter,
   type CurationWorkflowChildPresenterLike,
@@ -11,6 +11,7 @@ import {
   ExplorerSessionPresenter,
   type ExplorerSessionChildPresenterLike,
 } from './presenter/explorer-session-presenter';
+import { RulesPresenter } from './presenter/rules-presenter';
 import {
   CompilerCurationServiceImpl,
   type CompilerCurationService,
@@ -23,10 +24,14 @@ import { ZwjsExplorerServiceImpl, type ZwjsExplorerService } from './service/zwj
 import { parseShellCommand } from './view/command-parser';
 import {
   renderInspectSummary,
+  renderRuleDetail,
+  renderRuleList,
   renderNodeDetail,
   renderNodeList,
   renderRunLog,
+  renderRulesShellHelp,
   renderScaffoldDraft,
+  renderSimulationSummary,
   renderShellHelp,
   renderSignatureSelected,
   renderStatusSnapshot,
@@ -79,10 +84,15 @@ export function getUsageText(): string {
     'Usage:',
     '  compiler-tui --url ws://host:port [--token <bearer>] [--schema-version 0]',
     '               [--include-values none|summary|full] [--max-values N] [--start-node <id>]',
+    '               [--manifest-file <rules/manifest.json>]',
+    '  compiler-tui --rules-only [--manifest-file <rules/manifest.json>]',
+    '               [--url ws://host:port] [--token <bearer>] [--schema-version 0]',
+    '               [--include-values none|summary|full] [--max-values N]',
     '',
     'Interactive commands:',
-    '  list | refresh | show <nodeId>',
-    '  signature [<m:p:id>] [--from-node <id>] | inspect | validate',
+    '  list | refresh | show <id>',
+    '  signature [<m:p:id>] [--from-node <id>] [--from-rule <index>] | inspect | validate',
+    '  simulate [--manifest <file>] [--dry-run] [--skip-inspect] [--inspect-format <fmt>]',
     '  scaffold preview [--product-name "..."] [--homey-class <class>] | scaffold write [filePath] --force',
     '  manifest add [filePath] [--manifest <file>] --force | status',
     '  log [--limit N] | help | quit',
@@ -104,9 +114,10 @@ export function parseCliArgs(
     };
   }
 
+  const rulesOnly = flags.has('--rules-only');
   const url = flags.get('--url');
-  if (!url) {
-    return { ok: false, error: '--url is required' };
+  if (!url && !rulesOnly) {
+    return { ok: false, error: 'Provide either --url or --rules-only' };
   }
 
   const schemaVersionResult = parseIntegerFlag(
@@ -135,9 +146,15 @@ export function parseCliArgs(
     startNode = startNodeResult.value;
   }
 
+  if (rulesOnly && startNode !== undefined) {
+    return { ok: false, error: '--start-node is only supported in nodes mode' };
+  }
+
   return {
     ok: true,
     command: {
+      mode: rulesOnly ? 'rules' : 'nodes',
+      manifestFile: flags.get('--manifest-file') ?? 'rules/manifest.json',
       url,
       token: flags.get('--token'),
       schemaVersion: schemaVersionResult.value,
@@ -160,6 +177,7 @@ interface ReadlineLike {
 
 interface RunAppDeps {
   presenter?: ExplorerPresenter;
+  rulesPresenter?: RulesPresenter;
   explorerService?: ZwjsExplorerService;
   curationService?: CompilerCurationService;
   fileService?: WorkspaceFileService;
@@ -186,15 +204,18 @@ export async function runApp(
     deps.explorerChildPresenter ?? new ExplorerSessionPresenter(explorerService);
   const curationChildPresenter =
     deps.curationChildPresenter ?? new CurationWorkflowPresenter(curationService, fileService);
-  const presenter =
+  const nodesPresenter =
     deps.presenter ??
     new ExplorerPresenter({
       explorer: explorerChildPresenter,
       curation: curationChildPresenter,
     });
+  const rulesPresenter =
+    deps.rulesPresenter ?? new RulesPresenter(curationChildPresenter, fileService);
   const createInterfaceImpl = deps.createInterfaceImpl ?? createInterface;
   const input = deps.stdin ?? defaultStdin;
   const output = deps.stdout ?? defaultStdout;
+  const isNodesMode = config.mode === 'nodes';
 
   const readline = createInterfaceImpl({
     input,
@@ -203,18 +224,24 @@ export async function runApp(
   });
 
   try {
-    await presenter.connect(config);
-    io.log(renderShellHelp());
-    io.log(renderNodeList(presenter.getState().explorer.items));
+    if (isNodesMode) {
+      await nodesPresenter.connect(config as ConnectedSessionConfig);
+      io.log(renderShellHelp());
+      io.log(renderNodeList(nodesPresenter.getState().explorer.items));
 
-    if (config.startNode !== undefined) {
-      const detail = await presenter.showNodeDetail(config.startNode);
-      io.log(renderNodeDetail(detail));
+      if (config.startNode !== undefined) {
+        const detail = await nodesPresenter.showNodeDetail(config.startNode);
+        io.log(renderNodeDetail(detail));
+      }
+    } else {
+      const rules = rulesPresenter.initialize(config);
+      io.log(renderRulesShellHelp());
+      io.log(renderRuleList(rules));
     }
 
     // eslint-disable-next-line no-constant-condition
     while (true) {
-      const line = await readline.question('zwjs-explorer> ');
+      const line = await readline.question(isNodesMode ? 'zwjs-explorer> ' : 'zwjs-rules> ');
       const parsed = parseShellCommand(line);
       if (!parsed.ok) {
         io.error(parsed.error);
@@ -227,77 +254,157 @@ export async function runApp(
       }
       try {
         if (command.type === 'help') {
-          io.log(renderShellHelp());
+          io.log(isNodesMode ? renderShellHelp() : renderRulesShellHelp());
           continue;
         }
         if (command.type === 'list') {
-          io.log(renderNodeList(presenter.getState().explorer.items));
+          io.log(
+            isNodesMode
+              ? renderNodeList(nodesPresenter.getState().explorer.items)
+              : renderRuleList(rulesPresenter.getRules()),
+          );
           continue;
         }
         if (command.type === 'refresh') {
-          const nodes = await presenter.refreshNodes();
-          io.log(renderNodeList(nodes));
+          if (isNodesMode) {
+            const nodes = await nodesPresenter.refreshNodes();
+            io.log(renderNodeList(nodes));
+          } else {
+            const rules = rulesPresenter.refreshRules();
+            io.log(renderRuleList(rules));
+          }
           continue;
         }
         if (command.type === 'show') {
-          const detail = await presenter.showNodeDetail(command.nodeId);
-          io.log(renderNodeDetail(detail));
+          if (isNodesMode) {
+            const detail = await nodesPresenter.showNodeDetail(command.nodeId);
+            io.log(renderNodeDetail(detail));
+          } else {
+            const detail = rulesPresenter.showRuleDetail(command.nodeId);
+            io.log(renderRuleDetail(detail));
+          }
           continue;
         }
         if (command.type === 'signature') {
-          if (command.signature) {
-            presenter.selectSignature(command.signature);
-            io.log(renderSignatureSelected(command.signature));
+          if (isNodesMode) {
+            if (command.fromRuleIndex !== undefined) {
+              throw new Error('--from-rule is not supported in nodes mode');
+            }
+            if (command.signature) {
+              nodesPresenter.selectSignature(command.signature);
+              io.log(renderSignatureSelected(command.signature));
+            } else {
+              const signature = nodesPresenter.selectSignatureFromNode(command.fromNodeId);
+              io.log(renderSignatureSelected(signature));
+            }
           } else {
-            const signature = presenter.selectSignatureFromNode(command.fromNodeId);
-            io.log(renderSignatureSelected(signature));
+            if (command.fromNodeId !== undefined) {
+              throw new Error('--from-node is not supported in rules mode');
+            }
+            if (command.signature) {
+              rulesPresenter.selectSignature(command.signature);
+              io.log(renderSignatureSelected(command.signature));
+            } else {
+              const signature = rulesPresenter.selectSignatureFromRule(command.fromRuleIndex);
+              io.log(renderSignatureSelected(signature));
+            }
           }
           continue;
         }
         if (command.type === 'inspect') {
-          const summary = await presenter.inspectSelectedSignature({
-            manifestFile: command.manifestFile,
-          });
+          const summary = await (isNodesMode
+            ? nodesPresenter.inspectSelectedSignature({
+                manifestFile: command.manifestFile,
+              })
+            : rulesPresenter.inspectSelectedSignature({
+                manifestFile: command.manifestFile,
+              }));
           io.log(renderInspectSummary(summary));
           continue;
         }
         if (command.type === 'validate') {
-          const summary = await presenter.validateSelectedSignature({
-            manifestFile: command.manifestFile,
-          });
+          const summary = await (isNodesMode
+            ? nodesPresenter.validateSelectedSignature({
+                manifestFile: command.manifestFile,
+              })
+            : rulesPresenter.validateSelectedSignature({
+                manifestFile: command.manifestFile,
+              }));
           io.log(renderValidationSummary(summary));
           continue;
         }
+        if (command.type === 'simulate') {
+          const summary = await (isNodesMode
+            ? nodesPresenter.simulateSelectedSignature({
+                manifestFile: command.manifestFile,
+                dryRun: command.dryRun,
+                skipInspect: command.skipInspect,
+                inspectFormat: command.inspectFormat,
+              })
+            : rulesPresenter.simulateSelectedSignature({
+                manifestFile: command.manifestFile,
+                dryRun: command.dryRun,
+                skipInspect: command.skipInspect,
+                inspectFormat: command.inspectFormat,
+              }));
+          io.log(renderSimulationSummary(summary));
+          continue;
+        }
         if (command.type === 'scaffold-preview') {
-          const draft = presenter.createScaffoldFromSignature({
-            productName: command.productName,
-            homeyClass: command.homeyClass,
-          });
+          const draft = isNodesMode
+            ? nodesPresenter.createScaffoldFromSignature({
+                productName: command.productName,
+                homeyClass: command.homeyClass,
+              })
+            : rulesPresenter.createScaffoldFromSignature({
+                productName: command.productName,
+                homeyClass: command.homeyClass,
+              });
           io.log(renderScaffoldDraft(draft));
           continue;
         }
         if (command.type === 'scaffold-write') {
-          const writtenPath = presenter.writeScaffoldDraft(command.filePath, {
-            confirm: command.force,
-          });
+          const writtenPath = isNodesMode
+            ? nodesPresenter.writeScaffoldDraft(command.filePath, {
+                confirm: command.force,
+              })
+            : rulesPresenter.writeScaffoldDraft(command.filePath, {
+                confirm: command.force,
+              });
           io.log(`Scaffold written: ${writtenPath}`);
           continue;
         }
         if (command.type === 'manifest-add') {
-          const result = presenter.addDraftToManifest({
-            filePath: command.filePath,
-            manifestFile: command.manifestFile,
-            confirm: command.force,
-          });
+          const result = isNodesMode
+            ? nodesPresenter.addDraftToManifest({
+                filePath: command.filePath,
+                manifestFile: command.manifestFile,
+                confirm: command.force,
+              })
+            : rulesPresenter.addDraftToManifest({
+                filePath: command.filePath,
+                manifestFile: command.manifestFile,
+                confirm: command.force,
+              });
           io.log(renderManifestResult(result));
           continue;
         }
         if (command.type === 'status') {
-          io.log(renderStatusSnapshot(presenter.getStatusSnapshot()));
+          io.log(
+            renderStatusSnapshot(
+              isNodesMode ? nodesPresenter.getStatusSnapshot() : rulesPresenter.getStatusSnapshot(),
+            ),
+          );
           continue;
         }
         if (command.type === 'log') {
-          io.log(renderRunLog(presenter.getRunLog(command.limit)));
+          io.log(
+            renderRunLog(
+              isNodesMode
+                ? nodesPresenter.getRunLog(command.limit)
+                : rulesPresenter.getRunLog(command.limit),
+            ),
+          );
           continue;
         }
         if (command.type === 'quit') {
@@ -310,6 +417,8 @@ export async function runApp(
     }
   } finally {
     readline.close();
-    await presenter.disconnect();
+    if (isNodesMode) {
+      await nodesPresenter.disconnect();
+    }
   }
 }

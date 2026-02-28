@@ -41,6 +41,22 @@ function createChildren(overrides = {}) {
           outcomes: { curated: 1 },
         };
       },
+      async simulateSignature(_session, signature) {
+        return {
+          signature,
+          dryRun: false,
+          inspectSkipped: false,
+          inspectFormat: 'list',
+          inspectCommandLine: 'inspect',
+          validateCommandLine: 'validate',
+          gatePassed: true,
+          totalNodes: 1,
+          reviewNodes: 0,
+          outcomes: { curated: 1 },
+          reportFile: '/tmp/report.json',
+          summaryJsonFile: '/tmp/summary.json',
+        };
+      },
       scaffoldFromSignature(signature) {
         return {
           signature,
@@ -99,6 +115,8 @@ test('ExplorerPresenter connect success loads nodes and sets ready state', async
 
   const presenter = new ExplorerPresenter(children);
   const nodes = await presenter.connect({
+    mode: 'nodes',
+    manifestFile: 'rules/manifest.json',
     url: 'ws://127.0.0.1:3000',
     schemaVersion: 0,
     includeValues: 'summary',
@@ -134,6 +152,8 @@ test('ExplorerPresenter connect failure sets error state', async () => {
   await assert.rejects(
     () =>
       presenter.connect({
+        mode: 'nodes',
+        manifestFile: 'rules/manifest.json',
         url: 'ws://127.0.0.1:3000',
         schemaVersion: 0,
         includeValues: 'summary',
@@ -154,6 +174,8 @@ test('ExplorerPresenter connect failure sets error state', async () => {
 test('ExplorerPresenter can derive signature, inspect and validate selected signature', async () => {
   const presenter = new ExplorerPresenter(createChildren());
   await presenter.connect({
+    mode: 'nodes',
+    manifestFile: 'rules/manifest.json',
     url: 'ws://127.0.0.1:3000',
     schemaVersion: 0,
     includeValues: 'summary',
@@ -167,6 +189,8 @@ test('ExplorerPresenter can derive signature, inspect and validate selected sign
   assert.equal(inspect.signature, '29:66:2');
   const validate = await presenter.validateSelectedSignature();
   assert.equal(validate.signature, '29:66:2');
+  const simulate = await presenter.simulateSelectedSignature();
+  assert.equal(simulate.signature, '29:66:2');
 });
 
 test('ExplorerPresenter scaffold infers homey class from inspect summary unless overridden', async () => {
@@ -222,6 +246,8 @@ test('ExplorerPresenter scaffold infers homey class from inspect summary unless 
   };
   const presenter = new ExplorerPresenter(children);
   await presenter.connect({
+    mode: 'nodes',
+    manifestFile: 'rules/manifest.json',
     url: 'ws://127.0.0.1:3000',
     schemaVersion: 0,
     includeValues: 'summary',

@@ -1,7 +1,10 @@
 import type {
   NodeDetail,
   NodeSummary,
+  RuleDetail,
+  RuleSummary,
   ScaffoldDraft,
+  SimulationSummary,
   SignatureInspectSummary,
   StatusSnapshot,
   ValidationSummary,
@@ -39,6 +42,27 @@ export function renderShellHelp(): string {
     '  signature [triple] [--from-node <id>]  Set/derive selected signature',
     '  inspect [--manifest <file>]            Inspect selected signature',
     '  validate [--manifest <file>]           Validate selected signature',
+    '  simulate [--manifest <file>] [--dry-run] [--skip-inspect] [--inspect-format <fmt>]  Run signature simulation',
+    '  scaffold preview [--product-name "..."] [--homey-class <class>] Preview scaffold draft from selected signature',
+    '  scaffold write [filePath] [--force]     Write scaffold draft file',
+    '  manifest add [filePath] [--manifest <file>] [--force]  Add product rule to manifest',
+    '  status                                  Show current workspace snapshot',
+    '  log [--limit N]                         Show run log',
+    '  help                  Show this help',
+    '  quit                  Exit',
+  ].join('\n');
+}
+
+export function renderRulesShellHelp(): string {
+  return [
+    'Commands:',
+    '  list                  Show manifest rule list',
+    '  refresh               Reload manifest rule list',
+    '  show <index>          Show rule detail',
+    '  signature [triple] [--from-rule <index>]  Set/derive selected signature',
+    '  inspect [--manifest <file>]            Inspect selected signature',
+    '  validate [--manifest <file>]           Validate selected signature',
+    '  simulate [--manifest <file>] [--dry-run] [--skip-inspect] [--inspect-format <fmt>]  Run signature simulation',
     '  scaffold preview [--product-name "..."] [--homey-class <class>] Preview scaffold draft from selected signature',
     '  scaffold write [filePath] [--force]     Write scaffold draft file',
     '  manifest add [filePath] [--manifest <file>] [--force]  Add product rule to manifest',
@@ -66,6 +90,27 @@ export function renderNodeList(nodes: NodeSummary[]): string {
   return `${renderTable(['Node', 'Name', 'Ready', 'Status', 'Manufacturer', 'Product'], rows)}\n\nNodes: ${
     nodes.length
   }`;
+}
+
+export function renderRuleList(rules: RuleSummary[]): string {
+  if (!rules.length) {
+    return 'No rules returned.';
+  }
+
+  const rows = rules.map((rule) => [
+    String(rule.index),
+    rule.filePath,
+    rule.layer,
+    rule.signature ?? '',
+    String(rule.ruleCount),
+    rule.exists ? 'yes' : 'no',
+    rule.loadError ?? '',
+  ]);
+
+  return `${renderTable(
+    ['#', 'File', 'Layer', 'Signature', 'Rules', 'Exists', 'Load'],
+    rows,
+  )}\n\nRules: ${rules.length}`;
 }
 
 export function renderNodeDetail(detail: NodeDetail): string {
@@ -117,6 +162,24 @@ export function renderNodeDetail(detail: NodeDetail): string {
   }
 
   return lines.join('\n');
+}
+
+export function renderRuleDetail(detail: RuleDetail): string {
+  return [
+    `Rule #${detail.index}`,
+    `Manifest: ${detail.manifestFile}`,
+    `File: ${detail.filePath}`,
+    `Absolute: ${detail.absoluteFilePath}`,
+    `Layer: ${detail.layer}`,
+    `Name: ${detail.name ?? ''}`,
+    `Signature: ${detail.signature ?? ''}`,
+    `Rules: ${detail.ruleCount}`,
+    detail.loadError ? `Load error: ${detail.loadError}` : null,
+    '',
+    detail.content ? JSON.stringify(detail.content, null, 2) : '(no content loaded)',
+  ]
+    .filter((line) => line !== null)
+    .join('\n');
 }
 
 export function renderSignatureSelected(signature: string): string {
@@ -175,6 +238,29 @@ export function renderScaffoldDraft(draft: ScaffoldDraft): string {
   ].join('\n');
 }
 
+export function renderSimulationSummary(summary: SimulationSummary): string {
+  return [
+    `Simulation signature: ${summary.signature}`,
+    `Dry run: ${summary.dryRun ? 'yes' : 'no'}`,
+    `Inspect: ${summary.inspectSkipped ? 'skipped' : `ran (${summary.inspectFormat})`}`,
+    `Validate gate passed: ${summary.gatePassed === null ? 'n/a' : summary.gatePassed ? 'yes' : 'no'}`,
+    `Nodes validated: ${summary.totalNodes}`,
+    `Needs review: ${summary.reviewNodes}`,
+    `Outcomes: ${
+      Object.entries(summary.outcomes)
+        .map(([key, value]) => `${key}=${value}`)
+        .join(', ') || 'none'
+    }`,
+    '',
+    summary.inspectCommandLine ? `Inspect command: ${summary.inspectCommandLine}` : null,
+    `Validate command: ${summary.validateCommandLine}`,
+    summary.reportFile ? `Validation report: ${summary.reportFile}` : null,
+    summary.summaryJsonFile ? `Validation summary JSON: ${summary.summaryJsonFile}` : null,
+  ]
+    .filter((line) => line !== null)
+    .join('\n');
+}
+
 export function renderRunLog(
   lines: Array<{ timestamp: string; level: string; message: string }>,
 ): string {
@@ -198,8 +284,10 @@ export function renderManifestResult(result: {
 
 export function renderStatusSnapshot(status: StatusSnapshot): string {
   return [
+    `Mode: ${status.mode ?? '-'}`,
     `Connection: ${status.connectionState}`,
     `Selected node: ${status.selectedNodeId ?? '-'}`,
+    `Selected rule: ${status.selectedRuleIndex ?? '-'}`,
     `Selected signature: ${status.selectedSignature ?? '-'}`,
     `Cached nodes: ${status.cachedNodeCount}`,
     `Scaffold draft: ${status.scaffoldFileHint ?? '-'}`,

@@ -4,9 +4,16 @@ export type ShellCommand =
   | { type: 'list' }
   | { type: 'refresh' }
   | { type: 'show'; nodeId: number }
-  | { type: 'signature'; signature?: string; fromNodeId?: number }
+  | { type: 'signature'; signature?: string; fromNodeId?: number; fromRuleIndex?: number }
   | { type: 'inspect'; manifestFile?: string }
   | { type: 'validate'; manifestFile?: string }
+  | {
+      type: 'simulate';
+      manifestFile?: string;
+      dryRun: boolean;
+      skipInspect: boolean;
+      inspectFormat?: string;
+    }
   | { type: 'scaffold-preview'; productName?: string; homeyClass?: string }
   | { type: 'scaffold-write'; filePath?: string; force: boolean }
   | { type: 'manifest-add'; manifestFile?: string; filePath?: string; force: boolean }
@@ -74,7 +81,14 @@ export function parseShellCommand(
     }
     if (name === 'signature' || name === 'sig') {
       const fromNodeRaw = parseFlagValue(rest, '--from-node');
+      const fromRuleRaw = parseFlagValue(rest, '--from-rule');
       const explicit = rest[0] && !rest[0].startsWith('--') ? rest[0] : undefined;
+      if (fromNodeRaw && fromRuleRaw) {
+        return {
+          ok: false,
+          error: 'signature accepts only one source: --from-node or --from-rule',
+        };
+      }
       if (explicit && !/^\d+:\d+:\d+$/.test(explicit)) {
         return {
           ok: false,
@@ -87,6 +101,7 @@ export function parseShellCommand(
           type: 'signature',
           signature: explicit,
           fromNodeId: fromNodeRaw ? parsePositiveInteger(fromNodeRaw, '--from-node') : undefined,
+          fromRuleIndex: fromRuleRaw ? parsePositiveInteger(fromRuleRaw, '--from-rule') : undefined,
         },
       };
     }
@@ -105,6 +120,18 @@ export function parseShellCommand(
         command: {
           type: 'validate',
           manifestFile: parseFlagValue(rest, '--manifest'),
+        },
+      };
+    }
+    if (name === 'simulate' || name === 'sim') {
+      return {
+        ok: true,
+        command: {
+          type: 'simulate',
+          manifestFile: parseFlagValue(rest, '--manifest'),
+          dryRun: parseFlagExists(rest, '--dry-run'),
+          skipInspect: parseFlagExists(rest, '--skip-inspect'),
+          inspectFormat: parseFlagValue(rest, '--inspect-format'),
         },
       };
     }

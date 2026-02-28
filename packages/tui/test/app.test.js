@@ -5,6 +5,7 @@ const { getUsageText, parseCliArgs, runApp } = require('../dist/app');
 
 test('getUsageText includes scaffold homey-class override', () => {
   assert.match(getUsageText(), /scaffold preview .*--homey-class <class>/);
+  assert.match(getUsageText(), /simulate \[--manifest <file>\]/);
 });
 
 test('parseCliArgs parses required and optional fields', () => {
@@ -23,6 +24,8 @@ test('parseCliArgs parses required and optional fields', () => {
 
   assert.equal(parsed.ok, true);
   assert.deepEqual(parsed.command, {
+    mode: 'nodes',
+    manifestFile: 'rules/manifest.json',
     url: 'ws://127.0.0.1:3000',
     token: undefined,
     schemaVersion: 1,
@@ -32,12 +35,28 @@ test('parseCliArgs parses required and optional fields', () => {
   });
 });
 
+test('parseCliArgs supports rules-only startup with optional url', () => {
+  const parsed = parseCliArgs(['--rules-only', '--manifest-file', 'rules/manifest.dev.json']);
+  assert.equal(parsed.ok, true);
+  assert.deepEqual(parsed.command, {
+    mode: 'rules',
+    manifestFile: 'rules/manifest.dev.json',
+    url: undefined,
+    token: undefined,
+    schemaVersion: 0,
+    includeValues: 'summary',
+    maxValues: 200,
+    startNode: undefined,
+  });
+});
+
 test('runApp executes interactive command flow through parent+child presenters', async () => {
   const commands = [
     'list',
     'show 2',
     'signature --from-node 2',
     'inspect',
+    'simulate --dry-run',
     'scaffold preview --product-name TestProduct --homey-class light',
     'scaffold write test-output.json --force',
     'manifest add test-output.json --manifest rules/manifest.json --force',
@@ -100,6 +119,7 @@ test('runApp executes interactive command flow through parent+child presenters',
   const curationChildPresenter = {
     inspectCalls: 0,
     validateCalls: 0,
+    simulateCalls: 0,
     deriveSignatureFromNodeDetail() {
       return '29:66:2';
     },
@@ -119,6 +139,24 @@ test('runApp executes interactive command flow through parent+child presenters',
         totalNodes: 1,
         reviewNodes: 0,
         outcomes: { curated: 1 },
+      };
+    },
+    async simulateSignature(_session, signature, options) {
+      this.simulateCalls += 1;
+      assert.equal(options.dryRun, true);
+      return {
+        signature,
+        dryRun: true,
+        inspectSkipped: false,
+        inspectFormat: 'list',
+        inspectCommandLine: 'inspect',
+        validateCommandLine: 'validate',
+        gatePassed: null,
+        totalNodes: 0,
+        reviewNodes: 0,
+        outcomes: {},
+        reportFile: null,
+        summaryJsonFile: null,
       };
     },
     scaffoldFromSignature(signature, options) {
@@ -144,6 +182,8 @@ test('runApp executes interactive command flow through parent+child presenters',
   const errors = [];
   await runApp(
     {
+      mode: 'nodes',
+      manifestFile: 'rules/manifest.json',
       url: 'ws://127.0.0.1:3000',
       schemaVersion: 0,
       includeValues: 'summary',
@@ -167,6 +207,7 @@ test('runApp executes interactive command flow through parent+child presenters',
   assert.equal(explorerChildPresenter.listCalls >= 1, true);
   assert.equal(explorerChildPresenter.detailCalls, 1);
   assert.equal(curationChildPresenter.inspectCalls, 1);
+  assert.equal(curationChildPresenter.simulateCalls, 1);
   assert.equal(curationChildPresenter.validateCalls, 0);
   assert.equal(closeCalls, 1);
   assert.equal(errors.length, 0);
@@ -184,6 +225,111 @@ test('runApp executes interactive command flow through parent+child presenters',
   );
   assert.equal(
     logs.some((line) => line.includes('Connection: ready')),
+    true,
+  );
+  assert.equal(
+    logs.some((line) => line.includes('Simulation signature: 29:66:2')),
+    true,
+  );
+});
+
+test('runApp supports rules-only root command flow', async () => {
+  const commands = ['list', 'show 1', 'signature --from-rule 1', 'status', 'quit'];
+  let index = 0;
+  let closeCalls = 0;
+  const fakeReadline = {
+    async question() {
+      const value = commands[index] ?? 'quit';
+      index += 1;
+      return value;
+    },
+    close() {
+      closeCalls += 1;
+    },
+  };
+
+  const rulesPresenter = {
+    initializeCalls: 0,
+    initialize() {
+      this.initializeCalls += 1;
+      return [
+        {
+          index: 1,
+          filePath: 'project/product/product-29-66-2.json',
+          layer: 'project-product',
+          name: 'Device',
+          signature: '29:66:2',
+          ruleCount: 1,
+          exists: true,
+        },
+      ];
+    },
+    getRules() {
+      return this.initialize();
+    },
+    showRuleDetail() {
+      return {
+        index: 1,
+        filePath: 'project/product/product-29-66-2.json',
+        layer: 'project-product',
+        name: 'Device',
+        signature: '29:66:2',
+        ruleCount: 1,
+        exists: true,
+        manifestFile: '/tmp/manifest.json',
+        absoluteFilePath: '/tmp/product-29-66-2.json',
+        content: { schemaVersion: 'product-rules/v1' },
+      };
+    },
+    selectSignature() {},
+    selectSignatureFromRule() {
+      return '29:66:2';
+    },
+    getStatusSnapshot() {
+      return {
+        mode: 'rules',
+        connectionState: 'disconnected',
+        selectedRuleIndex: 1,
+        selectedSignature: '29:66:2',
+        cachedNodeCount: 1,
+      };
+    },
+    getRunLog() {
+      return [];
+    },
+  };
+
+  const logs = [];
+  const errors = [];
+  await runApp(
+    {
+      mode: 'rules',
+      manifestFile: 'rules/manifest.json',
+      schemaVersion: 0,
+      includeValues: 'summary',
+      maxValues: 50,
+    },
+    {
+      log: (line) => logs.push(String(line)),
+      error: (line) => errors.push(String(line)),
+    },
+    {
+      rulesPresenter,
+      createInterfaceImpl: () => fakeReadline,
+      stdin: {},
+      stdout: {},
+    },
+  );
+
+  assert.equal(rulesPresenter.initializeCalls >= 1, true);
+  assert.equal(closeCalls, 1);
+  assert.equal(errors.length, 0);
+  assert.equal(
+    logs.some((line) => line.includes('Selected signature: 29:66:2')),
+    true,
+  );
+  assert.equal(
+    logs.some((line) => line.includes('Mode: rules')),
     true,
   );
 });

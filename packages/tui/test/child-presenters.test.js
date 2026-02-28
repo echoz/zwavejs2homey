@@ -28,6 +28,8 @@ test('ExplorerSessionPresenter delegates explorer operations to service', async 
 
   const presenter = new ExplorerSessionPresenter(service);
   await presenter.connect({
+    mode: 'nodes',
+    manifestFile: 'rules/manifest.json',
     url: 'ws://127.0.0.1:3000',
     schemaVersion: 0,
     includeValues: 'summary',
@@ -54,6 +56,22 @@ test('CurationWorkflowPresenter delegates curation calls and enforces confirmati
     },
     async validateSignature(_session, signature) {
       return { signature, totalNodes: 1, reviewNodes: 0, outcomes: { curated: 1 } };
+    },
+    async simulateSignature(_session, signature) {
+      return {
+        signature,
+        dryRun: false,
+        inspectSkipped: false,
+        inspectFormat: 'list',
+        inspectCommandLine: 'inspect',
+        validateCommandLine: 'validate',
+        gatePassed: true,
+        totalNodes: 1,
+        reviewNodes: 0,
+        outcomes: { curated: 1 },
+        reportFile: null,
+        summaryJsonFile: null,
+      };
     },
     scaffoldFromSignature(signature) {
       return {
@@ -88,10 +106,29 @@ test('CurationWorkflowPresenter delegates curation calls and enforces confirmati
     '29:66:2',
   );
   const inspect = await presenter.inspectSignature(
-    { url: 'ws://127.0.0.1:3000', schemaVersion: 0, includeValues: 'summary', maxValues: 10 },
+    {
+      mode: 'nodes',
+      manifestFile: 'rules/manifest.json',
+      url: 'ws://127.0.0.1:3000',
+      schemaVersion: 0,
+      includeValues: 'summary',
+      maxValues: 10,
+    },
     '29:66:2',
   );
   assert.equal(inspect.totalNodes, 1);
+  const simulate = await presenter.simulateSignature(
+    {
+      mode: 'nodes',
+      manifestFile: 'rules/manifest.json',
+      url: 'ws://127.0.0.1:3000',
+      schemaVersion: 0,
+      includeValues: 'summary',
+      maxValues: 10,
+    },
+    '29:66:2',
+  );
+  assert.equal(simulate.signature, '29:66:2');
   assert.throws(
     () =>
       presenter.writeScaffoldDraft(

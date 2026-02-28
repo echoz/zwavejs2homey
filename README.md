@@ -53,26 +53,29 @@ The project is intentionally split into layers:
 - `npm run zwjs:inspect -- nodes list --url ws://HOST:PORT --format table`
 - `npm run zwjs:inspect -- nodes show <nodeId> --url ws://HOST:PORT --format json --include-values full`
 
-### ZWJS Explorer TUI (Current Shell + Reset Plan)
+### ZWJS Explorer TUI (Dual Root)
 
 - `npm run compiler:tui -- --help`
 - `npm run compiler:tui -- --url ws://HOST:PORT --include-values summary`
 - `npm run compiler:tui -- --url ws://HOST:PORT --start-node 12 --include-values full`
+- `npm run compiler:tui -- --rules-only --manifest-file rules/manifest.json`
+- `npm run compiler:tui -- --rules-only --url ws://HOST:PORT --manifest-file rules/manifest.json`
 
-Phase 4 reset (in progress):
+Phase 4 reset status:
 
-- core CLI cutover first (`compiler:simulate`)
-- panel-first dual-root TUI (`--url` for nodes root, future `--rules-only` for rules root)
-- contributor workflow centers on signature simulation in both roots
+- core CLI cutover complete (`compiler:simulate`)
+- dual-root startup active (`--url` nodes root, `--rules-only` rules root)
+- signature simulation workflow available in both roots
 
 Interactive commands:
 
 - `list`
 - `refresh`
-- `show <nodeId>`
-- `signature [<manufacturerId:productType:productId>] [--from-node <id>]`
+- `show <id>` (`nodeId` in nodes root, `rule index` in rules root)
+- `signature [<manufacturerId:productType:productId>] [--from-node <id>] [--from-rule <index>]`
 - `inspect [--manifest <file>]`
 - `validate [--manifest <file>]`
+- `simulate [--manifest <file>] [--dry-run] [--skip-inspect] [--inspect-format <fmt>]`
 - `scaffold preview [--product-name "..."] [--homey-class <class>]`
 - `scaffold write [filePath] --force`
 - `manifest add [filePath] [--manifest <file>] --force`

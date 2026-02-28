@@ -141,7 +141,8 @@ Reference plan:
 Phase 4 is now executing a reset sequence:
 
 2. test/docs/help migration for that cutover
-3. dual-root rich TUI implementation on top of the updated CLI/tooling contracts
+3. dual-root rich TUI implementation on top of the updated CLI/tooling contracts (Section 6 complete)
+4. convergence review (Section 7 in progress)
 
 Reset architecture direction:
 

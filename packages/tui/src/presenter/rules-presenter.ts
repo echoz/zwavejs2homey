@@ -1,21 +1,17 @@
 import type {
   AppState,
   ConnectedSessionConfig,
-  NodeDetail,
-  NodeSummary,
+  RuleDetail,
+  RuleSummary,
   ScaffoldDraft,
-  SimulationSummary,
+  SessionConfig,
   SignatureInspectSummary,
+  SimulationSummary,
   StatusSnapshot,
   ValidationSummary,
 } from '../model/types';
 import type { CurationWorkflowChildPresenterLike } from './curation-workflow-presenter';
-import type { ExplorerSessionChildPresenterLike } from './explorer-session-presenter';
-
-export interface ExplorerPresenterChildren {
-  explorer: ExplorerSessionChildPresenterLike;
-  curation: CurationWorkflowChildPresenterLike;
-}
+import type { WorkspaceFileService } from '../service/workspace-file-service';
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -26,107 +22,68 @@ function toErrorMessage(error: unknown): string {
   return String(error);
 }
 
-export class ExplorerPresenter {
-  private state: AppState = {
+export class RulesPresenter {
+  private state: AppState & {
+    selectedRuleIndex?: number;
+    ruleItems: RuleSummary[];
+    ruleDetailCache: Record<number, RuleDetail>;
+  } = {
     connectionState: 'disconnected',
     explorer: {
       items: [],
     },
     nodeDetailCache: {},
     runLog: [],
+    ruleItems: [],
+    ruleDetailCache: {},
   };
 
-  constructor(private readonly children: ExplorerPresenterChildren) {}
+  constructor(
+    private readonly curation: CurationWorkflowChildPresenterLike,
+    private readonly fileService: WorkspaceFileService,
+  ) {}
 
-  getState(): AppState {
-    return {
-      ...this.state,
-      explorer: { ...this.state.explorer, items: [...this.state.explorer.items] },
-      nodeDetailCache: { ...this.state.nodeDetailCache },
-      inspectSummary: this.state.inspectSummary
-        ? { ...this.state.inspectSummary, nodes: [...this.state.inspectSummary.nodes] }
-        : undefined,
-      validationSummary: this.state.validationSummary
-        ? {
-            ...this.state.validationSummary,
-            outcomes: { ...this.state.validationSummary.outcomes },
-          }
-        : undefined,
-      simulationSummary: this.state.simulationSummary
-        ? {
-            ...this.state.simulationSummary,
-            outcomes: { ...this.state.simulationSummary.outcomes },
-          }
-        : undefined,
-      scaffoldDraft: this.state.scaffoldDraft
-        ? {
-            ...this.state.scaffoldDraft,
-            bundle: JSON.parse(JSON.stringify(this.state.scaffoldDraft.bundle)),
-          }
-        : undefined,
-      runLog: [...this.state.runLog],
-    };
-  }
-
-  async connect(config: ConnectedSessionConfig): Promise<NodeSummary[]> {
+  initialize(config: SessionConfig): RuleSummary[] {
     this.state.sessionConfig = config;
-    this.state.connectionState = 'connecting';
+    this.state.connectionState = typeof config.url === 'string' ? 'ready' : 'disconnected';
     this.state.lastError = undefined;
-    this.logInfo(`Connecting to ${config.url}`);
-
-    try {
-      await this.children.explorer.connect(config);
-      this.state.connectionState = 'ready';
-      this.logInfo('Connected');
-      return await this.refreshNodes();
-    } catch (error) {
-      const message = toErrorMessage(error);
-      this.state.connectionState = 'error';
-      this.state.lastError = message;
-      this.logError(`Connect failed: ${message}`);
-      throw error;
-    }
+    this.logInfo(
+      `Rules mode initialized (${config.manifestFile})${config.url ? ` with ${config.url}` : ''}`,
+    );
+    return this.refreshRules();
   }
 
-  async disconnect(): Promise<void> {
-    await this.children.explorer.disconnect();
-    this.state.connectionState = 'disconnected';
-    this.logInfo('Disconnected');
-  }
-
-  async refreshNodes(): Promise<NodeSummary[]> {
-    this.requireReady();
-    try {
-      const nodes = await this.children.explorer.listNodes();
-      this.state.explorer.items = nodes;
-      this.state.explorer.lastRefreshedAt = nowIso();
-      this.logInfo(`Loaded ${nodes.length} node(s)`);
-      return nodes;
-    } catch (error) {
-      const message = toErrorMessage(error);
-      this.state.lastError = message;
-      this.logError(`Node refresh failed: ${message}`);
-      throw error;
-    }
-  }
-
-  async showNodeDetail(nodeId: number): Promise<NodeDetail> {
-    this.requireReady();
+  refreshRules(): RuleSummary[] {
     const config = this.requireSessionConfig();
-    this.state.explorer.selectedNodeId = nodeId;
-
     try {
-      const detail = await this.children.explorer.getNodeDetail(nodeId, {
-        includeValues: config.includeValues,
-        maxValues: config.maxValues,
-      });
-      this.state.nodeDetailCache[nodeId] = detail;
-      this.logInfo(`Loaded node ${nodeId} detail`);
+      const rules = this.fileService.listManifestRules(config.manifestFile);
+      this.state.ruleItems = rules;
+      this.logInfo(`Loaded ${rules.length} manifest rule(s)`);
+      return rules;
+    } catch (error) {
+      const message = toErrorMessage(error);
+      this.state.lastError = message;
+      this.logError(`Rule list failed: ${message}`);
+      throw error;
+    }
+  }
+
+  getRules(): RuleSummary[] {
+    return [...this.state.ruleItems];
+  }
+
+  showRuleDetail(ruleIndex: number): RuleDetail {
+    const config = this.requireSessionConfig();
+    try {
+      const detail = this.fileService.readManifestRule(config.manifestFile, ruleIndex);
+      this.state.selectedRuleIndex = ruleIndex;
+      this.state.ruleDetailCache[ruleIndex] = detail;
+      this.logInfo(`Loaded rule #${ruleIndex} detail`);
       return detail;
     } catch (error) {
       const message = toErrorMessage(error);
       this.state.lastError = message;
-      this.logError(`Node detail failed for ${nodeId}: ${message}`);
+      this.logError(`Rule detail failed for #${ruleIndex}: ${message}`);
       throw error;
     }
   }
@@ -139,23 +96,19 @@ export class ExplorerPresenter {
     this.logInfo(`Selected signature ${signature}`);
   }
 
-  selectSignatureFromNode(nodeId?: number): string {
-    this.requireReady();
-    const targetNodeId = nodeId ?? this.state.explorer.selectedNodeId;
-    if (!targetNodeId) {
-      throw new Error('No node selected. Run "show <nodeId>" first.');
+  selectSignatureFromRule(ruleIndex?: number): string {
+    const targetIndex = ruleIndex ?? this.state.selectedRuleIndex;
+    if (!targetIndex) {
+      throw new Error('No rule selected. Run "show <index>" first.');
     }
-    const detail = this.state.nodeDetailCache[targetNodeId];
-    if (!detail) {
-      throw new Error(`Node ${targetNodeId} detail not loaded. Run "show ${targetNodeId}" first.`);
+
+    const detail = this.state.ruleDetailCache[targetIndex] ?? this.showRuleDetail(targetIndex);
+    if (!detail.signature) {
+      throw new Error(`Rule #${targetIndex} does not include a complete target signature.`);
     }
-    const signature = this.children.curation.deriveSignatureFromNodeDetail(detail);
-    if (!signature) {
-      throw new Error(`Node ${targetNodeId} does not have a complete product signature.`);
-    }
-    this.state.selectedSignature = signature;
-    this.logInfo(`Derived signature ${signature} from node ${targetNodeId}`);
-    return signature;
+    this.state.selectedSignature = detail.signature;
+    this.logInfo(`Derived signature ${detail.signature} from rule #${targetIndex}`);
+    return detail.signature;
   }
 
   async inspectSelectedSignature(
@@ -164,12 +117,14 @@ export class ExplorerPresenter {
       includeControllerNodes?: boolean;
     } = {},
   ): Promise<SignatureInspectSummary> {
-    this.requireReady();
-    const session = this.requireSessionConfig();
+    const session = this.requireSessionWithUrl();
     const signature = this.requireSelectedSignature();
 
     try {
-      const summary = await this.children.curation.inspectSignature(session, signature, options);
+      const summary = await this.curation.inspectSignature(session, signature, {
+        ...options,
+        manifestFile: options.manifestFile ?? this.requireSessionConfig().manifestFile,
+      });
       this.state.inspectSummary = summary;
       this.logInfo(`Inspected signature ${signature} (${summary.totalNodes} node(s))`);
       return summary;
@@ -187,12 +142,14 @@ export class ExplorerPresenter {
       includeControllerNodes?: boolean;
     } = {},
   ): Promise<ValidationSummary> {
-    this.requireReady();
-    const session = this.requireSessionConfig();
+    const session = this.requireSessionWithUrl();
     const signature = this.requireSelectedSignature();
 
     try {
-      const summary = await this.children.curation.validateSignature(session, signature, options);
+      const summary = await this.curation.validateSignature(session, signature, {
+        ...options,
+        manifestFile: options.manifestFile ?? this.requireSessionConfig().manifestFile,
+      });
       this.state.validationSummary = summary;
       this.logInfo(`Validated signature ${signature} (${summary.totalNodes} node(s))`);
       return summary;
@@ -213,12 +170,14 @@ export class ExplorerPresenter {
       inspectFormat?: string;
     } = {},
   ): Promise<SimulationSummary> {
-    this.requireReady();
-    const session = this.requireSessionConfig();
+    const session = this.requireSessionWithUrl();
     const signature = this.requireSelectedSignature();
 
     try {
-      const summary = await this.children.curation.simulateSignature(session, signature, options);
+      const summary = await this.curation.simulateSignature(session, signature, {
+        ...options,
+        manifestFile: options.manifestFile ?? this.requireSessionConfig().manifestFile,
+      });
       this.state.simulationSummary = summary;
       this.logInfo(`Simulated signature ${signature} (${summary.totalNodes} node(s))`);
       return summary;
@@ -243,7 +202,7 @@ export class ExplorerPresenter {
     const inferredHomeyClass = options.homeyClass ?? this.inferHomeyClassForSignature(signature);
 
     try {
-      const draft = this.children.curation.scaffoldFromSignature(signature, {
+      const draft = this.curation.scaffoldFromSignature(signature, {
         productName: options.productName,
         ruleIdPrefix: options.ruleIdPrefix,
         homeyClass: inferredHomeyClass,
@@ -264,9 +223,13 @@ export class ExplorerPresenter {
     if (!draft) {
       throw new Error('No scaffold draft prepared. Run "scaffold preview" first.');
     }
+    if (options.confirm !== true) {
+      throw new Error('Write not confirmed. Re-run with explicit confirmation.');
+    }
     const targetPath = filePath ?? draft.fileHint;
     try {
-      const written = this.children.curation.writeScaffoldDraft(targetPath, draft, options);
+      this.fileService.writeJsonFile(targetPath, draft.bundle);
+      const written = this.fileService.resolveAllowedProductRulePath(targetPath);
       this.logInfo(`Wrote scaffold file ${written}`);
       return written;
     } catch (error) {
@@ -284,12 +247,14 @@ export class ExplorerPresenter {
     if (!draft) {
       throw new Error('No scaffold draft prepared. Run "scaffold preview" first.');
     }
-    const manifestFile = options.manifestFile ?? 'rules/manifest.json';
+    if (options.confirm !== true) {
+      throw new Error('Manifest update not confirmed. Re-run with explicit confirmation.');
+    }
+    const config = this.requireSessionConfig();
+    const manifestFile = options.manifestFile ?? config.manifestFile;
     const filePath = options.filePath ?? draft.fileHint;
     try {
-      const result = this.children.curation.addProductRuleToManifest(manifestFile, filePath, {
-        confirm: options.confirm,
-      });
+      const result = this.fileService.addProductRuleToManifest(manifestFile, filePath);
       if (result.updated) {
         this.logInfo(`Added ${result.entryFilePath} to manifest`);
       } else {
@@ -306,11 +271,11 @@ export class ExplorerPresenter {
 
   getStatusSnapshot(): StatusSnapshot {
     return {
-      mode: 'nodes',
+      mode: 'rules',
       connectionState: this.state.connectionState,
-      selectedNodeId: this.state.explorer.selectedNodeId,
+      selectedRuleIndex: this.state.selectedRuleIndex,
       selectedSignature: this.state.selectedSignature,
-      cachedNodeCount: this.state.explorer.items.length,
+      cachedNodeCount: this.state.ruleItems.length,
       scaffoldFileHint: this.state.scaffoldDraft?.fileHint,
     };
   }
@@ -319,23 +284,19 @@ export class ExplorerPresenter {
     return this.state.runLog.slice(-limit);
   }
 
-  private requireReady(): void {
-    if (this.state.connectionState !== 'ready') {
-      throw new Error(`Presenter is not ready (state=${this.state.connectionState})`);
-    }
-  }
-
-  private requireSessionConfig(): ConnectedSessionConfig {
+  private requireSessionConfig(): SessionConfig {
     if (!this.state.sessionConfig) {
       throw new Error('Session config is not set');
     }
-    if (
-      typeof this.state.sessionConfig.url !== 'string' ||
-      this.state.sessionConfig.url.length === 0
-    ) {
-      throw new Error('Session config does not include a ZWJS URL');
+    return this.state.sessionConfig;
+  }
+
+  private requireSessionWithUrl(): ConnectedSessionConfig {
+    const config = this.requireSessionConfig();
+    if (typeof config.url !== 'string' || config.url.length === 0) {
+      throw new Error('Rules mode needs --url to run inspect/validate/simulate.');
     }
-    return this.state.sessionConfig as ConnectedSessionConfig;
+    return config as ConnectedSessionConfig;
   }
 
   private requireSelectedSignature(): string {

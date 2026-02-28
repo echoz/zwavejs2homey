@@ -1,7 +1,8 @@
 import type {
+  ConnectedSessionConfig,
   NodeDetail,
   ScaffoldDraft,
-  SessionConfig,
+  SimulationSummary,
   SignatureInspectSummary,
   ValidationSummary,
 } from '../model/types';
@@ -11,15 +12,26 @@ import type { WorkspaceFileService } from '../service/workspace-file-service';
 export interface CurationWorkflowChildPresenterLike {
   deriveSignatureFromNodeDetail(detail: NodeDetail): string | null;
   inspectSignature(
-    session: SessionConfig,
+    session: ConnectedSessionConfig,
     signature: string,
     options?: { manifestFile?: string; includeControllerNodes?: boolean },
   ): Promise<SignatureInspectSummary>;
   validateSignature(
-    session: SessionConfig,
+    session: ConnectedSessionConfig,
     signature: string,
     options?: { manifestFile?: string; includeControllerNodes?: boolean },
   ): Promise<ValidationSummary>;
+  simulateSignature(
+    session: ConnectedSessionConfig,
+    signature: string,
+    options?: {
+      manifestFile?: string;
+      includeControllerNodes?: boolean;
+      skipInspect?: boolean;
+      dryRun?: boolean;
+      inspectFormat?: string;
+    },
+  ): Promise<SimulationSummary>;
   scaffoldFromSignature(
     signature: string,
     options?: { productName?: string; ruleIdPrefix?: string; homeyClass?: string },
@@ -47,7 +59,7 @@ export class CurationWorkflowPresenter implements CurationWorkflowChildPresenter
   }
 
   async inspectSignature(
-    session: SessionConfig,
+    session: ConnectedSessionConfig,
     signature: string,
     options: { manifestFile?: string; includeControllerNodes?: boolean } = {},
   ): Promise<SignatureInspectSummary> {
@@ -55,11 +67,25 @@ export class CurationWorkflowPresenter implements CurationWorkflowChildPresenter
   }
 
   async validateSignature(
-    session: SessionConfig,
+    session: ConnectedSessionConfig,
     signature: string,
     options: { manifestFile?: string; includeControllerNodes?: boolean } = {},
   ): Promise<ValidationSummary> {
     return this.curationService.validateSignature(session, signature, options);
+  }
+
+  async simulateSignature(
+    session: ConnectedSessionConfig,
+    signature: string,
+    options: {
+      manifestFile?: string;
+      includeControllerNodes?: boolean;
+      skipInspect?: boolean;
+      dryRun?: boolean;
+      inspectFormat?: string;
+    } = {},
+  ): Promise<SimulationSummary> {
+    return this.curationService.simulateSignature(session, signature, options);
   }
 
   scaffoldFromSignature(

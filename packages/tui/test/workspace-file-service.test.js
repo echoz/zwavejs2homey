@@ -44,3 +44,44 @@ test('WorkspaceFileServiceImpl rejects writes outside allowed product root', () 
   const fileService = new WorkspaceFileServiceImpl(productDir);
   assert.throws(() => fileService.resolveAllowedProductRulePath('../outside.json'), /under/i);
 });
+
+test('WorkspaceFileServiceImpl lists manifest rules and reads rule detail', () => {
+  const root = makeTempDir('zwjs2homey-tui-');
+  const productDir = path.join(root, 'rules/project/product');
+  fs.mkdirSync(productDir, { recursive: true });
+  const ruleFile = path.join(productDir, 'product-29-66-2.json');
+  fs.writeFileSync(
+    ruleFile,
+    `${JSON.stringify(
+      {
+        schemaVersion: 'product-rules/v1',
+        name: 'Test Device',
+        target: { manufacturerId: 29, productType: 66, productId: 2 },
+        rules: [{ ruleId: 'identity', actions: [] }],
+      },
+      null,
+      2,
+    )}\n`,
+    'utf8',
+  );
+  const manifestFile = path.join(root, 'rules/manifest.json');
+  fs.mkdirSync(path.dirname(manifestFile), { recursive: true });
+  fs.writeFileSync(
+    manifestFile,
+    `${JSON.stringify(
+      [{ filePath: 'project/product/product-29-66-2.json', layer: 'project-product' }],
+      null,
+      2,
+    )}\n`,
+    'utf8',
+  );
+
+  const fileService = new WorkspaceFileServiceImpl(productDir);
+  const rules = fileService.listManifestRules(manifestFile);
+  assert.equal(rules.length, 1);
+  assert.equal(rules[0].signature, '29:66:2');
+  assert.equal(rules[0].name, 'Test Device');
+  const detail = fileService.readManifestRule(manifestFile, 1);
+  assert.equal(detail.signature, '29:66:2');
+  assert.equal(detail.content.target.manufacturerId, 29);
+});

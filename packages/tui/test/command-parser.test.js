@@ -6,11 +6,30 @@ const { parseShellCommand } = require('../dist/view/command-parser');
 test('parseShellCommand parses signature/inspect/validate commands', () => {
   assert.deepEqual(parseShellCommand('signature 29:66:2'), {
     ok: true,
-    command: { type: 'signature', signature: '29:66:2', fromNodeId: undefined },
+    command: {
+      type: 'signature',
+      signature: '29:66:2',
+      fromNodeId: undefined,
+      fromRuleIndex: undefined,
+    },
   });
   assert.deepEqual(parseShellCommand('signature --from-node 5'), {
     ok: true,
-    command: { type: 'signature', signature: undefined, fromNodeId: 5 },
+    command: {
+      type: 'signature',
+      signature: undefined,
+      fromNodeId: 5,
+      fromRuleIndex: undefined,
+    },
+  });
+  assert.deepEqual(parseShellCommand('signature --from-rule 2'), {
+    ok: true,
+    command: {
+      type: 'signature',
+      signature: undefined,
+      fromNodeId: undefined,
+      fromRuleIndex: 2,
+    },
   });
   assert.deepEqual(parseShellCommand('inspect --manifest rules/manifest.json'), {
     ok: true,
@@ -19,6 +38,16 @@ test('parseShellCommand parses signature/inspect/validate commands', () => {
   assert.deepEqual(parseShellCommand('validate'), {
     ok: true,
     command: { type: 'validate', manifestFile: undefined },
+  });
+  assert.deepEqual(parseShellCommand('simulate --dry-run --skip-inspect --inspect-format list'), {
+    ok: true,
+    command: {
+      type: 'simulate',
+      manifestFile: undefined,
+      dryRun: true,
+      skipInspect: true,
+      inspectFormat: 'list',
+    },
   });
 });
 
@@ -65,5 +94,9 @@ test('parseShellCommand rejects malformed input', () => {
   assert.deepEqual(parseShellCommand('unknown cmd'), {
     ok: false,
     error: 'Unknown command: unknown',
+  });
+  assert.deepEqual(parseShellCommand('signature --from-node 5 --from-rule 2'), {
+    ok: false,
+    error: 'signature accepts only one source: --from-node or --from-rule',
   });
 });

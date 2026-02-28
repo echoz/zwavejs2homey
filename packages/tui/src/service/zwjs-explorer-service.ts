@@ -7,10 +7,10 @@ import {
 } from '@zwavejs2homey/core';
 
 import type {
+  ConnectedSessionConfig,
   IncludeValuesMode,
   NodeDetail,
   NodeSummary,
-  SessionConfig,
   ValueIdShape,
 } from '../model/types';
 
@@ -63,7 +63,7 @@ function stableValueIdKey(valueId: ValueIdShape): string {
 }
 
 export interface ZwjsExplorerService {
-  connect(config: SessionConfig): Promise<void>;
+  connect(config: ConnectedSessionConfig): Promise<void>;
   disconnect(): Promise<void>;
   listNodes(): Promise<NodeSummary[]>;
   getNodeDetail(
@@ -89,7 +89,7 @@ export class ZwjsExplorerServiceImpl implements ZwjsExplorerService {
     this.createClient = deps.createClient ?? createZwjsClient;
   }
 
-  async connect(config: SessionConfig): Promise<void> {
+  async connect(config: ConnectedSessionConfig): Promise<void> {
     await this.disconnect();
 
     const client = this.createClient({
