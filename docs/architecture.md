@@ -146,14 +146,14 @@ The ZWJS Explorer + Curation TUI is a workflow layer that sits above existing co
 Layering contract:
 
 1. view: terminal rendering and input only
-2. presenter: UI business logic, state transitions, view-model mapping
-3. coordinator: orchestration boundary between UI intent flow and service calls
+2. parent presenter: UI business logic, state transitions, view-model mapping
+3. child presenters: grouped multi-step workflow presenters used by the parent presenter
 4. services: typed use-case wrappers over existing libs/tools
 5. core/tooling: existing compiler/ZWJS domain logic
 
 Data flow:
 
-- intent -> presenter -> coordinator -> services -> core/tooling -> presenter -> view-model -> view
+- intent -> parent presenter -> child presenter -> services -> core/tooling -> parent presenter -> view-model -> view
 
 Guardrails:
 
@@ -171,7 +171,7 @@ Current implemented slices:
   - scaffold preview + guarded write flow
   - manifest helper for product rule registration
   - interactive shell command loop (`npm run compiler:tui`) with run-log view
-  - presenter/coordinator/service layering with package-local regression tests
+  - parent+child presenter/service layering with package-local regression tests
 
 ## Runtime Flow (Target)
 

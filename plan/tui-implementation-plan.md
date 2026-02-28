@@ -39,12 +39,12 @@ Use a strict data-driven layering model:
 1. View (`packages/tui/src/view/*`)
    - pure render/input
    - no business logic
-2. Presenter (`packages/tui/src/presenter/*`)
+2. Parent presenter (`packages/tui/src/presenter/*`)
    - handles intents, state transitions, loading/error behavior
    - maps use-case results to view models
-3. Coordinator (`packages/tui/src/coordinator/*`)
-   - orchestrates presenter use-cases into service calls
-   - keeps orchestration rules out of view and service layers
+3. Child presenters (`packages/tui/src/presenter/*`)
+   - encapsulate grouped multi-step workflows (explorer session, curation workflow)
+   - keep parent presenter lean while avoiding an extra coordinator layer
 4. Services (`packages/tui/src/service/*`)
    - typed orchestration wrapper over existing tooling/libs
    - normalized return/error contracts
@@ -53,7 +53,7 @@ Use a strict data-driven layering model:
 
 Data flow:
 
-- `Intent -> Presenter -> Coordinator -> Services -> Core -> Presenter -> ViewModel -> View`
+- `Intent -> Parent Presenter -> Child Presenter -> Services -> Core -> Parent Presenter -> ViewModel -> View`
 
 ## State Model
 
@@ -84,7 +84,6 @@ Single in-memory state with these top-level sections:
 - `packages/tui/src/model/*`
 - `packages/tui/src/view/*`
 - `packages/tui/src/presenter/*`
-- `packages/tui/src/coordinator/*`
 - `packages/tui/src/service/*`
 - `tools/homey-compile-tui.mjs` (thin launcher)
 

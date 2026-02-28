@@ -28,7 +28,7 @@ test('parseCliArgs parses required and optional fields', () => {
   });
 });
 
-test('runApp executes interactive command flow through presenter/coordinator', async () => {
+test('runApp executes interactive command flow through parent+child presenters', async () => {
   const commands = [
     'list',
     'show 2',
@@ -57,13 +57,11 @@ test('runApp executes interactive command flow through presenter/coordinator', a
     },
   };
 
-  const coordinator = {
+  const explorerChildPresenter = {
     connectCalls: 0,
     disconnectCalls: 0,
     listCalls: 0,
     detailCalls: 0,
-    inspectCalls: 0,
-    validateCalls: 0,
     async connect() {
       this.connectCalls += 1;
     },
@@ -96,6 +94,10 @@ test('runApp executes interactive command flow through presenter/coordinator', a
         values: [],
       };
     },
+  };
+  const curationChildPresenter = {
+    inspectCalls: 0,
+    validateCalls: 0,
     deriveSignatureFromNodeDetail() {
       return '29:66:2';
     },
@@ -167,19 +169,20 @@ test('runApp executes interactive command flow through presenter/coordinator', a
       error: (line) => errors.push(String(line)),
     },
     {
-      coordinator,
+      explorerChildPresenter,
+      curationChildPresenter,
       createInterfaceImpl: () => fakeReadline,
       stdin: {},
       stdout: {},
     },
   );
 
-  assert.equal(coordinator.connectCalls, 1);
-  assert.equal(coordinator.disconnectCalls, 1);
-  assert.equal(coordinator.listCalls >= 1, true);
-  assert.equal(coordinator.detailCalls, 1);
-  assert.equal(coordinator.inspectCalls, 1);
-  assert.equal(coordinator.validateCalls, 0);
+  assert.equal(explorerChildPresenter.connectCalls, 1);
+  assert.equal(explorerChildPresenter.disconnectCalls, 1);
+  assert.equal(explorerChildPresenter.listCalls >= 1, true);
+  assert.equal(explorerChildPresenter.detailCalls, 1);
+  assert.equal(curationChildPresenter.inspectCalls, 1);
+  assert.equal(curationChildPresenter.validateCalls, 0);
   assert.equal(closeCalls, 1);
   assert.equal(errors.length, 0);
   assert.equal(

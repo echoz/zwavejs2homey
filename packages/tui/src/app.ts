@@ -2,8 +2,24 @@ import { createInterface } from 'node:readline/promises';
 import { stdin as defaultStdin, stdout as defaultStdout } from 'node:process';
 
 import type { IncludeValuesMode, SessionConfig } from './model/types';
-import { TuiCoordinatorImpl, type TuiCoordinator } from './coordinator/tui-coordinator';
+import {
+  CurationWorkflowPresenter,
+  type CurationWorkflowChildPresenterLike,
+} from './presenter/curation-workflow-presenter';
 import { ExplorerPresenter } from './presenter/explorer-presenter';
+import {
+  ExplorerSessionPresenter,
+  type ExplorerSessionChildPresenterLike,
+} from './presenter/explorer-session-presenter';
+import {
+  CompilerCurationServiceImpl,
+  type CompilerCurationService,
+} from './service/compiler-curation-service';
+import {
+  WorkspaceFileServiceImpl,
+  type WorkspaceFileService,
+} from './service/workspace-file-service';
+import { ZwjsExplorerServiceImpl, type ZwjsExplorerService } from './service/zwjs-explorer-service';
 import { parseShellCommand } from './view/command-parser';
 import {
   renderBacklogSummary,
@@ -145,7 +161,12 @@ interface ReadlineLike {
 }
 
 interface RunAppDeps {
-  coordinator?: TuiCoordinator;
+  presenter?: ExplorerPresenter;
+  explorerService?: ZwjsExplorerService;
+  curationService?: CompilerCurationService;
+  fileService?: WorkspaceFileService;
+  explorerChildPresenter?: ExplorerSessionChildPresenterLike;
+  curationChildPresenter?: CurationWorkflowChildPresenterLike;
   createInterfaceImpl?: (options: {
     input: NodeJS.ReadStream;
     output: NodeJS.WriteStream;
@@ -160,8 +181,19 @@ export async function runApp(
   io: LoggerLike = console,
   deps: RunAppDeps = {},
 ): Promise<void> {
-  const coordinator = deps.coordinator ?? new TuiCoordinatorImpl();
-  const presenter = new ExplorerPresenter(coordinator);
+  const explorerService = deps.explorerService ?? new ZwjsExplorerServiceImpl();
+  const curationService = deps.curationService ?? new CompilerCurationServiceImpl();
+  const fileService = deps.fileService ?? new WorkspaceFileServiceImpl();
+  const explorerChildPresenter =
+    deps.explorerChildPresenter ?? new ExplorerSessionPresenter(explorerService);
+  const curationChildPresenter =
+    deps.curationChildPresenter ?? new CurationWorkflowPresenter(curationService, fileService);
+  const presenter =
+    deps.presenter ??
+    new ExplorerPresenter({
+      explorer: explorerChildPresenter,
+      curation: curationChildPresenter,
+    });
   const createInterfaceImpl = deps.createInterfaceImpl ?? createInterface;
   const input = deps.stdin ?? defaultStdin;
   const output = deps.stdout ?? defaultStdout;

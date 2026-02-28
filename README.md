@@ -6,7 +6,7 @@ The project is intentionally split into layers:
 
 - `packages/core`: protocol-first `ZwjsClient` (WebSocket client for `zwave-js-server`)
 - `packages/compiler`: Homey-targeted profile compiler (rules + HA import + catalog tooling)
-- `packages/tui`: Phase 4 ZWJS explorer/curation terminal UI (view/presenter/coordinator/service shell over existing tooling)
+- `packages/tui`: Phase 4 ZWJS explorer/curation terminal UI (view/parent+child presenters/service shell over existing tooling)
 - `co.lazylabs.zwavejs2homey`: Homey app package (adapter/runtime integration, in progress)
 
 ## Project Goals
@@ -35,7 +35,7 @@ The project is intentionally split into layers:
 - `packages/compiler/`
   - compiler models, rule loading/matching/application, HA import pipeline, catalog tooling
 - `packages/tui/`
-  - terminal UI app shell with strict view/presenter/coordinator/service layering
+  - terminal UI app shell with strict view/parent+child presenters/service layering
 - `tools/`
   - local CLIs for inspection, import, catalog operations, benchmarking, and compiler builds
 - `rules/`

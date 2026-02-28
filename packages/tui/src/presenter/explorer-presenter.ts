@@ -9,7 +9,13 @@ import type {
   StatusSnapshot,
   ValidationSummary,
 } from '../model/types';
-import type { TuiCoordinator } from '../coordinator/tui-coordinator';
+import type { CurationWorkflowChildPresenterLike } from './curation-workflow-presenter';
+import type { ExplorerSessionChildPresenterLike } from './explorer-session-presenter';
+
+export interface ExplorerPresenterChildren {
+  explorer: ExplorerSessionChildPresenterLike;
+  curation: CurationWorkflowChildPresenterLike;
+}
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -30,7 +36,7 @@ export class ExplorerPresenter {
     runLog: [],
   };
 
-  constructor(private readonly coordinator: TuiCoordinator) {}
+  constructor(private readonly children: ExplorerPresenterChildren) {}
 
   getState(): AppState {
     return {
@@ -66,7 +72,7 @@ export class ExplorerPresenter {
     this.logInfo(`Connecting to ${config.url}`);
 
     try {
-      await this.coordinator.connect(config);
+      await this.children.explorer.connect(config);
       this.state.connectionState = 'ready';
       this.logInfo('Connected');
       return await this.refreshNodes();
@@ -80,7 +86,7 @@ export class ExplorerPresenter {
   }
 
   async disconnect(): Promise<void> {
-    await this.coordinator.disconnect();
+    await this.children.explorer.disconnect();
     this.state.connectionState = 'disconnected';
     this.logInfo('Disconnected');
   }
@@ -88,7 +94,7 @@ export class ExplorerPresenter {
   async refreshNodes(): Promise<NodeSummary[]> {
     this.requireReady();
     try {
-      const nodes = await this.coordinator.listNodes();
+      const nodes = await this.children.explorer.listNodes();
       this.state.explorer.items = nodes;
       this.state.explorer.lastRefreshedAt = nowIso();
       this.logInfo(`Loaded ${nodes.length} node(s)`);
@@ -107,7 +113,7 @@ export class ExplorerPresenter {
     this.state.explorer.selectedNodeId = nodeId;
 
     try {
-      const detail = await this.coordinator.getNodeDetail(nodeId, {
+      const detail = await this.children.explorer.getNodeDetail(nodeId, {
         includeValues: config.includeValues,
         maxValues: config.maxValues,
       });
@@ -140,7 +146,7 @@ export class ExplorerPresenter {
     if (!detail) {
       throw new Error(`Node ${targetNodeId} detail not loaded. Run "show ${targetNodeId}" first.`);
     }
-    const signature = this.coordinator.deriveSignatureFromNodeDetail(detail);
+    const signature = this.children.curation.deriveSignatureFromNodeDetail(detail);
     if (!signature) {
       throw new Error(`Node ${targetNodeId} does not have a complete product signature.`);
     }
@@ -160,7 +166,7 @@ export class ExplorerPresenter {
     const signature = this.requireSelectedSignature();
 
     try {
-      const summary = await this.coordinator.inspectSignature(session, signature, options);
+      const summary = await this.children.curation.inspectSignature(session, signature, options);
       this.state.inspectSummary = summary;
       this.logInfo(`Inspected signature ${signature} (${summary.totalNodes} node(s))`);
       return summary;
@@ -183,7 +189,7 @@ export class ExplorerPresenter {
     const signature = this.requireSelectedSignature();
 
     try {
-      const summary = await this.coordinator.validateSignature(session, signature, options);
+      const summary = await this.children.curation.validateSignature(session, signature, options);
       this.state.validationSummary = summary;
       this.logInfo(`Validated signature ${signature} (${summary.totalNodes} node(s))`);
       return summary;
@@ -197,7 +203,7 @@ export class ExplorerPresenter {
 
   loadBacklog(backlogFile: string, options: { top?: number } = {}): BacklogSummary {
     try {
-      const summary = this.coordinator.loadBacklogSummary(backlogFile, options);
+      const summary = this.children.curation.loadBacklogSummary(backlogFile, options);
       this.state.backlogSummary = summary;
       this.logInfo(
         `Loaded backlog (${summary.entries.length}/${summary.totalSignatures} signatures shown)`,
@@ -227,7 +233,7 @@ export class ExplorerPresenter {
     }
 
     try {
-      const draft = this.coordinator.scaffoldFromBacklog(backlogFile, signature, {
+      const draft = this.children.curation.scaffoldFromBacklog(backlogFile, signature, {
         productName: options.productName,
         ruleIdPrefix: options.ruleIdPrefix,
       });
@@ -249,7 +255,7 @@ export class ExplorerPresenter {
     }
     const targetPath = filePath ?? draft.fileHint;
     try {
-      const written = this.coordinator.writeScaffoldDraft(targetPath, draft, options);
+      const written = this.children.curation.writeScaffoldDraft(targetPath, draft, options);
       this.logInfo(`Wrote scaffold file ${written}`);
       return written;
     } catch (error) {
@@ -270,7 +276,7 @@ export class ExplorerPresenter {
     const manifestFile = options.manifestFile ?? 'rules/manifest.json';
     const filePath = options.filePath ?? draft.fileHint;
     try {
-      const result = this.coordinator.addProductRuleToManifest(manifestFile, filePath, {
+      const result = this.children.curation.addProductRuleToManifest(manifestFile, filePath, {
         confirm: options.confirm,
       });
       if (result.updated) {

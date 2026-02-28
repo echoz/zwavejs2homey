@@ -427,7 +427,7 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - added slice-1 tests (presenter transitions, service adapter behavior, and app smoke path)
     - folded TUI package tests/build into root workspace quality gates (`npm run check`)
 92. Completed Phase 4 TUI slices 2-5 (signature workspace, inspect/validate, scaffold, backlog):
-    - introduced explicit coordinator layer (`packages/tui/src/coordinator/*`) between presenter and services/core
+    - introduced parent+child presenter workflow split (`packages/tui/src/presenter/*`) over service/core layers
     - added signature workflow commands:
       - `signature [triple] [--from-node <id>]`
       - `inspect [--manifest <file>]`
@@ -438,7 +438,7 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
       - `scaffold preview [--product-name ...]`, `scaffold write [filePath] --force`
     - scaffold writes are path-guarded to `rules/project/product/*` and require explicit confirmation (`--force`)
     - added run-log command (`log [--limit N]`) and per-command error handling so interactive sessions continue after failures
-    - expanded TUI tests for coordinator delegation, command parsing, and presenter/app signature-curation flows
+    - expanded TUI tests for child-presenter delegation, command parsing, and presenter/app signature-curation flows
 93. Completed Phase 4 TUI slice 6 (manifest helper + run-log polish):
     - added manifest helper command:
       - `manifest add [filePath] [--manifest <file>] --force`

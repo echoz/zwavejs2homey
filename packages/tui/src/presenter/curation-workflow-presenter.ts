@@ -1,27 +1,15 @@
 import type {
   BacklogSummary,
   NodeDetail,
-  NodeSummary,
   ScaffoldDraft,
   SessionConfig,
   SignatureInspectSummary,
   ValidationSummary,
 } from '../model/types';
 import type { CompilerCurationService } from '../service/compiler-curation-service';
-import { CompilerCurationServiceImpl } from '../service/compiler-curation-service';
 import type { WorkspaceFileService } from '../service/workspace-file-service';
-import { WorkspaceFileServiceImpl } from '../service/workspace-file-service';
-import type { ZwjsExplorerService } from '../service/zwjs-explorer-service';
-import { ZwjsExplorerServiceImpl } from '../service/zwjs-explorer-service';
 
-export interface TuiCoordinator {
-  connect(config: SessionConfig): Promise<void>;
-  disconnect(): Promise<void>;
-  listNodes(): Promise<NodeSummary[]>;
-  getNodeDetail(
-    nodeId: number,
-    options?: { includeValues?: SessionConfig['includeValues']; maxValues?: number },
-  ): Promise<NodeDetail>;
+export interface CurationWorkflowChildPresenterLike {
   deriveSignatureFromNodeDetail(detail: NodeDetail): string | null;
   inspectSignature(
     session: SessionConfig,
@@ -48,50 +36,14 @@ export interface TuiCoordinator {
     manifestFile: string,
     filePath: string,
     options?: { confirm?: boolean },
-  ): {
-    manifestFile: string;
-    entryFilePath: string;
-    updated: boolean;
-  };
+  ): { manifestFile: string; entryFilePath: string; updated: boolean };
 }
 
-interface CoordinatorDeps {
-  explorerService?: ZwjsExplorerService;
-  curationService?: CompilerCurationService;
-  fileService?: WorkspaceFileService;
-}
-
-export class TuiCoordinatorImpl implements TuiCoordinator {
-  private readonly explorerService: ZwjsExplorerService;
-
-  private readonly curationService: CompilerCurationService;
-
-  private readonly fileService: WorkspaceFileService;
-
-  constructor(deps: CoordinatorDeps = {}) {
-    this.explorerService = deps.explorerService ?? new ZwjsExplorerServiceImpl();
-    this.curationService = deps.curationService ?? new CompilerCurationServiceImpl();
-    this.fileService = deps.fileService ?? new WorkspaceFileServiceImpl();
-  }
-
-  async connect(config: SessionConfig): Promise<void> {
-    await this.explorerService.connect(config);
-  }
-
-  async disconnect(): Promise<void> {
-    await this.explorerService.disconnect();
-  }
-
-  async listNodes(): Promise<NodeSummary[]> {
-    return this.explorerService.listNodes();
-  }
-
-  async getNodeDetail(
-    nodeId: number,
-    options: { includeValues?: SessionConfig['includeValues']; maxValues?: number } = {},
-  ): Promise<NodeDetail> {
-    return this.explorerService.getNodeDetail(nodeId, options);
-  }
+export class CurationWorkflowPresenter implements CurationWorkflowChildPresenterLike {
+  constructor(
+    private readonly curationService: CompilerCurationService,
+    private readonly fileService: WorkspaceFileService,
+  ) {}
 
   deriveSignatureFromNodeDetail(detail: NodeDetail): string | null {
     return this.curationService.deriveSignatureFromNodeDetail(detail);
@@ -141,11 +93,7 @@ export class TuiCoordinatorImpl implements TuiCoordinator {
     manifestFile: string,
     filePath: string,
     options: { confirm?: boolean } = {},
-  ): {
-    manifestFile: string;
-    entryFilePath: string;
-    updated: boolean;
-  } {
+  ): { manifestFile: string; entryFilePath: string; updated: boolean } {
     if (options.confirm !== true) {
       throw new Error('Manifest update not confirmed. Re-run with explicit confirmation.');
     }

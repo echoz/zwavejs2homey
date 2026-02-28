@@ -3,100 +3,119 @@ const assert = require('node:assert/strict');
 
 const { ExplorerPresenter } = require('../dist/presenter/explorer-presenter');
 
-function createCoordinator(overrides = {}) {
+function createChildren(overrides = {}) {
+  const children = {
+    explorer: {
+      async connect() {},
+      async disconnect() {},
+      async listNodes() {
+        return [];
+      },
+      async getNodeDetail(nodeId) {
+        return {
+          nodeId,
+          state: { name: 'Node' },
+          neighbors: [],
+          notificationEvents: [],
+          values: [],
+        };
+      },
+    },
+    curation: {
+      deriveSignatureFromNodeDetail() {
+        return '29:66:2';
+      },
+      async inspectSignature(_session, signature) {
+        return {
+          signature,
+          totalNodes: 1,
+          outcomeCounts: { curated: 1 },
+          nodes: [],
+        };
+      },
+      async validateSignature(_session, signature) {
+        return {
+          signature,
+          totalNodes: 1,
+          reviewNodes: 0,
+          outcomes: { curated: 1 },
+        };
+      },
+      loadBacklogSummary(filePath) {
+        return {
+          filePath,
+          totalSignatures: 1,
+          totalNodes: 1,
+          reviewNodes: 1,
+          entries: [
+            {
+              rank: 1,
+              signature: '29:66:2',
+              nodeCount: 1,
+              reviewNodeCount: 1,
+              genericNodeCount: 0,
+              emptyNodeCount: 0,
+            },
+          ],
+        };
+      },
+      scaffoldFromBacklog(_backlogFile, signature) {
+        return {
+          signature,
+          fileHint: 'product-29-66-2.json',
+          generatedAt: new Date().toISOString(),
+          bundle: { schemaVersion: 'product-rules/v1', rules: [] },
+        };
+      },
+      writeScaffoldDraft(filePath) {
+        return filePath;
+      },
+      addProductRuleToManifest(_manifestFile, filePath) {
+        return { manifestFile: '/tmp/manifest.json', entryFilePath: filePath, updated: true };
+      },
+    },
+  };
   return {
-    async connect() {},
-    async disconnect() {},
-    async listNodes() {
-      return [];
-    },
-    async getNodeDetail(nodeId) {
-      return {
-        nodeId,
-        state: { name: 'Node' },
-        neighbors: [],
-        notificationEvents: [],
-        values: [],
-      };
-    },
-    deriveSignatureFromNodeDetail() {
-      return '29:66:2';
-    },
-    async inspectSignature(_session, signature) {
-      return {
-        signature,
-        totalNodes: 1,
-        outcomeCounts: { curated: 1 },
-        nodes: [],
-      };
-    },
-    async validateSignature(_session, signature) {
-      return {
-        signature,
-        totalNodes: 1,
-        reviewNodes: 0,
-        outcomes: { curated: 1 },
-      };
-    },
-    loadBacklogSummary(filePath) {
-      return {
-        filePath,
-        totalSignatures: 1,
-        totalNodes: 1,
-        reviewNodes: 1,
-        entries: [
-          {
-            rank: 1,
-            signature: '29:66:2',
-            nodeCount: 1,
-            reviewNodeCount: 1,
-            genericNodeCount: 0,
-            emptyNodeCount: 0,
-          },
-        ],
-      };
-    },
-    scaffoldFromBacklog(_backlogFile, signature) {
-      return {
-        signature,
-        fileHint: 'product-29-66-2.json',
-        generatedAt: new Date().toISOString(),
-        bundle: { schemaVersion: 'product-rules/v1', rules: [] },
-      };
-    },
-    writeScaffoldDraft(filePath) {
-      return filePath;
-    },
-    addProductRuleToManifest(_manifestFile, filePath) {
-      return { manifestFile: '/tmp/manifest.json', entryFilePath: filePath, updated: true };
-    },
+    ...children,
     ...overrides,
   };
 }
 
 test('ExplorerPresenter connect success loads nodes and sets ready state', async () => {
-  const coordinator = createCoordinator({
+  const children = createChildren({
     connectCalls: 0,
     listNodesCalls: 0,
-    async connect() {
-      this.connectCalls += 1;
-    },
-    async listNodes() {
-      this.listNodesCalls += 1;
-      return [
-        {
-          nodeId: 3,
-          name: 'Kitchen',
-          ready: true,
-          status: 'alive',
-          manufacturer: null,
-          product: null,
-        },
-      ];
+    explorer: {
+      async connect() {
+        children.connectCalls += 1;
+      },
+      async disconnect() {},
+      async listNodes() {
+        children.listNodesCalls += 1;
+        return [
+          {
+            nodeId: 3,
+            name: 'Kitchen',
+            ready: true,
+            status: 'alive',
+            manufacturer: null,
+            product: null,
+          },
+        ];
+      },
+      async getNodeDetail(nodeId) {
+        return {
+          nodeId,
+          state: { name: 'Node' },
+          neighbors: [],
+          notificationEvents: [],
+          values: [],
+        };
+      },
     },
   });
 
-  const presenter = new ExplorerPresenter(coordinator);
+  const presenter = new ExplorerPresenter(children);
   const nodes = await presenter.connect({
     url: 'ws://127.0.0.1:3000',
     schemaVersion: 0,
@@ -104,8 +123,8 @@ test('ExplorerPresenter connect success loads nodes and sets ready state', async
     maxValues: 200,
   });
 
-  assert.equal(coordinator.connectCalls, 1);
-  assert.equal(coordinator.listNodesCalls, 1);
+  assert.equal(children.connectCalls, 1);
+  assert.equal(children.listNodesCalls, 1);
   assert.equal(nodes.length, 1);
   const state = presenter.getState();
   assert.equal(state.connectionState, 'ready');
@@ -114,13 +133,22 @@ test('ExplorerPresenter connect success loads nodes and sets ready state', async
 });
 
 test('ExplorerPresenter connect failure sets error state', async () => {
-  const coordinator = createCoordinator({
-    async connect() {
-      throw new Error('boom');
+  const children = createChildren({
+    explorer: {
+      async connect() {
+        throw new Error('boom');
+      },
+      async disconnect() {},
+      async listNodes() {
+        return [];
+      },
+      async getNodeDetail() {
+        return null;
+      },
     },
   });
 
-  const presenter = new ExplorerPresenter(coordinator);
+  const presenter = new ExplorerPresenter(children);
   await assert.rejects(
     () =>
       presenter.connect({
@@ -142,7 +170,7 @@ test('ExplorerPresenter connect failure sets error state', async () => {
 });
 
 test('ExplorerPresenter can derive signature, inspect and validate selected signature', async () => {
-  const presenter = new ExplorerPresenter(createCoordinator());
+  const presenter = new ExplorerPresenter(createChildren());
   await presenter.connect({
     url: 'ws://127.0.0.1:3000',
     schemaVersion: 0,
@@ -162,19 +190,24 @@ test('ExplorerPresenter can derive signature, inspect and validate selected sign
 test('ExplorerPresenter backlog + scaffold draft + write flow', async () => {
   const writes = [];
   const manifests = [];
-  const coordinator = createCoordinator({
-    writeScaffoldDraft(filePath, _draft, options) {
-      assert.equal(options.confirm, true);
-      writes.push(filePath);
-      return `/abs/${filePath}`;
+  const base = createChildren();
+  const children = {
+    ...base,
+    curation: {
+      ...base.curation,
+      writeScaffoldDraft(filePath, _draft, options) {
+        assert.equal(options.confirm, true);
+        writes.push(filePath);
+        return `/abs/${filePath}`;
+      },
+      addProductRuleToManifest(manifestFile, filePath, options) {
+        assert.equal(options.confirm, true);
+        manifests.push({ manifestFile, filePath });
+        return { manifestFile, entryFilePath: filePath, updated: true };
+      },
     },
-    addProductRuleToManifest(manifestFile, filePath, options) {
-      assert.equal(options.confirm, true);
-      manifests.push({ manifestFile, filePath });
-      return { manifestFile, entryFilePath: filePath, updated: true };
-    },
-  });
-  const presenter = new ExplorerPresenter(coordinator);
+  };
+  const presenter = new ExplorerPresenter(children);
 
   const backlog = presenter.loadBacklog('/tmp/backlog.json');
   assert.equal(backlog.entries.length, 1);
