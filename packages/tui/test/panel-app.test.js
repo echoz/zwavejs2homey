@@ -572,9 +572,9 @@ test('runPanelApp hydrates missing neighbor manufacturer/product from node detai
       name: 'Office',
       ready: true,
       status: 'alive',
-      manufacturer: 'Aeotec',
+      manufacturer: 'Unknown manufacturer',
       manufacturerId: 134,
-      product: 'Sensor',
+      product: 'unknown product',
       productType: 2,
       productId: 9,
     },
@@ -655,8 +655,157 @@ test('runPanelApp hydrates missing neighbor manufacturer/product from node detai
 
   const rendered = capture.text();
   assert.equal(rendered.includes('Node 2 | Kitchen | Zooz'), true);
-  assert.equal(rendered.includes('Node 5 | Office | Aeotec'), true);
+  assert.equal(rendered.includes('Node 5 | Office | id 134 / type 2, id 9'), true);
   assert.equal(rendered.includes('unknown | unknown'), false);
+  assert.equal(rendered.toLowerCase().includes('unknown manufacturer'), false);
+});
+
+test('runPanelApp omits link column when lifeline route is not reported', async () => {
+  const input = new FakeInput();
+  const output = new FakeOutput();
+  output.columns = 140;
+  const presenter = {
+    async connect() {},
+    async disconnect() {},
+    getState() {
+      return {
+        explorer: {
+          items: [
+            { nodeId: 7, name: 'Bedroom', manufacturer: 'Zooz', product: 'Dimmer' },
+            { nodeId: 8, name: 'Hall', manufacturer: 'Inovelli', product: 'Switch' },
+          ],
+        },
+      };
+    },
+    getStatusSnapshot() {
+      return {
+        mode: 'nodes',
+        connectionState: 'ready',
+        selectedSignature: undefined,
+        cachedNodeCount: 2,
+      };
+    },
+    async showNodeDetail(nodeId) {
+      return {
+        nodeId,
+        state: {
+          name: 'Bedroom',
+          ready: true,
+          status: 'alive',
+          manufacturer: 'Zooz',
+          product: 'Dimmer',
+        },
+        neighbors: [8],
+        lifelineRoute: null,
+        notificationEvents: [],
+        values: [],
+      };
+    },
+  };
+  const { capture, deps } = createPanelDeps(presenter, input, output);
+
+  const runPromise = runPanelApp(
+    {
+      mode: 'nodes',
+      uiMode: 'panel',
+      manifestFile: 'rules/manifest.json',
+      url: 'ws://127.0.0.1:3000',
+      schemaVersion: 0,
+      includeValues: 'summary',
+      maxValues: 100,
+    },
+    { log: () => {}, error: () => {} },
+    deps,
+  );
+
+  setTimeout(() => {
+    emitInputKeys(input, ['return', 'n', 'q']);
+  }, 5);
+
+  await runPromise;
+
+  const rendered = capture.text();
+  assert.equal(rendered.includes('Lifeline route: not reported'), true);
+  assert.equal(rendered.includes('Node 8 | Hall | Inovelli / Switch'), true);
+  assert.equal(rendered.includes('link n/a'), false);
+});
+
+test('runPanelApp wraps long neighbor identity fields without truncating content', async () => {
+  const input = new FakeInput();
+  const output = new FakeOutput();
+  output.columns = 92;
+  output.rows = 60;
+  const longManufacturer = 'ExtremelyLongManufacturerNameForNeighborIdentityValidation';
+  const longProduct = 'SuperVerboseProductDescriptorUsedToVerifyWrappingBehavior';
+  const presenter = {
+    async connect() {},
+    async disconnect() {},
+    getState() {
+      return {
+        explorer: {
+          items: [
+            { nodeId: 4, name: 'Main Node', manufacturer: 'Zooz', product: 'Switch' },
+            {
+              nodeId: 6,
+              name: 'Neighbor Node',
+              manufacturer: longManufacturer,
+              product: longProduct,
+            },
+          ],
+        },
+      };
+    },
+    getStatusSnapshot() {
+      return {
+        mode: 'nodes',
+        connectionState: 'ready',
+        selectedSignature: undefined,
+        cachedNodeCount: 2,
+      };
+    },
+    async showNodeDetail(nodeId) {
+      return {
+        nodeId,
+        state: {
+          name: 'Main Node',
+          ready: true,
+          status: 'alive',
+          manufacturer: 'Zooz',
+          product: 'Switch',
+        },
+        neighbors: [6],
+        lifelineRoute: { repeaters: [6], routeSpeed: 40_000 },
+        notificationEvents: [],
+        values: [],
+      };
+    },
+  };
+  const { capture, deps } = createPanelDeps(presenter, input, output);
+
+  const runPromise = runPanelApp(
+    {
+      mode: 'nodes',
+      uiMode: 'panel',
+      manifestFile: 'rules/manifest.json',
+      url: 'ws://127.0.0.1:3000',
+      schemaVersion: 0,
+      includeValues: 'summary',
+      maxValues: 100,
+    },
+    { log: () => {}, error: () => {} },
+    deps,
+  );
+
+  setTimeout(() => {
+    emitInputKeys(input, ['return', 'n', 'q']);
+  }, 5);
+
+  await runPromise;
+
+  const rendered = capture.text();
+  const compact = rendered.replace(/\s+/g, '');
+  assert.equal(compact.includes(longManufacturer), true);
+  assert.equal(compact.includes(longProduct), true);
 });
 
 test('runPanelApp renders status codes and notifications in human-readable form', async () => {

@@ -487,6 +487,73 @@ function padOrTruncateText(value: string, width: number): string {
   return `${value.slice(0, width - 1)}~`;
 }
 
+function wrapLineToWidth(
+  line: string,
+  width: number,
+  options?: { continuationPrefix?: string },
+): string[] {
+  if (width <= 0) return [''];
+  if (line.length <= width) return [line];
+  const continuationPrefix = options?.continuationPrefix ?? '  ';
+  const continuationBase =
+    continuationPrefix.length >= width ? ' '.repeat(Math.max(0, width - 1)) : continuationPrefix;
+  const wrapped: string[] = [];
+  let remainder = line;
+  let first = true;
+
+  while (remainder.length > 0) {
+    const prefix = first ? '' : continuationBase;
+    const available = Math.max(1, width - prefix.length);
+    if (remainder.length <= available) {
+      wrapped.push(`${prefix}${remainder}`);
+      break;
+    }
+    let breakIndex = remainder.lastIndexOf(' ', available);
+    const pipeBreakIndex = remainder.lastIndexOf('|', available);
+    if (pipeBreakIndex > breakIndex) breakIndex = pipeBreakIndex;
+    if (breakIndex <= 0) breakIndex = available;
+
+    const chunk = remainder.slice(0, breakIndex).trimEnd();
+    const output = chunk.length > 0 ? chunk : remainder.slice(0, available);
+    wrapped.push(`${prefix}${output}`);
+    remainder = remainder.slice(output.length).trimStart();
+    first = false;
+  }
+
+  return wrapped.length > 0 ? wrapped : [''];
+}
+
+function wrapDetailLinesForDisplay(lines: string[], sectionWidth: number): string[] {
+  const headingPattern = /^(?:[▶▼]\s+)?(Identity|Telemetry|Neighbors|Values)\b/;
+  const wrapped: string[] = [];
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.length === 0) {
+      wrapped.push('');
+      continue;
+    }
+    if (headingPattern.test(trimmed)) {
+      wrapped.push(line);
+      continue;
+    }
+
+    const bulletMatch = line.match(/^(\s*[-*]\s+)/);
+    const labelMatch = line.match(/^(\s*[A-Za-z][A-Za-z0-9 _/()\-]*:\s+)/);
+    const continuationPrefix = bulletMatch?.[1]
+      ? ' '.repeat(bulletMatch[1].length)
+      : labelMatch?.[1]
+        ? ' '.repeat(labelMatch[1].length)
+        : '  ';
+
+    wrapped.push(
+      ...wrapLineToWidth(line, sectionWidth, {
+        continuationPrefix,
+      }),
+    );
+  }
+  return wrapped;
+}
+
 function formatDetailLinesForDisplay(lines: string[], sectionWidth: number): string {
   const headingPattern = /^(?:[▶▼]\s+)?(Identity|Telemetry|Neighbors|Values)\b/;
   const labelValuePattern = /^([A-Za-z][A-Za-z0-9 _/()\-]*):(.*)$/;
@@ -658,18 +725,31 @@ function normalizeIdentityText(value: string | null | undefined): string | null 
   if (!value) return null;
   const trimmed = value.trim();
   if (!trimmed) return null;
-  const canonical = trimmed.toLowerCase();
-  switch (canonical) {
-    case 'unknown':
-    case 'n/a':
-    case 'na':
-    case 'none':
-    case 'null':
-    case 'undefined':
-      return null;
-    default:
-      return trimmed;
+  const canonical = trimmed.toLowerCase().replace(/\s+/g, ' ');
+  if (
+    canonical === 'unknown' ||
+    canonical === 'n/a' ||
+    canonical === 'na' ||
+    canonical === 'none' ||
+    canonical === 'null' ||
+    canonical === 'undefined' ||
+    canonical === 'unavailable' ||
+    canonical === 'not available' ||
+    canonical === 'not known'
+  ) {
+    return null;
   }
+  if (
+    canonical.startsWith('unknown ') ||
+    canonical.endsWith(' unknown') ||
+    canonical.includes('unknown manufacturer') ||
+    canonical.includes('manufacturer unknown') ||
+    canonical.includes('unknown product') ||
+    canonical.includes('product unknown')
+  ) {
+    return null;
+  }
+  return trimmed;
 }
 
 function asReadableId(value: unknown): string | undefined {
@@ -686,7 +766,9 @@ function formatManufacturerLabel(state: Record<string, unknown>): string {
   if (name && manufacturerId) {
     return name.includes(manufacturerId) ? name : `${name} (id ${manufacturerId})`;
   }
-  return name ?? manufacturerId ?? '';
+  if (name) return name;
+  if (manufacturerId) return `id ${manufacturerId}`;
+  return '';
 }
 
 function formatProductLabel(state: Record<string, unknown>): string {
@@ -859,7 +941,7 @@ function formatRouteSpeed(value: number | undefined): string | null {
 }
 
 function formatLifelineRouteSummary(route: LifelineRouteSummary | null): string {
-  if (!route) return 'Lifeline route: unknown';
+  if (!route) return 'Lifeline route: not reported';
   if (route.error) return `Lifeline route: unavailable (${route.error})`;
   const speed = formatRouteSpeed(route.routeSpeed);
   if (route.repeaters.length === 0) {
@@ -871,11 +953,11 @@ function formatLifelineRouteSummary(route: LifelineRouteSummary | null): string 
 function formatNeighborLinkQuality(
   neighborId: number | undefined,
   route: LifelineRouteSummary | null,
-): string {
-  if (!route) return 'link unknown';
+): string | null {
+  if (!route) return null;
   if (route.error) return 'link unavailable';
   const speed = formatRouteSpeed(route.routeSpeed);
-  if (neighborId === undefined) return 'link unknown';
+  if (neighborId === undefined) return null;
   if (route.repeaters.length === 0) return 'not-on-lifeline';
   const hopIndex = route.repeaters.indexOf(neighborId);
   if (hopIndex < 0) return 'not-on-lifeline';
@@ -905,16 +987,19 @@ function renderNeighborLines(
       if (!summary) {
         return `- Node ${value}`;
       }
-      const name = truncateValueText(normalizeIdentityText(summary.name) ?? '(unnamed)', 28);
+      const name = normalizeIdentityText(summary.name) ?? '(unnamed)';
       const manufacturerText = normalizeIdentityText(summary.manufacturer);
-      const manufacturer = manufacturerText ? truncateValueText(manufacturerText, 24) : null;
+      const manufacturer = manufacturerText ?? null;
       const productText = normalizeIdentityText(summary.product);
-      const product = productText ? truncateValueText(productText, 24) : null;
+      const product = productText ?? null;
       const identity =
         manufacturer && product
           ? `${manufacturer} / ${product}`
           : (manufacturer ?? product ?? 'identity pending');
       const linkQuality = formatNeighborLinkQuality(neighborId, route);
+      if (!linkQuality) {
+        return `- Node ${value} | ${name} | ${identity}`;
+      }
       return `- Node ${value} | ${name} | ${identity} | ${linkQuality}`;
     });
     return [
@@ -1959,7 +2044,7 @@ export async function runPanelApp(
     const filterSuffix = filterQuery ? ` | filter="${filterQuery}"` : '';
     const leftTitle = `${isNodesMode ? 'Nodes' : 'Rules'}${rangeSuffix}${filterSuffix}`;
 
-    const rightAllLines = splitLines(rightText);
+    const rightAllLines = wrapDetailLinesForDisplay(splitLines(rightText), rightContentWidth);
     const rightVisibleCapacity = Math.max(1, paneHeights.topContentHeight);
     const rightMaxScroll = Math.max(0, rightAllLines.length - rightVisibleCapacity);
     rightScroll = Math.min(rightMaxScroll, Math.max(0, rightScroll));
