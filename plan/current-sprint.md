@@ -457,11 +457,18 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 ## Next Tasks
 
 1. Execute Section 6B:
-   - harden panel ergonomics (selection persistence, pagination/filtering, richer detail panes)
-   - add panel curation affordances for safer write flows and better diagnostics drill-down
+   - list ergonomics: filtering/search + paging and selection persistence
+   - richer detail panes: node/rule/simulation drill-down readability
+   - safer curation writes: explicit in-panel confirmation before write operations
+   - diagnostics UX: long-run progress states and timeout/cancel behavior
+   - panel test expansion for all section 6B paths
 2. Execute Section 7 convergence review:
    - decide whether to keep separate stacks or extract shared view primitives
 3. Keep Homey adapter implementation paused until Phase 4 reset is complete
+
+Note:
+
+- Section 7 is blocked until all Section 6B items above are complete.
 
 ## Risks / Unknowns
 

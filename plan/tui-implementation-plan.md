@@ -24,6 +24,22 @@
 5. **Convergence review**
    - evaluate separate stacks vs shared view primitives
 
+### Section 6B Completion Order (Locked Before Section 7)
+
+1. list ergonomics:
+   - filtering/search
+   - paging + selection persistence
+2. richer detail panes:
+   - node/rule/simulation drill-down readability
+3. safer curation write UX:
+   - explicit in-panel confirmation flow before writes
+4. diagnostics UX:
+   - clear long-run progress states
+   - timeout/cancel behavior for live operations
+5. panel test expansion for all Section 6B behavior
+
+Section 7 does not start until all 6B slices above are complete.
+
 ## Startup and Root Flows
 
 - `--url ws://HOST:PORT` -> nodes-root stack

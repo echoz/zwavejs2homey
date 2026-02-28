@@ -110,6 +110,10 @@
 - [ ] Section 7: convergence review (separate stacks vs shared view primitives)
 - [ ] Keep Homey adapter implementation frozen until Phase 4 reset completion
 
+Execution note:
+
+- Section 7 starts only after Section 6B is fully complete.
+
 ## Phase 5: Homey Adapter MVP (Next Major Area)
 
 - [ ] Start only after compiler runtime-validation readiness milestone is met
