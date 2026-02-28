@@ -71,7 +71,8 @@ Data flow in both stacks:
 - [x] Section 2: startup + dual-root IA lock (docs/plans)
 - [x] Section 3: curation flow lock with simulation center (docs/plans)
 - [x] Section 4B: tests/docs migration for cutover
-- [x] Section 6: rich simulation integration in both stacks
+- [x] Section 6A: dual-root shell workflow parity (simulate integration in both stacks)
+- [ ] Section 6B: panel-first rich TUI UI integration in both stacks
 - [ ] Section 7: convergence review + final cleanup
 
 ## Testing Strategy

@@ -105,7 +105,8 @@
 
 - [x] Drafted reset MVP spec and implementation plan (`plan/tui-explorer-curation-spec.md`, `plan/tui-implementation-plan.md`)
 - [x] Section 4B: migrate tests/docs/help to simulate-centric workflow
-- [x] Section 6: rich simulation view integration in nodes and rules stacks
+- [x] Section 6A: dual-root shell workflow parity (nodes/rules + simulate)
+- [ ] Section 6B: panel-first rich UI integration in nodes and rules stacks
 - [ ] Section 7: convergence review (separate stacks vs shared view primitives)
 - [ ] Keep Homey adapter implementation frozen until Phase 4 reset completion
 

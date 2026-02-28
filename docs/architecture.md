@@ -141,8 +141,8 @@ Reference plan:
 Phase 4 is now executing a reset sequence:
 
 2. test/docs/help migration for that cutover
-3. dual-root rich TUI implementation on top of the updated CLI/tooling contracts (Section 6 complete)
-4. convergence review (Section 7 in progress)
+3. dual-root TUI implementation on top of the updated CLI/tooling contracts
+4. convergence review (after panel-first UI integration is complete)
 
 Reset architecture direction:
 
@@ -150,6 +150,7 @@ Reset architecture direction:
   - nodes root (`--url ws://...`)
   - rules root (`--rules-only [--manifest-file ...]`)
 - simulation-centric curation flow in both roots
+- current status: dual-root shell workflows are implemented; panel-first rich UI is pending
 
 Implementation structure (current direction):
 

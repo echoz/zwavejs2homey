@@ -66,6 +66,7 @@ Phase 4 reset status:
 - core CLI cutover complete (`compiler:simulate`)
 - dual-root startup active (`--url` nodes root, `--rules-only` rules root)
 - signature simulation workflow available in both roots
+- current interaction model is command-shell; panel-first rich TUI is still in progress
 
 Interactive commands:
 
