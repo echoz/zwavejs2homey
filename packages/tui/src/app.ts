@@ -464,6 +464,31 @@ function truncateLabel(value: string, max = 64): string {
   return `${value.slice(0, max - 1)}~`;
 }
 
+function getLeftPaneCapacity(rows: number | undefined): number {
+  const height = Math.max(18, rows ?? 30);
+  const bodyHeight = height - 6;
+  const topHeight = Math.max(8, Math.floor(bodyHeight * 0.65));
+  return Math.max(1, topHeight - 2);
+}
+
+function getVisibleWindow<T>(
+  items: T[],
+  selected: number,
+  capacity: number,
+): { start: number; visible: T[] } {
+  if (items.length <= capacity) {
+    return { start: 0, visible: items };
+  }
+  let start = Math.max(0, selected - Math.floor(capacity / 2));
+  if (start + capacity > items.length) {
+    start = items.length - capacity;
+  }
+  return {
+    start,
+    visible: items.slice(start, start + capacity),
+  };
+}
+
 type PanelFocus = 'left' | 'right' | 'bottom';
 
 export async function runPanelApp(
@@ -549,22 +574,40 @@ export async function runPanelApp(
     clampSelection();
     const width = output.columns ?? 120;
     const height = output.rows ?? 36;
+    const totalItems = getItemCount();
+    const listCapacity = getLeftPaneCapacity(output.rows);
 
-    const listLines = isNodesMode
-      ? getNodeItems().map((node, index) =>
-          formatListRow(
-            node.nodeId,
-            truncateLabel(`${node.name ?? '(unnamed)'} ${node.product ?? ''}`.trim()),
-            index === selectedIndex,
-          ),
-        )
-      : getRuleItems().map((rule, index) =>
-          formatListRow(
-            rule.index,
-            truncateLabel(`${rule.filePath} ${rule.signature ? `(${rule.signature})` : ''}`.trim()),
-            index === selectedIndex,
-          ),
-        );
+    let listLines: string[];
+    let leftTitle: string;
+    if (isNodesMode) {
+      const windowed = getVisibleWindow(getNodeItems(), selectedIndex, listCapacity);
+      listLines = windowed.visible.map((node, visibleIndex) =>
+        formatListRow(
+          node.nodeId,
+          truncateLabel(`${node.name ?? '(unnamed)'} ${node.product ?? ''}`.trim()),
+          windowed.start + visibleIndex === selectedIndex,
+        ),
+      );
+      const rangeSuffix =
+        totalItems > listCapacity
+          ? ` [${windowed.start + 1}-${windowed.start + windowed.visible.length}/${totalItems}]`
+          : '';
+      leftTitle = `Nodes${rangeSuffix}`;
+    } else {
+      const windowed = getVisibleWindow(getRuleItems(), selectedIndex, listCapacity);
+      listLines = windowed.visible.map((rule, visibleIndex) =>
+        formatListRow(
+          rule.index,
+          truncateLabel(`${rule.filePath} ${rule.signature ? `(${rule.signature})` : ''}`.trim()),
+          windowed.start + visibleIndex === selectedIndex,
+        ),
+      );
+      const rangeSuffix =
+        totalItems > listCapacity
+          ? ` [${windowed.start + 1}-${windowed.start + windowed.visible.length}/${totalItems}]`
+          : '';
+      leftTitle = `Rules${rangeSuffix}`;
+    }
 
     const status = isNodesMode
       ? nodesPresenter.getStatusSnapshot()
@@ -580,7 +623,7 @@ export async function runPanelApp(
       height,
       header,
       footer,
-      leftTitle: isNodesMode ? 'Nodes' : 'Rules',
+      leftTitle,
       leftLines: listLines,
       rightTitle: isNodesMode ? 'Node Detail' : 'Rule Detail',
       rightLines: splitLines(rightText),

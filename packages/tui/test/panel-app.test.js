@@ -78,7 +78,7 @@ test('runPanelApp renders panel UI and exits on q', async () => {
 
   setTimeout(() => {
     input.emit('keypress', '', { name: 'h' });
-    input.emit('keypress', '', { name: 'q' });
+    input.emit('keypress', 'q', {});
   }, 5);
 
   await runPromise;
@@ -88,6 +88,67 @@ test('runPanelApp renders panel UI and exits on q', async () => {
   assert.deepEqual(input.rawModes, [true, false]);
   assert.equal(
     output.writes.some((line) => line.includes('ZWJS nodes (panel)')),
+    true,
+  );
+});
+
+test('runPanelApp scrolls list viewport when selection moves beyond visible window', async () => {
+  const input = new FakeInput();
+  const output = new FakeOutput();
+  output.rows = 20;
+  const presenter = {
+    async connect() {},
+    async disconnect() {},
+    getState() {
+      return {
+        explorer: {
+          items: Array.from({ length: 40 }, (_, index) => ({
+            nodeId: index + 1,
+            name: `Node-${index + 1}`,
+            product: 'Device',
+          })),
+        },
+      };
+    },
+    getStatusSnapshot() {
+      return {
+        mode: 'nodes',
+        connectionState: 'ready',
+        selectedSignature: undefined,
+        cachedNodeCount: 40,
+      };
+    },
+  };
+
+  const runPromise = runPanelApp(
+    {
+      mode: 'nodes',
+      uiMode: 'panel',
+      manifestFile: 'rules/manifest.json',
+      url: 'ws://127.0.0.1:3000',
+      schemaVersion: 0,
+      includeValues: 'summary',
+      maxValues: 100,
+    },
+    { log: () => {}, error: () => {} },
+    { presenter, stdin: input, stdout: output },
+  );
+
+  setTimeout(() => {
+    for (let i = 0; i < 24; i += 1) {
+      input.emit('keypress', '', { name: 'down' });
+    }
+    input.emit('keypress', 'q', {});
+  }, 5);
+
+  await runPromise;
+
+  assert.equal(
+    output.writes.some((line) => line.includes('Nodes [')),
+    true,
+  );
+  assert.equal(
+    output.writes.some((line) => line.includes('Node-25')),
     true,
   );
 });
