@@ -3,7 +3,12 @@ export type PanelIntent =
   | { type: 'quit' }
   | { type: 'move-up' }
   | { type: 'move-down' }
+  | { type: 'move-page-up' }
+  | { type: 'move-page-down' }
+  | { type: 'move-first' }
+  | { type: 'move-last' }
   | { type: 'switch-pane' }
+  | { type: 'start-filter' }
   | { type: 'open' }
   | { type: 'refresh' }
   | { type: 'inspect' }
@@ -40,7 +45,12 @@ export function parsePanelKeypress(char: string, key: KeyLike = {}): PanelIntent
   if (name === 'q' || token === 'q' || name === 'escape') return { type: 'quit' };
   if (name === 'up' || token === 'k') return { type: 'move-up' };
   if (name === 'down' || token === 'j') return { type: 'move-down' };
+  if (name === 'pageup') return { type: 'move-page-up' };
+  if (name === 'pagedown') return { type: 'move-page-down' };
+  if (name === 'home') return { type: 'move-first' };
+  if (name === 'end') return { type: 'move-last' };
   if (name === 'tab') return { type: 'switch-pane' };
+  if (token === '/' || name === 'slash') return { type: 'start-filter' };
   if (name === 'return' || name === 'enter') return { type: 'open' };
   if (name === 'r' || token === 'r') return { type: 'refresh' };
   if (name === 'i' || token === 'i') return { type: 'inspect' };

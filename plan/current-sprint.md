@@ -453,11 +453,17 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - implemented panel event loop for nodes/rules roots on top of existing presenters/services
     - wired panel actions for refresh/open/inspect/validate/simulate/scaffold preview plus confirmed write helpers (`W` scaffold write, `A` manifest add)
     - added panel view/runtime tests (`panel-view`, `panel-app`) and updated CLI arg tests for ui mode
+93. Completed Section 6B list ergonomics slice:
+    - added viewported list navigation ergonomics:
+      - page movement (`pgup`/`pgdn`) and boundary jumps (`home`/`end`)
+      - stable selection persistence by item key across filtering/refresh
+    - added interactive panel filter mode (`/`) with inline query editing and match counts
+    - hardened quit/data handling to avoid arrow-sequence misclassification while preserving fallback quit paths
+    - added/expanded panel tests for filtering, viewport scrolling, and low-level key parsing
 
 ## Next Tasks
 
 1. Execute Section 6B:
-   - list ergonomics: filtering/search + paging and selection persistence
    - richer detail panes: node/rule/simulation drill-down readability
    - safer curation writes: explicit in-panel confirmation before write operations
    - diagnostics UX: long-run progress states and timeout/cancel behavior

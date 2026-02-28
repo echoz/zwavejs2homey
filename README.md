@@ -72,6 +72,9 @@ Phase 4 reset status:
 Panel keys (default `--ui panel`):
 
 - `up/down` or `k/j`: move selection
+- `pgup/pgdn`: move by page
+- `home/end`: jump to first/last item
+- `/`: enter filter mode (type query, `backspace`, `enter` apply)
 - `tab`: switch focused pane
 - `enter`: open selected node/rule detail
 - `r`: refresh list

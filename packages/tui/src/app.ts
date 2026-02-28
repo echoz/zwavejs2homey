@@ -447,7 +447,8 @@ function renderPanelHelp(mode: SessionConfig['mode']): string {
       ? 'enter=open node, i/v/m use selected node signature'
       : 'enter=open rule, i/v/m use selected rule signature';
   return [
-    'Keys: up/down move | tab switch pane | enter open | r refresh',
+    'Keys: up/down move | pgup/pgdn page | home/end jump | / filter | tab switch pane',
+    'enter open | r refresh',
     'i inspect | v validate | m simulate | d simulate(dry-run) | p scaffold-preview',
     'W scaffold-write (confirmed) | A manifest-add (confirmed)',
     's status | l log | h help | q quit',
@@ -462,6 +463,12 @@ function formatListRow(index: number, label: string, selected: boolean): string 
 function truncateLabel(value: string, max = 64): string {
   if (value.length <= max) return value;
   return `${value.slice(0, max - 1)}~`;
+}
+
+function normalizeText(value: string | null | undefined): string {
+  return String(value ?? '')
+    .trim()
+    .toLowerCase();
 }
 
 function getLeftPaneCapacity(rows: number | undefined): number {
@@ -488,6 +495,24 @@ function getVisibleWindow<T>(
     visible: items.slice(start, start + capacity),
   };
 }
+
+interface NodeListEntry {
+  kind: 'node';
+  key: string;
+  rowId: number;
+  label: string;
+  nodeId: number;
+}
+
+interface RuleListEntry {
+  kind: 'rule';
+  key: string;
+  rowId: number;
+  label: string;
+  ruleIndex: number;
+}
+
+type PanelListEntry = NodeListEntry | RuleListEntry;
 
 type PanelFocus = 'left' | 'right' | 'bottom';
 
@@ -517,40 +542,124 @@ export async function runPanelApp(
   const paneOrder: PanelFocus[] = ['left', 'right', 'bottom'];
 
   let selectedIndex = 0;
+  let selectedItemKey: string | undefined;
   let focusedPane: PanelFocus = 'left';
+  let filterMode = false;
+  let filterQuery = '';
   let rightText = '';
   let bottomText = renderPanelHelp(config.mode);
   let isClosing = false;
 
-  const getNodeItems = () => nodesPresenter.getState().explorer.items;
-  const getRuleItems = () => rulesPresenter.getRules();
-  const getItemCount = () => (isNodesMode ? getNodeItems().length : getRuleItems().length);
+  function getListEntries(): PanelListEntry[] {
+    if (isNodesMode) {
+      const items = nodesPresenter.getState().explorer.items;
+      const filtered = items.filter((node) => {
+        if (!filterQuery) return true;
+        const haystack = [
+          String(node.nodeId),
+          normalizeText(node.name),
+          normalizeText(node.product),
+          normalizeText(node.manufacturer),
+          normalizeText(node.location),
+        ].join(' ');
+        return haystack.includes(filterQuery.toLowerCase());
+      });
+      return filtered.map((node) => ({
+        kind: 'node',
+        key: `node:${node.nodeId}`,
+        rowId: node.nodeId,
+        label: truncateLabel(`${node.name ?? '(unnamed)'} ${node.product ?? ''}`.trim()),
+        nodeId: node.nodeId,
+      }));
+    }
+
+    const items = rulesPresenter.getRules();
+    const filtered = items.filter((rule) => {
+      if (!filterQuery) return true;
+      const haystack = [
+        String(rule.index),
+        normalizeText(rule.filePath),
+        normalizeText(rule.signature),
+        normalizeText(rule.name),
+        normalizeText(rule.layer),
+      ].join(' ');
+      return haystack.includes(filterQuery.toLowerCase());
+    });
+    return filtered.map((rule) => ({
+      kind: 'rule',
+      key: `rule:${rule.index}`,
+      rowId: rule.index,
+      label: truncateLabel(
+        `${rule.filePath} ${rule.signature ? `(${rule.signature})` : ''}`.trim(),
+      ),
+      ruleIndex: rule.index,
+    }));
+  }
 
   function clampSelection(): void {
-    const count = getItemCount();
-    if (count <= 0) {
+    const entries = getListEntries();
+    if (entries.length <= 0) {
       selectedIndex = 0;
+      selectedItemKey = undefined;
       return;
     }
+
+    if (selectedItemKey) {
+      const persistedIndex = entries.findIndex((entry) => entry.key === selectedItemKey);
+      if (persistedIndex >= 0) {
+        selectedIndex = persistedIndex;
+      }
+    }
     if (selectedIndex < 0) selectedIndex = 0;
-    if (selectedIndex >= count) selectedIndex = count - 1;
+    if (selectedIndex >= entries.length) selectedIndex = entries.length - 1;
+    selectedItemKey = entries[selectedIndex]?.key;
   }
 
   function moveSelection(delta: number): void {
+    const entries = getListEntries();
+    if (entries.length === 0) {
+      selectedIndex = 0;
+      selectedItemKey = undefined;
+      return;
+    }
     selectedIndex += delta;
+    if (selectedIndex < 0) selectedIndex = 0;
+    if (selectedIndex >= entries.length) selectedIndex = entries.length - 1;
+    selectedItemKey = entries[selectedIndex]?.key;
+  }
+
+  function moveSelectionByPage(multiplier: number): void {
+    const pageSize = getLeftPaneCapacity(output.rows);
+    moveSelection(pageSize * multiplier);
+  }
+
+  function moveSelectionToBoundary(kind: 'first' | 'last'): void {
+    const entries = getListEntries();
+    if (entries.length === 0) {
+      selectedIndex = 0;
+      selectedItemKey = undefined;
+      return;
+    }
+    selectedIndex = kind === 'first' ? 0 : entries.length - 1;
+    selectedItemKey = entries[selectedIndex]?.key;
+  }
+
+  function getSelectedEntry(): PanelListEntry | undefined {
     clampSelection();
+    const entries = getListEntries();
+    return entries[selectedIndex];
   }
 
   function getSelectedNodeId(): number | undefined {
-    const nodes = getNodeItems();
-    const node = nodes[selectedIndex];
-    return node?.nodeId;
+    const entry = getSelectedEntry();
+    if (entry?.kind !== 'node') return undefined;
+    return entry.nodeId;
   }
 
   function getSelectedRuleIndex(): number | undefined {
-    const rules = getRuleItems();
-    const rule = rules[selectedIndex];
-    return rule?.index;
+    const entry = getSelectedEntry();
+    if (entry?.kind !== 'rule') return undefined;
+    return entry.ruleIndex;
   }
 
   async function ensureSelectedSignature(): Promise<string> {
@@ -574,40 +683,21 @@ export async function runPanelApp(
     clampSelection();
     const width = output.columns ?? 120;
     const height = output.rows ?? 36;
-    const totalItems = getItemCount();
+    const entries = getListEntries();
+    const totalItems = entries.length;
     const listCapacity = getLeftPaneCapacity(output.rows);
-
-    let listLines: string[];
-    let leftTitle: string;
-    if (isNodesMode) {
-      const windowed = getVisibleWindow(getNodeItems(), selectedIndex, listCapacity);
-      listLines = windowed.visible.map((node, visibleIndex) =>
-        formatListRow(
-          node.nodeId,
-          truncateLabel(`${node.name ?? '(unnamed)'} ${node.product ?? ''}`.trim()),
-          windowed.start + visibleIndex === selectedIndex,
-        ),
-      );
-      const rangeSuffix =
-        totalItems > listCapacity
-          ? ` [${windowed.start + 1}-${windowed.start + windowed.visible.length}/${totalItems}]`
-          : '';
-      leftTitle = `Nodes${rangeSuffix}`;
-    } else {
-      const windowed = getVisibleWindow(getRuleItems(), selectedIndex, listCapacity);
-      listLines = windowed.visible.map((rule, visibleIndex) =>
-        formatListRow(
-          rule.index,
-          truncateLabel(`${rule.filePath} ${rule.signature ? `(${rule.signature})` : ''}`.trim()),
-          windowed.start + visibleIndex === selectedIndex,
-        ),
-      );
-      const rangeSuffix =
-        totalItems > listCapacity
-          ? ` [${windowed.start + 1}-${windowed.start + windowed.visible.length}/${totalItems}]`
-          : '';
-      leftTitle = `Rules${rangeSuffix}`;
-    }
+    const windowed = getVisibleWindow(entries, selectedIndex, listCapacity);
+    const listLines = windowed.visible.map((entry, visibleIndex) =>
+      formatListRow(entry.rowId, entry.label, windowed.start + visibleIndex === selectedIndex),
+    );
+    const rangeSuffix =
+      totalItems > listCapacity
+        ? ` [${windowed.start + 1}-${windowed.start + windowed.visible.length}/${totalItems}]`
+        : totalItems > 0
+          ? ` [1-${totalItems}/${totalItems}]`
+          : ' [0/0]';
+    const filterSuffix = filterQuery ? ` | filter="${filterQuery}"` : '';
+    const leftTitle = `${isNodesMode ? 'Nodes' : 'Rules'}${rangeSuffix}${filterSuffix}`;
 
     const status = isNodesMode
       ? nodesPresenter.getStatusSnapshot()
@@ -616,7 +706,9 @@ export async function runPanelApp(
       ? `sig=${status.selectedSignature}`
       : 'sig=-';
     const header = `ZWJS ${config.mode} (${config.uiMode}) ${selectedSignature}`;
-    const footer = 'q quit | arrows move | enter open | i/v/m simulate loop | h help';
+    const footer = filterMode
+      ? 'Filter mode: type to search | backspace delete | enter apply | esc cancel'
+      : 'q quit | arrows move | pgup/pgdn page | / filter | enter open | i/v/m loop';
 
     const frame = renderPanelFrame({
       width,
@@ -642,12 +734,33 @@ export async function runPanelApp(
       isClosing = true;
       return;
     }
+    if (intent.type === 'start-filter') {
+      filterMode = true;
+      bottomText = `Filter: ${filterQuery || '<empty>'} (${getListEntries().length} match(es))`;
+      return;
+    }
     if (intent.type === 'move-up') {
       moveSelection(-1);
       return;
     }
     if (intent.type === 'move-down') {
       moveSelection(1);
+      return;
+    }
+    if (intent.type === 'move-page-up') {
+      moveSelectionByPage(-1);
+      return;
+    }
+    if (intent.type === 'move-page-down') {
+      moveSelectionByPage(1);
+      return;
+    }
+    if (intent.type === 'move-first') {
+      moveSelectionToBoundary('first');
+      return;
+    }
+    if (intent.type === 'move-last') {
+      moveSelectionToBoundary('last');
       return;
     }
     if (intent.type === 'switch-pane') {
@@ -676,7 +789,7 @@ export async function runPanelApp(
       } else {
         rulesPresenter.refreshRules();
       }
-      bottomText = `Refreshed ${getItemCount()} item(s).`;
+      bottomText = `Refreshed ${getListEntries().length} item(s).`;
       return;
     }
     if (intent.type === 'inspect') {
@@ -807,14 +920,54 @@ export async function runPanelApp(
         char: string,
         key: { name?: string; ctrl?: boolean; sequence?: string },
       ) => {
-        const intent = parsePanelKeypress(char, key);
-        queueIntent(intent);
+        const parsedIntent = parsePanelKeypress(char, key);
+        if (!filterMode && parsedIntent.type === 'start-filter') {
+          filterMode = true;
+          bottomText = `Filter: ${filterQuery || '<empty>'} (${getListEntries().length} match(es))`;
+          renderFrame();
+          return;
+        }
+        if (filterMode) {
+          const name = (key.name ?? '').toLowerCase();
+          if (name === 'escape') {
+            filterMode = false;
+            bottomText = `Filter applied: ${filterQuery || '<empty>'} (${getListEntries().length} match(es))`;
+            renderFrame();
+            return;
+          }
+          if (name === 'return' || name === 'enter') {
+            filterMode = false;
+            bottomText = `Filter applied: ${filterQuery || '<empty>'} (${getListEntries().length} match(es))`;
+            renderFrame();
+            return;
+          }
+          if (name === 'backspace') {
+            filterQuery = filterQuery.slice(0, -1);
+            selectedIndex = 0;
+            selectedItemKey = undefined;
+            bottomText = `Filter: ${filterQuery || '<empty>'} (${getListEntries().length} match(es))`;
+            renderFrame();
+            return;
+          }
+          if (!key.ctrl && char && char >= ' ') {
+            filterQuery += char;
+            selectedIndex = 0;
+            selectedItemKey = undefined;
+            bottomText = `Filter: ${filterQuery || '<empty>'} (${getListEntries().length} match(es))`;
+            renderFrame();
+            return;
+          }
+          return;
+        }
+        queueIntent(parsedIntent);
       };
       const onData = (chunk: Buffer | string) => {
-        const fallbackIntent = parsePanelDataChunk(
-          typeof chunk === 'string' ? chunk : chunk.toString('utf8'),
-        );
+        const value = typeof chunk === 'string' ? chunk : chunk.toString('utf8');
+        const fallbackIntent = parsePanelDataChunk(value);
         if (fallbackIntent) {
+          if (filterMode && (value === 'q' || value === 'Q')) {
+            return;
+          }
           queueIntent(fallbackIntent);
         }
       };

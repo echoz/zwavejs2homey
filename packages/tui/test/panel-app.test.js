@@ -153,6 +153,67 @@ test('runPanelApp scrolls list viewport when selection moves beyond visible wind
   );
 });
 
+test('runPanelApp supports interactive filtering in list pane', async () => {
+  const input = new FakeInput();
+  const output = new FakeOutput();
+  const presenter = {
+    async connect() {},
+    async disconnect() {},
+    getState() {
+      return {
+        explorer: {
+          items: [
+            { nodeId: 1, name: 'Kitchen', product: 'Switch' },
+            { nodeId: 2, name: 'Office', product: 'Sensor' },
+            { nodeId: 3, name: 'Garage', product: 'Light' },
+          ],
+        },
+      };
+    },
+    getStatusSnapshot() {
+      return {
+        mode: 'nodes',
+        connectionState: 'ready',
+        selectedSignature: undefined,
+        cachedNodeCount: 3,
+      };
+    },
+  };
+
+  const runPromise = runPanelApp(
+    {
+      mode: 'nodes',
+      uiMode: 'panel',
+      manifestFile: 'rules/manifest.json',
+      url: 'ws://127.0.0.1:3000',
+      schemaVersion: 0,
+      includeValues: 'summary',
+      maxValues: 100,
+    },
+    { log: () => {}, error: () => {} },
+    { presenter, stdin: input, stdout: output },
+  );
+
+  setTimeout(() => {
+    input.emit('keypress', '/', { name: 'slash' });
+    input.emit('keypress', 'o', {});
+    input.emit('keypress', 'f', {});
+    input.emit('keypress', '', { name: 'return' });
+    input.emit('keypress', 'q', {});
+  }, 5);
+
+  await runPromise;
+
+  assert.equal(
+    output.writes.some((line) => line.includes('Filter applied: of')),
+    true,
+  );
+  assert.equal(
+    output.writes.some((line) => line.includes('Office')),
+    true,
+  );
+});
+
 test('runPanelApp can quit via raw data fallback', async () => {
   const input = new FakeInput();
   const output = new FakeOutput();
