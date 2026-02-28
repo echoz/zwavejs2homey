@@ -605,6 +605,7 @@ function renderPanelHelp(mode: SessionConfig['mode']): string {
     'i inspect | v validate | m simulate | d simulate(dry-run) | p scaffold-preview',
     'n toggle neighbors in node detail',
     'z toggle values in node detail',
+    '1-6 toggle value subsections (controls/sensors/events/config/diagnostic/other)',
     'b toggle bottom pane full/status-bar',
     'W scaffold-write (confirmed) | A manifest-add (confirmed)',
     's status | l log | c cancel operation | h help | q quit',
@@ -1221,16 +1222,21 @@ interface ValueSectionDescriptor {
   id: ValueSemanticSection;
   title: string;
   compact: boolean;
+  toggleKey: string;
 }
 
 const VALUE_SECTION_ORDER: ValueSectionDescriptor[] = [
-  { id: 'controls', title: 'Controls', compact: false },
-  { id: 'sensors', title: 'Sensors', compact: false },
-  { id: 'events', title: 'Events', compact: false },
-  { id: 'config', title: 'Config', compact: true },
-  { id: 'diagnostic', title: 'Diagnostic', compact: true },
-  { id: 'other', title: 'Other', compact: false },
+  { id: 'controls', title: 'Controls', compact: false, toggleKey: '1' },
+  { id: 'sensors', title: 'Sensors', compact: false, toggleKey: '2' },
+  { id: 'events', title: 'Events', compact: false, toggleKey: '3' },
+  { id: 'config', title: 'Config', compact: true, toggleKey: '4' },
+  { id: 'diagnostic', title: 'Diagnostic', compact: true, toggleKey: '5' },
+  { id: 'other', title: 'Other', compact: false, toggleKey: '6' },
 ];
+
+const VALUE_SECTION_BY_TOGGLE_KEY = new Map<string, ValueSectionDescriptor>(
+  VALUE_SECTION_ORDER.map((section) => [section.toggleKey, section]),
+);
 
 function groupValuesBySection(
   values: NodeValueDetail[],
@@ -1261,11 +1267,39 @@ function renderCollapsedValuePreview(values: NodeValueDetail[], limit: number): 
   });
 }
 
+function renderCollapsedSectionPreview(
+  valuesBySection: Map<ValueSemanticSection, NodeValueDetail[]>,
+  collapsedSections: Set<ValueSemanticSection>,
+): string[] {
+  const sections = VALUE_SECTION_ORDER.flatMap((section) => {
+    const sectionValues = valuesBySection.get(section.id) ?? [];
+    if (sectionValues.length <= 0) return [];
+    const collapsed = collapsedSections.has(section.id);
+    const sectionTitle = `${collapsed ? '▶' : '▼'} ${section.title} (${sectionValues.length}) (${section.toggleKey})`;
+    if (collapsed) return [sectionTitle];
+    const previewLimit = section.compact ? 1 : 2;
+    const previewRows = sectionValues
+      .slice(0, previewLimit)
+      .map((entry) =>
+        section.compact ? formatNodeValueCompactLine(entry) : formatNodeValueLine(entry),
+      );
+    return [
+      sectionTitle,
+      ...previewRows,
+      sectionValues.length > previewRows.length
+        ? `... ${sectionValues.length - previewRows.length} more ${section.title.toLowerCase()} values (z)`
+        : null,
+    ];
+  });
+  return sections.filter((line): line is string => line !== null);
+}
+
 function renderPanelNodeDetail(
   detail: NodeDetail,
   options: {
     neighborsExpanded?: boolean;
     valuesExpanded?: boolean;
+    collapsedValueSections?: Set<ValueSemanticSection>;
     neighborLookup?: Map<number, NeighborIdentity>;
   } = {},
 ): string {
@@ -1294,20 +1328,23 @@ function renderPanelNodeDetail(
   const sortedValues = sortValuesByRelevance(values);
   const valuesExpanded = options.valuesExpanded === true;
   const valuesDisclosure = valuesExpanded ? '▼' : '▶';
+  const collapsedValueSections = options.collapsedValueSections ?? new Set<ValueSemanticSection>();
   const valuesBySection = groupValuesBySection(sortedValues);
   const collapsedPreviewRows = renderCollapsedValuePreview(sortedValues, 5);
-  const nonEmptySectionSummaries = VALUE_SECTION_ORDER.map((section) => {
-    const count = valuesBySection.get(section.id)?.length ?? 0;
-    if (count <= 0) return null;
-    return `${section.title.toLowerCase()} ${count}`;
-  }).filter((value): value is string => value !== null);
+  const collapsedSectionRows = renderCollapsedSectionPreview(
+    valuesBySection,
+    collapsedValueSections,
+  );
   const expandedSectionLines = VALUE_SECTION_ORDER.flatMap((section) => {
     const sectionValues = valuesBySection.get(section.id) ?? [];
     if (sectionValues.length <= 0) return [];
+    const collapsed = collapsedValueSections.has(section.id);
+    const sectionTitle = `${collapsed ? '▶' : '▼'} ${section.title}: ${sectionValues.length} (${section.toggleKey})`;
+    if (collapsed) return [sectionTitle];
     const rows = section.compact
       ? sectionValues.map((entry) => formatNodeValueCompactLine(entry))
       : sectionValues.map((entry) => formatNodeValueLine(entry));
-    return [`${section.title}: ${sectionValues.length}`, ...rows];
+    return [sectionTitle, ...rows];
   });
   const valuesSectionTitle = `${valuesDisclosure} Values ${values.length}${values.length > 0 ? ' (z)' : ''}`;
   const valuesBodyLines = valuesExpanded
@@ -1315,16 +1352,15 @@ function renderPanelNodeDetail(
       ? expandedSectionLines
       : ['No values available.']
     : values.length > 0
-      ? [
-          nonEmptySectionSummaries.length > 0
-            ? `Section counts: ${nonEmptySectionSummaries.join(' | ')}`
-            : null,
-          'Top values (relevance first):',
-          ...collapsedPreviewRows,
-          values.length > collapsedPreviewRows.length
-            ? `... ${values.length - collapsedPreviewRows.length} more values (z)`
-            : null,
-        ]
+      ? collapsedSectionRows.length > 0
+        ? collapsedSectionRows
+        : [
+            'Top values (relevance first):',
+            ...collapsedPreviewRows,
+            values.length > collapsedPreviewRows.length
+              ? `... ${values.length - collapsedPreviewRows.length} more values (z)`
+              : null,
+          ]
       : ['No values available.'];
 
   return [
@@ -1437,6 +1473,7 @@ type PanelIntent =
   | { type: 'cancel-operation' }
   | { type: 'toggle-neighbors' }
   | { type: 'toggle-values' }
+  | { type: 'toggle-value-section'; key: string }
   | { type: 'toggle-bottom-pane-size' }
   | { type: 'help' };
 
@@ -1473,6 +1510,7 @@ function keypressToPanelIntent(
   if (name === 'c' || token === 'c') return { type: 'cancel-operation' };
   if (name === 'n' || token === 'n') return { type: 'toggle-neighbors' };
   if (name === 'z' || token === 'z') return { type: 'toggle-values' };
+  if (VALUE_SECTION_BY_TOGGLE_KEY.has(token)) return { type: 'toggle-value-section', key: token };
   if (name === 'b' || token === 'b') return { type: 'toggle-bottom-pane-size' };
   if (name === 'h' || name === '?' || char === '?') return { type: 'help' };
   return { type: 'noop' };
@@ -1530,6 +1568,7 @@ export async function runPanelApp(
   let currentNodeDetail: NodeDetail | null = null;
   let neighborsExpanded = false;
   let valuesExpanded = false;
+  const collapsedValueSections = new Set<ValueSemanticSection>();
   let bottomText = renderPanelHelp(config.mode);
   let bottomScroll = 0;
   let bottomCompact = true;
@@ -1916,12 +1955,14 @@ export async function runPanelApp(
     if (selectedNodeChanged) {
       neighborsExpanded = false;
       valuesExpanded = false;
+      collapsedValueSections.clear();
     }
     const neighborLookup = isNodesMode ? buildNeighborLookup() : undefined;
     setRightPaneText(
       renderPanelNodeDetail(detail, {
         neighborsExpanded,
         valuesExpanded,
+        collapsedValueSections,
         neighborLookup,
       }),
     );
@@ -1933,6 +1974,7 @@ export async function runPanelApp(
     rightText = renderPanelNodeDetail(currentNodeDetail, {
       neighborsExpanded,
       valuesExpanded,
+      collapsedValueSections,
       neighborLookup,
     });
   }
@@ -2139,7 +2181,7 @@ export async function runPanelApp(
         : '';
     const footer = filterMode
       ? `Filter mode: type to search | backspace delete | enter apply | esc apply${statusSuffix}`
-      : `q quit | arrows move | pgup/pgdn page | / filter | enter open | i/v/m loop | n neighbors | z values | b bottom-size | c cancel${statusSuffix}`;
+      : `q quit | arrows move | pgup/pgdn page | / filter | enter open | i/v/m loop | n neighbors | z values | 1-6 subsections | b bottom-size | c cancel${statusSuffix}`;
 
     requestVisibleListIdentityHydration();
 
@@ -2298,6 +2340,7 @@ export async function runPanelApp(
         currentNodeDetail = null;
         neighborsExpanded = false;
         valuesExpanded = false;
+        collapsedValueSections.clear();
         setRightPaneText(renderPanelRuleDetail(rulesPresenter.showRuleDetail(ruleIndex)));
       }
       return;
@@ -2313,6 +2356,7 @@ export async function runPanelApp(
             currentNodeDetail = null;
             neighborsExpanded = false;
             valuesExpanded = false;
+            collapsedValueSections.clear();
             setRightPaneText('');
           } else {
             rerenderCurrentNodeDetail();
@@ -2364,6 +2408,37 @@ export async function runPanelApp(
       valuesExpanded = !valuesExpanded;
       rerenderCurrentNodeDetail();
       setBottomPaneText(valuesExpanded ? 'Expanded values.' : 'Collapsed values.');
+      return;
+    }
+    if (intent.type === 'toggle-value-section') {
+      if (!isNodesMode) {
+        setBottomPaneText('Values subsections are only available in nodes mode.');
+        return;
+      }
+      if (!currentNodeDetail) {
+        const nodeId = getSelectedNodeId();
+        if (!nodeId) {
+          setBottomPaneText('Open a node first.');
+          return;
+        }
+        const detail = await nodesPresenter.showNodeDetail(nodeId);
+        updateNodeDetail(detail);
+      }
+      const section = VALUE_SECTION_BY_TOGGLE_KEY.get(intent.key);
+      if (!section) {
+        setBottomPaneText(`Unknown value subsection key: ${intent.key}`);
+        return;
+      }
+      const isCollapsed = collapsedValueSections.has(section.id);
+      if (isCollapsed) {
+        collapsedValueSections.delete(section.id);
+      } else {
+        collapsedValueSections.add(section.id);
+      }
+      rerenderCurrentNodeDetail();
+      setBottomPaneText(
+        `${isCollapsed ? 'Expanded' : 'Collapsed'} value subsection: ${section.title} (${section.toggleKey}).`,
+      );
       return;
     }
     if (intent.type === 'inspect') {
