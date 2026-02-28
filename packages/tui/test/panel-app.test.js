@@ -606,6 +606,99 @@ test('runPanelApp orders expanded values by relevance', async () => {
   );
 });
 
+test('runPanelApp scrolls right pane when focused on node detail', async () => {
+  const input = new FakeInput();
+  const output = new FakeOutput();
+  output.rows = 24;
+  const presenter = {
+    async connect() {},
+    async disconnect() {},
+    getState() {
+      return {
+        explorer: {
+          items: [{ nodeId: 4, name: 'Bedroom', product: 'Dimmer' }],
+        },
+      };
+    },
+    getStatusSnapshot() {
+      return {
+        mode: 'nodes',
+        connectionState: 'ready',
+        selectedSignature: undefined,
+        cachedNodeCount: 1,
+      };
+    },
+    async showNodeDetail(nodeId) {
+      return {
+        nodeId,
+        state: {
+          name: 'Bedroom',
+          ready: true,
+          status: 'alive',
+          manufacturer: 'Inovelli',
+          manufacturerId: 4655,
+          product: 'Dimmer',
+          productType: 1,
+          productId: 2,
+        },
+        neighbors: [1, 2],
+        notificationEvents: [],
+        values: Array.from({ length: 16 }, (_, index) => ({
+          valueId: {
+            commandClass: 112,
+            endpoint: 0,
+            property: `prop-${index + 1}`,
+          },
+          metadata: {
+            label: `Property ${index + 1}`,
+            readable: true,
+            writeable: false,
+            type: 'number',
+          },
+          value: index,
+        })),
+      };
+    },
+  };
+
+  const runPromise = runPanelApp(
+    {
+      mode: 'nodes',
+      uiMode: 'panel',
+      manifestFile: 'rules/manifest.json',
+      url: 'ws://127.0.0.1:3000',
+      schemaVersion: 0,
+      includeValues: 'summary',
+      maxValues: 100,
+    },
+    { log: () => {}, error: () => {} },
+    { presenter, stdin: input, stdout: output },
+  );
+
+  setTimeout(() => {
+    input.emit('keypress', '', { name: 'return' });
+    input.emit('keypress', 'z', { name: 'z' });
+    input.emit('keypress', '', { name: 'tab' });
+    input.emit('keypress', '', { name: 'pagedown' });
+    input.emit('keypress', 'q', {});
+  }, 5);
+
+  await runPromise;
+
+  const ranges = [];
+  for (const frame of output.writes) {
+    const match = frame.match(/Node Detail \[(\d+)-(\d+)\/(\d+)\]/);
+    if (match) {
+      ranges.push(Number(match[1]));
+    }
+  }
+  assert.equal(ranges.length > 0, true);
+  assert.equal(
+    ranges.some((start) => start > 1),
+    true,
+  );
+});
+
 test('runPanelApp can quit via raw data fallback', async () => {
   const input = new FakeInput();
   const output = new FakeOutput();

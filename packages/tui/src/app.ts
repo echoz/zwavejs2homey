@@ -107,7 +107,7 @@ export function getUsageText(): string {
     '               [--include-values none|summary|full] [--max-values N]',
     '',
     'Panel Mode Keys (default):',
-    '  arrows/j/k move | pgup/pgdn page | home/end jump | / filter | tab switch pane',
+    '  arrows/j/k move/scroll focused pane | pgup/pgdn page | home/end jump | / filter | tab switch pane',
     '  enter open | r refresh',
     '  i inspect | v validate | m simulate | d simulate --dry-run',
     '  n toggle neighbors in node detail',
@@ -466,7 +466,7 @@ function renderPanelHelp(mode: SessionConfig['mode']): string {
       ? 'enter=open node, i/v/m use selected node signature'
       : 'enter=open rule, i/v/m use selected rule signature';
   return [
-    'Keys: up/down move | pgup/pgdn page | home/end jump | / filter | tab switch pane',
+    'Keys: up/down move/scroll focused pane | pgup/pgdn page | home/end jump | / filter | tab switch pane',
     'enter open | r refresh',
     'i inspect | v validate | m simulate | d simulate(dry-run) | p scaffold-preview',
     'n toggle neighbors in node detail',
@@ -499,6 +499,20 @@ function getLeftPaneCapacity(rows: number | undefined): number {
   return Math.max(1, topHeight - 2);
 }
 
+function getPanelContentHeights(rows: number | undefined): {
+  topContentHeight: number;
+  bottomContentHeight: number;
+} {
+  const height = Math.max(18, rows ?? 30);
+  const bodyHeight = height - 6;
+  const topHeight = Math.max(8, Math.floor(bodyHeight * 0.65));
+  const bottomHeight = bodyHeight - topHeight;
+  return {
+    topContentHeight: Math.max(1, topHeight - 2),
+    bottomContentHeight: Math.max(1, bottomHeight - 2),
+  };
+}
+
 function getVisibleWindow<T>(
   items: T[],
   selected: number,
@@ -514,6 +528,20 @@ function getVisibleWindow<T>(
   return {
     start,
     visible: items.slice(start, start + capacity),
+  };
+}
+
+function getOffsetWindow<T>(
+  items: T[],
+  start: number,
+  capacity: number,
+): { start: number; visible: T[]; maxStart: number } {
+  const maxStart = Math.max(0, items.length - capacity);
+  const clampedStart = Math.min(maxStart, Math.max(0, start));
+  return {
+    start: clampedStart,
+    visible: items.slice(clampedStart, clampedStart + capacity),
+    maxStart,
   };
 }
 
@@ -1046,10 +1074,12 @@ export async function runPanelApp(
   let filterMode = false;
   let filterQuery = '';
   let rightText = '';
+  let rightScroll = 0;
   let currentNodeDetail: NodeDetail | null = null;
   let neighborsExpanded = false;
   let valuesExpanded = false;
   let bottomText = renderPanelHelp(config.mode);
+  let bottomScroll = 0;
   let isClosing = false;
   let pendingConfirm: PendingConfirm | null = null;
   let activeOperation: ActiveOperation | null = null;
@@ -1057,6 +1087,16 @@ export async function runPanelApp(
 
   const OPERATION_TIMEOUT_MS = Math.max(1, deps.panelOperationTimeoutMs ?? 45_000);
   const WRITE_CONFIRM_WINDOW_MS = 6_000;
+
+  function setRightPaneText(value: string): void {
+    rightText = value;
+    rightScroll = 0;
+  }
+
+  function setBottomPaneText(value: string): void {
+    bottomText = value;
+    bottomScroll = 0;
+  }
 
   function getListEntries(): PanelListEntry[] {
     if (isNodesMode) {
@@ -1243,11 +1283,13 @@ export async function runPanelApp(
       valuesExpanded = false;
     }
     const neighborLookup = isNodesMode ? buildNeighborLookup() : undefined;
-    rightText = renderPanelNodeDetail(detail, {
-      neighborsExpanded,
-      valuesExpanded,
-      neighborLookup,
-    });
+    setRightPaneText(
+      renderPanelNodeDetail(detail, {
+        neighborsExpanded,
+        valuesExpanded,
+        neighborLookup,
+      }),
+    );
   }
 
   function rerenderCurrentNodeDetail(): void {
@@ -1279,9 +1321,9 @@ export async function runPanelApp(
     };
     const key = action === 'scaffold-write' ? 'W' : 'A';
     const actionLabel = action === 'scaffold-write' ? 'scaffold write' : 'manifest add';
-    bottomText = `Confirm ${actionLabel}: press ${key} again within ${
-      WRITE_CONFIRM_WINDOW_MS / 1000
-    }s`;
+    setBottomPaneText(
+      `Confirm ${actionLabel}: press ${key} again within ${WRITE_CONFIRM_WINDOW_MS / 1000}s`,
+    );
     return false;
   }
 
@@ -1350,6 +1392,7 @@ export async function runPanelApp(
     clampSelection();
     const width = output.columns ?? 120;
     const height = output.rows ?? 36;
+    const paneHeights = getPanelContentHeights(output.rows);
     const entries = getListEntries();
     const totalItems = entries.length;
     const listCapacity = getLeftPaneCapacity(output.rows);
@@ -1365,6 +1408,28 @@ export async function runPanelApp(
           : ' [0/0]';
     const filterSuffix = filterQuery ? ` | filter="${filterQuery}"` : '';
     const leftTitle = `${isNodesMode ? 'Nodes' : 'Rules'}${rangeSuffix}${filterSuffix}`;
+
+    const rightAllLines = splitLines(rightText);
+    const rightWindow = getOffsetWindow(rightAllLines, rightScroll, paneHeights.topContentHeight);
+    rightScroll = rightWindow.start;
+    const rightRange =
+      rightAllLines.length > paneHeights.topContentHeight
+        ? ` [${rightWindow.start + 1}-${rightWindow.start + rightWindow.visible.length}/${rightAllLines.length}]`
+        : '';
+    const rightTitle = `${isNodesMode ? 'Node Detail' : 'Rule Detail'}${rightRange}`;
+
+    const bottomAllLines = splitLines(bottomText);
+    const bottomWindow = getOffsetWindow(
+      bottomAllLines,
+      bottomScroll,
+      paneHeights.bottomContentHeight,
+    );
+    bottomScroll = bottomWindow.start;
+    const bottomRange =
+      bottomAllLines.length > paneHeights.bottomContentHeight
+        ? ` [${bottomWindow.start + 1}-${bottomWindow.start + bottomWindow.visible.length}/${bottomAllLines.length}]`
+        : '';
+    const bottomTitle = `Output / Run${bottomRange}`;
 
     const status = isNodesMode
       ? nodesPresenter.getStatusSnapshot()
@@ -1390,10 +1455,10 @@ export async function runPanelApp(
       footer,
       leftTitle,
       leftLines: listLines,
-      rightTitle: isNodesMode ? 'Node Detail' : 'Rule Detail',
-      rightLines: splitLines(rightText),
-      bottomTitle: 'Output / Run',
-      bottomLines: splitLines(bottomText),
+      rightTitle,
+      rightLines: rightWindow.visible,
+      bottomTitle,
+      bottomLines: bottomWindow.visible,
       focusedPane,
     });
 
@@ -1409,31 +1474,79 @@ export async function runPanelApp(
     }
     if (intent.type === 'start-filter') {
       filterMode = true;
-      bottomText = `Filter: ${filterQuery || '<empty>'} (${getListEntries().length} match(es))`;
+      setBottomPaneText(
+        `Filter: ${filterQuery || '<empty>'} (${getListEntries().length} match(es))`,
+      );
       return;
     }
     if (intent.type === 'move-up') {
-      moveSelection(-1);
+      if (focusedPane === 'left') {
+        moveSelection(-1);
+      } else if (focusedPane === 'right') {
+        rightScroll = Math.max(0, rightScroll - 1);
+      } else {
+        bottomScroll = Math.max(0, bottomScroll - 1);
+      }
       return;
     }
     if (intent.type === 'move-down') {
-      moveSelection(1);
+      if (focusedPane === 'left') {
+        moveSelection(1);
+      } else if (focusedPane === 'right') {
+        rightScroll += 1;
+      } else {
+        bottomScroll += 1;
+      }
       return;
     }
     if (intent.type === 'move-page-up') {
-      moveSelectionByPage(-1);
+      if (focusedPane === 'left') {
+        moveSelectionByPage(-1);
+      } else {
+        const paneHeights = getPanelContentHeights(output.rows);
+        const delta =
+          focusedPane === 'right' ? paneHeights.topContentHeight : paneHeights.bottomContentHeight;
+        if (focusedPane === 'right') {
+          rightScroll = Math.max(0, rightScroll - delta);
+        } else {
+          bottomScroll = Math.max(0, bottomScroll - delta);
+        }
+      }
       return;
     }
     if (intent.type === 'move-page-down') {
-      moveSelectionByPage(1);
+      if (focusedPane === 'left') {
+        moveSelectionByPage(1);
+      } else {
+        const paneHeights = getPanelContentHeights(output.rows);
+        const delta =
+          focusedPane === 'right' ? paneHeights.topContentHeight : paneHeights.bottomContentHeight;
+        if (focusedPane === 'right') {
+          rightScroll += delta;
+        } else {
+          bottomScroll += delta;
+        }
+      }
       return;
     }
     if (intent.type === 'move-first') {
-      moveSelectionToBoundary('first');
+      if (focusedPane === 'left') {
+        moveSelectionToBoundary('first');
+      } else if (focusedPane === 'right') {
+        rightScroll = 0;
+      } else {
+        bottomScroll = 0;
+      }
       return;
     }
     if (intent.type === 'move-last') {
-      moveSelectionToBoundary('last');
+      if (focusedPane === 'left') {
+        moveSelectionToBoundary('last');
+      } else if (focusedPane === 'right') {
+        rightScroll = Number.MAX_SAFE_INTEGER;
+      } else {
+        bottomScroll = Number.MAX_SAFE_INTEGER;
+      }
       return;
     }
     if (intent.type === 'switch-pane') {
@@ -1441,7 +1554,7 @@ export async function runPanelApp(
       return;
     }
     if (intent.type === 'help') {
-      bottomText = renderPanelHelp(config.mode);
+      setBottomPaneText(renderPanelHelp(config.mode));
       return;
     }
     if (intent.type === 'open') {
@@ -1456,7 +1569,7 @@ export async function runPanelApp(
         currentNodeDetail = null;
         neighborsExpanded = false;
         valuesExpanded = false;
-        rightText = renderPanelRuleDetail(rulesPresenter.showRuleDetail(ruleIndex));
+        setRightPaneText(renderPanelRuleDetail(rulesPresenter.showRuleDetail(ruleIndex)));
       }
       return;
     }
@@ -1471,7 +1584,7 @@ export async function runPanelApp(
             currentNodeDetail = null;
             neighborsExpanded = false;
             valuesExpanded = false;
-            rightText = '';
+            setRightPaneText('');
           } else {
             rerenderCurrentNodeDetail();
           }
@@ -1480,18 +1593,18 @@ export async function runPanelApp(
         rulesPresenter.refreshRules();
       }
       pendingConfirm = null;
-      bottomText = `Refreshed ${getListEntries().length} item(s).`;
+      setBottomPaneText(`Refreshed ${getListEntries().length} item(s).`);
       return;
     }
     if (intent.type === 'toggle-neighbors') {
       if (!isNodesMode) {
-        bottomText = 'Neighbors view is only available in nodes mode.';
+        setBottomPaneText('Neighbors view is only available in nodes mode.');
         return;
       }
       if (!currentNodeDetail) {
         const nodeId = getSelectedNodeId();
         if (!nodeId) {
-          bottomText = 'Open a node first.';
+          setBottomPaneText('Open a node first.');
           return;
         }
         const detail = await nodesPresenter.showNodeDetail(nodeId);
@@ -1502,18 +1615,18 @@ export async function runPanelApp(
         await hydrateNeighborIdentity();
       }
       rerenderCurrentNodeDetail();
-      bottomText = neighborsExpanded ? 'Expanded neighbors.' : 'Collapsed neighbors.';
+      setBottomPaneText(neighborsExpanded ? 'Expanded neighbors.' : 'Collapsed neighbors.');
       return;
     }
     if (intent.type === 'toggle-values') {
       if (!isNodesMode) {
-        bottomText = 'Values view is only available in nodes mode.';
+        setBottomPaneText('Values view is only available in nodes mode.');
         return;
       }
       if (!currentNodeDetail) {
         const nodeId = getSelectedNodeId();
         if (!nodeId) {
-          bottomText = 'Open a node first.';
+          setBottomPaneText('Open a node first.');
           return;
         }
         const detail = await nodesPresenter.showNodeDetail(nodeId);
@@ -1521,12 +1634,12 @@ export async function runPanelApp(
       }
       valuesExpanded = !valuesExpanded;
       rerenderCurrentNodeDetail();
-      bottomText = valuesExpanded ? 'Expanded values.' : 'Collapsed values.';
+      setBottomPaneText(valuesExpanded ? 'Expanded values.' : 'Collapsed values.');
       return;
     }
     if (intent.type === 'inspect') {
       const selectedNodeId = isNodesMode ? getSelectedNodeId() : undefined;
-      bottomText = `Running inspect${selectedNodeId ? ` for node ${selectedNodeId}` : ''}...`;
+      setBottomPaneText(`Running inspect${selectedNodeId ? ` for node ${selectedNodeId}` : ''}...`);
       renderFrame();
       const signature = await ensureSelectedSignature();
       const summary = await runTimedOperation(`inspect ${signature}`, () =>
@@ -1534,13 +1647,15 @@ export async function runPanelApp(
           ? nodesPresenter.inspectSelectedSignature({ nodeId: selectedNodeId })
           : rulesPresenter.inspectSelectedSignature(),
       );
-      bottomText = renderInspectSummary(summary);
+      setBottomPaneText(renderInspectSummary(summary));
       io.log(`inspected ${signature}`);
       return;
     }
     if (intent.type === 'validate') {
       const selectedNodeId = isNodesMode ? getSelectedNodeId() : undefined;
-      bottomText = `Running validate${selectedNodeId ? ` for node ${selectedNodeId}` : ''}...`;
+      setBottomPaneText(
+        `Running validate${selectedNodeId ? ` for node ${selectedNodeId}` : ''}...`,
+      );
       renderFrame();
       const signature = await ensureSelectedSignature();
       const summary = await runTimedOperation(`validate ${signature}`, () =>
@@ -1548,15 +1663,17 @@ export async function runPanelApp(
           ? nodesPresenter.validateSelectedSignature({ nodeId: selectedNodeId })
           : rulesPresenter.validateSelectedSignature(),
       );
-      bottomText = renderPanelValidationSummary(summary);
+      setBottomPaneText(renderPanelValidationSummary(summary));
       io.log(`validated ${signature}`);
       return;
     }
     if (intent.type === 'simulate') {
       const selectedNodeId = isNodesMode ? getSelectedNodeId() : undefined;
-      bottomText = `Running simulate${selectedNodeId ? ` for node ${selectedNodeId}` : ''}${
-        intent.dryRun ? ' (dry-run)' : ''
-      }...`;
+      setBottomPaneText(
+        `Running simulate${selectedNodeId ? ` for node ${selectedNodeId}` : ''}${
+          intent.dryRun ? ' (dry-run)' : ''
+        }...`,
+      );
       renderFrame();
       const signature = await ensureSelectedSignature();
       const summary = await runTimedOperation(
@@ -1569,16 +1686,18 @@ export async function runPanelApp(
               })
             : rulesPresenter.simulateSelectedSignature({ dryRun: intent.dryRun }),
       );
-      bottomText = renderPanelSimulationSummary(summary);
+      setBottomPaneText(renderPanelSimulationSummary(summary));
       io.log(`simulated ${signature}${intent.dryRun ? ' (dry-run)' : ''}`);
       return;
     }
     if (intent.type === 'scaffold-preview') {
       await ensureSelectedSignature();
-      bottomText = renderScaffoldDraft(
-        isNodesMode
-          ? nodesPresenter.createScaffoldFromSignature({})
-          : rulesPresenter.createScaffoldFromSignature({}),
+      setBottomPaneText(
+        renderScaffoldDraft(
+          isNodesMode
+            ? nodesPresenter.createScaffoldFromSignature({})
+            : rulesPresenter.createScaffoldFromSignature({}),
+        ),
       );
       return;
     }
@@ -1589,7 +1708,7 @@ export async function runPanelApp(
       const written = isNodesMode
         ? nodesPresenter.writeScaffoldDraft(undefined, { confirm: true })
         : rulesPresenter.writeScaffoldDraft(undefined, { confirm: true });
-      bottomText = `Scaffold written: ${written}`;
+      setBottomPaneText(`Scaffold written: ${written}`);
       return;
     }
     if (intent.type === 'manifest-add') {
@@ -1599,28 +1718,30 @@ export async function runPanelApp(
       const result = isNodesMode
         ? nodesPresenter.addDraftToManifest({ confirm: true })
         : rulesPresenter.addDraftToManifest({ confirm: true });
-      bottomText = renderManifestResult(result);
+      setBottomPaneText(renderManifestResult(result));
       return;
     }
     if (intent.type === 'status') {
-      bottomText = renderStatusSnapshot(
-        isNodesMode ? nodesPresenter.getStatusSnapshot() : rulesPresenter.getStatusSnapshot(),
+      setBottomPaneText(
+        renderStatusSnapshot(
+          isNodesMode ? nodesPresenter.getStatusSnapshot() : rulesPresenter.getStatusSnapshot(),
+        ),
       );
       return;
     }
     if (intent.type === 'log') {
-      bottomText = renderRunLog(
-        isNodesMode ? nodesPresenter.getRunLog(30) : rulesPresenter.getRunLog(30),
+      setBottomPaneText(
+        renderRunLog(isNodesMode ? nodesPresenter.getRunLog(30) : rulesPresenter.getRunLog(30)),
       );
       return;
     }
     if (intent.type === 'cancel-operation') {
       if (!activeOperation) {
-        bottomText = 'No active operation.';
+        setBottomPaneText('No active operation.');
         return;
       }
       activeOperation.cancel();
-      bottomText = `Cancel requested for ${activeOperation.label}...`;
+      setBottomPaneText(`Cancel requested for ${activeOperation.label}...`);
     }
   }
 
@@ -1654,7 +1775,7 @@ export async function runPanelApp(
             await runIntent(intent);
           })
           .catch((error) => {
-            bottomText = `Error: ${error instanceof Error ? error.message : String(error)}`;
+            setBottomPaneText(`Error: ${error instanceof Error ? error.message : String(error)}`);
           })
           .finally(() => {
             renderFrame();
@@ -1675,7 +1796,9 @@ export async function runPanelApp(
         const parsedIntent = parsePanelKeypress(char, key);
         if (!filterMode && parsedIntent.type === 'start-filter') {
           filterMode = true;
-          bottomText = `Filter: ${filterQuery || '<empty>'} (${getListEntries().length} match(es))`;
+          setBottomPaneText(
+            `Filter: ${filterQuery || '<empty>'} (${getListEntries().length} match(es))`,
+          );
           renderFrame();
           return;
         }
@@ -1683,13 +1806,17 @@ export async function runPanelApp(
           const name = (key.name ?? '').toLowerCase();
           if (name === 'escape') {
             filterMode = false;
-            bottomText = `Filter applied: ${filterQuery || '<empty>'} (${getListEntries().length} match(es))`;
+            setBottomPaneText(
+              `Filter applied: ${filterQuery || '<empty>'} (${getListEntries().length} match(es))`,
+            );
             renderFrame();
             return;
           }
           if (name === 'return' || name === 'enter') {
             filterMode = false;
-            bottomText = `Filter applied: ${filterQuery || '<empty>'} (${getListEntries().length} match(es))`;
+            setBottomPaneText(
+              `Filter applied: ${filterQuery || '<empty>'} (${getListEntries().length} match(es))`,
+            );
             renderFrame();
             return;
           }
@@ -1697,7 +1824,9 @@ export async function runPanelApp(
             filterQuery = filterQuery.slice(0, -1);
             selectedIndex = 0;
             selectedItemKey = undefined;
-            bottomText = `Filter: ${filterQuery || '<empty>'} (${getListEntries().length} match(es))`;
+            setBottomPaneText(
+              `Filter: ${filterQuery || '<empty>'} (${getListEntries().length} match(es))`,
+            );
             renderFrame();
             return;
           }
@@ -1705,7 +1834,9 @@ export async function runPanelApp(
             filterQuery += char;
             selectedIndex = 0;
             selectedItemKey = undefined;
-            bottomText = `Filter: ${filterQuery || '<empty>'} (${getListEntries().length} match(es))`;
+            setBottomPaneText(
+              `Filter: ${filterQuery || '<empty>'} (${getListEntries().length} match(es))`,
+            );
             renderFrame();
             return;
           }
@@ -1713,11 +1844,11 @@ export async function runPanelApp(
         }
         if (parsedIntent.type === 'cancel-operation') {
           if (!activeOperation) {
-            bottomText = 'No active operation.';
+            setBottomPaneText('No active operation.');
           } else {
             const label = activeOperation.label;
             activeOperation.cancel();
-            bottomText = `Cancel requested for ${label}...`;
+            setBottomPaneText(`Cancel requested for ${label}...`);
           }
           renderFrame();
           return;
