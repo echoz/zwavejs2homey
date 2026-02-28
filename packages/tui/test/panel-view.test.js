@@ -23,6 +23,7 @@ test('parsePanelKeypress maps core keys to intents', () => {
   assert.deepEqual(parsePanelKeypress('', { name: 'c' }), { type: 'cancel-operation' });
   assert.deepEqual(parsePanelKeypress('', { name: 'n' }), { type: 'toggle-neighbors' });
   assert.deepEqual(parsePanelKeypress('', { name: 'z' }), { type: 'toggle-values' });
+  assert.deepEqual(parsePanelKeypress('', { name: 'b' }), { type: 'toggle-bottom-pane-size' });
   assert.deepEqual(parsePanelKeypress('', { name: 'x' }), { type: 'noop' });
 });
 

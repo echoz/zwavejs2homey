@@ -44,6 +44,7 @@ export interface PanelFrameModel {
   bottomTitle: string;
   bottomLines: string[];
   focusedPane?: 'left' | 'right' | 'bottom';
+  bottomCompact?: boolean;
 }
 
 export function renderPanelFrame(model: PanelFrameModel): string {
@@ -51,8 +52,12 @@ export function renderPanelFrame(model: PanelFrameModel): string {
   const height = Math.max(18, model.height || 30);
   const innerWidth = width - 2;
   const bodyHeight = height - 6; // header + footer + borders
-  const topHeight = Math.max(8, Math.floor(bodyHeight * 0.65));
-  const bottomHeight = bodyHeight - topHeight;
+  const compactBottomHeight = 3; // title + one content row
+  const bottomCompact = model.bottomCompact === true;
+  const bottomHeight = bottomCompact
+    ? Math.min(Math.max(3, bodyHeight - 8), compactBottomHeight)
+    : bodyHeight - Math.max(8, Math.floor(bodyHeight * 0.65));
+  const topHeight = bodyHeight - bottomHeight;
   const leftWidth = Math.max(22, Math.floor(innerWidth * 0.35));
   const rightWidth = innerWidth - leftWidth - 1; // separator
 

@@ -214,6 +214,60 @@ test('runPanelApp supports interactive filtering in list pane', async () => {
   );
 });
 
+test('runPanelApp toggles bottom pane into status-bar mode', async () => {
+  const input = new FakeInput();
+  const output = new FakeOutput();
+  const presenter = {
+    async connect() {},
+    async disconnect() {},
+    getState() {
+      return {
+        explorer: {
+          items: [{ nodeId: 1, name: 'Kitchen', product: 'Switch', manufacturer: 'Zooz' }],
+        },
+      };
+    },
+    getStatusSnapshot() {
+      return {
+        mode: 'nodes',
+        connectionState: 'ready',
+        selectedSignature: undefined,
+        cachedNodeCount: 1,
+      };
+    },
+  };
+
+  const runPromise = runPanelApp(
+    {
+      mode: 'nodes',
+      uiMode: 'panel',
+      manifestFile: 'rules/manifest.json',
+      url: 'ws://127.0.0.1:3000',
+      schemaVersion: 0,
+      includeValues: 'summary',
+      maxValues: 100,
+    },
+    { log: () => {}, error: () => {} },
+    { presenter, stdin: input, stdout: output },
+  );
+
+  setTimeout(() => {
+    input.emit('keypress', 'b', { name: 'b' });
+    input.emit('keypress', 'q', {});
+  }, 5);
+
+  await runPromise;
+
+  assert.equal(
+    output.writes.some((line) => line.includes('Status Bar')),
+    true,
+  );
+  assert.equal(
+    output.writes.some((line) => line.includes('Bottom pane set to status-bar mode')),
+    true,
+  );
+});
+
 test('runPanelApp toggles neighbors in node detail and shows readable identity labels', async () => {
   const input = new FakeInput();
   const output = new FakeOutput();

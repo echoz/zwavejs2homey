@@ -22,6 +22,7 @@ export type PanelIntent =
   | { type: 'cancel-operation' }
   | { type: 'toggle-neighbors' }
   | { type: 'toggle-values' }
+  | { type: 'toggle-bottom-pane-size' }
   | { type: 'help' };
 
 interface KeyLike {
@@ -68,6 +69,7 @@ export function parsePanelKeypress(char: string, key: KeyLike = {}): PanelIntent
   if (name === 'c' || token === 'c') return { type: 'cancel-operation' };
   if (name === 'n' || token === 'n') return { type: 'toggle-neighbors' };
   if (name === 'z' || token === 'z') return { type: 'toggle-values' };
+  if (name === 'b' || token === 'b') return { type: 'toggle-bottom-pane-size' };
   if (name === 'h' || name === '?' || char === '?') return { type: 'help' };
   return { type: 'noop' };
 }

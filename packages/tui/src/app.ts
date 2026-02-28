@@ -112,6 +112,7 @@ export function getUsageText(): string {
     '  i inspect | v validate | m simulate | d simulate --dry-run',
     '  n toggle neighbors in node detail',
     '  z toggle values in node detail',
+    '  b toggle bottom pane full/status-bar',
     '  p scaffold preview | W scaffold write (confirm x2) | A manifest add (confirm x2)',
     '  s status | l log | c cancel op | h help | q quit',
     '',
@@ -471,6 +472,7 @@ function renderPanelHelp(mode: SessionConfig['mode']): string {
     'i inspect | v validate | m simulate | d simulate(dry-run) | p scaffold-preview',
     'n toggle neighbors in node detail',
     'z toggle values in node detail',
+    'b toggle bottom pane full/status-bar',
     'W scaffold-write (confirmed) | A manifest-add (confirmed)',
     's status | l log | c cancel operation | h help | q quit',
     sourceHint,
@@ -492,25 +494,25 @@ function normalizeText(value: string | null | undefined): string {
     .toLowerCase();
 }
 
-function getLeftPaneCapacity(rows: number | undefined): number {
-  const height = Math.max(18, rows ?? 30);
-  const bodyHeight = height - 6;
-  const topHeight = Math.max(8, Math.floor(bodyHeight * 0.65));
-  return Math.max(1, topHeight - 2);
-}
-
-function getPanelContentHeights(rows: number | undefined): {
+function getPanelContentHeightsWithMode(
+  rows: number | undefined,
+  bottomCompact: boolean,
+): {
   topContentHeight: number;
   bottomContentHeight: number;
 } {
   const height = Math.max(18, rows ?? 30);
   const bodyHeight = height - 6;
-  const topHeight = Math.max(8, Math.floor(bodyHeight * 0.65));
-  const bottomHeight = bodyHeight - topHeight;
+  const bottomHeight = bottomCompact ? 3 : bodyHeight - Math.max(8, Math.floor(bodyHeight * 0.65));
+  const topHeight = bodyHeight - bottomHeight;
   return {
     topContentHeight: Math.max(1, topHeight - 2),
     bottomContentHeight: Math.max(1, bottomHeight - 2),
   };
+}
+
+function getLeftPaneCapacity(rows: number | undefined, bottomCompact: boolean): number {
+  return getPanelContentHeightsWithMode(rows, bottomCompact).topContentHeight;
 }
 
 function getVisibleWindow<T>(
@@ -1080,6 +1082,7 @@ export async function runPanelApp(
   let valuesExpanded = false;
   let bottomText = renderPanelHelp(config.mode);
   let bottomScroll = 0;
+  let bottomCompact = false;
   let isClosing = false;
   let pendingConfirm: PendingConfirm | null = null;
   let activeOperation: ActiveOperation | null = null;
@@ -1116,7 +1119,13 @@ export async function runPanelApp(
         kind: 'node',
         key: `node:${node.nodeId}`,
         rowId: node.nodeId,
-        label: truncateLabel(`${node.name ?? '(unnamed)'} ${node.product ?? ''}`.trim()),
+        label: truncateLabel(
+          [
+            node.name ?? '(unnamed)',
+            `(${node.manufacturer ?? 'unknown'} / ${node.product ?? 'unknown'})`,
+          ].join(' '),
+          96,
+        ),
         nodeId: node.nodeId,
       }));
     }
@@ -1177,7 +1186,7 @@ export async function runPanelApp(
   }
 
   function moveSelectionByPage(multiplier: number): void {
-    const pageSize = getLeftPaneCapacity(output.rows);
+    const pageSize = getLeftPaneCapacity(output.rows, bottomCompact);
     moveSelection(pageSize * multiplier);
   }
 
@@ -1392,10 +1401,10 @@ export async function runPanelApp(
     clampSelection();
     const width = output.columns ?? 120;
     const height = output.rows ?? 36;
-    const paneHeights = getPanelContentHeights(output.rows);
+    const paneHeights = getPanelContentHeightsWithMode(output.rows, bottomCompact);
     const entries = getListEntries();
     const totalItems = entries.length;
-    const listCapacity = getLeftPaneCapacity(output.rows);
+    const listCapacity = getLeftPaneCapacity(output.rows, bottomCompact);
     const windowed = getVisibleWindow(entries, selectedIndex, listCapacity);
     const listLines = windowed.visible.map((entry, visibleIndex) =>
       formatListRow(entry.rowId, entry.label, windowed.start + visibleIndex === selectedIndex),
@@ -1429,7 +1438,7 @@ export async function runPanelApp(
       bottomAllLines.length > paneHeights.bottomContentHeight
         ? ` [${bottomWindow.start + 1}-${bottomWindow.start + bottomWindow.visible.length}/${bottomAllLines.length}]`
         : '';
-    const bottomTitle = `Output / Run${bottomRange}`;
+    const bottomTitle = `${bottomCompact ? 'Status Bar' : 'Output / Run'}${bottomRange}`;
 
     const status = isNodesMode
       ? nodesPresenter.getStatusSnapshot()
@@ -1446,7 +1455,7 @@ export async function runPanelApp(
         : '';
     const footer = filterMode
       ? `Filter mode: type to search | backspace delete | enter apply | esc apply${statusSuffix}`
-      : `q quit | arrows move | pgup/pgdn page | / filter | enter open | i/v/m loop | n neighbors | z values | c cancel${statusSuffix}`;
+      : `q quit | arrows move | pgup/pgdn page | / filter | enter open | i/v/m loop | n neighbors | z values | b bottom-size | c cancel${statusSuffix}`;
 
     const frame = renderPanelFrame({
       width,
@@ -1460,6 +1469,7 @@ export async function runPanelApp(
       bottomTitle,
       bottomLines: bottomWindow.visible,
       focusedPane,
+      bottomCompact,
     });
 
     output.write('\x1b[2J\x1b[H');
@@ -1503,7 +1513,7 @@ export async function runPanelApp(
       if (focusedPane === 'left') {
         moveSelectionByPage(-1);
       } else {
-        const paneHeights = getPanelContentHeights(output.rows);
+        const paneHeights = getPanelContentHeightsWithMode(output.rows, bottomCompact);
         const delta =
           focusedPane === 'right' ? paneHeights.topContentHeight : paneHeights.bottomContentHeight;
         if (focusedPane === 'right') {
@@ -1518,7 +1528,7 @@ export async function runPanelApp(
       if (focusedPane === 'left') {
         moveSelectionByPage(1);
       } else {
-        const paneHeights = getPanelContentHeights(output.rows);
+        const paneHeights = getPanelContentHeightsWithMode(output.rows, bottomCompact);
         const delta =
           focusedPane === 'right' ? paneHeights.topContentHeight : paneHeights.bottomContentHeight;
         if (focusedPane === 'right') {
@@ -1551,6 +1561,15 @@ export async function runPanelApp(
     }
     if (intent.type === 'switch-pane') {
       focusedPane = paneOrder[(paneOrder.indexOf(focusedPane) + 1) % paneOrder.length];
+      return;
+    }
+    if (intent.type === 'toggle-bottom-pane-size') {
+      bottomCompact = !bottomCompact;
+      setBottomPaneText(
+        bottomCompact
+          ? 'Bottom pane set to status-bar mode (single line). Press b to expand.'
+          : 'Bottom pane expanded. Press b for status-bar mode.',
+      );
       return;
     }
     if (intent.type === 'help') {
