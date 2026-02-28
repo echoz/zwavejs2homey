@@ -7,6 +7,7 @@ const { renderPanelFrame } = require('../dist/view/panel-layout');
 test('parsePanelKeypress maps core keys to intents', () => {
   assert.deepEqual(parsePanelKeypress('', { name: 'q' }), { type: 'quit' });
   assert.deepEqual(parsePanelKeypress('q', {}), { type: 'quit' });
+  assert.deepEqual(parsePanelKeypress('', { sequence: 'q' }), { type: 'quit' });
   assert.deepEqual(parsePanelKeypress('', { ctrl: true, name: 'c' }), { type: 'quit' });
   assert.deepEqual(parsePanelKeypress('', { name: 'up' }), { type: 'move-up' });
   assert.deepEqual(parsePanelKeypress('', { name: 'down' }), { type: 'move-down' });
