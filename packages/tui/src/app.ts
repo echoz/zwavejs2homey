@@ -1097,6 +1097,8 @@ export async function runPanelApp(
     });
   const rulesPresenter =
     deps.rulesPresenter ?? new RulesPresenter(curationChildPresenter, fileService);
+  const canHydrateListIdentity =
+    typeof (nodesPresenter as { showNodeDetail?: unknown }).showNodeDetail === 'function';
   const input = deps.stdin ?? defaultStdin;
   const output = deps.stdout ?? defaultStdout;
   const isNodesMode = config.mode === 'nodes';
@@ -1114,11 +1116,14 @@ export async function runPanelApp(
   let valuesExpanded = false;
   let bottomText = renderPanelHelp(config.mode);
   let bottomScroll = 0;
-  let bottomCompact = false;
+  let bottomCompact = true;
   let isClosing = false;
   let pendingConfirm: PendingConfirm | null = null;
   let activeOperation: ActiveOperation | null = null;
   let nextOperationId = 1;
+  let listIdentityHydrationInFlight: Promise<void> | null = null;
+  const listIdentityHydrationPendingNodeIds = new Set<number>();
+  const listIdentityHydrationAttemptedNodeIds = new Set<number>();
 
   const OPERATION_TIMEOUT_MS = Math.max(1, deps.panelOperationTimeoutMs ?? 45_000);
   const WRITE_CONFIRM_WINDOW_MS = 6_000;
@@ -1260,6 +1265,71 @@ export async function runPanelApp(
     const entry = getSelectedEntry();
     if (entry?.kind !== 'rule') return undefined;
     return entry.ruleIndex;
+  }
+
+  function nodeNeedsListIdentity(nodeId: number): boolean {
+    const snapshot = nodesPresenter.getState();
+    const item = snapshot.explorer.items.find((entry) => entry.nodeId === nodeId);
+    const detailIdentity = extractListIdentityFromDetail(snapshot.nodeDetailCache?.[nodeId]);
+    const manufacturer = item?.manufacturer ?? detailIdentity.manufacturer;
+    const product = item?.product ?? detailIdentity.product;
+    return !(manufacturer && product);
+  }
+
+  function requestVisibleListIdentityHydration(): void {
+    if (!isNodesMode || !canHydrateListIdentity || isClosing) return;
+    clampSelection();
+    const entries = getListEntries().filter(
+      (entry): entry is NodeListEntry => entry.kind === 'node',
+    );
+    if (entries.length === 0) return;
+    const capacity = getLeftPaneCapacity(output.rows, bottomCompact);
+    const windowed = getVisibleWindow(entries, selectedIndex, capacity);
+    for (const entry of windowed.visible) {
+      if (entry.nodeId === currentNodeDetail?.nodeId) continue;
+      if (listIdentityHydrationAttemptedNodeIds.has(entry.nodeId)) continue;
+      if (!nodeNeedsListIdentity(entry.nodeId)) {
+        listIdentityHydrationAttemptedNodeIds.add(entry.nodeId);
+        continue;
+      }
+      listIdentityHydrationPendingNodeIds.add(entry.nodeId);
+    }
+    ensureListIdentityHydrationRunner();
+  }
+
+  function ensureListIdentityHydrationRunner(): void {
+    if (!isNodesMode || !canHydrateListIdentity || isClosing) return;
+    if (listIdentityHydrationInFlight || listIdentityHydrationPendingNodeIds.size === 0) return;
+
+    listIdentityHydrationInFlight = (async () => {
+      while (!isClosing && listIdentityHydrationPendingNodeIds.size > 0) {
+        const iterator = listIdentityHydrationPendingNodeIds.values().next();
+        if (iterator.done) break;
+        const nodeId = iterator.value;
+        listIdentityHydrationPendingNodeIds.delete(nodeId);
+        if (listIdentityHydrationAttemptedNodeIds.has(nodeId)) continue;
+        listIdentityHydrationAttemptedNodeIds.add(nodeId);
+        if (!nodeNeedsListIdentity(nodeId)) continue;
+        try {
+          await nodesPresenter.showNodeDetail(nodeId, {
+            selectNode: false,
+            includeValues: 'none',
+            maxValues: 1,
+            includeLinkQuality: false,
+          });
+          if (!isClosing) {
+            renderFrame();
+          }
+        } catch {
+          // Best effort enrichment for list display.
+        }
+      }
+    })().finally(() => {
+      listIdentityHydrationInFlight = null;
+      if (!isClosing && listIdentityHydrationPendingNodeIds.size > 0) {
+        ensureListIdentityHydrationRunner();
+      }
+    });
   }
 
   function toNeighborIdentityFromDetail(detail: NodeDetail): NeighborIdentity {
@@ -1515,6 +1585,7 @@ export async function runPanelApp(
       bottomCompact,
     });
 
+    requestVisibleListIdentityHydration();
     output.write('\x1b[2J\x1b[H');
     output.write(frame);
   }

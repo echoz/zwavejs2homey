@@ -218,7 +218,7 @@ test('runPanelApp supports interactive filtering in list pane', async () => {
   );
 });
 
-test('runPanelApp toggles bottom pane into status-bar mode', async () => {
+test('runPanelApp toggles bottom pane between status-bar and full mode', async () => {
   const input = new FakeInput();
   const output = new FakeOutput();
   const presenter = {
@@ -267,7 +267,105 @@ test('runPanelApp toggles bottom pane into status-bar mode', async () => {
     true,
   );
   assert.equal(
-    output.writes.some((line) => line.includes('Bottom pane set to status-bar mode')),
+    output.writes.some((line) => line.includes('Output / Run')),
+    true,
+  );
+  assert.equal(
+    output.writes.some((line) =>
+      line.includes('Bottom pane expanded. Press b for status-bar mode.'),
+    ),
+    true,
+  );
+});
+
+test('runPanelApp hydrates visible list identity without opening node detail', async () => {
+  const input = new FakeInput();
+  const output = new FakeOutput();
+  const presenterState = {
+    explorer: {
+      items: [
+        { nodeId: 1, name: 'Kitchen', product: null, manufacturer: null },
+        { nodeId: 2, name: 'Office', product: null, manufacturer: null },
+      ],
+    },
+    nodeDetailCache: {},
+  };
+  const detailByNode = {
+    1: {
+      name: 'Kitchen',
+      ready: true,
+      status: 'alive',
+      manufacturer: 'Zooz',
+      manufacturerId: 634,
+      product: 'Switch',
+      productType: 1,
+      productId: 2,
+    },
+    2: {
+      name: 'Office',
+      ready: true,
+      status: 'alive',
+      manufacturer: 'Aeotec',
+      manufacturerId: 134,
+      product: 'Sensor',
+      productType: 2,
+      productId: 7,
+    },
+  };
+  const presenter = {
+    async connect() {},
+    async disconnect() {},
+    getState() {
+      return presenterState;
+    },
+    getStatusSnapshot() {
+      return {
+        mode: 'nodes',
+        connectionState: 'ready',
+        selectedSignature: undefined,
+        cachedNodeCount: 2,
+      };
+    },
+    async showNodeDetail(nodeId) {
+      const detail = {
+        nodeId,
+        state: detailByNode[nodeId],
+        neighbors: [],
+        lifelineRoute: null,
+        notificationEvents: [],
+        values: [],
+      };
+      presenterState.nodeDetailCache[nodeId] = detail;
+      return detail;
+    },
+  };
+
+  const runPromise = runPanelApp(
+    {
+      mode: 'nodes',
+      uiMode: 'panel',
+      manifestFile: 'rules/manifest.json',
+      url: 'ws://127.0.0.1:3000',
+      schemaVersion: 0,
+      includeValues: 'summary',
+      maxValues: 100,
+    },
+    { log: () => {}, error: () => {} },
+    { presenter, stdin: input, stdout: output },
+  );
+
+  setTimeout(() => {
+    input.emit('keypress', 'q', {});
+  }, 40);
+
+  await runPromise;
+
+  assert.equal(
+    output.writes.some((line) => line.includes('Kitchen (Zooz / Switch)')),
+    true,
+  );
+  assert.equal(
+    output.writes.some((line) => line.includes('Office (Aeotec / Sensor)')),
     true,
   );
 });
