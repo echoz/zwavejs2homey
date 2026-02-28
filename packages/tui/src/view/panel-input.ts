@@ -19,6 +19,7 @@ export type PanelIntent =
   | { type: 'manifest-add' }
   | { type: 'status' }
   | { type: 'log' }
+  | { type: 'cancel-operation' }
   | { type: 'help' };
 
 interface KeyLike {
@@ -62,6 +63,7 @@ export function parsePanelKeypress(char: string, key: KeyLike = {}): PanelIntent
   if (char === 'A') return { type: 'manifest-add' };
   if (name === 's' || token === 's') return { type: 'status' };
   if (name === 'l' || token === 'l') return { type: 'log' };
+  if (name === 'c' || token === 'c') return { type: 'cancel-operation' };
   if (name === 'h' || name === '?' || char === '?') return { type: 'help' };
   return { type: 'noop' };
 }

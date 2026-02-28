@@ -262,3 +262,253 @@ test('runPanelApp can quit via raw data fallback', async () => {
     true,
   );
 });
+
+test('runPanelApp requires double confirmation for write actions', async () => {
+  const input = new FakeInput();
+  const output = new FakeOutput();
+  const presenter = {
+    writeCalls: 0,
+    manifestCalls: 0,
+    async connect() {},
+    async disconnect() {},
+    getState() {
+      return {
+        explorer: {
+          items: [{ nodeId: 1, name: 'Kitchen', product: 'Switch' }],
+        },
+      };
+    },
+    getStatusSnapshot() {
+      return {
+        mode: 'nodes',
+        connectionState: 'ready',
+        selectedSignature: '29:66:2',
+        cachedNodeCount: 1,
+      };
+    },
+    async showNodeDetail(nodeId) {
+      return {
+        nodeId,
+        state: { name: 'Kitchen', ready: true, status: 'alive' },
+        neighbors: [],
+        notificationEvents: [],
+        values: [],
+      };
+    },
+    selectSignatureFromNode() {
+      return '29:66:2';
+    },
+    createScaffoldFromSignature() {
+      return {
+        signature: '29:66:2',
+        fileHint: 'product-29-66-2.json',
+        generatedAt: new Date().toISOString(),
+        bundle: { schemaVersion: 'product-rules/v1', rules: [] },
+      };
+    },
+    writeScaffoldDraft() {
+      this.writeCalls += 1;
+      return '/tmp/product-29-66-2.json';
+    },
+    addDraftToManifest() {
+      this.manifestCalls += 1;
+      return {
+        manifestFile: '/tmp/manifest.json',
+        entryFilePath: 'project/product/product-29-66-2.json',
+        updated: true,
+      };
+    },
+  };
+
+  const runPromise = runPanelApp(
+    {
+      mode: 'nodes',
+      uiMode: 'panel',
+      manifestFile: 'rules/manifest.json',
+      url: 'ws://127.0.0.1:3000',
+      schemaVersion: 0,
+      includeValues: 'summary',
+      maxValues: 100,
+    },
+    { log: () => {}, error: () => {} },
+    { presenter, stdin: input, stdout: output },
+  );
+
+  setTimeout(() => {
+    input.emit('keypress', 'p', {});
+    input.emit('keypress', 'W', {});
+    input.emit('keypress', 'W', {});
+    input.emit('keypress', 'A', {});
+    input.emit('keypress', 'A', {});
+    input.emit('keypress', 'q', {});
+  }, 5);
+
+  await runPromise;
+
+  assert.equal(presenter.writeCalls, 1);
+  assert.equal(presenter.manifestCalls, 1);
+  assert.equal(
+    output.writes.some((line) => line.includes('Confirm scaffold write')),
+    true,
+  );
+  assert.equal(
+    output.writes.some((line) => line.includes('Confirm manifest add')),
+    true,
+  );
+});
+
+test('runPanelApp supports cancelling long-running operation', async () => {
+  const input = new FakeInput();
+  const output = new FakeOutput();
+  const presenter = {
+    async connect() {},
+    async disconnect() {},
+    getState() {
+      return {
+        explorer: {
+          items: [{ nodeId: 1, name: 'Kitchen', product: 'Switch' }],
+        },
+      };
+    },
+    getStatusSnapshot() {
+      return {
+        mode: 'nodes',
+        connectionState: 'ready',
+        selectedSignature: '29:66:2',
+        cachedNodeCount: 1,
+      };
+    },
+    async showNodeDetail(nodeId) {
+      return {
+        nodeId,
+        state: { name: 'Kitchen', ready: true, status: 'alive' },
+        neighbors: [],
+        notificationEvents: [],
+        values: [],
+      };
+    },
+    selectSignatureFromNode() {
+      return '29:66:2';
+    },
+    async simulateSelectedSignature() {
+      return await new Promise((resolve) => {
+        setTimeout(
+          () =>
+            resolve({
+              signature: '29:66:2',
+              dryRun: false,
+              inspectSkipped: false,
+              inspectFormat: 'list',
+              inspectCommandLine: 'inspect',
+              validateCommandLine: 'validate',
+              gatePassed: true,
+              totalNodes: 1,
+              reviewNodes: 0,
+              outcomes: { curated: 1 },
+              reportFile: null,
+              summaryJsonFile: null,
+            }),
+          200,
+        );
+      });
+    },
+  };
+
+  const runPromise = runPanelApp(
+    {
+      mode: 'nodes',
+      uiMode: 'panel',
+      manifestFile: 'rules/manifest.json',
+      url: 'ws://127.0.0.1:3000',
+      schemaVersion: 0,
+      includeValues: 'summary',
+      maxValues: 100,
+    },
+    { log: () => {}, error: () => {} },
+    { presenter, stdin: input, stdout: output },
+  );
+
+  setTimeout(() => {
+    input.emit('keypress', 'm', {});
+  }, 5);
+  setTimeout(() => {
+    input.emit('keypress', 'c', {});
+  }, 40);
+  setTimeout(() => {
+    input.emit('keypress', 'q', {});
+  }, 80);
+
+  await runPromise;
+
+  assert.equal(
+    output.writes.some((line) => line.includes('Cancel requested for')),
+    true,
+  );
+});
+
+test('runPanelApp reports timeout for long-running operation', async () => {
+  const input = new FakeInput();
+  const output = new FakeOutput();
+  const presenter = {
+    async connect() {},
+    async disconnect() {},
+    getState() {
+      return {
+        explorer: {
+          items: [{ nodeId: 1, name: 'Kitchen', product: 'Switch' }],
+        },
+      };
+    },
+    getStatusSnapshot() {
+      return {
+        mode: 'nodes',
+        connectionState: 'ready',
+        selectedSignature: '29:66:2',
+        cachedNodeCount: 1,
+      };
+    },
+    async showNodeDetail(nodeId) {
+      return {
+        nodeId,
+        state: { name: 'Kitchen', ready: true, status: 'alive' },
+        neighbors: [],
+        notificationEvents: [],
+        values: [],
+      };
+    },
+    selectSignatureFromNode() {
+      return '29:66:2';
+    },
+    async simulateSelectedSignature() {
+      return await new Promise(() => {});
+    },
+  };
+
+  const runPromise = runPanelApp(
+    {
+      mode: 'nodes',
+      uiMode: 'panel',
+      manifestFile: 'rules/manifest.json',
+      url: 'ws://127.0.0.1:3000',
+      schemaVersion: 0,
+      includeValues: 'summary',
+      maxValues: 100,
+    },
+    { log: () => {}, error: () => {} },
+    { presenter, stdin: input, stdout: output, panelOperationTimeoutMs: 30 },
+  );
+
+  setTimeout(() => {
+    input.emit('keypress', 'm', {});
+  }, 5);
+  setTimeout(() => {
+    input.emit('keypress', 'q', {});
+  }, 80);
+
+  await runPromise;
+
+  assert.equal(
+    output.writes.some((line) => line.toLowerCase().includes('timed out')),
+    true,
+  );
+});

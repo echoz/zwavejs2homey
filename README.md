@@ -80,8 +80,9 @@ Panel keys (default `--ui panel`):
 - `r`: refresh list
 - `i` / `v` / `m` / `d`: inspect / validate / simulate / simulate dry-run
 - `p`: scaffold preview
-- `W`: scaffold write (explicit confirmed write)
-- `A`: manifest add (explicit confirmed write)
+- `W`: scaffold write (press twice within confirmation window)
+- `A`: manifest add (press twice within confirmation window)
+- `c`: cancel active inspect/validate/simulate operation
 - `s` / `l` / `h` / `q`: status / log / help / quit
 
 Shell commands (`--ui shell`):

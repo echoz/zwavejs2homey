@@ -2,7 +2,15 @@ import { emitKeypressEvents } from 'node:readline';
 import { createInterface } from 'node:readline/promises';
 import { stdin as defaultStdin, stdout as defaultStdout } from 'node:process';
 
-import type { ConnectedSessionConfig, IncludeValuesMode, SessionConfig } from './model/types';
+import type {
+  ConnectedSessionConfig,
+  IncludeValuesMode,
+  NodeDetail,
+  RuleDetail,
+  SessionConfig,
+  SimulationSummary,
+  ValidationSummary,
+} from './model/types';
 import {
   CurationWorkflowPresenter,
   type CurationWorkflowChildPresenterLike,
@@ -93,9 +101,11 @@ export function getUsageText(): string {
     '               [--include-values none|summary|full] [--max-values N]',
     '',
     'Panel Mode Keys (default):',
-    '  arrows/j/k move | tab switch pane | enter open | r refresh',
+    '  arrows/j/k move | pgup/pgdn page | home/end jump | / filter | tab switch pane',
+    '  enter open | r refresh',
     '  i inspect | v validate | m simulate | d simulate --dry-run',
-    '  p scaffold preview | W scaffold write | A manifest add | s status | l log | h help | q quit',
+    '  p scaffold preview | W scaffold write (confirm x2) | A manifest add (confirm x2)',
+    '  s status | l log | c cancel op | h help | q quit',
     '',
     'Shell Mode Commands (--ui shell):',
     'Interactive commands:',
@@ -204,6 +214,7 @@ interface RunAppDeps {
   }) => ReadlineLike;
   stdin?: NodeJS.ReadStream;
   stdout?: NodeJS.WriteStream;
+  panelOperationTimeoutMs?: number;
 }
 
 export async function runApp(
@@ -451,7 +462,7 @@ function renderPanelHelp(mode: SessionConfig['mode']): string {
     'enter open | r refresh',
     'i inspect | v validate | m simulate | d simulate(dry-run) | p scaffold-preview',
     'W scaffold-write (confirmed) | A manifest-add (confirmed)',
-    's status | l log | h help | q quit',
+    's status | l log | c cancel operation | h help | q quit',
     sourceHint,
   ].join('\n');
 }
@@ -514,7 +525,133 @@ interface RuleListEntry {
 
 type PanelListEntry = NodeListEntry | RuleListEntry;
 
+function stringifyCompact(value: unknown): string {
+  try {
+    if (typeof value === 'string') return value;
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
+function renderPanelNodeDetail(detail: NodeDetail): string {
+  const state = detail.state ?? {};
+  const ready = String(state.ready ?? '');
+  const status = String(state.status ?? '');
+  const manufacturer = String(state.manufacturer ?? state.manufacturerId ?? '');
+  const product = String(state.product ?? state.productId ?? '');
+  const name = String(state.name ?? '');
+  const values = detail.values ?? [];
+  const previewRows = values.slice(0, 12).map((entry) => {
+    if (entry._error !== undefined) return `- value-error: ${stringifyCompact(entry._error)}`;
+    const valueId = entry.valueId;
+    if (!valueId) return '- value: <missing valueId>';
+    const valuePreview =
+      entry.value !== undefined
+        ? stringifyCompact(entry.value)
+        : entry.metadata && typeof entry.metadata === 'object' && 'type' in entry.metadata
+          ? `meta:${stringifyCompact((entry.metadata as Record<string, unknown>).type)}`
+          : '';
+    return `- CC ${valueId.commandClass} ep ${valueId.endpoint ?? 0} ${String(valueId.property)}${valueId.propertyKey != null ? `/${String(valueId.propertyKey)}` : ''} ${valuePreview}`;
+  });
+
+  return [
+    `Node ${detail.nodeId}`,
+    `Name: ${name}`,
+    `Ready: ${ready}  Status: ${status}`,
+    `Manufacturer: ${manufacturer}  Product: ${product}`,
+    `Neighbors: ${stringifyCompact(detail.neighbors)}`,
+    `Notifications: ${stringifyCompact(detail.notificationEvents)}`,
+    `Values: ${values.length}`,
+    ...previewRows,
+    values.length > previewRows.length
+      ? `... ${values.length - previewRows.length} more values`
+      : null,
+  ]
+    .filter((line) => line !== null)
+    .join('\n');
+}
+
+function renderPanelRuleDetail(detail: RuleDetail): string {
+  const rulesArray = Array.isArray(detail.content?.rules)
+    ? (detail.content?.rules as Array<Record<string, unknown>>)
+    : [];
+  const sampleRules = rulesArray.slice(0, 12).map((rule, index) => {
+    const id = typeof rule.ruleId === 'string' ? rule.ruleId : `rule-${index + 1}`;
+    const actions = Array.isArray(rule.actions) ? rule.actions.length : 0;
+    return `- ${id} (${actions} action${actions === 1 ? '' : 's'})`;
+  });
+  return [
+    `Rule #${detail.index}`,
+    `File: ${detail.filePath}`,
+    `Layer: ${detail.layer}`,
+    `Name: ${detail.name ?? ''}`,
+    `Signature: ${detail.signature ?? ''}`,
+    `Rules: ${detail.ruleCount}`,
+    detail.loadError ? `Load error: ${detail.loadError}` : null,
+    sampleRules.length > 0 ? 'Rule IDs:' : null,
+    ...sampleRules,
+    rulesArray.length > sampleRules.length
+      ? `... ${rulesArray.length - sampleRules.length} more rules`
+      : null,
+  ]
+    .filter((line) => line !== null)
+    .join('\n');
+}
+
+function renderPanelValidationSummary(summary: ValidationSummary): string {
+  return [
+    `Validation signature: ${summary.signature}`,
+    `Nodes: ${summary.totalNodes}`,
+    `Needs review: ${summary.reviewNodes}`,
+    `Outcomes: ${
+      Object.entries(summary.outcomes)
+        .map(([key, value]) => `${key}=${value}`)
+        .join(', ') || 'none'
+    }`,
+    summary.reportFile ? `Report: ${summary.reportFile}` : null,
+    summary.artifactFile ? `Artifact: ${summary.artifactFile}` : null,
+  ]
+    .filter((line) => line !== null)
+    .join('\n');
+}
+
+function renderPanelSimulationSummary(summary: SimulationSummary): string {
+  return [
+    `Simulation signature: ${summary.signature}`,
+    `Dry run: ${summary.dryRun ? 'yes' : 'no'}`,
+    `Inspect: ${summary.inspectSkipped ? 'skipped' : summary.inspectFormat}`,
+    `Gate passed: ${summary.gatePassed === null ? 'n/a' : summary.gatePassed ? 'yes' : 'no'}`,
+    `Nodes validated: ${summary.totalNodes}`,
+    `Needs review: ${summary.reviewNodes}`,
+    `Outcomes: ${
+      Object.entries(summary.outcomes)
+        .map(([key, value]) => `${key}=${value}`)
+        .join(', ') || 'none'
+    }`,
+    `Inspect cmd: ${summary.inspectCommandLine ?? '(skipped)'}`,
+    `Validate cmd: ${summary.validateCommandLine}`,
+    summary.reportFile ? `Report: ${summary.reportFile}` : null,
+    summary.summaryJsonFile ? `Summary JSON: ${summary.summaryJsonFile}` : null,
+  ]
+    .filter((line) => line !== null)
+    .join('\n');
+}
+
 type PanelFocus = 'left' | 'right' | 'bottom';
+type ConfirmAction = 'scaffold-write' | 'manifest-add';
+
+interface PendingConfirm {
+  action: ConfirmAction;
+  expiresAt: number;
+}
+
+interface ActiveOperation {
+  id: number;
+  label: string;
+  startedAt: number;
+  cancel: () => void;
+}
 
 export async function runPanelApp(
   config: SessionConfig,
@@ -549,6 +686,12 @@ export async function runPanelApp(
   let rightText = '';
   let bottomText = renderPanelHelp(config.mode);
   let isClosing = false;
+  let pendingConfirm: PendingConfirm | null = null;
+  let activeOperation: ActiveOperation | null = null;
+  let nextOperationId = 1;
+
+  const OPERATION_TIMEOUT_MS = Math.max(1, deps.panelOperationTimeoutMs ?? 45_000);
+  const WRITE_CONFIRM_WINDOW_MS = 6_000;
 
   function getListEntries(): PanelListEntry[] {
     if (isNodesMode) {
@@ -662,6 +805,75 @@ export async function runPanelApp(
     return entry.ruleIndex;
   }
 
+  function clearExpiredPendingConfirm(): void {
+    if (!pendingConfirm) return;
+    if (pendingConfirm.expiresAt <= Date.now()) {
+      pendingConfirm = null;
+    }
+  }
+
+  function requestConfirmation(action: ConfirmAction): boolean {
+    clearExpiredPendingConfirm();
+    if (pendingConfirm?.action === action) {
+      pendingConfirm = null;
+      return true;
+    }
+    pendingConfirm = {
+      action,
+      expiresAt: Date.now() + WRITE_CONFIRM_WINDOW_MS,
+    };
+    const key = action === 'scaffold-write' ? 'W' : 'A';
+    const actionLabel = action === 'scaffold-write' ? 'scaffold write' : 'manifest add';
+    bottomText = `Confirm ${actionLabel}: press ${key} again within ${
+      WRITE_CONFIRM_WINDOW_MS / 1000
+    }s`;
+    return false;
+  }
+
+  async function runTimedOperation<T>(label: string, run: () => Promise<T>): Promise<T> {
+    const operationId = nextOperationId;
+    nextOperationId += 1;
+    let cancelResolve: (() => void) | null = null;
+    const cancelPromise = new Promise<{ kind: 'cancel' }>((resolve) => {
+      cancelResolve = () => resolve({ kind: 'cancel' });
+    });
+    activeOperation = {
+      id: operationId,
+      label,
+      startedAt: Date.now(),
+      cancel: () => {
+        if (cancelResolve) cancelResolve();
+      },
+    };
+
+    const taskPromise = run()
+      .then((value) => ({ kind: 'task' as const, ok: true as const, value }))
+      .catch((error) => ({ kind: 'task' as const, ok: false as const, error }));
+    let timeoutHandle: NodeJS.Timeout | null = null;
+    const timeoutPromise = new Promise<{ kind: 'timeout' }>((resolve) => {
+      timeoutHandle = setTimeout(() => resolve({ kind: 'timeout' }), OPERATION_TIMEOUT_MS);
+    });
+
+    const winner = await Promise.race([taskPromise, timeoutPromise, cancelPromise]);
+    if (timeoutHandle) {
+      clearTimeout(timeoutHandle);
+    }
+    if (activeOperation?.id === operationId) {
+      activeOperation = null;
+    }
+
+    if (winner.kind === 'cancel') {
+      throw new Error(`${label} cancelled`);
+    }
+    if (winner.kind === 'timeout') {
+      throw new Error(`${label} timed out after ${Math.round(OPERATION_TIMEOUT_MS / 1000)}s`);
+    }
+    if (!winner.ok) {
+      throw winner.error;
+    }
+    return winner.value;
+  }
+
   async function ensureSelectedSignature(): Promise<string> {
     if (isNodesMode) {
       const nodeId = getSelectedNodeId();
@@ -669,7 +881,7 @@ export async function runPanelApp(
         throw new Error('No node selected');
       }
       const detail = await nodesPresenter.showNodeDetail(nodeId);
-      rightText = renderNodeDetail(detail);
+      rightText = renderPanelNodeDetail(detail);
       return nodesPresenter.selectSignatureFromNode(nodeId);
     }
     const ruleIndex = getSelectedRuleIndex();
@@ -706,9 +918,15 @@ export async function runPanelApp(
       ? `sig=${status.selectedSignature}`
       : 'sig=-';
     const header = `ZWJS ${config.mode} (${config.uiMode}) ${selectedSignature}`;
+    clearExpiredPendingConfirm();
+    const statusSuffix = activeOperation
+      ? ` | running: ${activeOperation.label} (press c to cancel)`
+      : pendingConfirm
+        ? ` | confirm pending: ${pendingConfirm.action}`
+        : '';
     const footer = filterMode
-      ? 'Filter mode: type to search | backspace delete | enter apply | esc cancel'
-      : 'q quit | arrows move | pgup/pgdn page | / filter | enter open | i/v/m loop';
+      ? `Filter mode: type to search | backspace delete | enter apply | esc apply${statusSuffix}`
+      : `q quit | arrows move | pgup/pgdn page | / filter | enter open | i/v/m loop | c cancel${statusSuffix}`;
 
     const frame = renderPanelFrame({
       width,
@@ -775,11 +993,11 @@ export async function runPanelApp(
       if (isNodesMode) {
         const nodeId = getSelectedNodeId();
         if (!nodeId) throw new Error('No node selected');
-        rightText = renderNodeDetail(await nodesPresenter.showNodeDetail(nodeId));
+        rightText = renderPanelNodeDetail(await nodesPresenter.showNodeDetail(nodeId));
       } else {
         const ruleIndex = getSelectedRuleIndex();
         if (!ruleIndex) throw new Error('No rule selected');
-        rightText = renderRuleDetail(rulesPresenter.showRuleDetail(ruleIndex));
+        rightText = renderPanelRuleDetail(rulesPresenter.showRuleDetail(ruleIndex));
       }
       return;
     }
@@ -789,6 +1007,7 @@ export async function runPanelApp(
       } else {
         rulesPresenter.refreshRules();
       }
+      pendingConfirm = null;
       bottomText = `Refreshed ${getListEntries().length} item(s).`;
       return;
     }
@@ -797,11 +1016,12 @@ export async function runPanelApp(
       bottomText = `Running inspect${selectedNodeId ? ` for node ${selectedNodeId}` : ''}...`;
       renderFrame();
       const signature = await ensureSelectedSignature();
-      bottomText = renderInspectSummary(
-        await (isNodesMode
+      const summary = await runTimedOperation(`inspect ${signature}`, () =>
+        isNodesMode
           ? nodesPresenter.inspectSelectedSignature({ nodeId: selectedNodeId })
-          : rulesPresenter.inspectSelectedSignature()),
+          : rulesPresenter.inspectSelectedSignature(),
       );
+      bottomText = renderInspectSummary(summary);
       io.log(`inspected ${signature}`);
       return;
     }
@@ -810,11 +1030,12 @@ export async function runPanelApp(
       bottomText = `Running validate${selectedNodeId ? ` for node ${selectedNodeId}` : ''}...`;
       renderFrame();
       const signature = await ensureSelectedSignature();
-      bottomText = renderValidationSummary(
-        await (isNodesMode
+      const summary = await runTimedOperation(`validate ${signature}`, () =>
+        isNodesMode
           ? nodesPresenter.validateSelectedSignature({ nodeId: selectedNodeId })
-          : rulesPresenter.validateSelectedSignature()),
+          : rulesPresenter.validateSelectedSignature(),
       );
+      bottomText = renderPanelValidationSummary(summary);
       io.log(`validated ${signature}`);
       return;
     }
@@ -825,14 +1046,17 @@ export async function runPanelApp(
       }...`;
       renderFrame();
       const signature = await ensureSelectedSignature();
-      bottomText = renderSimulationSummary(
-        await (isNodesMode
-          ? nodesPresenter.simulateSelectedSignature({
-              nodeId: selectedNodeId,
-              dryRun: intent.dryRun,
-            })
-          : rulesPresenter.simulateSelectedSignature({ dryRun: intent.dryRun })),
+      const summary = await runTimedOperation(
+        `simulate ${signature}${intent.dryRun ? ' (dry-run)' : ''}`,
+        () =>
+          isNodesMode
+            ? nodesPresenter.simulateSelectedSignature({
+                nodeId: selectedNodeId,
+                dryRun: intent.dryRun,
+              })
+            : rulesPresenter.simulateSelectedSignature({ dryRun: intent.dryRun }),
       );
+      bottomText = renderPanelSimulationSummary(summary);
       io.log(`simulated ${signature}${intent.dryRun ? ' (dry-run)' : ''}`);
       return;
     }
@@ -846,6 +1070,9 @@ export async function runPanelApp(
       return;
     }
     if (intent.type === 'scaffold-write') {
+      if (!requestConfirmation('scaffold-write')) {
+        return;
+      }
       const written = isNodesMode
         ? nodesPresenter.writeScaffoldDraft(undefined, { confirm: true })
         : rulesPresenter.writeScaffoldDraft(undefined, { confirm: true });
@@ -853,6 +1080,9 @@ export async function runPanelApp(
       return;
     }
     if (intent.type === 'manifest-add') {
+      if (!requestConfirmation('manifest-add')) {
+        return;
+      }
       const result = isNodesMode
         ? nodesPresenter.addDraftToManifest({ confirm: true })
         : rulesPresenter.addDraftToManifest({ confirm: true });
@@ -869,6 +1099,15 @@ export async function runPanelApp(
       bottomText = renderRunLog(
         isNodesMode ? nodesPresenter.getRunLog(30) : rulesPresenter.getRunLog(30),
       );
+      return;
+    }
+    if (intent.type === 'cancel-operation') {
+      if (!activeOperation) {
+        bottomText = 'No active operation.';
+        return;
+      }
+      activeOperation.cancel();
+      bottomText = `Cancel requested for ${activeOperation.label}...`;
     }
   }
 
@@ -876,7 +1115,7 @@ export async function runPanelApp(
     if (isNodesMode) {
       await nodesPresenter.connect(config as ConnectedSessionConfig);
       if (config.startNode !== undefined) {
-        rightText = renderNodeDetail(await nodesPresenter.showNodeDetail(config.startNode));
+        rightText = renderPanelNodeDetail(await nodesPresenter.showNodeDetail(config.startNode));
       }
     } else {
       rulesPresenter.initialize(config);
@@ -957,6 +1196,17 @@ export async function runPanelApp(
             renderFrame();
             return;
           }
+          return;
+        }
+        if (parsedIntent.type === 'cancel-operation') {
+          if (!activeOperation) {
+            bottomText = 'No active operation.';
+          } else {
+            const label = activeOperation.label;
+            activeOperation.cancel();
+            bottomText = `Cancel requested for ${label}...`;
+          }
+          renderFrame();
           return;
         }
         queueIntent(parsedIntent);

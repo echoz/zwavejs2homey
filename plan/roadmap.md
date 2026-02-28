@@ -106,13 +106,13 @@
 - [x] Drafted reset MVP spec and implementation plan (`plan/tui-explorer-curation-spec.md`, `plan/tui-implementation-plan.md`)
 - [x] Section 4B: migrate tests/docs/help to simulate-centric workflow
 - [x] Section 6A: dual-root shell workflow parity (nodes/rules + simulate)
-- [ ] Section 6B: panel-first rich UI integration in nodes and rules stacks
+- [x] Section 6B: panel-first rich UI integration in nodes and rules stacks
 - [ ] Section 7: convergence review (separate stacks vs shared view primitives)
 - [ ] Keep Homey adapter implementation frozen until Phase 4 reset completion
 
 Execution note:
 
-- Section 7 starts only after Section 6B is fully complete.
+- Section 7 is now unblocked (Section 6B complete).
 
 ## Phase 5: Homey Adapter MVP (Next Major Area)
 

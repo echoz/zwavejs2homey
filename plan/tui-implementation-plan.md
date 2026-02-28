@@ -29,14 +29,14 @@
 - [x] list ergonomics:
   - filtering/search
   - paging + selection persistence
-- [ ] richer detail panes:
+- [x] richer detail panes:
   - node/rule/simulation drill-down readability
-- [ ] safer curation write UX:
+- [x] safer curation write UX:
   - explicit in-panel confirmation flow before writes
-- [ ] diagnostics UX:
+- [x] diagnostics UX:
   - clear long-run progress states
   - timeout/cancel behavior for live operations
-- [x] panel test expansion for list ergonomics behavior
+- [x] panel test expansion for Section 6B behavior
 
 Section 7 does not start until all 6B slices above are complete.
 
@@ -88,7 +88,7 @@ Data flow in both stacks:
 - [x] Section 3: curation flow lock with simulation center (docs/plans)
 - [x] Section 4B: tests/docs migration for cutover
 - [x] Section 6A: dual-root shell workflow parity (simulate integration in both stacks)
-- [ ] Section 6B: panel-first rich TUI UI integration in both stacks (in progress; baseline panel runtime landed)
+- [x] Section 6B: panel-first rich TUI UI integration in both stacks
 - [ ] Section 7: convergence review + final cleanup
 
 ## Testing Strategy

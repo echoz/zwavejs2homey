@@ -20,6 +20,7 @@ test('parsePanelKeypress maps core keys to intents', () => {
   assert.deepEqual(parsePanelKeypress('', { name: 'd' }), { type: 'simulate', dryRun: true });
   assert.deepEqual(parsePanelKeypress('W', { name: 'w' }), { type: 'scaffold-write' });
   assert.deepEqual(parsePanelKeypress('A', { name: 'a' }), { type: 'manifest-add' });
+  assert.deepEqual(parsePanelKeypress('', { name: 'c' }), { type: 'cancel-operation' });
   assert.deepEqual(parsePanelKeypress('', { name: 'x' }), { type: 'noop' });
 });
 

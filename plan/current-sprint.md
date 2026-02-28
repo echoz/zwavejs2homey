@@ -460,21 +460,31 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - added interactive panel filter mode (`/`) with inline query editing and match counts
     - hardened quit/data handling to avoid arrow-sequence misclassification while preserving fallback quit paths
     - added/expanded panel tests for filtering, viewport scrolling, and low-level key parsing
+94. Completed remaining Section 6B rich-panel slices:
+    - richer detail panes:
+      - panel-optimized node detail renderer with value previews
+      - panel-optimized rule detail renderer with concise rule/action summaries
+      - panel-optimized validation/simulation summaries for bottom-pane readability
+    - safer curation write UX:
+      - explicit in-panel two-step confirmation flow for scaffold write (`W`) and manifest add (`A`)
+    - diagnostics UX:
+      - active operation tracking in panel footer
+      - cancel support (`c`) for running operations
+      - timeout handling with configurable panel timeout for tests and deterministic timeout reporting
+    - expanded panel tests:
+      - confirmation workflow coverage
+      - cancel workflow coverage
+      - timeout workflow coverage
 
 ## Next Tasks
 
-1. Execute Section 6B:
-   - richer detail panes: node/rule/simulation drill-down readability
-   - safer curation writes: explicit in-panel confirmation before write operations
-   - diagnostics UX: long-run progress states and timeout/cancel behavior
-   - panel test expansion for all section 6B paths
-2. Execute Section 7 convergence review:
+1. Execute Section 7 convergence review:
    - decide whether to keep separate stacks or extract shared view primitives
-3. Keep Homey adapter implementation paused until Phase 4 reset is complete
+2. Keep Homey adapter implementation paused until Phase 4 reset is complete
 
 Note:
 
-- Section 7 is blocked until all Section 6B items above are complete.
+- Section 7 is unblocked now that Section 6B is complete.
 
 ## Risks / Unknowns
 
