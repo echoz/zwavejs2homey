@@ -660,6 +660,75 @@ test('runPanelApp hydrates missing neighbor manufacturer/product from node detai
   assert.equal(rendered.includes('Node 5 | Office | Aeotec'), true);
 });
 
+test('runPanelApp renders status codes and notifications in human-readable form', async () => {
+  const input = new FakeInput();
+  const output = new FakeOutput();
+  const presenter = {
+    async connect() {},
+    async disconnect() {},
+    getState() {
+      return {
+        explorer: {
+          items: [{ nodeId: 7, name: 'Front Door', manufacturer: 'Yale', product: 'Lock' }],
+        },
+      };
+    },
+    getStatusSnapshot() {
+      return {
+        mode: 'nodes',
+        connectionState: 'ready',
+        selectedSignature: undefined,
+        cachedNodeCount: 1,
+      };
+    },
+    async showNodeDetail(nodeId) {
+      return {
+        nodeId,
+        state: {
+          name: 'Front Door',
+          ready: true,
+          status: 4,
+          manufacturer: 'Yale',
+          product: 'Lock',
+        },
+        neighbors: [],
+        notificationEvents: {
+          'Access Control': [6, 22],
+          HomeSecurity: [2],
+        },
+        values: [],
+      };
+    },
+  };
+  const { capture, deps } = createPanelDeps(presenter, input, output);
+
+  const runPromise = runPanelApp(
+    {
+      mode: 'nodes',
+      uiMode: 'panel',
+      manifestFile: 'rules/manifest.json',
+      url: 'ws://127.0.0.1:3000',
+      schemaVersion: 0,
+      includeValues: 'summary',
+      maxValues: 100,
+    },
+    { log: () => {}, error: () => {} },
+    deps,
+  );
+
+  setTimeout(() => {
+    emitInputKeys(input, ['return', 'q']);
+  }, 5);
+
+  await runPromise;
+
+  const rendered = capture.text();
+  assert.equal(rendered.includes('Status: 4 (alive)'), true);
+  assert.equal(rendered.includes('Notifications: 2 type(s)'), true);
+  assert.equal(rendered.includes('- Access Control: 6, 22'), true);
+  assert.equal(rendered.includes('- HomeSecurity: 2'), true);
+});
+
 test('runPanelApp orders expanded values by relevance', async () => {
   const input = new FakeInput();
   const output = new FakeOutput();
@@ -759,7 +828,8 @@ test('runPanelApp orders expanded values by relevance', async () => {
 
   const expandedValuesFrame = capture.text();
   assert.equal(expandedValuesFrame.includes('Values: 3 (press z to collapse)'), true);
-  assert.equal(expandedValuesFrame.includes('Values (top relevant first):'), true);
+  assert.equal(expandedValuesFrame.includes('Live/Control values: 2'), true);
+  assert.equal(expandedValuesFrame.includes('Static/Diagnostic values: 1'), true);
   assert.equal(
     expandedValuesFrame.includes(
       'Switch = on (99) [number,rw] {cap:onoff dir:rw conf:high src:meta}',
@@ -864,7 +934,7 @@ test('runPanelApp scrolls right pane when focused on node detail', async () => {
 
   const rendered = capture.text();
   const ranges = [];
-  for (const match of rendered.matchAll(/Node Detail \[(\d+)-(\d+)\/(\d+)\]/g)) {
+  for (const match of rendered.matchAll(/Detail \[(\d+)-(\d+)\/(\d+)\]/g)) {
     ranges.push(Number(match[1]));
   }
   assert.equal(ranges.length > 0, true);

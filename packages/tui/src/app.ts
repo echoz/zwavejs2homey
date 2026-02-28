@@ -638,6 +638,113 @@ function formatProductLabel(state: Record<string, unknown>): string {
   return name ?? idLabel;
 }
 
+function parseNodeStatusCode(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isInteger(value)) return value;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    const parsed = Number(trimmed);
+    if (Number.isInteger(parsed)) return parsed;
+  }
+  return null;
+}
+
+function describeNodeStatus(status: unknown): string {
+  const code = parseNodeStatusCode(status);
+  const statusByCode: Record<number, string> = {
+    0: 'unknown',
+    1: 'asleep',
+    2: 'awake',
+    3: 'dead',
+    4: 'alive',
+  };
+  if (code !== null) {
+    return statusByCode[code] ? `${code} (${statusByCode[code]})` : String(code);
+  }
+  if (typeof status === 'string' && status.trim().length > 0) return status.trim();
+  if (status === null || status === undefined) return 'unknown';
+  return truncateValueText(stringifyCompact(status), 48);
+}
+
+function renderNotificationLines(notificationEvents: unknown): string[] {
+  const maxLines = 16;
+  if (notificationEvents === null || notificationEvents === undefined) {
+    return ['Notifications: none'];
+  }
+  if (Array.isArray(notificationEvents)) {
+    if (notificationEvents.length === 0) return ['Notifications: none'];
+    const rows = notificationEvents.slice(0, maxLines).map((event) => {
+      if (typeof event === 'string') return `- ${event}`;
+      if (typeof event === 'number' || typeof event === 'boolean') return `- ${String(event)}`;
+      return `- ${truncateValueText(stringifyCompact(event), 120)}`;
+    });
+    if (notificationEvents.length > maxLines) {
+      rows.push(`... ${notificationEvents.length - maxLines} more`);
+    }
+    return [`Notifications: ${notificationEvents.length}`, ...rows];
+  }
+  const record = asRecord(notificationEvents);
+  if (record) {
+    if (record._error !== undefined) {
+      return [
+        `Notifications: unavailable (${truncateValueText(stringifyCompact(record._error), 96)})`,
+      ];
+    }
+    const entries = Object.entries(record);
+    if (entries.length === 0) return ['Notifications: none'];
+    const rows = entries.slice(0, maxLines).map(([key, value]) => {
+      if (Array.isArray(value)) {
+        return `- ${key}: ${value.length > 0 ? value.map((item) => stringifyCompact(item)).join(', ') : '(none)'}`;
+      }
+      if (asRecord(value)) {
+        const nested = Object.entries(value as Record<string, unknown>)
+          .slice(0, 5)
+          .map(([nestedKey, nestedValue]) => `${nestedKey}=${stringifyCompact(nestedValue)}`)
+          .join(', ');
+        return `- ${key}: ${nested || '(object)'}`;
+      }
+      return `- ${key}: ${truncateValueText(stringifyCompact(value), 96)}`;
+    });
+    if (entries.length > maxLines) {
+      rows.push(`... ${entries.length - maxLines} more`);
+    }
+    return [`Notifications: ${entries.length} type(s)`, ...rows];
+  }
+  return [`Notifications: ${truncateValueText(stringifyCompact(notificationEvents), 120)}`];
+}
+
+function isStaticLikeNodeValue(entry: NodeValueDetail): boolean {
+  if (entry._error !== undefined) return false;
+  const metadata = asRecord(entry.metadata);
+  const states = asRecord(metadata?.states);
+  const semantic = annotateNodeValue(entry);
+  const commandClass = toCommandClassNumber(entry.valueId?.commandClass);
+  const propertyText = `${entry.valueId?.property ?? ''} ${entry.valueId?.propertyKey ?? ''}`
+    .trim()
+    .toLowerCase();
+  const hasStates = Boolean(states && Object.keys(states).length > 0);
+  const hasUnit = Boolean(asNonEmptyString(metadata?.unit));
+  const writeable = metadata?.writeable === true;
+  const semanticDynamic = semantic.capabilityId !== null && semantic.confidence !== 'low';
+  if (writeable || hasStates || hasUnit || semanticDynamic) {
+    return false;
+  }
+  if ([112, 114, 115].includes(commandClass ?? -1)) {
+    return true;
+  }
+  return (
+    propertyText.includes('status') ||
+    propertyText.includes('manufacturer') ||
+    propertyText.includes('product') ||
+    propertyText.includes('firmware') ||
+    propertyText.includes('version') ||
+    propertyText.includes('protocol') ||
+    propertyText.includes('interview') ||
+    propertyText.includes('serial') ||
+    propertyText.includes('hardware')
+  );
+}
+
 function extractListIdentityFromDetail(detail: NodeDetail | undefined): {
   manufacturer: string | null;
   product: string | null;
@@ -953,7 +1060,7 @@ function renderPanelNodeDetail(
 ): string {
   const state = detail.state ?? {};
   const ready = String(state.ready ?? '');
-  const status = String(state.status ?? '');
+  const status = describeNodeStatus(state.status);
   const manufacturer = formatManufacturerLabel(state);
   const product = formatProductLabel(state);
   const name = String(state.name ?? '');
@@ -962,35 +1069,53 @@ function renderPanelNodeDetail(
     neighborLookup: options.neighborLookup,
     lifelineRoute: detail.lifelineRoute,
   });
+  const notificationLines = renderNotificationLines(detail.notificationEvents);
   const values = detail.values ?? [];
   const sortedValues = sortValuesByRelevance(values);
   const valuesExpanded = options.valuesExpanded === true;
-  const previewLimit = valuesExpanded ? sortedValues.length : 3;
-  const previewRows = sortedValues
-    .slice(0, previewLimit)
-    .map((entry) => formatNodeValueLine(entry));
+  const interactiveValues = sortedValues.filter((entry) => !isStaticLikeNodeValue(entry));
+  const staticValues = sortedValues.filter((entry) => isStaticLikeNodeValue(entry));
+  const previewRows = (valuesExpanded ? interactiveValues : interactiveValues.slice(0, 3)).map(
+    (entry) => formatNodeValueLine(entry),
+  );
+  const staticRows = (valuesExpanded ? staticValues : staticValues.slice(0, 2)).map((entry) =>
+    formatNodeValueLine(entry),
+  );
 
   return [
     `Node ${detail.nodeId}`,
-    `Name: ${name}`,
+    '',
+    'Identity',
+    `Name: ${name || '(unnamed)'}`,
     `Ready: ${ready}  Status: ${status}`,
     `Manufacturer: ${manufacturer}`,
     `Product: ${product}`,
+    '',
+    'Telemetry',
+    ...notificationLines,
+    '',
+    'Neighbors',
     ...neighborLines,
-    `Notifications: ${stringifyCompact(detail.notificationEvents)}`,
+    '',
+    'Values',
     `Values: ${values.length}${
       values.length > 0 ? (valuesExpanded ? ' (press z to collapse)' : ' (press z to expand)') : ''
     }`,
-    values.length > 0
+    interactiveValues.length > 0
       ? valuesExpanded
-        ? 'Values (top relevant first):'
+        ? `Live/Control values: ${interactiveValues.length}`
         : 'Top Values (top relevant first):'
       : null,
     ...previewRows,
-    sortedValues.length > previewRows.length
+    !valuesExpanded && interactiveValues.length > previewRows.length
       ? valuesExpanded
         ? null
-        : `... ${sortedValues.length - previewRows.length} more values (press z to expand)`
+        : `... ${interactiveValues.length - previewRows.length} more live/control values (press z to expand)`
+      : null,
+    staticValues.length > 0 ? `Static/Diagnostic values: ${staticValues.length}` : null,
+    ...staticRows,
+    !valuesExpanded && staticValues.length > staticRows.length
+      ? `... ${staticValues.length - staticRows.length} more static values (press z to expand)`
       : null,
   ]
     .filter((line) => line !== null)
@@ -1736,7 +1861,7 @@ export async function runPanelApp(
       rightAllLines.length > rightVisibleCapacity
         ? ` [${rightWindowStart}-${rightWindowEnd}/${rightAllLines.length}]`
         : '';
-    const rightTitle = `${isNodesMode ? 'Node Detail' : 'Rule Detail'}${rightRange}`;
+    const rightTitle = `Detail${rightRange}`;
 
     const bottomAllLines = splitLines(bottomText);
     const bottomVisibleCapacity = Math.max(1, paneHeights.bottomContentHeight);
