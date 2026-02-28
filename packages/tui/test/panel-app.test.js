@@ -981,7 +981,9 @@ test('runPanelApp orders expanded values by relevance', async () => {
   assert.equal(expandedValuesFrame.includes('Config: 1 (4)'), true);
   assert.equal(expandedValuesFrame.includes('Switch: on (99)'), true);
   assert.equal(expandedValuesFrame.includes('Temperature: 21.4 C'), true);
-  assert.equal(expandedValuesFrame.includes('[static] Status Flags: 3'), true);
+  assert.equal(expandedValuesFrame.includes('Status Flags: 3'), true);
+  assert.equal(expandedValuesFrame.includes('dir read-write'), true);
+  assert.equal(expandedValuesFrame.includes('map onoff (high)'), true);
   assert.notEqual(expandedValuesFrame, undefined);
   assert.equal(
     expandedValuesFrame.indexOf('Switch: on (99)') <
@@ -990,7 +992,7 @@ test('runPanelApp orders expanded values by relevance', async () => {
   );
   assert.equal(
     expandedValuesFrame.indexOf('Temperature: 21.4 C') <
-      expandedValuesFrame.indexOf('[static] Status Flags: 3'),
+      expandedValuesFrame.indexOf('Status Flags: 3'),
     true,
   );
 });
@@ -1189,7 +1191,7 @@ test('runPanelApp shows section counts and top preview when values are collapsed
   assert.equal(rendered.includes('Config (1) (4)'), true);
   assert.equal(rendered.includes('Switch: on (99)'), true);
   assert.equal(rendered.includes('Temperature: 20.8 C'), true);
-  assert.equal(rendered.includes('[static] Status Flags: 2'), true);
+  assert.equal(rendered.includes('Status Flags: 2'), true);
 });
 
 test('runPanelApp scrolls right pane when focused on node detail', async () => {

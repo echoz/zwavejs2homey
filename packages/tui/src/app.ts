@@ -1028,14 +1028,17 @@ function formatReadableValue(value: unknown): string {
   return stringifyCompact(value);
 }
 
-function formatNodeValueLine(entry: NodeValueDetail): string {
-  if (entry._error !== undefined) {
-    return `- value-error: ${truncateValueText(stringifyCompact(entry._error))}`;
-  }
+function formatValueEntryBase(entry: NodeValueDetail): {
+  label: string;
+  renderedValue: string;
+  identifier: string;
+  type: string | null;
+  semantic: ReturnType<typeof annotateNodeValue>;
+  errors: string[];
+} | null {
+  if (entry._error !== undefined || !entry.valueId) return null;
 
   const valueId = entry.valueId;
-  if (!valueId) return '- value: <missing valueId>';
-
   const metadata = asRecord(entry.metadata);
   const states = asRecord(metadata?.states);
   const rawValueText = formatReadableValue(entry.value);
@@ -1043,7 +1046,7 @@ function formatNodeValueLine(entry: NodeValueDetail): string {
     states && entry.value !== undefined
       ? (states[String(entry.value)] ?? states[String(Number(entry.value))])
       : undefined;
-  const mappedValueText =
+  const renderedValue =
     typeof mappedValue === 'string' && mappedValue.trim().length > 0
       ? `${mappedValue} (${rawValueText})`
       : rawValueText;
@@ -1058,75 +1061,64 @@ function formatNodeValueLine(entry: NodeValueDetail): string {
   const type =
     metadata && typeof metadata.type === 'string' && metadata.type.trim().length > 0
       ? metadata.type.trim()
-      : undefined;
-  const permissions = [
-    metadata?.readable === true ? 'r' : '',
-    metadata?.writeable === true ? 'w' : '',
-  ]
-    .join('')
-    .trim();
-  const metaBits = [type, permissions].filter((item) => item && item.length > 0).join(',');
-  const identifier = `CC ${valueId.commandClass} ep ${valueId.endpoint ?? 0} ${String(valueId.property)}${
+      : null;
+  const identifier = `cc${valueId.commandClass}/ep${valueId.endpoint ?? 0}/${String(valueId.property)}${
     valueId.propertyKey != null ? `/${String(valueId.propertyKey)}` : ''
   }`;
-
   const errors = [
     entry.metadataError
-      ? `meta-err=${truncateValueText(stringifyCompact(entry.metadataError), 28)}`
+      ? `meta=${truncateValueText(stringifyCompact(entry.metadataError), 40)}`
       : null,
-    entry.valueError
-      ? `val-err=${truncateValueText(stringifyCompact(entry.valueError), 28)}`
-      : null,
+    entry.valueError ? `value=${truncateValueText(stringifyCompact(entry.valueError), 40)}` : null,
     entry.timestampError
-      ? `ts-err=${truncateValueText(stringifyCompact(entry.timestampError), 28)}`
+      ? `timestamp=${truncateValueText(stringifyCompact(entry.timestampError), 40)}`
       : null,
-  ]
-    .filter((value) => value !== null)
-    .join(' ');
-  const semantic = annotateNodeValue(entry);
+  ].filter((value): value is string => value !== null);
+
+  return {
+    label,
+    renderedValue: `${renderedValue}${unit}`,
+    identifier,
+    type,
+    semantic: annotateNodeValue(entry),
+    errors,
+  };
+}
+
+function formatNodeValueLine(entry: NodeValueDetail): string {
+  if (entry._error !== undefined) {
+    return `- value-error: ${truncateValueText(stringifyCompact(entry._error))}`;
+  }
+
+  const valueBase = formatValueEntryBase(entry);
+  if (!valueBase) return '- value: <missing valueId>';
+
+  const semanticLabel = valueBase.semantic.capabilityId
+    ? `${valueBase.semantic.capabilityId} (${valueBase.semantic.confidence})`
+    : 'unmapped';
   const detailBits = [
-    `id ${identifier}`,
-    metaBits ? `meta ${metaBits}` : null,
-    semantic.capabilityId
-      ? `maps ${semantic.capabilityId}${semantic.confidence ? ` (${semantic.confidence})` : ''}`
-      : null,
-    errors ? `errors ${errors}` : null,
+    `id ${valueBase.identifier}`,
+    `dir ${valueBase.semantic.direction}`,
+    valueBase.type ? `type ${valueBase.type}` : null,
+    `map ${semanticLabel}`,
+    `src ${valueBase.semantic.source}`,
   ].filter((bit): bit is string => bit !== null);
 
   return [
-    `- ${truncateValueText(label, 34)}: ${truncateValueText(mappedValueText + unit, 56)}`,
+    `- ${valueBase.label}: ${valueBase.renderedValue}`,
     `  ${detailBits.join(' | ')}`,
+    valueBase.errors.length > 0 ? `  errors: ${valueBase.errors.join(' | ')}` : null,
   ].join('\n');
 }
 
 function formatNodeValueCompactLine(entry: NodeValueDetail): string {
   if (entry._error !== undefined) {
-    return `- [static] value-error: ${truncateValueText(stringifyCompact(entry._error))}`;
+    return `- value-error: ${truncateValueText(stringifyCompact(entry._error))}`;
   }
 
-  const valueId = entry.valueId;
-  if (!valueId) return '- [static] value: <missing valueId>';
-
-  const metadata = asRecord(entry.metadata);
-  const states = asRecord(metadata?.states);
-  const rawValueText = formatReadableValue(entry.value);
-  const mappedValue =
-    states && entry.value !== undefined
-      ? (states[String(entry.value)] ?? states[String(Number(entry.value))])
-      : undefined;
-  const mappedValueText =
-    typeof mappedValue === 'string' && mappedValue.trim().length > 0
-      ? `${mappedValue} (${rawValueText})`
-      : rawValueText;
-  const unit =
-    metadata && typeof metadata.unit === 'string' && metadata.unit.trim().length > 0
-      ? ` ${metadata.unit}`
-      : '';
-  const label =
-    metadata && typeof metadata.label === 'string' && metadata.label.trim().length > 0
-      ? metadata.label.trim()
-      : String(valueId.property);
-  return `- [static] ${truncateValueText(label, 28)}: ${truncateValueText(mappedValueText + unit, 48)}`;
+  const valueBase = formatValueEntryBase(entry);
+  if (!valueBase) return '- value: <missing valueId>';
+  return `- ${valueBase.label}: ${valueBase.renderedValue}`;
 }
 
 function valueIdKey(entry: NodeValueDetail): string {
@@ -1280,9 +1272,7 @@ function renderCollapsedSectionPreview(
     const previewLimit = section.compact ? 1 : 2;
     const previewRows = sectionValues
       .slice(0, previewLimit)
-      .map((entry) =>
-        section.compact ? formatNodeValueCompactLine(entry) : formatNodeValueLine(entry),
-      );
+      .map((entry) => formatNodeValueCompactLine(entry));
     return [
       sectionTitle,
       ...previewRows,
