@@ -60,15 +60,28 @@ The project is intentionally split into layers:
 - `npm run compiler:tui -- --url ws://HOST:PORT --start-node 12 --include-values full`
 - `npm run compiler:tui -- --rules-only --manifest-file rules/manifest.json`
 - `npm run compiler:tui -- --rules-only --url ws://HOST:PORT --manifest-file rules/manifest.json`
+- `npm run compiler:tui -- --url ws://HOST:PORT --ui shell` (fallback shell mode)
 
 Phase 4 reset status:
 
 - core CLI cutover complete (`compiler:simulate`)
 - dual-root startup active (`--url` nodes root, `--rules-only` rules root)
 - signature simulation workflow available in both roots
-- current interaction model is command-shell; panel-first rich TUI is still in progress
+- panel-first UI is now the default runtime (`--ui panel`), with shell fallback (`--ui shell`)
 
-Interactive commands:
+Panel keys (default `--ui panel`):
+
+- `up/down` or `k/j`: move selection
+- `tab`: switch focused pane
+- `enter`: open selected node/rule detail
+- `r`: refresh list
+- `i` / `v` / `m` / `d`: inspect / validate / simulate / simulate dry-run
+- `p`: scaffold preview
+- `W`: scaffold write (explicit confirmed write)
+- `A`: manifest add (explicit confirmed write)
+- `s` / `l` / `h` / `q`: status / log / help / quit
+
+Shell commands (`--ui shell`):
 
 - `list`
 - `refresh`

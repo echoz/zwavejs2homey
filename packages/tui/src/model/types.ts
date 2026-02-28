@@ -1,10 +1,12 @@
 export type IncludeValuesMode = 'none' | 'summary' | 'full';
 export type SessionMode = 'nodes' | 'rules';
+export type UiMode = 'panel' | 'shell';
 
 export type ConnectionState = 'disconnected' | 'connecting' | 'ready' | 'error';
 
 export interface SessionConfig {
   mode: SessionMode;
+  uiMode: UiMode;
   manifestFile: string;
   url?: string;
   token?: string;

@@ -447,11 +447,18 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - expanded renderers/help for rules root and simulation summaries
     - extended tests: parser/app/rules-presenter/workspace-file-service coverage for dual-root + simulate flow
     - synced roadmap and implementation plan to mark Section 6A complete, and leave Section 6B (panel-rich UI) pending
+92. Started Phase 4 Section 6B (panel-first rich UI) first slice:
+    - added default panel UI runtime (`--ui panel`) with shell fallback (`--ui shell`)
+    - introduced full-screen panel frame rendering and key-intent mapping modules
+    - implemented panel event loop for nodes/rules roots on top of existing presenters/services
+    - wired panel actions for refresh/open/inspect/validate/simulate/scaffold preview plus confirmed write helpers (`W` scaffold write, `A` manifest add)
+    - added panel view/runtime tests (`panel-view`, `panel-app`) and updated CLI arg tests for ui mode
 
 ## Next Tasks
 
 1. Execute Section 6B:
-   - implement panel-first rich TUI UI for nodes and rules roots (not command-shell only)
+   - harden panel ergonomics (selection persistence, pagination/filtering, richer detail panes)
+   - add panel curation affordances for safer write flows and better diagnostics drill-down
 2. Execute Section 7 convergence review:
    - decide whether to keep separate stacks or extract shared view primitives
 3. Keep Homey adapter implementation paused until Phase 4 reset is complete

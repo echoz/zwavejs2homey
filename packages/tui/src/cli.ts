@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { parseCliArgs, runApp } from './app';
+import { parseCliArgs, runApp, runPanelApp } from './app';
 
 async function main(): Promise<void> {
   const parsed = parseCliArgs(process.argv.slice(2));
@@ -12,7 +12,11 @@ async function main(): Promise<void> {
   }
 
   try {
-    await runApp(parsed.command, console);
+    if (parsed.command.uiMode === 'panel') {
+      await runPanelApp(parsed.command, console);
+    } else {
+      await runApp(parsed.command, console);
+    }
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;

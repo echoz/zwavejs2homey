@@ -25,6 +25,7 @@ test('parseCliArgs parses required and optional fields', () => {
   assert.equal(parsed.ok, true);
   assert.deepEqual(parsed.command, {
     mode: 'nodes',
+    uiMode: 'panel',
     manifestFile: 'rules/manifest.json',
     url: 'ws://127.0.0.1:3000',
     token: undefined,
@@ -40,6 +41,7 @@ test('parseCliArgs supports rules-only startup with optional url', () => {
   assert.equal(parsed.ok, true);
   assert.deepEqual(parsed.command, {
     mode: 'rules',
+    uiMode: 'panel',
     manifestFile: 'rules/manifest.dev.json',
     url: undefined,
     token: undefined,
@@ -48,6 +50,12 @@ test('parseCliArgs supports rules-only startup with optional url', () => {
     maxValues: 200,
     startNode: undefined,
   });
+});
+
+test('parseCliArgs accepts --ui shell override', () => {
+  const parsed = parseCliArgs(['--url', 'ws://127.0.0.1:3000', '--ui', 'shell']);
+  assert.equal(parsed.ok, true);
+  assert.equal(parsed.command.uiMode, 'shell');
 });
 
 test('runApp executes interactive command flow through parent+child presenters', async () => {
@@ -183,6 +191,7 @@ test('runApp executes interactive command flow through parent+child presenters',
   await runApp(
     {
       mode: 'nodes',
+      uiMode: 'shell',
       manifestFile: 'rules/manifest.json',
       url: 'ws://127.0.0.1:3000',
       schemaVersion: 0,
@@ -304,6 +313,7 @@ test('runApp supports rules-only root command flow', async () => {
   await runApp(
     {
       mode: 'rules',
+      uiMode: 'shell',
       manifestFile: 'rules/manifest.json',
       schemaVersion: 0,
       includeValues: 'summary',

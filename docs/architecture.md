@@ -150,7 +150,7 @@ Reset architecture direction:
   - nodes root (`--url ws://...`)
   - rules root (`--rules-only [--manifest-file ...]`)
 - simulation-centric curation flow in both roots
-- current status: dual-root shell workflows are implemented; panel-first rich UI is pending
+- current status: panel-first runtime is implemented as default (`--ui panel`) with shell fallback (`--ui shell`)
 
 Implementation structure (current direction):
 
