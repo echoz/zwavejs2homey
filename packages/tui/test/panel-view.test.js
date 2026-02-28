@@ -23,6 +23,8 @@ test('parsePanelDataChunk provides fallback quit intent', () => {
   assert.deepEqual(parsePanelDataChunk('Q'), { type: 'quit' });
   assert.deepEqual(parsePanelDataChunk('\u001b'), { type: 'quit' });
   assert.deepEqual(parsePanelDataChunk('\u0003'), { type: 'quit' });
+  assert.equal(parsePanelDataChunk('\u001b[B'), null);
+  assert.equal(parsePanelDataChunk('\u001b[A'), null);
   assert.equal(parsePanelDataChunk(''), null);
 });
 
