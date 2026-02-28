@@ -162,6 +162,7 @@ export class ExplorerPresenter {
     options: {
       manifestFile?: string;
       includeControllerNodes?: boolean;
+      nodeId?: number;
     } = {},
   ): Promise<SignatureInspectSummary> {
     this.requireReady();
@@ -185,6 +186,7 @@ export class ExplorerPresenter {
     options: {
       manifestFile?: string;
       includeControllerNodes?: boolean;
+      nodeId?: number;
     } = {},
   ): Promise<ValidationSummary> {
     this.requireReady();
@@ -208,6 +210,7 @@ export class ExplorerPresenter {
     options: {
       manifestFile?: string;
       includeControllerNodes?: boolean;
+      nodeId?: number;
       skipInspect?: boolean;
       dryRun?: boolean;
       inspectFormat?: string;

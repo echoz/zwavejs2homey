@@ -95,12 +95,12 @@ export interface CompilerCurationService {
   inspectSignature(
     session: ConnectedSessionConfig,
     signature: string,
-    options?: { manifestFile?: string; includeControllerNodes?: boolean },
+    options?: { manifestFile?: string; includeControllerNodes?: boolean; nodeId?: number },
   ): Promise<SignatureInspectSummary>;
   validateSignature(
     session: ConnectedSessionConfig,
     signature: string,
-    options?: { manifestFile?: string; includeControllerNodes?: boolean },
+    options?: { manifestFile?: string; includeControllerNodes?: boolean; nodeId?: number },
   ): Promise<ValidationSummary>;
   simulateSignature(
     session: ConnectedSessionConfig,
@@ -108,6 +108,7 @@ export interface CompilerCurationService {
     options?: {
       manifestFile?: string;
       includeControllerNodes?: boolean;
+      nodeId?: number;
       skipInspect?: boolean;
       dryRun?: boolean;
       inspectFormat?: string;
@@ -135,13 +136,17 @@ export class CompilerCurationServiceImpl implements CompilerCurationService {
   async inspectSignature(
     session: ConnectedSessionConfig,
     signature: string,
-    options: { manifestFile?: string; includeControllerNodes?: boolean } = {},
+    options: { manifestFile?: string; includeControllerNodes?: boolean; nodeId?: number } = {},
   ): Promise<SignatureInspectSummary> {
     const manifestFile = resolveDefaultManifestFile(options.manifestFile ?? session.manifestFile);
+    const scopeArgs =
+      Number.isInteger(options.nodeId) && (options.nodeId as number) > 0
+        ? ['--node', String(options.nodeId)]
+        : ['--all-nodes'];
     const parsed = parseInspectLiveCliArgs([
       '--url',
       session.url,
-      '--all-nodes',
+      ...scopeArgs,
       '--manifest-file',
       manifestFile,
       '--format',
@@ -204,13 +209,17 @@ export class CompilerCurationServiceImpl implements CompilerCurationService {
   async validateSignature(
     session: ConnectedSessionConfig,
     signature: string,
-    options: { manifestFile?: string; includeControllerNodes?: boolean } = {},
+    options: { manifestFile?: string; includeControllerNodes?: boolean; nodeId?: number } = {},
   ): Promise<ValidationSummary> {
     const manifestFile = resolveDefaultManifestFile(options.manifestFile ?? session.manifestFile);
+    const scopeArgs =
+      Number.isInteger(options.nodeId) && (options.nodeId as number) > 0
+        ? ['--node', String(options.nodeId)]
+        : ['--all-nodes'];
     const parsed = parseValidateLiveCliArgs([
       '--url',
       session.url,
-      '--all-nodes',
+      ...scopeArgs,
       '--manifest-file',
       manifestFile,
       '--signature',
@@ -249,16 +258,21 @@ export class CompilerCurationServiceImpl implements CompilerCurationService {
     options: {
       manifestFile?: string;
       includeControllerNodes?: boolean;
+      nodeId?: number;
       skipInspect?: boolean;
       dryRun?: boolean;
       inspectFormat?: string;
     } = {},
   ): Promise<SimulationSummary> {
     const manifestFile = resolveDefaultManifestFile(options.manifestFile ?? session.manifestFile);
+    const scopeArgs =
+      Number.isInteger(options.nodeId) && (options.nodeId as number) > 0
+        ? ['--node', String(options.nodeId)]
+        : ['--all-nodes'];
     const parsed = parseSimulateCliArgs([
       '--url',
       session.url,
-      '--all-nodes',
+      ...scopeArgs,
       '--manifest-file',
       manifestFile,
       '--signature',

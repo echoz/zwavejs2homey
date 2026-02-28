@@ -680,30 +680,44 @@ export async function runPanelApp(
       return;
     }
     if (intent.type === 'inspect') {
+      const selectedNodeId = isNodesMode ? getSelectedNodeId() : undefined;
+      bottomText = `Running inspect${selectedNodeId ? ` for node ${selectedNodeId}` : ''}...`;
+      renderFrame();
       const signature = await ensureSelectedSignature();
       bottomText = renderInspectSummary(
         await (isNodesMode
-          ? nodesPresenter.inspectSelectedSignature()
+          ? nodesPresenter.inspectSelectedSignature({ nodeId: selectedNodeId })
           : rulesPresenter.inspectSelectedSignature()),
       );
       io.log(`inspected ${signature}`);
       return;
     }
     if (intent.type === 'validate') {
+      const selectedNodeId = isNodesMode ? getSelectedNodeId() : undefined;
+      bottomText = `Running validate${selectedNodeId ? ` for node ${selectedNodeId}` : ''}...`;
+      renderFrame();
       const signature = await ensureSelectedSignature();
       bottomText = renderValidationSummary(
         await (isNodesMode
-          ? nodesPresenter.validateSelectedSignature()
+          ? nodesPresenter.validateSelectedSignature({ nodeId: selectedNodeId })
           : rulesPresenter.validateSelectedSignature()),
       );
       io.log(`validated ${signature}`);
       return;
     }
     if (intent.type === 'simulate') {
+      const selectedNodeId = isNodesMode ? getSelectedNodeId() : undefined;
+      bottomText = `Running simulate${selectedNodeId ? ` for node ${selectedNodeId}` : ''}${
+        intent.dryRun ? ' (dry-run)' : ''
+      }...`;
+      renderFrame();
       const signature = await ensureSelectedSignature();
       bottomText = renderSimulationSummary(
         await (isNodesMode
-          ? nodesPresenter.simulateSelectedSignature({ dryRun: intent.dryRun })
+          ? nodesPresenter.simulateSelectedSignature({
+              nodeId: selectedNodeId,
+              dryRun: intent.dryRun,
+            })
           : rulesPresenter.simulateSelectedSignature({ dryRun: intent.dryRun })),
       );
       io.log(`simulated ${signature}${intent.dryRun ? ' (dry-run)' : ''}`);

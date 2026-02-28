@@ -115,6 +115,7 @@ export class RulesPresenter {
     options: {
       manifestFile?: string;
       includeControllerNodes?: boolean;
+      nodeId?: number;
     } = {},
   ): Promise<SignatureInspectSummary> {
     const session = this.requireSessionWithUrl();
@@ -140,6 +141,7 @@ export class RulesPresenter {
     options: {
       manifestFile?: string;
       includeControllerNodes?: boolean;
+      nodeId?: number;
     } = {},
   ): Promise<ValidationSummary> {
     const session = this.requireSessionWithUrl();
@@ -165,6 +167,7 @@ export class RulesPresenter {
     options: {
       manifestFile?: string;
       includeControllerNodes?: boolean;
+      nodeId?: number;
       skipInspect?: boolean;
       dryRun?: boolean;
       inspectFormat?: string;

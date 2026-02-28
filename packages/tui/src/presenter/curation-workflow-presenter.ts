@@ -14,12 +14,12 @@ export interface CurationWorkflowChildPresenterLike {
   inspectSignature(
     session: ConnectedSessionConfig,
     signature: string,
-    options?: { manifestFile?: string; includeControllerNodes?: boolean },
+    options?: { manifestFile?: string; includeControllerNodes?: boolean; nodeId?: number },
   ): Promise<SignatureInspectSummary>;
   validateSignature(
     session: ConnectedSessionConfig,
     signature: string,
-    options?: { manifestFile?: string; includeControllerNodes?: boolean },
+    options?: { manifestFile?: string; includeControllerNodes?: boolean; nodeId?: number },
   ): Promise<ValidationSummary>;
   simulateSignature(
     session: ConnectedSessionConfig,
@@ -27,6 +27,7 @@ export interface CurationWorkflowChildPresenterLike {
     options?: {
       manifestFile?: string;
       includeControllerNodes?: boolean;
+      nodeId?: number;
       skipInspect?: boolean;
       dryRun?: boolean;
       inspectFormat?: string;
@@ -61,7 +62,7 @@ export class CurationWorkflowPresenter implements CurationWorkflowChildPresenter
   async inspectSignature(
     session: ConnectedSessionConfig,
     signature: string,
-    options: { manifestFile?: string; includeControllerNodes?: boolean } = {},
+    options: { manifestFile?: string; includeControllerNodes?: boolean; nodeId?: number } = {},
   ): Promise<SignatureInspectSummary> {
     return this.curationService.inspectSignature(session, signature, options);
   }
@@ -69,7 +70,7 @@ export class CurationWorkflowPresenter implements CurationWorkflowChildPresenter
   async validateSignature(
     session: ConnectedSessionConfig,
     signature: string,
-    options: { manifestFile?: string; includeControllerNodes?: boolean } = {},
+    options: { manifestFile?: string; includeControllerNodes?: boolean; nodeId?: number } = {},
   ): Promise<ValidationSummary> {
     return this.curationService.validateSignature(session, signature, options);
   }
@@ -80,6 +81,7 @@ export class CurationWorkflowPresenter implements CurationWorkflowChildPresenter
     options: {
       manifestFile?: string;
       includeControllerNodes?: boolean;
+      nodeId?: number;
       skipInspect?: boolean;
       dryRun?: boolean;
       inspectFormat?: string;
