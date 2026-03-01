@@ -257,6 +257,278 @@ export interface PanelRenderSnapshot {
   bottomCompact: boolean;
 }
 
+interface ShellModeAdapter {
+  readonly mode: SessionConfig['mode'];
+  readonly prompt: string;
+  helpText(): string;
+  initialize(config: SessionConfig): Promise<void>;
+  listText(): string;
+  refreshText(): Promise<string>;
+  showText(id: number): Promise<string>;
+  selectSignatureText(options: {
+    signature?: string;
+    fromNodeId?: number;
+    fromRuleIndex?: number;
+  }): string;
+  inspectText(options?: { manifestFile?: string }): Promise<string>;
+  validateText(options?: { manifestFile?: string }): Promise<string>;
+  simulateText(options?: {
+    manifestFile?: string;
+    dryRun?: boolean;
+    skipInspect?: boolean;
+    inspectFormat?: string;
+  }): Promise<string>;
+  scaffoldPreviewText(options?: { productName?: string; homeyClass?: string }): string;
+  writeScaffold(filePath: string | undefined, confirm: boolean): string;
+  addManifest(options?: { filePath?: string; manifestFile?: string; confirm?: boolean }): {
+    manifestFile: string;
+    entryFilePath: string;
+    updated: boolean;
+  };
+  statusText(): string;
+  logText(limit?: number): string;
+  teardown(): Promise<void>;
+}
+
+function createShellModeAdapter(
+  config: SessionConfig,
+  nodesPresenter: ExplorerPresenter,
+  rulesPresenter: RulesPresenter,
+): ShellModeAdapter {
+  if (config.mode === 'nodes') {
+    return {
+      mode: 'nodes',
+      prompt: 'zwjs-explorer> ',
+      helpText: () => renderShellHelp(),
+      initialize: async (sessionConfig) => {
+        await nodesPresenter.connect(sessionConfig as ConnectedSessionConfig);
+      },
+      listText: () => renderNodeList(nodesPresenter.getState().explorer.items),
+      refreshText: async () => renderNodeList(await nodesPresenter.refreshNodes()),
+      showText: async (id) => renderNodeDetail(await nodesPresenter.showNodeDetail(id)),
+      selectSignatureText: (options) => {
+        if (options.fromRuleIndex !== undefined) {
+          throw new Error('--from-rule is not supported in nodes mode');
+        }
+        if (options.signature) {
+          nodesPresenter.selectSignature(options.signature);
+          return renderSignatureSelected(options.signature);
+        }
+        return renderSignatureSelected(nodesPresenter.selectSignatureFromNode(options.fromNodeId));
+      },
+      inspectText: async (options = {}) =>
+        renderInspectSummary(await nodesPresenter.inspectSelectedSignature(options)),
+      validateText: async (options = {}) =>
+        renderValidationSummary(await nodesPresenter.validateSelectedSignature(options)),
+      simulateText: async (options = {}) =>
+        renderSimulationSummary(await nodesPresenter.simulateSelectedSignature(options)),
+      scaffoldPreviewText: (options = {}) =>
+        renderScaffoldDraft(nodesPresenter.createScaffoldFromSignature(options)),
+      writeScaffold: (filePath, confirm) =>
+        nodesPresenter.writeScaffoldDraft(filePath, { confirm }),
+      addManifest: (options = {}) => nodesPresenter.addDraftToManifest(options),
+      statusText: () => renderStatusSnapshot(nodesPresenter.getStatusSnapshot()),
+      logText: (limit) => renderRunLog(nodesPresenter.getRunLog(limit)),
+      teardown: async () => {
+        await nodesPresenter.disconnect();
+      },
+    };
+  }
+
+  return {
+    mode: 'rules',
+    prompt: 'zwjs-rules> ',
+    helpText: () => renderRulesShellHelp(),
+    initialize: async (sessionConfig) => {
+      rulesPresenter.initialize(sessionConfig);
+    },
+    listText: () => renderRuleList(rulesPresenter.getRules()),
+    refreshText: async () => renderRuleList(rulesPresenter.refreshRules()),
+    showText: async (id) => renderRuleDetail(rulesPresenter.showRuleDetail(id)),
+    selectSignatureText: (options) => {
+      if (options.fromNodeId !== undefined) {
+        throw new Error('--from-node is not supported in rules mode');
+      }
+      if (options.signature) {
+        rulesPresenter.selectSignature(options.signature);
+        return renderSignatureSelected(options.signature);
+      }
+      return renderSignatureSelected(rulesPresenter.selectSignatureFromRule(options.fromRuleIndex));
+    },
+    inspectText: async (options = {}) =>
+      renderInspectSummary(await rulesPresenter.inspectSelectedSignature(options)),
+    validateText: async (options = {}) =>
+      renderValidationSummary(await rulesPresenter.validateSelectedSignature(options)),
+    simulateText: async (options = {}) =>
+      renderSimulationSummary(await rulesPresenter.simulateSelectedSignature(options)),
+    scaffoldPreviewText: (options = {}) =>
+      renderScaffoldDraft(rulesPresenter.createScaffoldFromSignature(options)),
+    writeScaffold: (filePath, confirm) => rulesPresenter.writeScaffoldDraft(filePath, { confirm }),
+    addManifest: (options = {}) => rulesPresenter.addDraftToManifest(options),
+    statusText: () => renderStatusSnapshot(rulesPresenter.getStatusSnapshot()),
+    logText: (limit) => renderRunLog(rulesPresenter.getRunLog(limit)),
+    teardown: async () => {},
+  };
+}
+
+interface DraftEditorSurface {
+  getDraftEditorState?: () => DraftEditorState | undefined;
+  startDraftEdit?: () => DraftEditorState;
+  setDraftEditorSelectedField?: (path: string) => DraftEditorState;
+  setDraftEditorField?: (path: string, value: unknown) => DraftEditorState;
+  setDraftEditorCapabilityField?: (
+    index: number,
+    field: 'capabilityId' | 'directionality',
+    value: unknown,
+  ) => DraftEditorState;
+  setDraftEditorCapabilityMappingField?: (
+    index: number,
+    path: string,
+    value: unknown,
+  ) => DraftEditorState;
+  commitDraftEditorState?: () => void;
+  addDraftEditorCapability?: () => DraftEditorState;
+  cloneDraftEditorCapability?: (index?: number) => DraftEditorState;
+  removeDraftEditorCapability?: (index?: number) => DraftEditorState;
+  moveDraftEditorCapability?: (index: number, delta: -1 | 1) => DraftEditorState;
+  validateDraftEditorState?: () => DraftEditorState;
+}
+
+interface PanelModeAdapter {
+  readonly mode: SessionConfig['mode'];
+  readonly draftSurface: DraftEditorSurface;
+  initialize(config: SessionConfig): Promise<void>;
+  teardown(): Promise<void>;
+  ensureSelectedSignature(options: {
+    selectedNodeId?: number;
+    selectedRuleIndex?: number;
+    updateNodeDetail: (detail: NodeDetail) => void;
+  }): Promise<string>;
+  inspectText(options: { manifestFile?: string; nodeId?: number }): Promise<string>;
+  validateText(options: { manifestFile?: string; nodeId?: number }): Promise<string>;
+  simulateText(options: {
+    manifestFile?: string;
+    nodeId?: number;
+    dryRun?: boolean;
+    skipInspect?: boolean;
+    inspectFormat?: string;
+  }): Promise<string>;
+  scaffoldPreviewText(options?: { productName?: string; homeyClass?: string }): string;
+  writeScaffold(confirm: boolean, filePath?: string): string;
+  addManifest(options?: { filePath?: string; manifestFile?: string; confirm?: boolean }): {
+    manifestFile: string;
+    entryFilePath: string;
+    updated: boolean;
+  };
+  statusText(): string;
+  logText(limit?: number): string;
+}
+
+function createPanelModeAdapter(
+  config: SessionConfig,
+  nodesPresenter: ExplorerPresenter,
+  rulesPresenter: RulesPresenter,
+): PanelModeAdapter {
+  if (config.mode === 'nodes') {
+    return {
+      mode: 'nodes',
+      draftSurface: nodesPresenter as DraftEditorSurface,
+      initialize: async (sessionConfig) => {
+        await nodesPresenter.connect(sessionConfig as ConnectedSessionConfig);
+      },
+      teardown: async () => {
+        await nodesPresenter.disconnect();
+      },
+      ensureSelectedSignature: async (options) => {
+        const nodeId = options.selectedNodeId;
+        if (!nodeId) {
+          throw new Error('No node selected');
+        }
+        const detail = await nodesPresenter.showNodeDetail(nodeId);
+        options.updateNodeDetail(detail);
+        return nodesPresenter.selectSignatureFromNode(nodeId);
+      },
+      inspectText: async (options) =>
+        renderInspectSummary(
+          await nodesPresenter.inspectSelectedSignature({
+            manifestFile: options.manifestFile,
+            nodeId: options.nodeId,
+          }),
+        ),
+      validateText: async (options) =>
+        renderPanelValidationSummary(
+          await nodesPresenter.validateSelectedSignature({
+            manifestFile: options.manifestFile,
+            nodeId: options.nodeId,
+          }),
+        ),
+      simulateText: async (options) =>
+        renderPanelSimulationSummary(
+          await nodesPresenter.simulateSelectedSignature({
+            manifestFile: options.manifestFile,
+            nodeId: options.nodeId,
+            dryRun: options.dryRun,
+            skipInspect: options.skipInspect,
+            inspectFormat: options.inspectFormat,
+          }),
+        ),
+      scaffoldPreviewText: (options = {}) =>
+        renderScaffoldDraft(nodesPresenter.createScaffoldFromSignature(options)),
+      writeScaffold: (confirm, filePath) =>
+        nodesPresenter.writeScaffoldDraft(filePath, { confirm }),
+      addManifest: (options = {}) => nodesPresenter.addDraftToManifest(options),
+      statusText: () => renderStatusSnapshot(nodesPresenter.getStatusSnapshot()),
+      logText: (limit) => renderRunLog(nodesPresenter.getRunLog(limit)),
+    };
+  }
+
+  return {
+    mode: 'rules',
+    draftSurface: rulesPresenter as DraftEditorSurface,
+    initialize: async (sessionConfig) => {
+      rulesPresenter.initialize(sessionConfig);
+    },
+    teardown: async () => {},
+    ensureSelectedSignature: async (options) => {
+      const ruleIndex = options.selectedRuleIndex;
+      if (!ruleIndex) {
+        throw new Error('No rule selected');
+      }
+      return rulesPresenter.selectSignatureFromRule(ruleIndex);
+    },
+    inspectText: async (options) =>
+      renderInspectSummary(
+        await rulesPresenter.inspectSelectedSignature({
+          manifestFile: options.manifestFile,
+          nodeId: options.nodeId,
+        }),
+      ),
+    validateText: async (options) =>
+      renderPanelValidationSummary(
+        await rulesPresenter.validateSelectedSignature({
+          manifestFile: options.manifestFile,
+          nodeId: options.nodeId,
+        }),
+      ),
+    simulateText: async (options) =>
+      renderPanelSimulationSummary(
+        await rulesPresenter.simulateSelectedSignature({
+          manifestFile: options.manifestFile,
+          nodeId: options.nodeId,
+          dryRun: options.dryRun,
+          skipInspect: options.skipInspect,
+          inspectFormat: options.inspectFormat,
+        }),
+      ),
+    scaffoldPreviewText: (options = {}) =>
+      renderScaffoldDraft(rulesPresenter.createScaffoldFromSignature(options)),
+    writeScaffold: (confirm, filePath) => rulesPresenter.writeScaffoldDraft(filePath, { confirm }),
+    addManifest: (options = {}) => rulesPresenter.addDraftToManifest(options),
+    statusText: () => renderStatusSnapshot(rulesPresenter.getStatusSnapshot()),
+    logText: (limit) => renderRunLog(rulesPresenter.getRunLog(limit)),
+  };
+}
+
 export async function runApp(
   config: SessionConfig,
   io: LoggerLike = console,
@@ -301,7 +573,7 @@ export async function runApp(
   const createInterfaceImpl = deps.createInterfaceImpl ?? createInterface;
   const input = deps.stdin ?? defaultStdin;
   const output = deps.stdout ?? defaultStdout;
-  const isNodesMode = config.mode === 'nodes';
+  const modeAdapter = createShellModeAdapter(config, nodesPresenter, rulesPresenter);
 
   const readline = createInterfaceImpl({
     input,
@@ -310,24 +582,17 @@ export async function runApp(
   });
 
   try {
-    if (isNodesMode) {
-      await nodesPresenter.connect(config as ConnectedSessionConfig);
-      io.log(renderShellHelp());
-      io.log(renderNodeList(nodesPresenter.getState().explorer.items));
+    await modeAdapter.initialize(config);
+    io.log(modeAdapter.helpText());
+    io.log(modeAdapter.listText());
 
-      if (config.startNode !== undefined) {
-        const detail = await nodesPresenter.showNodeDetail(config.startNode);
-        io.log(renderNodeDetail(detail));
-      }
-    } else {
-      const rules = rulesPresenter.initialize(config);
-      io.log(renderRulesShellHelp());
-      io.log(renderRuleList(rules));
+    if (modeAdapter.mode === 'nodes' && config.startNode !== undefined) {
+      io.log(await modeAdapter.showText(config.startNode));
     }
 
     // eslint-disable-next-line no-constant-condition
     while (true) {
-      const line = await readline.question(isNodesMode ? 'zwjs-explorer> ' : 'zwjs-rules> ');
+      const line = await readline.question(modeAdapter.prompt);
       const parsed = parseShellCommand(line);
       if (!parsed.ok) {
         io.error(parsed.error);
@@ -340,157 +605,87 @@ export async function runApp(
       }
       try {
         if (command.type === 'help') {
-          io.log(isNodesMode ? renderShellHelp() : renderRulesShellHelp());
+          io.log(modeAdapter.helpText());
           continue;
         }
         if (command.type === 'list') {
-          io.log(
-            isNodesMode
-              ? renderNodeList(nodesPresenter.getState().explorer.items)
-              : renderRuleList(rulesPresenter.getRules()),
-          );
+          io.log(modeAdapter.listText());
           continue;
         }
         if (command.type === 'refresh') {
-          if (isNodesMode) {
-            const nodes = await nodesPresenter.refreshNodes();
-            io.log(renderNodeList(nodes));
-          } else {
-            const rules = rulesPresenter.refreshRules();
-            io.log(renderRuleList(rules));
-          }
+          io.log(await modeAdapter.refreshText());
           continue;
         }
         if (command.type === 'show') {
-          if (isNodesMode) {
-            const detail = await nodesPresenter.showNodeDetail(command.nodeId);
-            io.log(renderNodeDetail(detail));
-          } else {
-            const detail = rulesPresenter.showRuleDetail(command.nodeId);
-            io.log(renderRuleDetail(detail));
-          }
+          io.log(await modeAdapter.showText(command.nodeId));
           continue;
         }
         if (command.type === 'signature') {
-          if (isNodesMode) {
-            if (command.fromRuleIndex !== undefined) {
-              throw new Error('--from-rule is not supported in nodes mode');
-            }
-            if (command.signature) {
-              nodesPresenter.selectSignature(command.signature);
-              io.log(renderSignatureSelected(command.signature));
-            } else {
-              const signature = nodesPresenter.selectSignatureFromNode(command.fromNodeId);
-              io.log(renderSignatureSelected(signature));
-            }
-          } else {
-            if (command.fromNodeId !== undefined) {
-              throw new Error('--from-node is not supported in rules mode');
-            }
-            if (command.signature) {
-              rulesPresenter.selectSignature(command.signature);
-              io.log(renderSignatureSelected(command.signature));
-            } else {
-              const signature = rulesPresenter.selectSignatureFromRule(command.fromRuleIndex);
-              io.log(renderSignatureSelected(signature));
-            }
-          }
+          io.log(
+            modeAdapter.selectSignatureText({
+              signature: command.signature,
+              fromNodeId: command.fromNodeId,
+              fromRuleIndex: command.fromRuleIndex,
+            }),
+          );
           continue;
         }
         if (command.type === 'inspect') {
-          const summary = await (isNodesMode
-            ? nodesPresenter.inspectSelectedSignature({
-                manifestFile: command.manifestFile,
-              })
-            : rulesPresenter.inspectSelectedSignature({
-                manifestFile: command.manifestFile,
-              }));
-          io.log(renderInspectSummary(summary));
+          io.log(
+            await modeAdapter.inspectText({
+              manifestFile: command.manifestFile,
+            }),
+          );
           continue;
         }
         if (command.type === 'validate') {
-          const summary = await (isNodesMode
-            ? nodesPresenter.validateSelectedSignature({
-                manifestFile: command.manifestFile,
-              })
-            : rulesPresenter.validateSelectedSignature({
-                manifestFile: command.manifestFile,
-              }));
-          io.log(renderValidationSummary(summary));
+          io.log(
+            await modeAdapter.validateText({
+              manifestFile: command.manifestFile,
+            }),
+          );
           continue;
         }
         if (command.type === 'simulate') {
-          const summary = await (isNodesMode
-            ? nodesPresenter.simulateSelectedSignature({
-                manifestFile: command.manifestFile,
-                dryRun: command.dryRun,
-                skipInspect: command.skipInspect,
-                inspectFormat: command.inspectFormat,
-              })
-            : rulesPresenter.simulateSelectedSignature({
-                manifestFile: command.manifestFile,
-                dryRun: command.dryRun,
-                skipInspect: command.skipInspect,
-                inspectFormat: command.inspectFormat,
-              }));
-          io.log(renderSimulationSummary(summary));
+          io.log(
+            await modeAdapter.simulateText({
+              manifestFile: command.manifestFile,
+              dryRun: command.dryRun,
+              skipInspect: command.skipInspect,
+              inspectFormat: command.inspectFormat,
+            }),
+          );
           continue;
         }
         if (command.type === 'scaffold-preview') {
-          const draft = isNodesMode
-            ? nodesPresenter.createScaffoldFromSignature({
-                productName: command.productName,
-                homeyClass: command.homeyClass,
-              })
-            : rulesPresenter.createScaffoldFromSignature({
-                productName: command.productName,
-                homeyClass: command.homeyClass,
-              });
-          io.log(renderScaffoldDraft(draft));
+          io.log(
+            modeAdapter.scaffoldPreviewText({
+              productName: command.productName,
+              homeyClass: command.homeyClass,
+            }),
+          );
           continue;
         }
         if (command.type === 'scaffold-write') {
-          const writtenPath = isNodesMode
-            ? nodesPresenter.writeScaffoldDraft(command.filePath, {
-                confirm: command.force,
-              })
-            : rulesPresenter.writeScaffoldDraft(command.filePath, {
-                confirm: command.force,
-              });
+          const writtenPath = modeAdapter.writeScaffold(command.filePath, command.force);
           io.log(`Scaffold written: ${writtenPath}`);
           continue;
         }
         if (command.type === 'manifest-add') {
-          const result = isNodesMode
-            ? nodesPresenter.addDraftToManifest({
-                filePath: command.filePath,
-                manifestFile: command.manifestFile,
-                confirm: command.force,
-              })
-            : rulesPresenter.addDraftToManifest({
-                filePath: command.filePath,
-                manifestFile: command.manifestFile,
-                confirm: command.force,
-              });
+          const result = modeAdapter.addManifest({
+            filePath: command.filePath,
+            manifestFile: command.manifestFile,
+            confirm: command.force,
+          });
           io.log(renderManifestResult(result));
           continue;
         }
         if (command.type === 'status') {
-          io.log(
-            renderStatusSnapshot(
-              isNodesMode ? nodesPresenter.getStatusSnapshot() : rulesPresenter.getStatusSnapshot(),
-            ),
-          );
+          io.log(modeAdapter.statusText());
           continue;
         }
         if (command.type === 'log') {
-          io.log(
-            renderRunLog(
-              isNodesMode
-                ? nodesPresenter.getRunLog(command.limit)
-                : rulesPresenter.getRunLog(command.limit),
-            ),
-          );
+          io.log(modeAdapter.logText(command.limit));
           continue;
         }
         if (command.type === 'quit') {
@@ -503,9 +698,7 @@ export async function runApp(
     }
   } finally {
     readline.close();
-    if (isNodesMode) {
-      await nodesPresenter.disconnect();
-    }
+    await modeAdapter.teardown();
   }
 }
 
@@ -2399,7 +2592,10 @@ export async function runPanelApp(
     typeof (nodesPresenter as { showNodeDetail?: unknown }).showNodeDetail === 'function';
   const input = deps.stdin ?? defaultStdin;
   const output = deps.stdout ?? defaultStdout;
-  const isNodesMode = config.mode === 'nodes';
+  const panelModeAdapter = createPanelModeAdapter(config, nodesPresenter, rulesPresenter);
+  const draftSurface = panelModeAdapter.draftSurface;
+  const isNodesMode = panelModeAdapter.mode === 'nodes';
+  const modeLabel = panelModeAdapter.mode;
   const paneOrder: PanelFocus[] = ['left', 'right', 'bottom'];
 
   let selectedIndex = 0;
@@ -2422,7 +2618,7 @@ export async function runPanelApp(
     Map<string, NodeValueProfileAttribution[]>
   >();
   const nodeValueProfileAttributionInFlight = new Set<number>();
-  let bottomText = renderPanelHelp(config.mode);
+  let bottomText = renderPanelHelp(modeLabel);
   let bottomScroll = 0;
   let bottomCompact = true;
   let isClosing = false;
@@ -2448,7 +2644,7 @@ export async function runPanelApp(
     input: input as any,
     output: output as any,
   });
-  screen.title = `ZWJS ${config.mode}`;
+  screen.title = `ZWJS ${modeLabel}`;
 
   const headerPane = blessed.box({
     parent: screen,
@@ -2700,55 +2896,34 @@ export async function runPanelApp(
     return entry.ruleIndex;
   }
 
-  function getActiveDraftEditorState(): DraftEditorState | undefined {
-    if (isNodesMode) {
-      const presenter = nodesPresenter as {
-        getDraftEditorState?: () => DraftEditorState | undefined;
-      };
-      return typeof presenter.getDraftEditorState === 'function'
-        ? presenter.getDraftEditorState()
-        : undefined;
+  function requireDraftMethod<T>(
+    method: T | undefined,
+    unavailableMessage: string,
+  ): NonNullable<T> {
+    if (typeof method !== 'function') {
+      throw new Error(unavailableMessage);
     }
-    const presenter = rulesPresenter as {
-      getDraftEditorState?: () => DraftEditorState | undefined;
-    };
-    return typeof presenter.getDraftEditorState === 'function'
-      ? presenter.getDraftEditorState()
+    return method as NonNullable<T>;
+  }
+
+  function getActiveDraftEditorState(): DraftEditorState | undefined {
+    return typeof draftSurface.getDraftEditorState === 'function'
+      ? draftSurface.getDraftEditorState()
       : undefined;
   }
 
   function startDraftEditMode(): DraftEditorState {
-    if (isNodesMode) {
-      const presenter = nodesPresenter as { startDraftEdit?: () => DraftEditorState };
-      if (typeof presenter.startDraftEdit !== 'function') {
-        throw new Error('Draft editor is unavailable in the current nodes presenter.');
-      }
-      return presenter.startDraftEdit();
-    }
-    const presenter = rulesPresenter as { startDraftEdit?: () => DraftEditorState };
-    if (typeof presenter.startDraftEdit !== 'function') {
-      throw new Error('Draft editor is unavailable in the current rules presenter.');
-    }
-    return presenter.startDraftEdit();
+    return requireDraftMethod(
+      draftSurface.startDraftEdit,
+      `Draft editor is unavailable in the current ${modeLabel} presenter.`,
+    )();
   }
 
   function setSelectedDraftField(path: string): DraftEditorState {
-    if (isNodesMode) {
-      const presenter = nodesPresenter as {
-        setDraftEditorSelectedField?: (path: string) => DraftEditorState;
-      };
-      if (typeof presenter.setDraftEditorSelectedField !== 'function') {
-        throw new Error('Draft field selection is unavailable in the current nodes presenter.');
-      }
-      return presenter.setDraftEditorSelectedField(path);
-    }
-    const presenter = rulesPresenter as {
-      setDraftEditorSelectedField?: (path: string) => DraftEditorState;
-    };
-    if (typeof presenter.setDraftEditorSelectedField !== 'function') {
-      throw new Error('Draft field selection is unavailable in the current rules presenter.');
-    }
-    return presenter.setDraftEditorSelectedField(path);
+    return requireDraftMethod(
+      draftSurface.setDraftEditorSelectedField,
+      `Draft field selection is unavailable in the current ${modeLabel} presenter.`,
+    )(path);
   }
 
   function setDraftFieldValue(path: string, value: string): DraftEditorState {
@@ -2758,159 +2933,56 @@ export async function runPanelApp(
     if (capabilityFieldMatch) {
       const index = Number(capabilityFieldMatch[1]);
       const field = capabilityFieldMatch[2] as 'capabilityId' | 'directionality';
-      if (isNodesMode) {
-        const presenter = nodesPresenter as {
-          setDraftEditorCapabilityField?: (
-            index: number,
-            field: 'capabilityId' | 'directionality',
-            value: unknown,
-          ) => DraftEditorState;
-        };
-        if (typeof presenter.setDraftEditorCapabilityField !== 'function') {
-          throw new Error('Capability field edits are unavailable in the current nodes presenter.');
-        }
-        return presenter.setDraftEditorCapabilityField(index, field, value);
-      }
-      const presenter = rulesPresenter as {
-        setDraftEditorCapabilityField?: (
-          index: number,
-          field: 'capabilityId' | 'directionality',
-          value: unknown,
-        ) => DraftEditorState;
-      };
-      if (typeof presenter.setDraftEditorCapabilityField !== 'function') {
-        throw new Error('Capability field edits are unavailable in the current rules presenter.');
-      }
-      return presenter.setDraftEditorCapabilityField(index, field, value);
+      return requireDraftMethod(
+        draftSurface.setDraftEditorCapabilityField,
+        `Capability field edits are unavailable in the current ${modeLabel} presenter.`,
+      )(index, field, value);
     }
     const capabilityMappingFieldMatch = path.match(
       /^bundle\.capabilities\.(\d+)\.(inboundMapping|outboundMapping)\./,
     );
     if (capabilityMappingFieldMatch) {
       const index = Number(capabilityMappingFieldMatch[1]);
-      if (isNodesMode) {
-        const presenter = nodesPresenter as {
-          setDraftEditorCapabilityMappingField?: (
-            index: number,
-            path: string,
-            value: unknown,
-          ) => DraftEditorState;
-        };
-        if (typeof presenter.setDraftEditorCapabilityMappingField !== 'function') {
-          throw new Error(
-            'Capability mapping edits are unavailable in the current nodes presenter.',
-          );
-        }
-        return presenter.setDraftEditorCapabilityMappingField(index, path, value);
-      }
-      const presenter = rulesPresenter as {
-        setDraftEditorCapabilityMappingField?: (
-          index: number,
-          path: string,
-          value: unknown,
-        ) => DraftEditorState;
-      };
-      if (typeof presenter.setDraftEditorCapabilityMappingField !== 'function') {
-        throw new Error('Capability mapping edits are unavailable in the current rules presenter.');
-      }
-      return presenter.setDraftEditorCapabilityMappingField(index, path, value);
+      return requireDraftMethod(
+        draftSurface.setDraftEditorCapabilityMappingField,
+        `Capability mapping edits are unavailable in the current ${modeLabel} presenter.`,
+      )(index, path, value);
     }
-    if (isNodesMode) {
-      const presenter = nodesPresenter as {
-        setDraftEditorField?: (path: string, value: unknown) => DraftEditorState;
-      };
-      if (typeof presenter.setDraftEditorField !== 'function') {
-        throw new Error('Draft field edits are unavailable in the current nodes presenter.');
-      }
-      return presenter.setDraftEditorField(path, value);
-    }
-    const presenter = rulesPresenter as {
-      setDraftEditorField?: (path: string, value: unknown) => DraftEditorState;
-    };
-    if (typeof presenter.setDraftEditorField !== 'function') {
-      throw new Error('Draft field edits are unavailable in the current rules presenter.');
-    }
-    return presenter.setDraftEditorField(path, value);
+    return requireDraftMethod(
+      draftSurface.setDraftEditorField,
+      `Draft field edits are unavailable in the current ${modeLabel} presenter.`,
+    )(path, value);
   }
 
   function commitDraftEdits(): void {
-    if (isNodesMode) {
-      const presenter = nodesPresenter as {
-        commitDraftEditorState?: () => void;
-      };
-      if (typeof presenter.commitDraftEditorState !== 'function') {
-        throw new Error('Draft commit is unavailable in the current nodes presenter.');
-      }
-      presenter.commitDraftEditorState();
-      return;
-    }
-    const presenter = rulesPresenter as {
-      commitDraftEditorState?: () => void;
-    };
-    if (typeof presenter.commitDraftEditorState !== 'function') {
-      throw new Error('Draft commit is unavailable in the current rules presenter.');
-    }
-    presenter.commitDraftEditorState();
+    requireDraftMethod(
+      draftSurface.commitDraftEditorState,
+      `Draft commit is unavailable in the current ${modeLabel} presenter.`,
+    )();
   }
 
   function addDraftCapabilityRow(): DraftEditorState | undefined {
-    if (isNodesMode) {
-      const presenter = nodesPresenter as {
-        addDraftEditorCapability?: () => DraftEditorState;
-      };
-      if (typeof presenter.addDraftEditorCapability !== 'function') return undefined;
-      return presenter.addDraftEditorCapability();
-    }
-    const presenter = rulesPresenter as {
-      addDraftEditorCapability?: () => DraftEditorState;
-    };
-    if (typeof presenter.addDraftEditorCapability !== 'function') return undefined;
-    return presenter.addDraftEditorCapability();
+    return typeof draftSurface.addDraftEditorCapability === 'function'
+      ? draftSurface.addDraftEditorCapability()
+      : undefined;
   }
 
   function cloneDraftCapabilityRow(index: number): DraftEditorState | undefined {
-    if (isNodesMode) {
-      const presenter = nodesPresenter as {
-        cloneDraftEditorCapability?: (index?: number) => DraftEditorState;
-      };
-      if (typeof presenter.cloneDraftEditorCapability !== 'function') return undefined;
-      return presenter.cloneDraftEditorCapability(index);
-    }
-    const presenter = rulesPresenter as {
-      cloneDraftEditorCapability?: (index?: number) => DraftEditorState;
-    };
-    if (typeof presenter.cloneDraftEditorCapability !== 'function') return undefined;
-    return presenter.cloneDraftEditorCapability(index);
+    return typeof draftSurface.cloneDraftEditorCapability === 'function'
+      ? draftSurface.cloneDraftEditorCapability(index)
+      : undefined;
   }
 
   function removeDraftCapabilityRow(index: number): DraftEditorState | undefined {
-    if (isNodesMode) {
-      const presenter = nodesPresenter as {
-        removeDraftEditorCapability?: (index?: number) => DraftEditorState;
-      };
-      if (typeof presenter.removeDraftEditorCapability !== 'function') return undefined;
-      return presenter.removeDraftEditorCapability(index);
-    }
-    const presenter = rulesPresenter as {
-      removeDraftEditorCapability?: (index?: number) => DraftEditorState;
-    };
-    if (typeof presenter.removeDraftEditorCapability !== 'function') return undefined;
-    return presenter.removeDraftEditorCapability(index);
+    return typeof draftSurface.removeDraftEditorCapability === 'function'
+      ? draftSurface.removeDraftEditorCapability(index)
+      : undefined;
   }
 
   function moveDraftCapabilityRow(index: number, delta: -1 | 1): DraftEditorState | undefined {
-    if (isNodesMode) {
-      const presenter = nodesPresenter as {
-        moveDraftEditorCapability?: (index: number, delta: -1 | 1) => DraftEditorState;
-      };
-      if (typeof presenter.moveDraftEditorCapability !== 'function') return undefined;
-      return presenter.moveDraftEditorCapability(index, delta);
-    }
-    const presenter = rulesPresenter as {
-      moveDraftEditorCapability?: (index: number, delta: -1 | 1) => DraftEditorState;
-    };
-    if (typeof presenter.moveDraftEditorCapability !== 'function') return undefined;
-    return presenter.moveDraftEditorCapability(index, delta);
+    return typeof draftSurface.moveDraftEditorCapability === 'function'
+      ? draftSurface.moveDraftEditorCapability(index, delta)
+      : undefined;
   }
 
   function moveDraftFieldSelection(delta: -1 | 1): DraftEditorState | undefined {
@@ -3291,24 +3363,10 @@ export async function runPanelApp(
   function validateDraftBeforeWrite(
     actionLabel: 'scaffold write' | 'manifest add',
   ): { ok: true; note?: string } | { ok: false } {
-    let editor: DraftEditorState | undefined;
-    if (isNodesMode) {
-      const presenter = nodesPresenter as {
-        validateDraftEditorState?: () => DraftEditorState;
-      };
-      editor =
-        typeof presenter.validateDraftEditorState === 'function'
-          ? presenter.validateDraftEditorState()
-          : getActiveDraftEditorState();
-    } else {
-      const presenter = rulesPresenter as {
-        validateDraftEditorState?: () => DraftEditorState;
-      };
-      editor =
-        typeof presenter.validateDraftEditorState === 'function'
-          ? presenter.validateDraftEditorState()
-          : getActiveDraftEditorState();
-    }
+    const editor =
+      typeof draftSurface.validateDraftEditorState === 'function'
+        ? draftSurface.validateDraftEditorState()
+        : getActiveDraftEditorState();
     if (!editor) return { ok: true };
     const errors = Array.isArray(editor.errors) ? editor.errors : [];
     const warnings = Array.isArray(editor.warnings) ? editor.warnings : [];
@@ -3388,20 +3446,11 @@ export async function runPanelApp(
   }
 
   async function ensureSelectedSignature(): Promise<string> {
-    if (isNodesMode) {
-      const nodeId = getSelectedNodeId();
-      if (!nodeId) {
-        throw new Error('No node selected');
-      }
-      const detail = await nodesPresenter.showNodeDetail(nodeId);
-      updateNodeDetail(detail);
-      return nodesPresenter.selectSignatureFromNode(nodeId);
-    }
-    const ruleIndex = getSelectedRuleIndex();
-    if (!ruleIndex) {
-      throw new Error('No rule selected');
-    }
-    return rulesPresenter.selectSignatureFromRule(ruleIndex);
+    return panelModeAdapter.ensureSelectedSignature({
+      selectedNodeId: getSelectedNodeId(),
+      selectedRuleIndex: getSelectedRuleIndex(),
+      updateNodeDetail,
+    });
   }
 
   function renderFrame(): void {
@@ -3470,7 +3519,7 @@ export async function runPanelApp(
     const listItems = entries.map((entry) => formatListRow(entry.rowId, entry.label));
     const listLines = windowed.visible.map((entry) => formatListRow(entry.rowId, entry.label));
     const leftTitle = panelLayoutPresenter.buildListTitle({
-      sessionMode: config.mode,
+      sessionMode: modeLabel,
       totalItems,
       visibleCapacity: listCapacity,
       windowStart: windowed.start,
@@ -3535,7 +3584,7 @@ export async function runPanelApp(
     rightScroll = Math.min(rightMaxScroll, Math.max(0, rightScroll));
     const rightTitle = panelLayoutPresenter.buildDetailTitle({
       panelMode,
-      sessionMode: config.mode,
+      sessionMode: modeLabel,
       currentNodeId: isNodesMode ? currentNodeDetail?.nodeId : undefined,
       totalLines: rightAllLines.length,
       visibleCapacity: rightVisibleCapacity,
@@ -3562,7 +3611,7 @@ export async function runPanelApp(
       : rulesPresenter.getStatusSnapshot();
     clearExpiredPendingConfirm();
     const chrome = panelChromePresenter.build({
-      sessionMode: config.mode,
+      sessionMode: modeLabel,
       uiMode: config.uiMode,
       selectedSignature: status.selectedSignature,
       filterMode,
@@ -3786,7 +3835,7 @@ export async function runPanelApp(
       return;
     }
     if (intent.type === 'help') {
-      setBottomPaneText(renderPanelHelp(config.mode));
+      setBottomPaneText(renderPanelHelp(modeLabel));
       return;
     }
     if (intent.type === 'open') {
@@ -4001,12 +4050,10 @@ export async function runPanelApp(
       setBottomPaneText(`Running inspect${selectedNodeId ? ` for node ${selectedNodeId}` : ''}...`);
       renderFrame();
       const signature = await ensureSelectedSignature();
-      const summary = await runTimedOperation(`inspect ${signature}`, () =>
-        isNodesMode
-          ? nodesPresenter.inspectSelectedSignature({ nodeId: selectedNodeId })
-          : rulesPresenter.inspectSelectedSignature(),
+      const summaryText = await runTimedOperation(`inspect ${signature}`, () =>
+        panelModeAdapter.inspectText({ nodeId: selectedNodeId }),
       );
-      setBottomPaneText(renderInspectSummary(summary));
+      setBottomPaneText(summaryText);
       io.log(`inspected ${signature}`);
       return;
     }
@@ -4017,12 +4064,10 @@ export async function runPanelApp(
       );
       renderFrame();
       const signature = await ensureSelectedSignature();
-      const summary = await runTimedOperation(`validate ${signature}`, () =>
-        isNodesMode
-          ? nodesPresenter.validateSelectedSignature({ nodeId: selectedNodeId })
-          : rulesPresenter.validateSelectedSignature(),
+      const summaryText = await runTimedOperation(`validate ${signature}`, () =>
+        panelModeAdapter.validateText({ nodeId: selectedNodeId }),
       );
-      setBottomPaneText(renderPanelValidationSummary(summary));
+      setBottomPaneText(summaryText);
       io.log(`validated ${signature}`);
       return;
     }
@@ -4035,29 +4080,17 @@ export async function runPanelApp(
       );
       renderFrame();
       const signature = await ensureSelectedSignature();
-      const summary = await runTimedOperation(
+      const summaryText = await runTimedOperation(
         `simulate ${signature}${intent.dryRun ? ' (dry-run)' : ''}`,
-        () =>
-          isNodesMode
-            ? nodesPresenter.simulateSelectedSignature({
-                nodeId: selectedNodeId,
-                dryRun: intent.dryRun,
-              })
-            : rulesPresenter.simulateSelectedSignature({ dryRun: intent.dryRun }),
+        () => panelModeAdapter.simulateText({ nodeId: selectedNodeId, dryRun: intent.dryRun }),
       );
-      setBottomPaneText(renderPanelSimulationSummary(summary));
+      setBottomPaneText(summaryText);
       io.log(`simulated ${signature}${intent.dryRun ? ' (dry-run)' : ''}`);
       return;
     }
     if (intent.type === 'scaffold-preview') {
       await ensureSelectedSignature();
-      setBottomPaneText(
-        renderScaffoldDraft(
-          isNodesMode
-            ? nodesPresenter.createScaffoldFromSignature({})
-            : rulesPresenter.createScaffoldFromSignature({}),
-        ),
-      );
+      setBottomPaneText(panelModeAdapter.scaffoldPreviewText({}));
       return;
     }
     if (intent.type === 'scaffold-write') {
@@ -4071,9 +4104,7 @@ export async function runPanelApp(
       if (!requestConfirmation('scaffold-write', draftValidation.note)) {
         return;
       }
-      const written = isNodesMode
-        ? nodesPresenter.writeScaffoldDraft(undefined, { confirm: true })
-        : rulesPresenter.writeScaffoldDraft(undefined, { confirm: true });
+      const written = panelModeAdapter.writeScaffold(true);
       setBottomPaneText(`Scaffold written: ${written}`);
       return;
     }
@@ -4088,24 +4119,16 @@ export async function runPanelApp(
       if (!requestConfirmation('manifest-add', draftValidation.note)) {
         return;
       }
-      const result = isNodesMode
-        ? nodesPresenter.addDraftToManifest({ confirm: true })
-        : rulesPresenter.addDraftToManifest({ confirm: true });
+      const result = panelModeAdapter.addManifest({ confirm: true });
       setBottomPaneText(renderManifestResult(result));
       return;
     }
     if (intent.type === 'status') {
-      setBottomPaneText(
-        renderStatusSnapshot(
-          isNodesMode ? nodesPresenter.getStatusSnapshot() : rulesPresenter.getStatusSnapshot(),
-        ),
-      );
+      setBottomPaneText(panelModeAdapter.statusText());
       return;
     }
     if (intent.type === 'log') {
-      setBottomPaneText(
-        renderRunLog(isNodesMode ? nodesPresenter.getRunLog(30) : rulesPresenter.getRunLog(30)),
-      );
+      setBottomPaneText(panelModeAdapter.logText(30));
       return;
     }
     if (intent.type === 'cancel-operation') {
@@ -4119,13 +4142,9 @@ export async function runPanelApp(
   }
 
   try {
-    if (isNodesMode) {
-      await nodesPresenter.connect(config as ConnectedSessionConfig);
-      if (config.startNode !== undefined) {
-        updateNodeDetail(await nodesPresenter.showNodeDetail(config.startNode));
-      }
-    } else {
-      rulesPresenter.initialize(config);
+    await panelModeAdapter.initialize(config);
+    if (panelModeAdapter.mode === 'nodes' && config.startNode !== undefined) {
+      updateNodeDetail(await nodesPresenter.showNodeDetail(config.startNode));
     }
     clampSelection();
 
@@ -4382,8 +4401,6 @@ export async function runPanelApp(
       screen.on('resize', onResize);
     });
   } finally {
-    if (isNodesMode) {
-      await nodesPresenter.disconnect();
-    }
+    await panelModeAdapter.teardown();
   }
 }

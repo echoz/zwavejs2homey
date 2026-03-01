@@ -116,9 +116,10 @@
   - [x] Section 6C slice: data-driven authoring vocab audit + cutover (remove hardcoded typed-select vocab where feasible)
     - [x] audit + ownership classification (`docs/homey-authoring-vocabulary-audit.md`)
     - [x] cutover implementation (artifact/provider-backed vocab in TUI + compiler validation)
-- [ ] Section 7: convergence review (separate stacks vs shared view primitives)
+- [x] Section 7: convergence review (separate stacks vs shared view primitives)
   - [x] Slice 7.1: shared draft-editor presenter core extraction
   - [x] Slice 7.2: shared signature workflow core extraction
+  - [x] Slice 7.3: `app.ts` mode adapter dispatch for shell + panel shared workflows
 - [ ] Keep Homey adapter implementation frozen until Phase 4 reset completion
 
 Execution note:
