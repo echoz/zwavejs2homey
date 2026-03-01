@@ -118,6 +118,7 @@
     - [x] cutover implementation (artifact/provider-backed vocab in TUI + compiler validation)
 - [ ] Section 7: convergence review (separate stacks vs shared view primitives)
   - [x] Slice 7.1: shared draft-editor presenter core extraction
+  - [x] Slice 7.2: shared signature workflow core extraction
 - [ ] Keep Homey adapter implementation frozen until Phase 4 reset completion
 
 Execution note:

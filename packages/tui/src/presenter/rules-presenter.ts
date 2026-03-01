@@ -18,6 +18,7 @@ import {
   DraftEditorCore,
   type DraftValidationVocabulary,
 } from './draft-editor-core';
+import { SignatureWorkflowCore } from './signature-workflow-core';
 
 export interface RulesPresenterOptions {
   draftVocabulary?: DraftValidationVocabulary;
@@ -49,6 +50,7 @@ export class RulesPresenter {
   };
 
   private readonly draftEditor: DraftEditorCore;
+  private readonly signatureWorkflow: SignatureWorkflowCore;
 
   constructor(
     private readonly curation: CurationWorkflowChildPresenterLike,
@@ -57,6 +59,13 @@ export class RulesPresenter {
   ) {
     this.draftEditor = new DraftEditorCore({
       draftVocabulary: options.draftVocabulary,
+    });
+    this.signatureWorkflow = new SignatureWorkflowCore({
+      curation: this.curation,
+      resolveSession: () => this.requireSessionWithUrl(),
+      resolveDefaultManifestFile: () => this.requireSessionConfig().manifestFile,
+      logInfo: (message) => this.logInfo(message),
+      logError: (message) => this.logError(message),
     });
   }
 
@@ -106,11 +115,7 @@ export class RulesPresenter {
   }
 
   selectSignature(signature: string): void {
-    if (!/^\d+:\d+:\d+$/.test(signature)) {
-      throw new Error('Signature must be <manufacturerId:productType:productId> in decimal format');
-    }
-    this.state.selectedSignature = signature;
-    this.logInfo(`Selected signature ${signature}`);
+    this.signatureWorkflow.selectSignature(this.state, signature);
   }
 
   selectSignatureFromRule(ruleIndex?: number): string {
@@ -135,23 +140,7 @@ export class RulesPresenter {
       nodeId?: number;
     } = {},
   ): Promise<SignatureInspectSummary> {
-    const session = this.requireSessionWithUrl();
-    const signature = this.requireSelectedSignature();
-
-    try {
-      const summary = await this.curation.inspectSignature(session, signature, {
-        ...options,
-        manifestFile: options.manifestFile ?? this.requireSessionConfig().manifestFile,
-      });
-      this.state.inspectSummary = summary;
-      this.logInfo(`Inspected signature ${signature} (${summary.totalNodes} node(s))`);
-      return summary;
-    } catch (error) {
-      const message = toErrorMessage(error);
-      this.state.lastError = message;
-      this.logError(`Inspect failed for ${signature}: ${message}`);
-      throw error;
-    }
+    return this.signatureWorkflow.inspectSelectedSignature(this.state, options);
   }
 
   async validateSelectedSignature(
@@ -161,23 +150,7 @@ export class RulesPresenter {
       nodeId?: number;
     } = {},
   ): Promise<ValidationSummary> {
-    const session = this.requireSessionWithUrl();
-    const signature = this.requireSelectedSignature();
-
-    try {
-      const summary = await this.curation.validateSignature(session, signature, {
-        ...options,
-        manifestFile: options.manifestFile ?? this.requireSessionConfig().manifestFile,
-      });
-      this.state.validationSummary = summary;
-      this.logInfo(`Validated signature ${signature} (${summary.totalNodes} node(s))`);
-      return summary;
-    } catch (error) {
-      const message = toErrorMessage(error);
-      this.state.lastError = message;
-      this.logError(`Validate failed for ${signature}: ${message}`);
-      throw error;
-    }
+    return this.signatureWorkflow.validateSelectedSignature(this.state, options);
   }
 
   async simulateSelectedSignature(
@@ -190,23 +163,7 @@ export class RulesPresenter {
       inspectFormat?: string;
     } = {},
   ): Promise<SimulationSummary> {
-    const session = this.requireSessionWithUrl();
-    const signature = this.requireSelectedSignature();
-
-    try {
-      const summary = await this.curation.simulateSignature(session, signature, {
-        ...options,
-        manifestFile: options.manifestFile ?? this.requireSessionConfig().manifestFile,
-      });
-      this.state.simulationSummary = summary;
-      this.logInfo(`Simulated signature ${signature} (${summary.totalNodes} node(s))`);
-      return summary;
-    } catch (error) {
-      const message = toErrorMessage(error);
-      this.state.lastError = message;
-      this.logError(`Simulate failed for ${signature}: ${message}`);
-      throw error;
-    }
+    return this.signatureWorkflow.simulateSelectedSignature(this.state, options);
   }
 
   createScaffoldFromSignature(options: {
@@ -215,28 +172,9 @@ export class RulesPresenter {
     ruleIdPrefix?: string;
     homeyClass?: string;
   }): ScaffoldDraft {
-    const signature = options.signature ?? this.state.selectedSignature;
-    if (!signature) {
-      throw new Error('No signature selected. Use "signature ..." first.');
-    }
-    const inferredHomeyClass = options.homeyClass ?? this.inferHomeyClassForSignature(signature);
-
-    try {
-      const draft = this.curation.scaffoldFromSignature(signature, {
-        productName: options.productName,
-        ruleIdPrefix: options.ruleIdPrefix,
-        homeyClass: inferredHomeyClass,
-      });
-      this.state.scaffoldDraft = draft;
-      this.draftEditor.clear();
-      this.logInfo(`Prepared scaffold draft for ${signature}`);
-      return draft;
-    } catch (error) {
-      const message = toErrorMessage(error);
-      this.state.lastError = message;
-      this.logError(`Scaffold failed: ${message}`);
-      throw error;
-    }
+    const draft = this.signatureWorkflow.createScaffoldFromSignature(this.state, options);
+    this.draftEditor.clear();
+    return draft;
   }
 
   startDraftEdit(): DraftEditorState {
@@ -394,30 +332,6 @@ export class RulesPresenter {
       throw new Error('Rules mode needs --url to run inspect/validate/simulate.');
     }
     return config as ConnectedSessionConfig;
-  }
-
-  private requireSelectedSignature(): string {
-    if (!this.state.selectedSignature) {
-      throw new Error('No signature selected. Use "signature ..." first.');
-    }
-    return this.state.selectedSignature;
-  }
-
-  private inferHomeyClassForSignature(signature: string): string | undefined {
-    const summary = this.state.inspectSummary;
-    if (!summary || summary.signature !== signature) return undefined;
-    const counts = new Map<string, number>();
-    for (const node of summary.nodes) {
-      const homeyClass = typeof node.homeyClass === 'string' ? node.homeyClass.trim() : '';
-      if (!homeyClass) continue;
-      counts.set(homeyClass, (counts.get(homeyClass) ?? 0) + 1);
-    }
-    if (counts.size === 0) return undefined;
-    const ranked = [...counts.entries()].sort((a, b) => {
-      if (a[1] !== b[1]) return b[1] - a[1];
-      return a[0].localeCompare(b[0]);
-    });
-    return ranked.find(([homeyClass]) => homeyClass !== 'other')?.[0] ?? ranked[0][0];
   }
 
   private logInfo(message: string): void {

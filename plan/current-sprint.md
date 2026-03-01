@@ -32,6 +32,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
   - rewired both `ExplorerPresenter` and `RulesPresenter` to delegate typed draft edit operations to the shared core
   - preserved behavior and validation semantics with full workspace gate pass (`npm run check`)
 
+- Latest convergence slice (Section 7.2):
+  - extracted shared signature workflow core into `packages/tui/src/presenter/signature-workflow-core.ts`
+  - rewired both `ExplorerPresenter` and `RulesPresenter` to delegate signature selection + inspect/validate/simulate/scaffold flows
+  - added focused regression tests for default-manifest wiring and scaffold homey-class inference in `packages/tui/test/signature-workflow-core.test.js`
+
 1. Completed Phase 2 HA import foundation:
    - `discovery.py` subset extractor in `packages/compiler`
    - extracted and generated HA artifact contracts
