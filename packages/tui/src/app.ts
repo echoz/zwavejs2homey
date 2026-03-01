@@ -30,6 +30,7 @@ import {
   type PanelChromeMode,
 } from './presenter/panel-chrome-presenter';
 import { PanelLayoutPresenter } from './presenter/panel-layout-presenter';
+import { PanelOutputPresenter } from './presenter/panel-output-presenter';
 import { RulesPresenter } from './presenter/rules-presenter';
 import {
   CompilerCurationServiceImpl,
@@ -221,6 +222,7 @@ interface RunAppDeps {
   rulesPresenter?: RulesPresenter;
   panelChromePresenter?: PanelChromePresenter;
   panelLayoutPresenter?: PanelLayoutPresenter;
+  panelOutputPresenter?: PanelOutputPresenter;
   explorerService?: ZwjsExplorerService;
   curationService?: CompilerCurationService;
   fileService?: WorkspaceFileService;
@@ -2020,6 +2022,7 @@ export async function runPanelApp(
     deps.rulesPresenter ?? new RulesPresenter(curationChildPresenter, fileService);
   const panelChromePresenter = deps.panelChromePresenter ?? new PanelChromePresenter();
   const panelLayoutPresenter = deps.panelLayoutPresenter ?? new PanelLayoutPresenter();
+  const panelOutputPresenter = deps.panelOutputPresenter ?? new PanelOutputPresenter();
   const canHydrateListIdentity =
     typeof (nodesPresenter as { showNodeDetail?: unknown }).showNodeDetail === 'function';
   const input = deps.stdin ?? defaultStdin;
@@ -3049,13 +3052,17 @@ export async function runPanelApp(
       scroll: rightScroll,
     });
 
-    const bottomAllLines = splitLines(bottomText);
     const bottomVisibleCapacity = Math.max(1, paneHeights.bottomContentHeight);
-    const bottomMaxScroll = Math.max(0, bottomAllLines.length - bottomVisibleCapacity);
-    bottomScroll = Math.min(bottomMaxScroll, Math.max(0, bottomScroll));
+    const outputViewModel = panelOutputPresenter.build({
+      text: bottomText,
+      scroll: bottomScroll,
+      compact: bottomCompact,
+      visibleCapacity: bottomVisibleCapacity,
+    });
+    bottomScroll = outputViewModel.clampedScroll;
     const bottomTitle = panelLayoutPresenter.buildOutputTitle({
       compact: bottomCompact,
-      totalLines: bottomAllLines.length,
+      totalLines: outputViewModel.lines.length,
       visibleCapacity: bottomVisibleCapacity,
       scroll: bottomScroll,
     });
@@ -3096,14 +3103,13 @@ export async function runPanelApp(
       bottomPane.setLabel(` ${bottomTitle} `);
     }
     if (bottomCompact) {
-      const compactLine = bottomAllLines[bottomScroll] ?? '';
       bottomPane.hide();
       statusPane.show();
-      statusPane.setContent(compactLine);
+      statusPane.setContent(outputViewModel.compactLine);
     } else {
       statusPane.hide();
       bottomPane.show();
-      bottomPane.setContent(bottomAllLines.join('\n'));
+      bottomPane.setContent(outputViewModel.lines.join('\n'));
       bottomPane.setScroll(bottomScroll);
     }
 
@@ -3115,9 +3121,7 @@ export async function runPanelApp(
       rightTitle,
       rightLines: rightAllLines.slice(rightScroll, rightScroll + rightVisibleCapacity),
       bottomTitle,
-      bottomLines: bottomCompact
-        ? [bottomAllLines[bottomScroll] ?? '']
-        : bottomAllLines.slice(bottomScroll, bottomScroll + bottomVisibleCapacity),
+      bottomLines: outputViewModel.visibleLines,
       focusedPane,
       bottomCompact,
     });

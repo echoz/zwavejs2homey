@@ -512,6 +512,10 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - extracted list/detail/output pane title composition into a dedicated presenter (`PanelLayoutPresenter`)
     - `runPanelApp` now consumes presenter-produced pane title view-model output for list/detail/output labels
     - added focused regression coverage for list pagination/filter titles, detail range titles, and compact-vs-expanded output labels
+100. Completed panel output presenter slice (view/presenter separation step):
+    - extracted bottom-pane output shaping (line split, scroll clamp, compact/full visible lines) into a dedicated presenter (`PanelOutputPresenter`)
+    - `runPanelApp` now consumes presenter-produced output view-model data for status-bar compact rendering, full output pane rendering, and panel snapshots
+    - added focused regression coverage for compact/full output behavior and scroll clamping edge cases
 
 ## Next Tasks
 
