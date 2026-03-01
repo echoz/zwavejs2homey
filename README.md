@@ -21,6 +21,7 @@ The project is intentionally split into layers:
 - **Protocol-first foundation**: `packages/core` is a standalone `zwave-js-server` client, not a Homey-specific wrapper. This keeps protocol work testable and reusable.
 - **HA-assisted compiler pipeline**: Home Assistant `zwave_js` discovery rules are extracted and translated into a generated `ha-derived` rule layer, then combined with project rules.
 - **Static-first mapping design**: the compiler emits reusable Homey profile artifacts (`compiled-homey-profiles/v1`) instead of relying on runtime inference (with Homey-specific fallback inference likely owned by the adapter layer).
+- **Shared profile resolution semantics**: compiled artifact matching (product triple/node/device-key precedence) now lives in compiler runtime helpers so tooling and the upcoming Homey adapter use the same resolver behavior.
 - **Diagnostics-heavy workflow**: the compiler and import tools support `summary`, `markdown`, `json-*`, and `ndjson` outputs for debugging and review.
 - **Actionable review output**: list output favors actionable review reasons; technical signals (like suppressed fill/unmatched ratio) are expanded in human-readable summary/markdown diagnostics instead of surfaced as terse review codes.
 - **Live validation loop**: tooling can inspect live ZWJS nodes and compare/validate compiler behavior against real device data.

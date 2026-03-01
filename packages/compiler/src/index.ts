@@ -42,6 +42,13 @@ export type {
   CompiledHomeyProfilesArtifactV1,
 } from './emit/compiled-profiles-artifact';
 export type {
+  CompiledProfileResolverIndexV1,
+  CompiledProfileResolverMatchKind,
+  CompiledProfileResolverMatchV1,
+  CompiledProfileResolverSelector,
+  ResolveCompiledProfileEntryOptionsV1,
+} from './runtime/compiled-profile-resolver';
+export type {
   HomeyAuthoringVocabularyArtifactV1,
   HomeyAuthoringVocabularyEntryV1,
   HomeyAuthoringVocabularyLookupV1,
@@ -68,6 +75,13 @@ export {
   assertCompiledHomeyProfilesArtifactV1,
   createCompiledHomeyProfilesArtifactV1,
 } from './emit/compiled-profiles-artifact';
+export {
+  buildCompiledProfileResolverIndexV1,
+  compiledProfileProductTripleKey,
+  resolveCompiledProfileEntryFromArtifactV1,
+  resolveCompiledProfileEntryFromIndexV1,
+  toCompiledProfileResolverSelector,
+} from './runtime/compiled-profile-resolver';
 export {
   HOMEY_AUTHORING_VOCABULARY_ARTIFACT_V1,
   HomeyAuthoringVocabularyArtifactError,

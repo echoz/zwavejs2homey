@@ -4,9 +4,7 @@
   "version": "1.0.0",
   "compatibility": ">=12.4.0",
   "sdk": 3,
-  "platforms": [
-    "local"
-  ],
+  "platforms": ["local"],
   "name": {
     "en": "zwavejs2homey"
   },
@@ -14,9 +12,7 @@
     "en": "Z-Wave JS Bridge"
   },
   "brandColor": "#2484bf",
-  "category": [
-    "tools"
-  ],
+  "category": ["tools"],
   "permissions": [],
   "images": {
     "small": "/assets/images/small.png",

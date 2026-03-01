@@ -125,6 +125,7 @@
 ## Phase 5: Homey Adapter MVP (Next Major Area)
 
 - [x] Start only after compiler runtime-validation readiness milestone is met
+- [x] Add compiler-owned compiled profile resolver/index API for adapter/tooling orchestration (`buildCompiledProfileResolverIndexV1`, `resolveCompiledProfileEntryFromIndexV1`)
 - [ ] Define first supported Homey device/capability vertical slice using compiled profiles
 - [x] Adapter bootstrap hardening: settings-backed ZWJS connection config + managed reload lifecycle in app init/uninit flow
 - [x] Lock adapter curation persistence v1 policy: `this.homey.settings` + versioned payloads (`docs/decisions/0010-homey-adapter-curation-storage-v1.md`)

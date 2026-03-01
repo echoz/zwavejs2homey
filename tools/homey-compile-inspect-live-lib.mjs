@@ -23,9 +23,13 @@ export {
 const require = createRequire(import.meta.url);
 const {
   assertCompiledHomeyProfilesArtifactV1,
+  buildCompiledProfileResolverIndexV1,
+  compiledProfileProductTripleKey,
   compileProfilePlanFromLoadedRuleSetManifest,
   compileProfilePlanFromRuleSetManifest,
   loadJsonRuleSetManifestWithOptions,
+  resolveCompiledProfileEntryFromIndexV1,
+  toCompiledProfileResolverSelector,
 } = require('../packages/compiler/dist');
 
 function parseFlagMap(argv) {
@@ -217,30 +221,6 @@ export function parseCliArgs(argv) {
   };
 }
 
-function productTripleKey(device) {
-  if (
-    device?.manufacturerId === undefined ||
-    device?.productType === undefined ||
-    device?.productId === undefined
-  ) {
-    return null;
-  }
-  return `${device.manufacturerId}:${device.productType}:${device.productId}`;
-}
-
-function buildCompiledArtifactIndex(artifact) {
-  const byTriple = new Map();
-  const byNodeId = new Map();
-  for (const entry of artifact.entries) {
-    const triple = productTripleKey(entry.device);
-    if (triple && !byTriple.has(triple)) byTriple.set(triple, entry);
-    if (typeof entry.device.nodeId === 'number' && !byNodeId.has(entry.device.nodeId)) {
-      byNodeId.set(entry.device.nodeId, entry);
-    }
-  }
-  return { byTriple, byNodeId };
-}
-
 function cloneCompiledForInspect(compiled, command) {
   return {
     ...compiled,
@@ -299,19 +279,18 @@ function buildNoCompiledProfileResult(deviceFacts) {
 }
 
 function selectCompiledEntryForDevice(deviceFacts, artifactIndex) {
-  const triple = productTripleKey(deviceFacts);
-  if (triple && artifactIndex.byTriple.has(triple)) {
-    return artifactIndex.byTriple.get(triple);
-  }
-  if (typeof deviceFacts.nodeId === 'number' && artifactIndex.byNodeId.has(deviceFacts.nodeId)) {
-    return artifactIndex.byNodeId.get(deviceFacts.nodeId);
-  }
-  return null;
+  const match = resolveCompiledProfileEntryFromIndexV1(
+    artifactIndex,
+    toCompiledProfileResolverSelector(deviceFacts),
+  );
+  return match.entry ?? null;
 }
 
 function matchesSignatureFilter(deviceFacts, signature) {
   if (!signature) return true;
-  return productTripleKey(deviceFacts) === signature;
+  return (
+    compiledProfileProductTripleKey(toCompiledProfileResolverSelector(deviceFacts)) === signature
+  );
 }
 
 function formatBool(value) {
@@ -434,7 +413,7 @@ export async function runLiveInspectCommand(command, io = console, deps = {}) {
     assertCompiledHomeyProfilesArtifactV1(compiledArtifact);
   }
   const compiledArtifactIndex = compiledArtifact
-    ? buildCompiledArtifactIndex(compiledArtifact)
+    ? buildCompiledProfileResolverIndexV1(compiledArtifact)
     : null;
   const canUseLoadedRuleSetPath =
     !compiledArtifactIndex &&

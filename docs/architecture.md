@@ -110,6 +110,7 @@ Current implemented foundation in `packages/compiler`:
   - rule authoring now supports compact scalar matcher syntax that is deterministically normalized to canonical array-based matcher models at load-time
   - policy decision: keep compiler generic rules minimal/provisional; generic fallback inference ownership is in the Homey adapter (ADR 0004)
   - compiler now applies a small HA-derived overlap suppression policy for same-selector conflicts (initially focused on curtain/multilevel duplicates and generic `number_value` shadowing)
+  - compiler now exposes compiled-profile artifact runtime resolution helpers (index + match precedence) for shared tooling and upcoming Homey adapter orchestration
 - Catalog/curation workflow decision:
   - no curation-seed artifact for now; rule/curation authoring remains schema-first using compiler diagnostics and stable device identifiers
 - Runtime curation boundary decision:

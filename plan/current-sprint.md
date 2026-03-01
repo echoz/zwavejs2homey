@@ -43,6 +43,14 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
   - rewired panel shared curation + draft-editing dispatch through adapter/draft surfaces while preserving nodes-only behaviors
 
 - Latest Phase 5 slice:
+  - added compiler-owned compiled profile resolver/index runtime API in `@zwavejs2homey/compiler`:
+    - `buildCompiledProfileResolverIndexV1`
+    - `resolveCompiledProfileEntryFromIndexV1` / `resolveCompiledProfileEntryFromArtifactV1`
+    - `toCompiledProfileResolverSelector` / `compiledProfileProductTripleKey`
+  - added compiler regression coverage for resolver precedence, duplicate-key behavior, selector normalization, and helper parity (`packages/compiler/test/compiled-profile-resolver.test.js`)
+  - rewired `compiler:inspect-live --compiled-file` to use the shared compiler resolver API (single source of matching semantics for tooling + upcoming adapter integration)
+
+- Latest Phase 5 slice:
   - added settings-backed ZWJS connection config resolution in `packages/core/src/zwjs-connection-config.ts`
   - added core regression coverage for defaults/settings/auth/url validation (`packages/core/test/zwjs-connection-config.test.js`)
   - hardened Homey app bootstrap lifecycle to reload ZWJS client on `zwjs_connection` settings changes and stop cleanly on app uninit (`co.lazylabs.zwavejs2homey/app.ts`)
