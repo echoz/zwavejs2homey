@@ -43,6 +43,12 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
 
   private shuttingDown = false;
 
+  private static readonly NODE_EVENT_REFRESH_TYPES = new Set<string>([
+    'zwjs.event.node.interview-completed',
+    'zwjs.event.node.value-added',
+    'zwjs.event.node.metadata-updated',
+  ]);
+
   private enqueueLifecycle(work: () => Promise<void>): Promise<void> {
     this.lifecycleQueue = this.lifecycleQueue.then(work).catch((error: unknown) => {
       this.error('ZWJS lifecycle operation failed', error);
@@ -80,6 +86,22 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
     });
     nextClient.onEvent((event: ZwjsClientEvent) => {
       this.log('zwjs event', event.type);
+      const refreshNodeId = this.getRuntimeRefreshNodeIdFromEvent(event);
+      if (refreshNodeId === undefined || this.shuttingDown) {
+        return;
+      }
+      this.enqueueLifecycle(async () => {
+        await this.refreshNodeRuntimeMappingsForNode(
+          refreshNodeId,
+          `event:${event.type}:node-${refreshNodeId}`,
+        );
+      }).catch((error: unknown) => {
+        this.error('Failed to refresh node runtime mappings from event', {
+          eventType: event.type,
+          nodeId: refreshNodeId,
+          error,
+        });
+      });
     });
     await nextClient.start();
     this.zwjsClient = nextClient;
@@ -132,6 +154,52 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
       }
     } catch (error) {
       this.error('Failed to refresh node runtime mappings', { reason, error });
+    }
+  }
+
+  private getRuntimeRefreshNodeIdFromEvent(event: ZwjsClientEvent): number | undefined {
+    if (!Zwavejs2HomeyApp.NODE_EVENT_REFRESH_TYPES.has(event.type)) {
+      return undefined;
+    }
+    if (!('event' in event)) {
+      return undefined;
+    }
+    const payload = event.event as { nodeId?: unknown } | undefined;
+    if (!payload || typeof payload.nodeId !== 'number' || !Number.isFinite(payload.nodeId)) {
+      return undefined;
+    }
+    return payload.nodeId;
+  }
+
+  private async refreshNodeRuntimeMappingsForNode(nodeId: number, reason: string): Promise<void> {
+    try {
+      const nodeDriver = this.homey.drivers.getDriver('node');
+      const devices = nodeDriver.getDevices() as Array<{
+        getData?: () => { bridgeId?: string; nodeId?: number } | undefined;
+        onRuntimeMappingsRefresh?: (refreshReason: string) => Promise<void>;
+      }>;
+
+      let refreshed = 0;
+      for (const device of devices) {
+        const data = device.getData?.();
+        if (!data || typeof data.nodeId !== 'number' || data.nodeId !== nodeId) {
+          continue;
+        }
+        if (data.bridgeId && data.bridgeId !== this.bridgeId) {
+          continue;
+        }
+        if (typeof device.onRuntimeMappingsRefresh === 'function') {
+          await device.onRuntimeMappingsRefresh(reason);
+          refreshed += 1;
+        }
+      }
+      this.log('Refreshed node runtime mappings for node', {
+        reason,
+        nodeId,
+        refreshed,
+      });
+    } catch (error) {
+      this.error('Failed targeted node runtime mapping refresh', { nodeId, reason, error });
     }
   }
 

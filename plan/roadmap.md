@@ -153,6 +153,7 @@
   - [x] Runtime mapping capability gate + diagnostics (defined-value/metadata checks + per-device mapping diagnostics)
 - [ ] Device lifecycle/sync (discovery, create/update, mapping diagnostics)
   - [x] Runtime rebind path for mapped node devices on app startup and settings-driven runtime reloads (`zwjs_connection`, `compiled_profiles_file`)
+  - [x] Targeted node rebind path from selected node lifecycle events (`interview-completed`, `value-added`, `metadata-updated`) with per-node refresh dispatch
 - [ ] User curation application in Homey runtime
 
 ## Phase 6: Reliability + UX

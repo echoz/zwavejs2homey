@@ -75,6 +75,7 @@ Implementation status:
   - runtime mapping now gates selectors/targets against live node defined-value facts and metadata before wiring listeners
   - per-device mapping diagnostics are persisted in `profileResolution.mappingDiagnostics` for operational visibility
   - runtime bindings are re-synced on startup and on relevant app settings updates (`zwjs_connection`, `compiled_profiles_file`) to avoid stale listeners/mappings
+  - runtime bindings are also re-synced for affected node devices on selected node lifecycle events (`interview-completed`, `value-added`, `metadata-updated`)
 
 Related locked MVP runtime policies:
 

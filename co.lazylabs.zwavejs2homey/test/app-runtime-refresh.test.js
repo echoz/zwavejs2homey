@@ -78,7 +78,15 @@ function createMockCoreModule() {
     },
     onEvent(listener) {
       this.listeners.push(listener);
-      return () => {};
+      return () => {
+        const index = this.listeners.indexOf(listener);
+        if (index >= 0) this.listeners.splice(index, 1);
+      };
+    },
+    emitEvent(event) {
+      for (const listener of [...this.listeners]) {
+        listener(event);
+      }
     },
   };
 
@@ -186,6 +194,68 @@ test('app refreshes node runtime mappings on startup and settings changes', asyn
   app.homey.settings.set('zwjs_connection', { url: 'ws://127.0.0.1:3001' });
   await flushEventQueue();
   assert.equal(refreshCalls.includes('zwjs-connection-updated'), true);
+
+  await app.onUninit();
+});
+
+test('app performs targeted node runtime refresh from node lifecycle events', async () => {
+  const node5Calls = [];
+  const node8Calls = [];
+  const otherBridgeCalls = [];
+  const nodeDevices = [
+    {
+      getData: () => ({ bridgeId: 'main', nodeId: 5 }),
+      async onRuntimeMappingsRefresh(reason) {
+        node5Calls.push(reason);
+      },
+    },
+    {
+      getData: () => ({ bridgeId: 'main', nodeId: 8 }),
+      async onRuntimeMappingsRefresh(reason) {
+        node8Calls.push(reason);
+      },
+    },
+    {
+      getData: () => ({ bridgeId: 'other-bridge', nodeId: 5 }),
+      async onRuntimeMappingsRefresh(reason) {
+        otherBridgeCalls.push(reason);
+      },
+    },
+  ];
+
+  const { app, coreMock } = loadAppClass(nodeDevices);
+  await app.onInit();
+  node5Calls.length = 0;
+  node8Calls.length = 0;
+  otherBridgeCalls.length = 0;
+
+  coreMock.mockClient.emitEvent({
+    type: 'zwjs.event.node.metadata-updated',
+    event: {
+      nodeId: 5,
+    },
+  });
+  await flushEventQueue();
+  assert.deepEqual(node5Calls, ['event:zwjs.event.node.metadata-updated:node-5']);
+  assert.deepEqual(node8Calls, []);
+  assert.deepEqual(otherBridgeCalls, []);
+
+  coreMock.mockClient.emitEvent({
+    type: 'zwjs.event.node.value-added',
+    event: {
+      nodeId: 8,
+    },
+  });
+  await flushEventQueue();
+  assert.deepEqual(node8Calls, ['event:zwjs.event.node.value-added:node-8']);
+
+  coreMock.mockClient.emitEvent({
+    type: 'zwjs.event.driver.logging',
+    event: { message: 'ignore' },
+  });
+  await flushEventQueue();
+  assert.equal(node5Calls.length, 1);
+  assert.equal(node8Calls.length, 1);
 
   await app.onUninit();
 });

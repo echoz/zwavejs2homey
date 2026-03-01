@@ -16,6 +16,15 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 ## Recently Completed
 
 - Latest Phase 5 slice:
+  - added targeted node runtime rebind dispatch from ZWJS node lifecycle events in app runtime:
+    - `zwjs.event.node.interview-completed`
+    - `zwjs.event.node.value-added`
+    - `zwjs.event.node.metadata-updated`
+  - event handler now resolves affected node ID and refreshes only matching `node` driver devices (same `bridgeId + nodeId`) instead of refreshing all devices
+  - keeps lifecycle-queue ordering guarantees by routing event refresh through app lifecycle queue
+  - expanded app-level orchestration tests to verify targeted refresh dispatch and non-refresh for unrelated event families
+
+- Latest Phase 5 slice:
   - refactored node runtime binding into reusable sync flow (`syncRuntimeMappings`) and added explicit refresh entrypoint (`onRuntimeMappingsRefresh`)
   - node profile resolution metadata now records `syncReason` + `syncedAt` in `profileResolution`
   - app lifecycle now triggers node runtime rebinds:
