@@ -1,6 +1,7 @@
 import type {
   AppState,
   ConnectedSessionConfig,
+  DraftEditorState,
   RuleDetail,
   RuleSummary,
   ScaffoldDraft,
@@ -22,6 +23,47 @@ function toErrorMessage(error: unknown): string {
   return String(error);
 }
 
+function cloneScaffoldDraft(draft: ScaffoldDraft): ScaffoldDraft {
+  return {
+    ...draft,
+    bundle: JSON.parse(JSON.stringify(draft.bundle)),
+  };
+}
+
+function createDraftEditorState(draft: ScaffoldDraft): DraftEditorState {
+  const baseDraft = cloneScaffoldDraft(draft);
+  return {
+    baseDraft,
+    workingDraft: cloneScaffoldDraft(draft),
+    dirty: false,
+    errors: [],
+    warnings: [],
+    selectedCapabilityIndex: 0,
+    selectedFieldPath: 'metadata.productName',
+    lastValidatedAt: nowIso(),
+  };
+}
+
+function setByPath(
+  target: Record<string, unknown>,
+  pathSegments: string[],
+  value: unknown,
+): Record<string, unknown> {
+  if (pathSegments.length <= 0) return target;
+  const [head, ...tail] = pathSegments;
+  if (tail.length === 0) {
+    return { ...target, [head]: value };
+  }
+  const nested =
+    target[head] && typeof target[head] === 'object' && !Array.isArray(target[head])
+      ? (target[head] as Record<string, unknown>)
+      : {};
+  return {
+    ...target,
+    [head]: setByPath(nested, tail, value),
+  };
+}
+
 export class RulesPresenter {
   private state: AppState & {
     selectedRuleIndex?: number;
@@ -37,6 +79,8 @@ export class RulesPresenter {
     ruleItems: [],
     ruleDetailCache: {},
   };
+
+  private draftEditorState?: DraftEditorState;
 
   constructor(
     private readonly curation: CurationWorkflowChildPresenterLike,
@@ -211,6 +255,7 @@ export class RulesPresenter {
         homeyClass: inferredHomeyClass,
       });
       this.state.scaffoldDraft = draft;
+      this.draftEditorState = undefined;
       this.logInfo(`Prepared scaffold draft for ${signature}`);
       return draft;
     } catch (error) {
@@ -219,6 +264,108 @@ export class RulesPresenter {
       this.logError(`Scaffold failed: ${message}`);
       throw error;
     }
+  }
+
+  startDraftEdit(): DraftEditorState {
+    const draft = this.state.scaffoldDraft;
+    if (!draft) {
+      throw new Error('No scaffold draft prepared. Run scaffold preview first.');
+    }
+    this.draftEditorState = createDraftEditorState(draft);
+    this.logInfo(`Draft edit started for ${draft.signature}`);
+    return this.getDraftEditorStateOrThrow();
+  }
+
+  getDraftEditorState(): DraftEditorState | undefined {
+    if (!this.draftEditorState) return undefined;
+    return {
+      ...this.draftEditorState,
+      baseDraft: cloneScaffoldDraft(this.draftEditorState.baseDraft),
+      workingDraft: cloneScaffoldDraft(this.draftEditorState.workingDraft),
+      errors: [...this.draftEditorState.errors],
+      warnings: [...this.draftEditorState.warnings],
+    };
+  }
+
+  setDraftEditorField(path: string, value: unknown): DraftEditorState {
+    const editor = this.getDraftEditorStateOrThrow();
+    const workingDraft = cloneScaffoldDraft(editor.workingDraft);
+    if (path === 'fileHint') {
+      workingDraft.fileHint = String(value);
+    } else if (path.startsWith('bundle.')) {
+      const pathSegments = path
+        .slice('bundle.'.length)
+        .split('.')
+        .map((segment) => segment.trim())
+        .filter((segment) => segment.length > 0);
+      workingDraft.bundle = setByPath(workingDraft.bundle, pathSegments, value);
+    } else {
+      throw new Error(`Unsupported draft editor field path: ${path}`);
+    }
+    this.draftEditorState = {
+      ...editor,
+      workingDraft,
+      dirty: JSON.stringify(editor.baseDraft) !== JSON.stringify(workingDraft),
+      lastValidatedAt: nowIso(),
+    };
+    return this.validateDraftEditorState();
+  }
+
+  setDraftEditorSelectedField(path: string): DraftEditorState {
+    const editor = this.getDraftEditorStateOrThrow();
+    this.draftEditorState = {
+      ...editor,
+      selectedFieldPath: path,
+      lastValidatedAt: nowIso(),
+    };
+    return this.getDraftEditorStateOrThrow();
+  }
+
+  validateDraftEditorState(): DraftEditorState {
+    const editor = this.getDraftEditorStateOrThrow();
+    const errors: string[] = [];
+    const warnings: string[] = [];
+    if (editor.workingDraft.fileHint.trim().length <= 0) {
+      errors.push('fileHint is required');
+    }
+
+    this.draftEditorState = {
+      ...editor,
+      errors,
+      warnings,
+      lastValidatedAt: nowIso(),
+    };
+    return this.getDraftEditorStateOrThrow();
+  }
+
+  resetDraftEditorState(): DraftEditorState {
+    const editor = this.getDraftEditorStateOrThrow();
+    this.draftEditorState = {
+      ...editor,
+      workingDraft: cloneScaffoldDraft(editor.baseDraft),
+      dirty: false,
+      errors: [],
+      warnings: [],
+      lastValidatedAt: nowIso(),
+    };
+    return this.getDraftEditorStateOrThrow();
+  }
+
+  commitDraftEditorState(): ScaffoldDraft {
+    const editor = this.validateDraftEditorState();
+    if (editor.errors.length > 0) {
+      throw new Error(`Draft editor has validation errors: ${editor.errors.join(', ')}`);
+    }
+    this.state.scaffoldDraft = cloneScaffoldDraft(editor.workingDraft);
+    this.logInfo(`Draft edit committed for ${editor.workingDraft.signature}`);
+    return cloneScaffoldDraft(editor.workingDraft);
+  }
+
+  clearDraftEditorState(): void {
+    if (this.draftEditorState) {
+      this.logInfo('Draft edit cleared');
+    }
+    this.draftEditorState = undefined;
   }
 
   writeScaffoldDraft(filePath?: string, options: { confirm?: boolean } = {}): string {
@@ -324,6 +471,13 @@ export class RulesPresenter {
       return a[0].localeCompare(b[0]);
     });
     return ranked.find(([homeyClass]) => homeyClass !== 'other')?.[0] ?? ranked[0][0];
+  }
+
+  private getDraftEditorStateOrThrow(): DraftEditorState {
+    if (!this.draftEditorState) {
+      throw new Error('Draft editor is not active. Start edit mode first.');
+    }
+    return this.draftEditorState;
   }
 
   private logInfo(message: string): void {

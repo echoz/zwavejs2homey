@@ -361,3 +361,23 @@ test('ExplorerPresenter scaffold draft + write flow', async () => {
   assert.equal(writes.length, 1);
   assert.equal(manifests.length, 1);
 });
+
+test('ExplorerPresenter draft editor lifecycle mutates and commits scaffold draft', () => {
+  const presenter = new ExplorerPresenter(createChildren());
+  presenter.selectSignature('29:66:2');
+  const draft = presenter.createScaffoldFromSignature({});
+  assert.equal(draft.fileHint, 'product-29-66-2.json');
+
+  const editor = presenter.startDraftEdit();
+  assert.equal(editor.dirty, false);
+  const mutated = presenter.setDraftEditorField('fileHint', 'product-29-66-2-edited.json');
+  assert.equal(mutated.dirty, true);
+  assert.equal(mutated.errors.length, 0);
+
+  const committed = presenter.commitDraftEditorState();
+  assert.equal(committed.fileHint, 'product-29-66-2-edited.json');
+  assert.equal(
+    presenter.writeScaffoldDraft(undefined, { confirm: true }),
+    'product-29-66-2-edited.json',
+  );
+});

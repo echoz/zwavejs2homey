@@ -9,6 +9,7 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 - Phase 4 reset execution (before Homey adapter implementation):
   - follow with dual-root rich TUI implementation (`--url` nodes root, `--rules-only` rules root)
+  - complete scaffold edit mode in panel TUI before convergence review
   - keep Homey adapter implementation paused until reset sections are complete
 
 ## Recently Completed
@@ -488,16 +489,29 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
       - confirmation workflow coverage
       - cancel workflow coverage
       - timeout workflow coverage
+95. Completed Section 6C foundation slice (before full edit UX):
+    - added scaffold edit-mode scaffolding in panel (`e` enter, `esc` exit)
+    - added draft-editor state/model APIs in presenters (nodes + rules) with initial validation/commit lifecycle
+    - added panel + presenter regression tests for edit-mode entry and draft-editor mutation/commit behavior
+96. Completed Section 6C metadata editing slice:
+    - panel draft editor now supports typed edits for scaffold metadata fields (`productName`, `homeyClass`, `ruleIdPrefix`, `fileHint`)
+    - edit interactions now support field selection (`up/down`), select-field cycling (`left/right`), and text field editing (`enter`, type, `enter`)
+    - `esc` in edit mode now commits draft editor state before returning to detail mode
+    - panel test harness updated for arrow-left/right key mapping and metadata edit flow coverage
 
 ## Next Tasks
 
-1. Execute Section 7 convergence review:
+1. Execute Section 6C scaffold edit mode:
+   - add typed in-panel scaffold draft editing (metadata + capability mappings)
+   - add live validation + diff preview before write/manifest confirmations
+   - expand panel tests for draft edit flows
+2. Execute Section 7 convergence review:
    - decide whether to keep separate stacks or extract shared view primitives
-2. Keep Homey adapter implementation paused until Phase 4 reset is complete
+3. Keep Homey adapter implementation paused until Phase 4 reset is complete
 
 Note:
 
-- Section 7 is unblocked now that Section 6B is complete.
+- Section 7 is intentionally blocked until Section 6C scaffold edit mode is complete.
 
 ## Risks / Unknowns
 

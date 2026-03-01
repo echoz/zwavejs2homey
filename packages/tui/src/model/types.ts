@@ -129,6 +129,17 @@ export interface ScaffoldDraft {
   generatedAt: string;
 }
 
+export interface DraftEditorState {
+  baseDraft: ScaffoldDraft;
+  workingDraft: ScaffoldDraft;
+  dirty: boolean;
+  errors: string[];
+  warnings: string[];
+  selectedCapabilityIndex: number;
+  selectedFieldPath: string;
+  lastValidatedAt?: string;
+}
+
 export interface RuleSummary {
   index: number;
   filePath: string;

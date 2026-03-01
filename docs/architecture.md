@@ -142,7 +142,8 @@ Phase 4 is now executing a reset sequence:
 
 2. test/docs/help migration for that cutover
 3. dual-root TUI implementation on top of the updated CLI/tooling contracts
-4. convergence review (now unblocked after panel-first integration completion)
+4. structured scaffold edit mode in panel TUI
+5. convergence review after edit mode is complete
 
 Reset architecture direction:
 
@@ -158,7 +159,8 @@ Implementation structure (current direction):
 1. separate nodes stack (views + presenters)
 2. separate rules stack (views + presenters)
 3. shared services/core adapters where practical
-4. convergence review after both stacks are complete (optional view-layer de-duplication)
+4. implement scaffold edit mode for typed draft authoring in panel UX
+5. convergence review after both stacks + edit mode are complete (optional view-layer de-duplication)
 
 Data flow remains:
 

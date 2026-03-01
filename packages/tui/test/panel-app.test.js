@@ -95,6 +95,8 @@ function createPanelDeps(presenter, input, output, extra = {}) {
 const keyToData = {
   up: '\u001b[A',
   down: '\u001b[B',
+  left: '\u001b[D',
+  right: '\u001b[C',
   pageup: '\u001b[5~',
   pagedown: '\u001b[6~',
   home: '\u001b[H',
@@ -338,6 +340,216 @@ test('runPanelApp toggles bottom pane between status-bar and full mode', async (
   assert.equal(rendered.includes('Status Bar'), false);
   assert.equal(rendered.includes('Output / Run'), true);
   assert.equal(rendered.includes('Bottom pane expanded. Press b for status-bar mode.'), true);
+});
+
+test('runPanelApp enters and exits scaffold edit mode from panel', async () => {
+  const input = new FakeInput();
+  const output = new FakeOutput();
+  let commitCalls = 0;
+  const draftEditorState = {
+    baseDraft: {
+      signature: '29:66:2',
+      fileHint: 'product-29-66-2.json',
+      generatedAt: new Date().toISOString(),
+      bundle: {
+        metadata: { productName: 'Switch', homeyClass: 'socket', ruleIdPrefix: 'switch' },
+        capabilities: [{ capabilityId: 'onoff', directionality: 'both' }],
+      },
+    },
+    workingDraft: {
+      signature: '29:66:2',
+      fileHint: 'product-29-66-2.json',
+      generatedAt: new Date().toISOString(),
+      bundle: {
+        metadata: { productName: 'Switch', homeyClass: 'socket', ruleIdPrefix: 'switch' },
+        capabilities: [{ capabilityId: 'onoff', directionality: 'both' }],
+      },
+    },
+    dirty: false,
+    errors: [],
+    warnings: [],
+    selectedCapabilityIndex: 0,
+    selectedFieldPath: 'metadata.productName',
+    lastValidatedAt: new Date().toISOString(),
+  };
+  const presenter = {
+    async connect() {},
+    async disconnect() {},
+    getState() {
+      return {
+        explorer: {
+          items: [{ nodeId: 1, name: 'Kitchen', product: 'Switch', manufacturer: 'Zooz' }],
+        },
+      };
+    },
+    getStatusSnapshot() {
+      return {
+        mode: 'nodes',
+        connectionState: 'ready',
+        selectedSignature: '29:66:2',
+        cachedNodeCount: 1,
+        scaffoldFileHint: draftEditorState.workingDraft.fileHint,
+      };
+    },
+    startDraftEdit() {
+      return draftEditorState;
+    },
+    getDraftEditorState() {
+      return draftEditorState;
+    },
+    commitDraftEditorState() {
+      commitCalls += 1;
+      return draftEditorState.workingDraft;
+    },
+  };
+  const { capture, deps } = createPanelDeps(presenter, input, output);
+
+  const runPromise = runPanelApp(
+    {
+      mode: 'nodes',
+      uiMode: 'panel',
+      manifestFile: 'rules/manifest.json',
+      url: 'ws://127.0.0.1:3000',
+      schemaVersion: 0,
+      includeValues: 'summary',
+      maxValues: 100,
+    },
+    { log: () => {}, error: () => {} },
+    deps,
+  );
+
+  setTimeout(() => {
+    emitInputKeys(input, ['e', 'escape', 'q']);
+  }, 5);
+
+  await runPromise;
+
+  const rendered = capture.text();
+  assert.equal(rendered.includes('Scaffold Edit'), true);
+  assert.equal(rendered.includes('Draft Editor (Scaffold)'), true);
+  assert.equal(rendered.includes('Saved draft edits and exited edit mode.'), true);
+  assert.equal(commitCalls, 1);
+});
+
+test('runPanelApp edits draft metadata fields in panel edit mode', async () => {
+  const input = new FakeInput();
+  const output = new FakeOutput();
+  const fieldCalls = [];
+  let selectedFieldPath = 'bundle.metadata.productName';
+  let commitCalls = 0;
+  const workingDraft = {
+    signature: '29:66:2',
+    fileHint: 'product-29-66-2.json',
+    generatedAt: new Date().toISOString(),
+    bundle: {
+      metadata: { productName: 'Switch', homeyClass: 'socket', ruleIdPrefix: 'switch' },
+      capabilities: [{ capabilityId: 'onoff', directionality: 'both' }],
+    },
+  };
+  const draftEditorState = {
+    baseDraft: structuredClone(workingDraft),
+    workingDraft,
+    dirty: false,
+    errors: [],
+    warnings: [],
+    selectedCapabilityIndex: 0,
+    selectedFieldPath,
+    lastValidatedAt: new Date().toISOString(),
+  };
+  const presenter = {
+    async connect() {},
+    async disconnect() {},
+    getState() {
+      return {
+        explorer: {
+          items: [{ nodeId: 1, name: 'Kitchen', product: 'Switch', manufacturer: 'Zooz' }],
+        },
+      };
+    },
+    getStatusSnapshot() {
+      return {
+        mode: 'nodes',
+        connectionState: 'ready',
+        selectedSignature: '29:66:2',
+        cachedNodeCount: 1,
+        scaffoldFileHint: workingDraft.fileHint,
+      };
+    },
+    startDraftEdit() {
+      return draftEditorState;
+    },
+    getDraftEditorState() {
+      return draftEditorState;
+    },
+    setDraftEditorField(path, value) {
+      fieldCalls.push({ path, value });
+      if (path === 'bundle.metadata.productName') {
+        draftEditorState.workingDraft.bundle.metadata.productName = String(value);
+      } else if (path === 'bundle.metadata.homeyClass') {
+        draftEditorState.workingDraft.bundle.metadata.homeyClass = String(value);
+      } else if (path === 'bundle.metadata.ruleIdPrefix') {
+        draftEditorState.workingDraft.bundle.metadata.ruleIdPrefix = String(value);
+      } else if (path === 'fileHint') {
+        draftEditorState.workingDraft.fileHint = String(value);
+      }
+      draftEditorState.dirty = true;
+      return draftEditorState;
+    },
+    setDraftEditorSelectedField(path) {
+      selectedFieldPath = path;
+      draftEditorState.selectedFieldPath = path;
+      return draftEditorState;
+    },
+    commitDraftEditorState() {
+      commitCalls += 1;
+      return draftEditorState.workingDraft;
+    },
+  };
+  const { capture, deps } = createPanelDeps(presenter, input, output);
+
+  const runPromise = runPanelApp(
+    {
+      mode: 'nodes',
+      uiMode: 'panel',
+      manifestFile: 'rules/manifest.json',
+      url: 'ws://127.0.0.1:3000',
+      schemaVersion: 0,
+      includeValues: 'summary',
+      maxValues: 100,
+    },
+    { log: () => {}, error: () => {} },
+    deps,
+  );
+
+  setTimeout(() => {
+    emitInputKeys(input, ['e', 'return']);
+  }, 5);
+  setTimeout(() => {
+    emitInputKeys(input, [' ', 'P', 'r', 'o', 'return']);
+  }, 25);
+  setTimeout(() => {
+    emitInputKeys(input, ['down', 'right', 'escape', 'q']);
+  }, 45);
+
+  await runPromise;
+
+  assert.equal(
+    fieldCalls.some(
+      (entry) => entry.path === 'bundle.metadata.productName' && entry.value === 'Switch Pro',
+    ),
+    true,
+  );
+  assert.equal(
+    fieldCalls.some(
+      (entry) => entry.path === 'bundle.metadata.homeyClass' && entry.value === 'light',
+    ),
+    true,
+  );
+  assert.equal(commitCalls, 1);
+  const rendered = capture.text();
+  assert.equal(rendered.includes('Product Name: Switch Pro'), true);
+  assert.equal(rendered.includes('Homey Class: light'), true);
+  assert.equal(rendered.includes('Updated Product Name.'), true);
 });
 
 test('runPanelApp hydrates visible list identity without opening node detail', async () => {
