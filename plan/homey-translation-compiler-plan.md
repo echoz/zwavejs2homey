@@ -759,14 +759,13 @@ Allowed user curation patch targets:
 - New custom DSL rules authored in Homey UI
 - Mutating compiler-layer ordering at runtime
 
-### Persistence (assumption pending explicit confirmation)
+### Persistence (confirmed v1 decision)
 
-Recommended default:
+Confirmed default (see `docs/decisions/0010-homey-adapter-curation-storage-v1.md`):
 
-- Homey app storage/settings as primary persistence
-- export/import JSON support later (or v1.1) for backup/share
-
-If desired, this can be made `both` in v1, but primary should remain Homey-managed storage.
+- Homey app storage/settings as primary persistence backend in v1
+- export/import JSON remains optional follow-on work for backup/share workflows
+- future backend changes are handled through versioned schema + storage-interface migration
 
 ## Testing Strategy (Compiler + Plan Contracts)
 

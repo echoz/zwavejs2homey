@@ -583,6 +583,13 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - added strict draft validation for unknown `homeyClass` / `capabilityId` values
     - added compiler/core/tui regression coverage for artifact, tool, loader, and validation behavior
 
+106. Completed docs consistency cleanup pass:
+
+
+    - resolved stale “planned/pending” wording in compiler/runtime curation persistence plan with the accepted v1 storage ADR reference
+    - updated vocabulary audit doc to mark cutover sections/work items as implemented/current
+    - rewrote ZWJS capability matrix gap section into explicit actionable gap IDs (`ZWJS-G1..G7`) with current date context and pointers to execution/checklist docs
+
 ## Next Tasks
 
 1. Start first Homey adapter mapping vertical slice against compiled profile artifacts.

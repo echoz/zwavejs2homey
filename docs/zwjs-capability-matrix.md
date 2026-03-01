@@ -237,30 +237,25 @@ These are included to prevent architectural confusion and to show where UI/backe
 | `GRANT_SECURITY_CLASSES` / `VALIDATE_DSK` / `INCLUSION_ABORTED` | inclusion UX callbacks          | controller protocol events mapped to UI | specialized controller inclusion/security events (protocol-native payloads)                              | Protocol inclusion/exclusion wrappers are implemented; higher-level UX flow remains app-specific |
 | `ZNIFFER_FRAME` / `ZNIFFER_STATE`                               | UI zniffer streaming/state      | zniffer domain plus app state           | typed zniffer event subset (`ready`, `corrupted frame`, `frame`, `error`) + generic `zwjs.event.zniffer` | Command/event typing in place for P3.2 subset; live validation pending                           |
 
-## Major Gaps (Actionable)
+## Major Gaps (Actionable, as of March 1, 2026)
 
-### P0 Gaps (Bridge-Critical)
+### High-Priority Gaps
 
-- Stronger typing for node value payloads used by Homey mapping (`node.get_value`) and deeper metadata typing beyond common fields
-- Additional specialized node event typing needed for capability sync (remaining high-frequency/edge node events still to be observed and prioritized)
-- Deeper typing for command-class-specific `node.get_value` payloads after more diverse observed value samples are cataloged (generic/empty envelope handling complete)
+- `ZWJS-G1` (P1): capture active `driver.logging` live traffic and validate specialized typing against observed payload variants
+- `ZWJS-G2` (P3): run non-production zniffer operational validation (`init/start/frequency/frame/stop`) and add fixtures for observed result/event variants
+- `ZWJS-G3` (P3): run non-production firmware workflow validation (read + mutation-gated paths) and add fixtures for observed result/event variants
+- `ZWJS-G4` (P0): deepen `node.get_value` / metadata typing from command-class-specific payload samples used by mapping workflows
 
-### P1 Gaps (Read-Only Ops Completeness)
+### On-Demand Expansion Gaps
 
-- Active `driver.logging` event live observation is still pending (wrappers + specialized typing + fixture tests are implemented)
-- Additional read-wrapper expansion remains open for lower-priority command families beyond the planned P1 subset
-- Additional specialized event typing remains open for long-tail controller/node events as they are observed
+- `ZWJS-G5` (P1/P2): expand additional read and mutation wrappers only when adapter workflows require them
+- `ZWJS-G6` (P0/P1): add long-tail specialized controller/node event typing as new events are observed in live traffic
+- `ZWJS-G7` (P3): expand endpoint/virtual-endpoint wrappers beyond current implemented subset as concrete use-cases appear
 
-### P2 Gaps (Safe Mutation Expansion)
+### Where Execution Status Lives
 
-- Planned P2 subset is implemented (presets, low-risk node maintenance wrappers, inclusion/exclusion protocol wrappers/events)
-- Remaining P2 work is incremental parity expansion for additional mutation commands and workflow-specific safeguards
-
-### P3 Gaps (Advanced Domains)
-
-- Endpoint/virtual endpoint typed wrappers
-- Zniffer live validation on a non-production zniffer-capable setup (wrappers/event typing implemented for current P3.2 subset)
-- Firmware and advanced maintenance workflows
+- Detailed execution slices and completion notes: `plan/zwjs-parity-roadmap.md`
+- Operational validation procedure for `ZWJS-G2`/`ZWJS-G3`: `docs/zwjs-nonprod-live-validation-checklist.md`
 
 ## Parity Roadmap Summary
 

@@ -31,22 +31,22 @@ Goal:
 3. mapping kinds and directionality are protocol/model enums, not catalog vocab; these should stay static but centralized.
 4. compiler validation supports strict membership checks and compile workflows should run with vocabulary enabled.
 
-## Cutover Target
+## Target Model (Implemented)
 
 ### Compiler-Managed Artifact
 
-Planned artifact:
+Artifact:
 
 - `homey-authoring-vocabulary/v1`
 - `homeyClasses[]`
 - `capabilityIds[]`
 - optional per-entry provenance (`sources[]`)
 
-### Source Inputs (planned)
+### Source Inputs (current)
 
-1. compiler-maintained seed file (curated baseline)
+1. Homey system lists via `homey-lib` (`assets/device/classes.json`, `assets/capability/capabilities.json`)
 2. project custom capabilities from Homey compose (`co.lazylabs.zwavejs2homey/.homeycompose/capabilities`)
-3. optional observed IDs from rules/HA-derived outputs (tagged provenance)
+3. optional extension point: observed IDs from rules/HA-derived outputs (not enabled by default)
 
 ### Consumers
 
@@ -54,11 +54,11 @@ Planned artifact:
 2. TUI/presenter draft validation
 3. compiler rule validation (membership checks)
 
-## Immediate Follow-On Work
+## Follow-On Work Status
 
-1. Add shared constants for intentionally static enums (directionality + mapping kinds) to remove duplicated literals.
-2. Implement compiler vocabulary artifact build/validate tooling.
-3. Wire TUI and compiler validation to one vocabulary provider contract.
+- [x] Add shared constants for intentionally static enums (directionality + mapping kinds) to remove duplicated literals.
+- [x] Implement compiler vocabulary artifact build/validate tooling.
+- [x] Wire TUI and compiler validation to one vocabulary provider contract.
 
 ## Implemented Cutover (Current)
 

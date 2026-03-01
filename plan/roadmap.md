@@ -19,7 +19,7 @@
 - [x] Connection lifecycle, reconnect, request correlation, typed frames/events
 - [x] Read wrapper subset + mutation policy/presets
 - [x] Fixture/mocked/integration tests and read-only live validation baseline
-- [ ] Non-production live validation for mutation-heavy domains (zniffer/firmware)
+- [ ] Non-production live validation for mutation-heavy domains (zniffer/firmware) (`ZWJS-G2`, `ZWJS-G3` in `docs/zwjs-capability-matrix.md`)
 
 ## Phase 3: Homey Mapping Compiler (In Progress)
 
@@ -139,7 +139,7 @@
 
 ## Phase 6: Reliability + UX
 
-- [ ] Non-production operational validation runs (zniffer/firmware) with captured fixtures
+- [ ] Non-production operational validation runs (zniffer/firmware) with captured fixtures (`ZWJS-G2`, `ZWJS-G3`)
 - [ ] Settings/diagnostics UI for compiler/profile inspection and curation
 - [ ] Logging and support bundle workflow
 - [ ] Performance tuning for compiler/rule volume and catalog scale
