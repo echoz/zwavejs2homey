@@ -348,6 +348,16 @@ export interface ZwjsNodePollValueResult {
   value?: unknown;
   [key: string]: unknown;
 }
+export interface ZwjsNodeSetValueArgs {
+  nodeId: number;
+  valueId: ZwjsValueId;
+  value: unknown;
+  [key: string]: unknown;
+}
+export interface ZwjsNodeSetValueResult {
+  success?: boolean;
+  [key: string]: unknown;
+}
 export interface ZwjsFirmwareUpdateCommandResult {
   success?: boolean;
   status?: unknown;
@@ -1091,6 +1101,7 @@ export interface ZwjsClient {
   refreshNodeInfo(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeRefreshInfoResult>>;
   refreshNodeValues(nodeId: number): Promise<ZwjsCommandResult<ZwjsNodeRefreshValuesResult>>;
   pollNodeValue(args: ZwjsNodePollValueArgs): Promise<ZwjsCommandResult<ZwjsNodePollValueResult>>;
+  setNodeValue(args: ZwjsNodeSetValueArgs): Promise<ZwjsCommandResult<ZwjsNodeSetValueResult>>;
   driverFirmwareUpdateOtw(
     args: ZwjsDriverFirmwareUpdateOtwArgs,
   ): Promise<ZwjsCommandResult<ZwjsFirmwareUpdateCommandResult>>;

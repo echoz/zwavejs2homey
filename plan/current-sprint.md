@@ -22,7 +22,7 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - initial state pull via `getNodeValue` and Homey capability sync
     - outbound capability listener issues `node.set_value`
     - inbound live updates consume `zwjs.event.node.value-updated`
-  - app ZWJS client mutation policy now explicitly allows `node.set_value` only
+  - app/runtime command ownership for `node.set_value` is now core-defined (`ZwjsClient.setNodeValue`, `ZWJS_COMMAND_NODE_SET_VALUE`) rather than adapter-local command strings
   - added node-runtime helper regression tests (`co.lazylabs.zwavejs2homey/test/node-runtime.test.js`)
 
 - Latest Phase 5 slice:

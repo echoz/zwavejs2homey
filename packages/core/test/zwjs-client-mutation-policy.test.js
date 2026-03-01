@@ -472,6 +472,30 @@ test('pollNodeValue sends mutation-gated protocol command and returns result', a
   await client.stop();
 });
 
+test('setNodeValue sends mutation-gated protocol command and returns result', async () => {
+  const { client, transport } = makeClient({ enabled: true, allowCommands: ['node.set_value'] });
+  await startConnected(client, transport);
+
+  const pending = client.setNodeValue({
+    nodeId: 5,
+    valueId: { commandClass: 37, property: 'targetValue', endpoint: 0 },
+    value: true,
+  });
+  const sent = transport.sent.at(-1);
+  assert.deepEqual(
+    sent,
+    withMessageId(loadFixture('zwjs-server', 'command.node.set_value.json'), sent.messageId),
+  );
+
+  transport.triggerMessage(
+    withMessageId(loadFixture('zwjs-server', 'result.node.set_value.success.json'), sent.messageId),
+  );
+  const result = await pending;
+  assert.equal(result.success, true);
+  assert.equal(result.result.success, true);
+  await client.stop();
+});
+
 test('P2.2 low-risk mutating wrappers are blocked by default mutation policy', async () => {
   const { client, transport } = makeClient();
   await startConnected(client, transport);
@@ -484,6 +508,15 @@ test('P2.2 low-risk mutating wrappers are blocked by default mutation policy', a
       client.pollNodeValue({
         nodeId: 5,
         valueId: { commandClass: 37, property: 'currentValue', endpoint: 0 },
+      }),
+    /blocked by policy/,
+  );
+  await assert.rejects(
+    () =>
+      client.setNodeValue({
+        nodeId: 5,
+        valueId: { commandClass: 37, property: 'targetValue', endpoint: 0 },
+        value: true,
       }),
     /blocked by policy/,
   );

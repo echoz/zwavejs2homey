@@ -84,6 +84,8 @@ export type {
   ZwjsNodeRefreshValuesResult,
   ZwjsNodePollValueArgs,
   ZwjsNodePollValueResult,
+  ZwjsNodeSetValueArgs,
+  ZwjsNodeSetValueResult,
   ZwjsFirmwareUpdateCommandResult,
   ZwjsDriverFirmwareUpdateOtwArgs,
   ZwjsControllerFirmwareUpdateOtaArgs,
@@ -171,6 +173,7 @@ export {
   resolveZwjsConnectionConfig,
   ZWJS_CONNECTION_SETTINGS_KEY,
 } from './zwjs-connection-config';
+export { ZWJS_COMMAND_NODE_SET_VALUE } from './client/command-ids';
 export type { ResolvedZwjsConnectionConfig } from './zwjs-connection-config';
 
 import { ZwjsClientImpl } from './client/zwjs-client';

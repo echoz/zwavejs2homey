@@ -7,6 +7,7 @@ import {
   type ZwjsClient,
   type ZwjsClientEvent,
   resolveZwjsConnectionConfig,
+  ZWJS_COMMAND_NODE_SET_VALUE,
   ZWJS_CONNECTION_SETTINGS_KEY,
 } from '@zwavejs2homey/core';
 import type {
@@ -74,7 +75,7 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
       mutationPolicy: {
         enabled: true,
         requireAllowList: true,
-        allowCommands: ['node.set_value'],
+        allowCommands: [ZWJS_COMMAND_NODE_SET_VALUE],
       },
     });
     nextClient.onEvent((event: ZwjsClientEvent) => {

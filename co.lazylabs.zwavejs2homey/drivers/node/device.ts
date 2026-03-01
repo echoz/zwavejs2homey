@@ -70,16 +70,13 @@ module.exports = class NodeDevice extends Homey.Device {
         throw new Error('onoff capability value must be boolean-like');
       }
 
-      const mutationResult = await client.sendMutationCommand({
-        command: 'node.set_value',
-        args: {
-          nodeId,
-          valueId: slice.outboundTarget,
-          value: outboundValue,
-        },
+      const mutationResult = await client.setNodeValue({
+        nodeId,
+        valueId: slice.outboundTarget,
+        value: outboundValue,
       });
       if (!mutationResult.success) {
-        throw new Error(`node.set_value failed (${mutationResult.error.errorCode ?? 'unknown'})`);
+        throw new Error(`setNodeValue failed (${mutationResult.error.errorCode ?? 'unknown'})`);
       }
     });
 

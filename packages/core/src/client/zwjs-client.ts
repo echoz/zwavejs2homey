@@ -58,6 +58,8 @@ import type {
   ZwjsNodeRefreshValuesResult,
   ZwjsNodePollValueArgs,
   ZwjsNodePollValueResult,
+  ZwjsNodeSetValueArgs,
+  ZwjsNodeSetValueResult,
   ZwjsFirmwareUpdateCommandResult,
   ZwjsDriverFirmwareUpdateOtwArgs,
   ZwjsControllerFirmwareUpdateOtaArgs,
@@ -98,6 +100,7 @@ import { WsTransport } from '../transport/ws-transport';
 import { detectProtocolInfo } from '../protocol/detector';
 import { selectAdapter } from '../protocol/normalizers/registry';
 import type { ZwjsProtocolAdapter } from '../protocol/normalizers/types';
+import { ZWJS_COMMAND_NODE_SET_VALUE } from './command-ids';
 
 const DEFAULT_TIMEOUTS: TimeoutPolicy = {
   connectTimeoutMs: 10_000,
@@ -605,6 +608,15 @@ export class ZwjsClientImpl implements ZwjsClient {
   ): Promise<ZwjsCommandResult<ZwjsNodePollValueResult>> {
     return this.sendMutationCommand<ZwjsNodePollValueResult, ZwjsNodePollValueArgs>({
       command: 'node.poll_value',
+      args,
+    });
+  }
+
+  async setNodeValue(
+    args: ZwjsNodeSetValueArgs,
+  ): Promise<ZwjsCommandResult<ZwjsNodeSetValueResult>> {
+    return this.sendMutationCommand<ZwjsNodeSetValueResult, ZwjsNodeSetValueArgs>({
+      command: ZWJS_COMMAND_NODE_SET_VALUE,
       args,
     });
   }
