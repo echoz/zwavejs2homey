@@ -22,7 +22,13 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
   - locked pairing/import semantics:
     - Homey pairing is explicit node import/link from ZWJS
     - inclusion can be triggered by bridge UX but does not auto-create node devices or auto-jump pairing
-  - recorded the policy in `docs/decisions/0017-homey-mvp-driver-topology-and-pairing-model.md`
+  - locked supporting runtime policies:
+    - app-level shared ZWJS session ownership + inclusion lock (`ADR 0018`)
+    - node identity/dedupe contract via `bridgeId + nodeId` (`ADR 0019`)
+    - compiled profile source + refresh policy (`ADR 0020`)
+    - no-profile-match fallback policy (`ADR 0021`)
+    - class/capability structural mutation policy (`ADR 0022`)
+  - recorded policies in `docs/decisions/0017-homey-mvp-driver-topology-and-pairing-model.md`, `docs/decisions/0018-homey-zwjs-session-and-inclusion-lock-v1.md`, `docs/decisions/0019-homey-node-identity-and-dedupe-v1.md`, `docs/decisions/0020-homey-compiled-profile-source-and-refresh-policy-v1.md`, `docs/decisions/0021-homey-no-profile-match-runtime-policy-v1.md`, and `docs/decisions/0022-homey-device-class-and-capability-mutation-policy-v1.md`
   - synced architecture/readme/roadmap references to the locked model
 
 - Latest TUI values UX slices:

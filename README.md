@@ -65,6 +65,14 @@ Pairing semantics:
 - If inclusion is started from bridge UX, node add remains explicit via node pairing.
 - No automatic cross-driver pairing handoff is assumed in v1.
 
+Additional locked MVP runtime policies:
+
+- one shared app-level ZWJS session service with serialized inclusion/exclusion lock (`docs/decisions/0018-homey-zwjs-session-and-inclusion-lock-v1.md`)
+- node identity/dedupe keyed by `bridgeId + nodeId` (`docs/decisions/0019-homey-node-identity-and-dedupe-v1.md`)
+- compiled profile source/refresh is explicit and local in v1 (`docs/decisions/0020-homey-compiled-profile-source-and-refresh-policy-v1.md`)
+- no-profile-match imports use minimal safe fallback + curation recommendation (`docs/decisions/0021-homey-no-profile-match-runtime-policy-v1.md`)
+- class/capability structural changes are explicit user-driven updates, not automatic runtime mutation (`docs/decisions/0022-homey-device-class-and-capability-mutation-policy-v1.md`)
+
 ## Homey App Connection Setting
 
 The Homey app bootstrap reads ZWJS transport settings from `this.homey.settings` key:

@@ -21,3 +21,8 @@ Decision records for major technical boundaries and policy choices.
 - `0015-homey-baseline-hash-canonical-projection-v1.md`: Defines exact v1 canonical projection, canonicalization rules, and marker versioning contract for `baselineProfileHash`
 - `0016-homey-curation-v1-storage-schema.md`: Locks concrete persisted `curation.v1` schema (entry map by `homeyDeviceId`, baseline marker embedding, override/collection validation rules)
 - `0017-homey-mvp-driver-topology-and-pairing-model.md`: Locks Homey MVP runtime shape to `bridge` + `node` drivers and explicit node import pairing semantics (no automatic cross-driver pairing handoff)
+- `0018-homey-zwjs-session-and-inclusion-lock-v1.md`: Locks adapter ZWJS session ownership to app-level shared service and serializes inclusion/exclusion via one operation lock
+- `0019-homey-node-identity-and-dedupe-v1.md`: Locks node device identity to `bridgeId + nodeId` with deterministic import dedupe behavior
+- `0020-homey-compiled-profile-source-and-refresh-policy-v1.md`: Locks compiled profile source/refresh policy to local explicit refresh (no background remote fetch/build in v1)
+- `0021-homey-no-profile-match-runtime-policy-v1.md`: Locks no-match behavior to safe import with minimal fallback profile + explicit curation recommendation
+- `0022-homey-device-class-and-capability-mutation-policy-v1.md`: Locks structural class/capability mutation to explicit user-driven update flows (no automatic runtime structural mutation)

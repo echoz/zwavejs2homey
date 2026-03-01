@@ -127,6 +127,11 @@
 - [x] Start only after compiler runtime-validation readiness milestone is met
 - [x] Lock Homey MVP runtime topology: two drivers (`bridge` singleton control plane + `node` per-node data plane)
 - [x] Lock Homey pairing/import semantics: explicit node import flow from ZWJS; no automatic cross-driver pairing handoff
+- [x] Lock app-level shared ZWJS session ownership + inclusion/exclusion operation lock
+- [x] Lock node identity/dedupe contract (`bridgeId + nodeId`)
+- [x] Lock compiled profile source/refresh policy for adapter runtime
+- [x] Lock no-profile-match runtime behavior (minimal safe fallback + curation prompt)
+- [x] Lock class/capability structural mutation policy (explicit user-driven update only)
 - [x] Add compiler-owned compiled profile resolver/index API for adapter/tooling orchestration (`buildCompiledProfileResolverIndexV1`, `resolveCompiledProfileEntryFromIndexV1`)
 - [ ] Implement Homey driver scaffolds for locked MVP topology (`drivers/bridge`, `drivers/node`)
 - [ ] Implement bridge singleton pair behavior and bridge control-plane device lifecycle

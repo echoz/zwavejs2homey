@@ -59,6 +59,14 @@ Pairing model in v1:
 - If inclusion is started from bridge UX, node creation is still explicit via node pairing.
 - no automatic cross-driver pairing handoff is assumed in v1.
 
+Related locked MVP runtime policies:
+
+- shared app-level ZWJS session ownership + inclusion lock (`docs/decisions/0018-homey-zwjs-session-and-inclusion-lock-v1.md`)
+- node identity and import dedupe contract (`docs/decisions/0019-homey-node-identity-and-dedupe-v1.md`)
+- compiled profile source and refresh policy (`docs/decisions/0020-homey-compiled-profile-source-and-refresh-policy-v1.md`)
+- no-profile-match fallback behavior (`docs/decisions/0021-homey-no-profile-match-runtime-policy-v1.md`)
+- class/capability structural mutation policy (`docs/decisions/0022-homey-device-class-and-capability-mutation-policy-v1.md`)
+
 ## Integration Contract (Draft)
 
 The Homey app will import a protocol-first `zwjs` client surface from `@zwavejs2homey/core`.
@@ -146,7 +154,7 @@ Current implemented foundation in `packages/compiler`:
   - adapter recommendation prompts are driven by per-device baseline markers (`pipelineFingerprint` + canonical baseline profile hash) to detect meaningful baseline changes (`docs/decisions/0014-homey-baseline-recommendation-detection-v1.md`)
   - canonical baseline hash projection is versioned and explicitly defined (`docs/decisions/0015-homey-baseline-hash-canonical-projection-v1.md`)
   - Homey adapter topology/pairing model is locked to bridge+node drivers and explicit node import semantics (`docs/decisions/0017-homey-mvp-driver-topology-and-pairing-model.md`)
-  - decisions are recorded in `docs/decisions/0002-compiler-adapter-boundary.md`, `docs/decisions/0003-defer-curation-seed-artifact.md`, `docs/decisions/0004-generic-fallback-ownership.md`, `docs/decisions/0005-manifest-owned-compile-rule-scope.md`, `docs/decisions/0006-homey-adapter-runtime-rule-order.md`, `docs/decisions/0007-product-and-curation-single-target-bundles.md`, `docs/decisions/0008-manifest-layer-is-single-source-of-truth.md`, `docs/decisions/0009-product-rules-v1-only.md`, `docs/decisions/0010-homey-adapter-curation-storage-v1.md`, `docs/decisions/0011-homey-curation-model-v1-materialized-overrides.md`, `docs/decisions/0012-homey-curation-execution-via-runtime-rule-lowering.md`, `docs/decisions/0013-homey-device-instance-curation-precedence-v1.md`, `docs/decisions/0014-homey-baseline-recommendation-detection-v1.md`, `docs/decisions/0015-homey-baseline-hash-canonical-projection-v1.md`, `docs/decisions/0016-homey-curation-v1-storage-schema.md`, and `docs/decisions/0017-homey-mvp-driver-topology-and-pairing-model.md`
+  - decisions are recorded in `docs/decisions/0002-compiler-adapter-boundary.md`, `docs/decisions/0003-defer-curation-seed-artifact.md`, `docs/decisions/0004-generic-fallback-ownership.md`, `docs/decisions/0005-manifest-owned-compile-rule-scope.md`, `docs/decisions/0006-homey-adapter-runtime-rule-order.md`, `docs/decisions/0007-product-and-curation-single-target-bundles.md`, `docs/decisions/0008-manifest-layer-is-single-source-of-truth.md`, `docs/decisions/0009-product-rules-v1-only.md`, `docs/decisions/0010-homey-adapter-curation-storage-v1.md`, `docs/decisions/0011-homey-curation-model-v1-materialized-overrides.md`, `docs/decisions/0012-homey-curation-execution-via-runtime-rule-lowering.md`, `docs/decisions/0013-homey-device-instance-curation-precedence-v1.md`, `docs/decisions/0014-homey-baseline-recommendation-detection-v1.md`, `docs/decisions/0015-homey-baseline-hash-canonical-projection-v1.md`, `docs/decisions/0016-homey-curation-v1-storage-schema.md`, `docs/decisions/0017-homey-mvp-driver-topology-and-pairing-model.md`, `docs/decisions/0018-homey-zwjs-session-and-inclusion-lock-v1.md`, `docs/decisions/0019-homey-node-identity-and-dedupe-v1.md`, `docs/decisions/0020-homey-compiled-profile-source-and-refresh-policy-v1.md`, `docs/decisions/0021-homey-no-profile-match-runtime-policy-v1.md`, and `docs/decisions/0022-homey-device-class-and-capability-mutation-policy-v1.md`
 - Sequencing decision:
   - complete the compiler runtime-validation pipeline first (real HA-derived + project rulesets, compiled profiles export, live ZWJS validation using compiled artifacts)
   - defer Homey adapter implementation until compiled profiles can be validated end-to-end outside Homey
