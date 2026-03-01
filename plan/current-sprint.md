@@ -508,6 +508,10 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - extracted header/footer contextual help generation into a dedicated presenter (`PanelChromePresenter`)
     - `runPanelApp` now consumes presenter-produced chrome view-model output instead of composing footer/header directly in the view loop
     - added focused regression coverage for panel chrome contexts (filter, detail, scaffold edit, confirm/cancel hints)
+99. Completed panel layout presenter slice (view/presenter separation step):
+    - extracted list/detail/output pane title composition into a dedicated presenter (`PanelLayoutPresenter`)
+    - `runPanelApp` now consumes presenter-produced pane title view-model output for list/detail/output labels
+    - added focused regression coverage for list pagination/filter titles, detail range titles, and compact-vs-expanded output labels
 
 ## Next Tasks
 

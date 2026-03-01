@@ -29,6 +29,7 @@ import {
   type PanelChromeFocus,
   type PanelChromeMode,
 } from './presenter/panel-chrome-presenter';
+import { PanelLayoutPresenter } from './presenter/panel-layout-presenter';
 import { RulesPresenter } from './presenter/rules-presenter';
 import {
   CompilerCurationServiceImpl,
@@ -219,6 +220,7 @@ interface RunAppDeps {
   presenter?: ExplorerPresenter;
   rulesPresenter?: RulesPresenter;
   panelChromePresenter?: PanelChromePresenter;
+  panelLayoutPresenter?: PanelLayoutPresenter;
   explorerService?: ZwjsExplorerService;
   curationService?: CompilerCurationService;
   fileService?: WorkspaceFileService;
@@ -2017,6 +2019,7 @@ export async function runPanelApp(
   const rulesPresenter =
     deps.rulesPresenter ?? new RulesPresenter(curationChildPresenter, fileService);
   const panelChromePresenter = deps.panelChromePresenter ?? new PanelChromePresenter();
+  const panelLayoutPresenter = deps.panelLayoutPresenter ?? new PanelLayoutPresenter();
   const canHydrateListIdentity =
     typeof (nodesPresenter as { showNodeDetail?: unknown }).showNodeDetail === 'function';
   const input = deps.stdin ?? defaultStdin;
@@ -2973,14 +2976,14 @@ export async function runPanelApp(
     const windowed = getVisibleWindow(entries, selectedIndex, listCapacity);
     const listItems = entries.map((entry) => formatListRow(entry.rowId, entry.label));
     const listLines = windowed.visible.map((entry) => formatListRow(entry.rowId, entry.label));
-    const rangeSuffix =
-      totalItems > listCapacity
-        ? ` [${windowed.start + 1}-${windowed.start + windowed.visible.length}/${totalItems}]`
-        : totalItems > 0
-          ? ` [1-${totalItems}/${totalItems}]`
-          : ' [0/0]';
-    const filterSuffix = filterQuery ? ` | filter="${filterQuery}"` : '';
-    const leftTitle = `${isNodesMode ? 'Nodes' : 'Rules'}${rangeSuffix}${filterSuffix}`;
+    const leftTitle = panelLayoutPresenter.buildListTitle({
+      sessionMode: config.mode,
+      totalItems,
+      visibleCapacity: listCapacity,
+      windowStart: windowed.start,
+      windowCount: windowed.visible.length,
+      filterQuery,
+    });
 
     const draftEditorState = panelMode === 'edit-draft' ? getActiveDraftEditorState() : undefined;
     const draftSourceNode =
@@ -3037,30 +3040,25 @@ export async function runPanelApp(
     const rightVisibleCapacity = Math.max(1, paneHeights.topContentHeight);
     const rightMaxScroll = Math.max(0, rightAllLines.length - rightVisibleCapacity);
     rightScroll = Math.min(rightMaxScroll, Math.max(0, rightScroll));
-    const rightWindowStart = rightAllLines.length > 0 ? rightScroll + 1 : 0;
-    const rightWindowEnd = Math.min(rightAllLines.length, rightScroll + rightVisibleCapacity);
-    const rightRange =
-      rightAllLines.length > rightVisibleCapacity
-        ? ` [${rightWindowStart}-${rightWindowEnd}/${rightAllLines.length}]`
-        : '';
-    const rightTitle =
-      panelMode === 'edit-draft'
-        ? `Scaffold Edit${rightRange}`
-        : isNodesMode && currentNodeDetail
-          ? `Node ${currentNodeDetail.nodeId} Detail${rightRange}`
-          : `Detail${rightRange}`;
+    const rightTitle = panelLayoutPresenter.buildDetailTitle({
+      panelMode,
+      sessionMode: config.mode,
+      currentNodeId: isNodesMode ? currentNodeDetail?.nodeId : undefined,
+      totalLines: rightAllLines.length,
+      visibleCapacity: rightVisibleCapacity,
+      scroll: rightScroll,
+    });
 
     const bottomAllLines = splitLines(bottomText);
     const bottomVisibleCapacity = Math.max(1, paneHeights.bottomContentHeight);
     const bottomMaxScroll = Math.max(0, bottomAllLines.length - bottomVisibleCapacity);
     bottomScroll = Math.min(bottomMaxScroll, Math.max(0, bottomScroll));
-    const bottomWindowStart = bottomAllLines.length > 0 ? bottomScroll + 1 : 0;
-    const bottomWindowEnd = Math.min(bottomAllLines.length, bottomScroll + bottomVisibleCapacity);
-    const bottomRange =
-      bottomAllLines.length > bottomVisibleCapacity
-        ? ` [${bottomWindowStart}-${bottomWindowEnd}/${bottomAllLines.length}]`
-        : '';
-    const bottomTitle = bottomCompact ? '' : `Output / Run${bottomRange}`;
+    const bottomTitle = panelLayoutPresenter.buildOutputTitle({
+      compact: bottomCompact,
+      totalLines: bottomAllLines.length,
+      visibleCapacity: bottomVisibleCapacity,
+      scroll: bottomScroll,
+    });
 
     const status = isNodesMode
       ? nodesPresenter.getStatusSnapshot()
