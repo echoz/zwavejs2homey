@@ -528,7 +528,7 @@ function wrapLineToWidth(
 
 function wrapDetailLinesForDisplay(lines: string[], sectionWidth: number): string[] {
   const headingPattern =
-    /^(?:[▶▼]\s+)?(Identity|Telemetry|Neighbors|Values|Controls|Sensors|Events|Config|Diagnostic|Other)\b/;
+    /^(?:[▶▼]\s+)?(Identity|Device|Telemetry|Neighbors|Values|Controls|Sensors|Events|Config|Diagnostic|Other|Draft|Source|Editable Fields|Capabilities|Validation|Errors|Warnings)\b/;
   const wrapped: string[] = [];
   for (const line of lines) {
     const trimmed = line.trim();
@@ -560,7 +560,7 @@ function wrapDetailLinesForDisplay(lines: string[], sectionWidth: number): strin
 
 function formatDetailLinesForDisplay(lines: string[], sectionWidth: number): string {
   const headingPattern =
-    /^(?:[▶▼]\s+)?(Identity|Telemetry|Neighbors|Values|Controls|Sensors|Events|Config|Diagnostic|Other)\b/;
+    /^(?:[▶▼]\s+)?(Identity|Device|Telemetry|Neighbors|Values|Controls|Sensors|Events|Config|Diagnostic|Other|Draft|Source|Editable Fields|Capabilities|Validation|Errors|Warnings)\b/;
   const labelValuePattern = /^([A-Za-z][A-Za-z0-9 _/()\-]*):(.*)$/;
   const rendered: string[] = [];
   for (const line of lines) {
@@ -891,9 +891,20 @@ function renderNotificationLines(notificationEvents: unknown): string[] {
 function extractListIdentityFromDetail(detail: NodeDetail | undefined): {
   manufacturer: string | null;
   product: string | null;
+  signature: string | null;
+  manufacturerId: string | null;
+  productType: string | null;
+  productId: string | null;
 } {
   if (!detail?.state) {
-    return { manufacturer: null, product: null };
+    return {
+      manufacturer: null,
+      product: null,
+      signature: null,
+      manufacturerId: null,
+      productType: null,
+      productId: null,
+    };
   }
   const state = detail.state;
   const deviceConfig = asRecord(state.deviceConfig);
@@ -905,20 +916,30 @@ function extractListIdentityFromDetail(detail: NodeDetail | undefined): {
       asNonEmptyString(state.productLabel) ??
       asNonEmptyString(deviceConfig?.label),
   );
-  return { manufacturer, product };
+  const manufacturerId = normalizeIdentityText(asReadableId(state.manufacturerId));
+  const productType = normalizeIdentityText(asReadableId(state.productType));
+  const productId = normalizeIdentityText(asReadableId(state.productId));
+  const signature =
+    manufacturerId && productType && productId
+      ? `${manufacturerId}:${productType}:${productId}`
+      : null;
+  return { manufacturer, product, signature, manufacturerId, productType, productId };
 }
 
 function formatNodeListLabel(options: {
   name: string | null;
   manufacturer: string | null;
   product: string | null;
+  signature?: string | null;
 }): string {
   const name = options.name ?? '(unnamed)';
   const identityParts = [options.manufacturer, options.product]
     .map((part) => normalizeIdentityText(part))
     .filter((part): part is string => part !== null && part.length > 0);
-  if (identityParts.length === 0) return name;
-  return `${name} (${identityParts.join(' / ')})`;
+  const signature = normalizeIdentityText(options.signature ?? null);
+  const base = identityParts.length === 0 ? name : `${name} (${identityParts.join(' / ')})`;
+  if (!signature) return base;
+  return `${base} [${signature}]`;
 }
 
 function formatNeighborValue(value: unknown): string {
@@ -1433,10 +1454,21 @@ function renderPanelNodeDetail(
   } = {},
 ): string {
   const state = detail.state ?? {};
+  const location = normalizeIdentityText(asNonEmptyString(state.location));
+  const interviewStage = normalizeIdentityText(asNonEmptyString(state.interviewStage));
+  const isFailed =
+    typeof state.isFailed === 'boolean' ? (state.isFailed ? 'yes' : 'no') : undefined;
   const ready = String(state.ready ?? '');
   const status = describeNodeStatus(state.status);
   const manufacturer = formatManufacturerLabel(state);
   const product = formatProductLabel(state);
+  const manufacturerId = normalizeIdentityText(asReadableId(state.manufacturerId));
+  const productType = normalizeIdentityText(asReadableId(state.productType));
+  const productId = normalizeIdentityText(asReadableId(state.productId));
+  const signature =
+    manufacturerId && productType && productId
+      ? `${manufacturerId}:${productType}:${productId}`
+      : null;
   const name = String(state.name ?? '');
   const neighborLines = renderNeighborLines(detail.neighbors, {
     expanded: options.neighborsExpanded === true,
@@ -1517,9 +1549,18 @@ function renderPanelNodeDetail(
   return [
     'Identity',
     `Name: ${name || '(unnamed)'}`,
+    location ? `Location: ${location}` : null,
     `Ready: ${ready}  Status: ${status}`,
-    `Manufacturer: ${manufacturer}`,
-    `Product: ${product}`,
+    interviewStage ? `Interview stage: ${interviewStage}` : null,
+    isFailed ? `Failed: ${isFailed}` : null,
+    '',
+    'Device',
+    `Manufacturer: ${manufacturer || '(unavailable)'}`,
+    `Product: ${product || '(unavailable)'}`,
+    `Signature: ${signature ?? '(unavailable)'}`,
+    manufacturerId ? `Manufacturer ID: ${manufacturerId}` : null,
+    productType ? `Product Type: ${productType}` : null,
+    productId ? `Product ID: ${productId}` : null,
     '',
     'Telemetry',
     ...notificationLines,
@@ -1669,7 +1710,20 @@ function getDraftEditorFieldValue(state: DraftEditorState, path: string): string
 
 function renderPanelDraftEditor(
   state: DraftEditorState,
-  options: { editingFieldPath?: string; editingBuffer?: string } = {},
+  options: {
+    editingFieldPath?: string;
+    editingBuffer?: string;
+    sourceNode?: {
+      nodeId?: number;
+      name?: string | null;
+      manufacturer?: string | null;
+      product?: string | null;
+      signature?: string | null;
+      manufacturerId?: string | null;
+      productType?: string | null;
+      productId?: string | null;
+    };
+  } = {},
 ): string {
   const workingBundle = state.workingDraft.bundle ?? {};
   const capabilities =
@@ -1697,33 +1751,67 @@ function renderPanelDraftEditor(
   const editStatus =
     options.editingFieldPath && options.editingBuffer !== undefined
       ? `Editing ${options.editingFieldPath}: ${options.editingBuffer}`
-      : 'Press enter to edit selected field. Use up/down to choose field.';
+      : null;
+  const sourceName = normalizeIdentityText(options.sourceNode?.name ?? null) ?? '(unnamed)';
+  const sourceNodeId = options.sourceNode?.nodeId;
+  const sourceManufacturer =
+    normalizeIdentityText(options.sourceNode?.manufacturer ?? null) ?? '(unavailable)';
+  const sourceProduct =
+    normalizeIdentityText(options.sourceNode?.product ?? null) ?? '(unavailable)';
+  const sourceManufacturerId = normalizeIdentityText(options.sourceNode?.manufacturerId ?? null);
+  const sourceProductType = normalizeIdentityText(options.sourceNode?.productType ?? null);
+  const sourceProductId = normalizeIdentityText(options.sourceNode?.productId ?? null);
+  const sourceSignature =
+    normalizeIdentityText(options.sourceNode?.signature ?? null) ??
+    (sourceManufacturerId && sourceProductType && sourceProductId
+      ? `${sourceManufacturerId}:${sourceProductType}:${sourceProductId}`
+      : null);
+  const sourceSection =
+    sourceNodeId !== undefined ||
+    sourceSignature ||
+    options.sourceNode?.manufacturer ||
+    options.sourceNode?.product
+      ? [
+          'Source',
+          `Node: ${sourceNodeId ?? '-'}`,
+          `Name: ${sourceName}`,
+          `Manufacturer: ${sourceManufacturer}`,
+          `Product: ${sourceProduct}`,
+          `Signature: ${sourceSignature ?? '(unavailable)'}`,
+          sourceManufacturerId ? `Manufacturer ID: ${sourceManufacturerId}` : null,
+          sourceProductType ? `Product Type: ${sourceProductType}` : null,
+          sourceProductId ? `Product ID: ${sourceProductId}` : null,
+          '',
+        ]
+      : [];
 
   return [
     'Draft Editor (Scaffold)',
+    '',
+    'Draft',
     `Signature: ${state.workingDraft.signature}`,
     `File hint: ${state.workingDraft.fileHint}`,
     `Dirty: ${state.dirty ? 'yes' : 'no'}`,
     `Validated: ${state.lastValidatedAt ?? '-'}`,
     '',
+    ...sourceSection,
     'Editable Fields',
     ...fieldLines,
+    ...(editStatus ? ['', editStatus] : []),
     '',
-    editStatus,
-    '',
-    `Capabilities: ${capabilities.length}`,
+    'Capabilities',
+    `Count: ${capabilities.length}`,
     ...sampleCapabilities,
     capabilities.length > sampleCapabilities.length
       ? `... ${capabilities.length - sampleCapabilities.length} more`
       : null,
     '',
+    'Validation',
     state.errors.length > 0 ? `Errors (${state.errors.length}):` : 'Errors: none',
     ...(state.errors.length > 0 ? state.errors.map((entry) => `- ${entry}`) : []),
     '',
     state.warnings.length > 0 ? `Warnings (${state.warnings.length}):` : 'Warnings: none',
     ...(state.warnings.length > 0 ? state.warnings.map((entry) => `- ${entry}`) : []),
-    '',
-    'Keys: up/down field, enter edit/apply, left/right cycle options, esc exit.',
   ]
     .filter((line): line is string => line !== null)
     .join('\n');
@@ -1997,11 +2085,16 @@ export async function runPanelApp(
         const manufacturer =
           normalizeIdentityText(node.manufacturer) ?? detailIdentity.manufacturer;
         const product = normalizeIdentityText(node.product) ?? detailIdentity.product;
+        const signature = detailIdentity.signature;
         const haystack = [
           String(node.nodeId),
           normalizeText(node.name),
           normalizeText(product),
           normalizeText(manufacturer),
+          normalizeText(signature),
+          normalizeText(detailIdentity.manufacturerId),
+          normalizeText(detailIdentity.productType),
+          normalizeText(detailIdentity.productId),
           normalizeText(node.location),
         ].join(' ');
         return haystack.includes(filterQuery.toLowerCase());
@@ -2020,6 +2113,7 @@ export async function runPanelApp(
               name: node.name,
               manufacturer,
               product,
+              signature: detailIdentity.signature,
             }),
             96,
           ),
@@ -2712,12 +2806,53 @@ export async function runPanelApp(
     const leftTitle = `${isNodesMode ? 'Nodes' : 'Rules'}${rangeSuffix}${filterSuffix}`;
 
     const draftEditorState = panelMode === 'edit-draft' ? getActiveDraftEditorState() : undefined;
+    const draftSourceNode =
+      panelMode === 'edit-draft' && isNodesMode
+        ? (() => {
+            const nodeId = getSelectedNodeId();
+            if (!nodeId) return undefined;
+            const snapshot = nodesPresenter.getState();
+            const item = snapshot.explorer.items.find((entry) => entry.nodeId === nodeId);
+            const detailFromCache = snapshot.nodeDetailCache?.[nodeId];
+            const state = (
+              currentNodeDetail?.nodeId === nodeId ? currentNodeDetail : detailFromCache
+            )?.state as Record<string, unknown> | null | undefined;
+            const manufacturerId = normalizeIdentityText(asReadableId(state?.manufacturerId));
+            const productType = normalizeIdentityText(asReadableId(state?.productType));
+            const productId = normalizeIdentityText(asReadableId(state?.productId));
+            const detailSignature =
+              manufacturerId && productType && productId
+                ? `${manufacturerId}:${productType}:${productId}`
+                : null;
+            return {
+              nodeId,
+              name: state ? (asNonEmptyString(state.name) ?? item?.name) : item?.name,
+              manufacturer:
+                (state ? normalizeIdentityText(formatManufacturerLabel(state)) : null) ??
+                normalizeIdentityText(item?.manufacturer) ??
+                null,
+              product:
+                (state ? normalizeIdentityText(formatProductLabel(state)) : null) ??
+                normalizeIdentityText(item?.product) ??
+                null,
+              signature:
+                detailSignature ??
+                (draftEditorState
+                  ? normalizeIdentityText(draftEditorState.workingDraft.signature)
+                  : null),
+              manufacturerId,
+              productType,
+              productId,
+            };
+          })()
+        : undefined;
     const rightSourceText =
       panelMode === 'edit-draft'
         ? draftEditorState
           ? renderPanelDraftEditor(draftEditorState, {
               editingFieldPath: draftFieldEdit?.path,
               editingBuffer: draftFieldEdit?.value,
+              sourceNode: draftSourceNode,
             })
           : 'Draft editor unavailable.\nPress esc to exit edit mode.'
         : rightText;

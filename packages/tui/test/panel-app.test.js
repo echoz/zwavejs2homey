@@ -427,6 +427,9 @@ test('runPanelApp enters and exits scaffold edit mode from panel', async () => {
   const rendered = capture.text();
   assert.equal(rendered.includes('Scaffold Edit'), true);
   assert.equal(rendered.includes('Draft Editor (Scaffold)'), true);
+  assert.equal(rendered.includes('Source'), true);
+  assert.equal(rendered.includes('Manufacturer: Zooz'), true);
+  assert.equal(rendered.includes('Product: Switch'), true);
   assert.equal(rendered.includes('Saved draft edits and exited edit mode.'), true);
   assert.equal(commitCalls, 1);
 });
@@ -636,8 +639,8 @@ test('runPanelApp hydrates visible list identity without opening node detail', a
   await runPromise;
 
   const rendered = capture.text();
-  assert.equal(rendered.includes('Kitchen (Zooz / Switch)'), true);
-  assert.equal(rendered.includes('Office (Aeotec / Sensor)'), true);
+  assert.equal(rendered.includes('Kitchen (Zooz / Switch) [634:1:2]'), true);
+  assert.equal(rendered.includes('Office (Aeotec / Sensor) [134:2:7]'), true);
 });
 
 test('runPanelApp toggles neighbors in node detail and shows readable identity labels', async () => {
@@ -748,8 +751,13 @@ test('runPanelApp toggles neighbors in node detail and shows readable identity l
   await runPromise;
 
   const rendered = capture.text();
+  assert.equal(rendered.includes('Device'), true);
   assert.equal(rendered.includes('Manufacturer: Zooz (id 634)'), true);
   assert.equal(rendered.includes('Product: ZEN32 Scene Controller (type 4, id 8)'), true);
+  assert.equal(rendered.includes('Signature: 634:4:8'), true);
+  assert.equal(rendered.includes('Manufacturer ID: 634'), true);
+  assert.equal(rendered.includes('Product Type: 4'), true);
+  assert.equal(rendered.includes('Product ID: 8'), true);
   assert.equal(rendered.includes('Neighbors 3 (n)'), true);
   assert.equal(rendered.includes('Lifeline route: 2 -> 5 @ 40 kbps'), true);
   assert.equal(
