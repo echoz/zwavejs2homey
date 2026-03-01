@@ -16,14 +16,15 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 ## Recently Completed
 
 - Latest Phase 5 slice:
-  - implemented first compiled-profile-backed runtime capability vertical for node devices (`onoff`)
+  - implemented first compiled-profile-backed runtime capability vertical set for node devices (`onoff` + `dim`)
   - added profile vertical extraction/matching helpers in `co.lazylabs.zwavejs2homey/node-runtime.js`
-  - node init now applies compiled `onoff` inbound/outbound mapping when compatible profile is resolved:
+  - node init now applies compiled `onoff`/`dim` inbound/outbound mappings when compatible profile is resolved:
     - initial state pull via `getNodeValue` and Homey capability sync
-    - outbound capability listener issues `node.set_value`
+    - outbound capability listeners issue `node.set_value`
     - inbound live updates consume `zwjs.event.node.value-updated`
+    - `dim` uses transform refs for 0..99 <-> 0..1 scaling (`zwave_level_0_99_to_homey_dim`, `homey_dim_to_zwave_level_0_99`)
   - app/runtime command ownership for `node.set_value` is now core-defined (`ZwjsClient.setNodeValue`, `ZWJS_COMMAND_NODE_SET_VALUE`) rather than adapter-local command strings
-  - added node-runtime helper regression tests (`co.lazylabs.zwavejs2homey/test/node-runtime.test.js`)
+  - added node-runtime helper regression tests for both verticals (`co.lazylabs.zwavejs2homey/test/node-runtime.test.js`)
 
 - Latest Phase 5 slice:
   - added compiled-profile runtime module (`co.lazylabs.zwavejs2homey/compiled-profiles.js`) with artifact path resolution, schema validation, resolver index build, and degraded-status reporting
@@ -688,7 +689,7 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 1. Scaffold Homey `bridge` and `node` drivers aligned with ADR 0017 (singleton bridge + per-node devices).
 2. Implement node pairing import flow (ZWJS node selection + explicit Homey device add).
-3. Wire node device runtime to compiled artifact resolver + first mapping vertical slice.
+3. Wire node device runtime to compiled artifact resolver + first mapping vertical set (`onoff` + `dim`).
 4. Keep compiler/TUI maintenance pass active for any regressions discovered during adapter integration.
 
 Note:

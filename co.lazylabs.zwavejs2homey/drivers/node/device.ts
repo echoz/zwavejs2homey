@@ -9,7 +9,10 @@ import {
   resolveNodeProfileClassification,
 } from '../../compiled-profiles';
 import {
+  coerceDimInboundValue,
+  coerceDimOutboundValue,
   coerceOnOffValue,
+  extractDimCapabilityVertical,
   extractOnOffCapabilityVertical,
   selectorMatchesNodeValueUpdatedEvent,
 } from '../../node-runtime';
@@ -24,7 +27,7 @@ interface AppRuntimeAccess {
 }
 
 module.exports = class NodeDevice extends Homey.Device {
-  private unsubscribeZwjsEvents?: () => void;
+  private zwjsEventUnsubscribers: Array<() => void> = [];
 
   private getNodeContext() {
     const data = this.getData() as { bridgeId?: string; nodeId?: number } | undefined;
@@ -34,11 +37,22 @@ module.exports = class NodeDevice extends Homey.Device {
     };
   }
 
+  private clearZwjsEventSubscriptions(): void {
+    for (const unsubscribe of this.zwjsEventUnsubscribers) {
+      unsubscribe();
+    }
+    this.zwjsEventUnsubscribers = [];
+  }
+
   private async applyOnOffVerticalSlice(
     client: ZwjsClient,
     nodeId: number,
     slice: NonNullable<ReturnType<typeof extractOnOffCapabilityVertical>>,
-  ): Promise<void> {
+  ): Promise<boolean> {
+    if (!this.hasCapability('onoff')) {
+      return false;
+    }
+
     try {
       const valueResult = await client.getNodeValue(nodeId, slice.inboundSelector);
       if (!valueResult.success) {
@@ -80,8 +94,7 @@ module.exports = class NodeDevice extends Homey.Device {
       }
     });
 
-    this.unsubscribeZwjsEvents?.();
-    this.unsubscribeZwjsEvents = client.onEvent((event) => {
+    const unsubscribe = client.onEvent((event) => {
       if (event.type !== 'zwjs.event.node.value-updated') return;
       if (event.event.nodeId !== nodeId) return;
       if (!selectorMatchesNodeValueUpdatedEvent(slice.inboundSelector, event.event)) return;
@@ -94,6 +107,78 @@ module.exports = class NodeDevice extends Homey.Device {
         });
       });
     });
+    this.zwjsEventUnsubscribers.push(unsubscribe);
+    return true;
+  }
+
+  private async applyDimVerticalSlice(
+    client: ZwjsClient,
+    nodeId: number,
+    slice: NonNullable<ReturnType<typeof extractDimCapabilityVertical>>,
+  ): Promise<boolean> {
+    if (!this.hasCapability('dim')) {
+      return false;
+    }
+
+    try {
+      const valueResult = await client.getNodeValue(nodeId, slice.inboundSelector);
+      if (!valueResult.success) {
+        this.error('NodeDevice failed to read dim inbound value', {
+          nodeId,
+          error: valueResult.error,
+        });
+      } else {
+        const nextValue = coerceDimInboundValue(valueResult.result, slice.inboundTransformRef);
+        if (nextValue !== undefined) {
+          await this.setCapabilityValue('dim', nextValue);
+        } else {
+          this.error('NodeDevice received non-numeric dim inbound value', {
+            nodeId,
+            value: valueResult.result,
+          });
+        }
+      }
+    } catch (error) {
+      this.error('NodeDevice failed to read dim inbound value', {
+        nodeId,
+        error,
+      });
+    }
+
+    this.registerCapabilityListener('dim', async (value: unknown) => {
+      const outboundValue = coerceDimOutboundValue(value, slice.outboundTransformRef);
+      if (outboundValue === undefined) {
+        throw new Error('dim capability value must be numeric');
+      }
+
+      const mutationResult = await client.setNodeValue({
+        nodeId,
+        valueId: slice.outboundTarget,
+        value: outboundValue,
+      });
+      if (!mutationResult.success) {
+        throw new Error(`setNodeValue failed (${mutationResult.error.errorCode ?? 'unknown'})`);
+      }
+    });
+
+    const unsubscribe = client.onEvent((event) => {
+      if (event.type !== 'zwjs.event.node.value-updated') return;
+      if (event.event.nodeId !== nodeId) return;
+      if (!selectorMatchesNodeValueUpdatedEvent(slice.inboundSelector, event.event)) return;
+      const nextValue = coerceDimInboundValue(
+        event.event.args?.newValue,
+        slice.inboundTransformRef,
+      );
+      if (nextValue === undefined) return;
+      this.setCapabilityValue('dim', nextValue).catch((error: unknown) => {
+        this.error('NodeDevice failed to apply dim value-updated event', {
+          nodeId,
+          error,
+        });
+      });
+    });
+    this.zwjsEventUnsubscribers.push(unsubscribe);
+    return true;
   }
 
   async onInit() {
@@ -106,6 +191,7 @@ module.exports = class NodeDevice extends Homey.Device {
     let match: CompiledProfileResolverMatchV1 = { by: 'none' };
     let classification = resolveNodeProfileClassification(match, resolverStatus);
     let verticalSliceApplied = false;
+    this.clearZwjsEventSubscriptions();
 
     if (ctx.nodeId !== undefined && client) {
       try {
@@ -121,8 +207,14 @@ module.exports = class NodeDevice extends Homey.Device {
           if (match.entry) {
             const onoffSlice = extractOnOffCapabilityVertical(match.entry.compiled.profile);
             if (onoffSlice) {
-              await this.applyOnOffVerticalSlice(client, ctx.nodeId, onoffSlice);
-              verticalSliceApplied = true;
+              const applied = await this.applyOnOffVerticalSlice(client, ctx.nodeId, onoffSlice);
+              if (applied) verticalSliceApplied = true;
+            }
+
+            const dimSlice = extractDimCapabilityVertical(match.entry.compiled.profile);
+            if (dimSlice) {
+              const applied = await this.applyDimVerticalSlice(client, ctx.nodeId, dimSlice);
+              if (applied) verticalSliceApplied = true;
             }
           }
         } else {
@@ -213,8 +305,7 @@ module.exports = class NodeDevice extends Homey.Device {
   }
 
   async onDeleted() {
-    this.unsubscribeZwjsEvents?.();
-    this.unsubscribeZwjsEvents = undefined;
+    this.clearZwjsEventSubscriptions();
     const ctx = this.getNodeContext();
     this.log('NodeDevice deleted', ctx);
   }

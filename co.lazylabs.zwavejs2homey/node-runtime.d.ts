@@ -14,13 +14,37 @@ export interface OnOffCapabilityVerticalSlice {
   };
 }
 
+export interface DimCapabilityVerticalSlice {
+  capabilityId: 'dim';
+  inboundSelector: {
+    commandClass: number | string;
+    endpoint?: number;
+    property: number | string;
+    propertyKey?: number | string;
+  };
+  inboundTransformRef?: string;
+  outboundTarget: {
+    commandClass: number | string;
+    endpoint?: number;
+    property: number | string;
+    propertyKey?: number | string;
+  };
+  outboundTransformRef?: string;
+}
+
 export function extractOnOffCapabilityVertical(
   profile: unknown,
 ): OnOffCapabilityVerticalSlice | null;
 
+export function extractDimCapabilityVertical(profile: unknown): DimCapabilityVerticalSlice | null;
+
 export function extractValueResultPayload(value: unknown): unknown;
 
 export function coerceOnOffValue(value: unknown): boolean | undefined;
+
+export function coerceDimInboundValue(value: unknown, transformRef?: string): number | undefined;
+
+export function coerceDimOutboundValue(value: unknown, transformRef?: string): number | undefined;
 
 export function selectorMatchesNodeValueUpdatedEvent(
   selector: unknown,

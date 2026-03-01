@@ -65,11 +65,59 @@ function extractOnOffCapabilityVertical(profile) {
   return null;
 }
 
+function extractDimCapabilityVertical(profile) {
+  if (!isObject(profile) || !Array.isArray(profile.capabilities)) {
+    return null;
+  }
+
+  for (const capability of profile.capabilities) {
+    if (!isObject(capability) || capability.capabilityId !== 'dim') {
+      continue;
+    }
+    const inbound = capability.inboundMapping;
+    const outbound = capability.outboundMapping;
+    if (!isObject(inbound) || inbound.kind !== 'value' || !isObject(inbound.selector)) {
+      continue;
+    }
+    if (!isObject(outbound) || outbound.kind !== 'set_value' || !isObject(outbound.target)) {
+      continue;
+    }
+
+    const inboundCc = parseNumericIdentity(inbound.selector.commandClass);
+    const outboundCc = parseNumericIdentity(outbound.target.commandClass);
+    if (inboundCc !== 38 || outboundCc !== 38) {
+      continue;
+    }
+
+    return {
+      capabilityId: 'dim',
+      inboundSelector: inbound.selector,
+      inboundTransformRef: normalizeComparableValue(inbound.transformRef),
+      outboundTarget: outbound.target,
+      outboundTransformRef: normalizeComparableValue(outbound.transformRef),
+    };
+  }
+
+  return null;
+}
+
 function extractValueResultPayload(value) {
   if (isObject(value) && Object.prototype.hasOwnProperty.call(value, 'value')) {
     return value.value;
   }
   return value;
+}
+
+function normalizeNumericValue(value) {
+  const payload = extractValueResultPayload(value);
+  if (typeof payload === 'number' && Number.isFinite(payload)) return payload;
+  if (typeof payload === 'string') {
+    const trimmed = payload.trim();
+    if (trimmed.length === 0) return undefined;
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  return undefined;
 }
 
 function coerceOnOffValue(value) {
@@ -83,6 +131,33 @@ function coerceOnOffValue(value) {
     return undefined;
   }
   return undefined;
+}
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function coerceDimInboundValue(value, transformRef) {
+  const numeric = normalizeNumericValue(value);
+  if (numeric === undefined) return undefined;
+  if (transformRef === 'zwave_level_0_99_to_homey_dim') {
+    return clamp(numeric, 0, 99) / 99;
+  }
+  if (numeric >= 0 && numeric <= 1) return numeric;
+  if (numeric >= 0 && numeric <= 99) return numeric / 99;
+  if (numeric === 255) return 1;
+  return clamp(numeric, 0, 1);
+}
+
+function coerceDimOutboundValue(value, transformRef) {
+  const numeric = normalizeNumericValue(value);
+  if (numeric === undefined) return undefined;
+  if (transformRef === 'homey_dim_to_zwave_level_0_99') {
+    return Math.round(clamp(numeric, 0, 1) * 99);
+  }
+  if (numeric >= 0 && numeric <= 1) return Math.round(numeric * 99);
+  if (numeric >= 0 && numeric <= 99) return Math.round(numeric);
+  return Math.round(clamp(numeric, 0, 99));
 }
 
 function selectorMatchesNodeValueUpdatedEvent(selector, eventPayload) {
@@ -144,7 +219,10 @@ function selectorMatchesNodeValueUpdatedEvent(selector, eventPayload) {
 
 module.exports = {
   extractOnOffCapabilityVertical,
+  extractDimCapabilityVertical,
   extractValueResultPayload,
   coerceOnOffValue,
+  coerceDimInboundValue,
+  coerceDimOutboundValue,
   selectorMatchesNodeValueUpdatedEvent,
 };
