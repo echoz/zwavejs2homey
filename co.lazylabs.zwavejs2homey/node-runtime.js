@@ -38,6 +38,46 @@ function isSupportedCapabilityRuntimeValue(value) {
   return false;
 }
 
+const CAPABILITY_RUNTIME_CONTRACTS = {
+  onoff: {
+    inboundCommandClasses: new Set([37]),
+    outboundCommandClasses: new Set([37]),
+  },
+  dim: {
+    inboundCommandClasses: new Set([38]),
+    outboundCommandClasses: new Set([38]),
+  },
+};
+
+function normalizeCapabilityId(value) {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return undefined;
+  return trimmed;
+}
+
+function isValidRuntimeValueIdShape(valueId) {
+  if (!isObject(valueId)) return false;
+  const commandClass = parseNumericIdentity(valueId.commandClass);
+  if (commandClass === undefined) return false;
+  if (normalizeComparableValue(valueId.property) === undefined) return false;
+  if (valueId.endpoint !== undefined && parseNumericIdentity(valueId.endpoint) === undefined) {
+    return false;
+  }
+  const { propertyKey } = valueId;
+  if (propertyKey !== undefined && normalizeComparableValue(propertyKey) === undefined) {
+    return false;
+  }
+  return true;
+}
+
+function matchesCommandClassContract(commandClass, contractCommandClasses) {
+  if (!contractCommandClasses) return true;
+  const parsedCommandClass = parseNumericIdentity(commandClass);
+  if (parsedCommandClass === undefined) return false;
+  return contractCommandClasses.has(parsedCommandClass);
+}
+
 function extractCapabilityRuntimeVerticals(profile) {
   if (!isObject(profile) || !Array.isArray(profile.capabilities)) {
     return [];
@@ -45,26 +85,69 @@ function extractCapabilityRuntimeVerticals(profile) {
 
   const slices = [];
   for (const capability of profile.capabilities) {
-    if (!isObject(capability) || !normalizeComparableValue(capability.capabilityId)) {
+    if (!isObject(capability)) {
+      continue;
+    }
+    const capabilityId = normalizeCapabilityId(capability.capabilityId);
+    if (!capabilityId) {
       continue;
     }
 
     const inbound = capability.inboundMapping;
     const outbound = capability.outboundMapping;
-    const hasInbound = isObject(inbound) && inbound.kind === 'value' && isObject(inbound.selector);
-    const hasOutbound = Boolean(
-      isObject(outbound) && outbound.kind === 'set_value' && isObject(outbound.target),
-    );
-    if (!hasInbound && !hasOutbound) continue;
+    const contract = CAPABILITY_RUNTIME_CONTRACTS[capabilityId];
+
+    let inboundCandidate;
+    if (isObject(inbound) && inbound.kind === 'value') {
+      if (isValidRuntimeValueIdShape(inbound.selector)) {
+        inboundCandidate = inbound.selector;
+      }
+    }
+
+    let outboundTargetCandidate;
+    if (isObject(outbound) && outbound.kind === 'set_value' && isObject(outbound.target)) {
+      if (isValidRuntimeValueIdShape(outbound.target)) {
+        outboundTargetCandidate = outbound.target;
+      }
+    }
+
+    let inboundSelector;
+    if (inboundCandidate) {
+      if (
+        matchesCommandClassContract(inboundCandidate.commandClass, contract?.inboundCommandClasses)
+      ) {
+        inboundSelector = inboundCandidate;
+      }
+    }
+    const inboundTransformRef = inboundSelector
+      ? normalizeComparableValue(inbound.transformRef)
+      : undefined;
+
+    // Unknown capability IDs are read-only by default for safety.
+    const outboundSupported = Boolean(contract);
+    let outboundTarget;
+    if (outboundSupported && outboundTargetCandidate) {
+      if (
+        matchesCommandClassContract(
+          outboundTargetCandidate.commandClass,
+          contract?.outboundCommandClasses,
+        )
+      ) {
+        outboundTarget = outboundTargetCandidate;
+      }
+    }
+    const outboundTransformRef = outboundTarget
+      ? normalizeComparableValue(outbound.transformRef)
+      : undefined;
+
+    if (!inboundSelector && !outboundTarget) continue;
 
     slices.push({
-      capabilityId: capability.capabilityId.trim(),
-      inboundSelector: hasInbound ? inbound.selector : undefined,
-      inboundTransformRef: hasInbound ? normalizeComparableValue(inbound.transformRef) : undefined,
-      outboundTarget: hasOutbound ? outbound.target : undefined,
-      outboundTransformRef: hasOutbound
-        ? normalizeComparableValue(outbound.transformRef)
-        : undefined,
+      capabilityId,
+      inboundSelector,
+      inboundTransformRef,
+      outboundTarget,
+      outboundTransformRef,
     });
   }
   return slices;
@@ -222,10 +305,7 @@ function coerceCapabilityOutboundValue(capabilityId, value, transformRef) {
     return coerceDimOutboundValue(value, transformRef);
   }
 
-  if (!isSupportedCapabilityRuntimeValue(value)) {
-    return undefined;
-  }
-  return value;
+  return undefined;
 }
 
 function selectorMatchesNodeValueUpdatedEvent(selector, eventPayload) {

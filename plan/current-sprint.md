@@ -20,7 +20,8 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
   - node runtime now iterates all resolver-matched capability mappings and applies compatible slices when the Homey device exposes that capability
   - added generic capability value coercion hooks in `co.lazylabs.zwavejs2homey/node-runtime.js`:
     - specialized coercion still applies for `onoff` and `dim`
-    - non-specialized capabilities now pass through string/number/boolean payloads for runtime mapping
+    - non-specialized capabilities use inbound primitive pass-through only; outbound writes remain blocked by default unless capability contracts are defined
+    - added shape + contract guards to runtime slice extraction (malformed selector/target skipped; `onoff`/`dim` command-class constraints enforced)
   - preserved existing event-driven inbound sync path (`zwjs.event.node.value-updated`) and outbound `node.set_value` writes for compatible mappings
   - extended tests:
     - runtime helper coverage for generic extraction/coercion (`co.lazylabs.zwavejs2homey/test/node-runtime.test.js`)

@@ -456,7 +456,7 @@ test('node device harness records explicit fallback when zwjs client is unavaila
   assert.equal(device._getErrors().length, 0);
 });
 
-test('node device harness applies generic value/set_value mappings for non-specialized capabilities', async () => {
+test('node device harness applies generic inbound mapping but blocks generic outbound writes', async () => {
   const measurePowerSelector = {
     commandClass: 50,
     endpoint: 0,
@@ -499,19 +499,11 @@ test('node device harness applies generic value/set_value mappings for non-speci
   await device.onInit();
   assert.equal(device._getCapabilityValue('measure_power'), 215.7);
   assert.equal(client.getListenerCount(), 1);
-
-  await device._triggerCapabilityListener('measure_power', 42.5);
-  assert.deepEqual(client.callLog.setNodeValue, [
-    {
-      nodeId: 8,
-      valueId: {
-        commandClass: 112,
-        endpoint: 0,
-        property: 'targetValue',
-      },
-      value: 42.5,
-    },
-  ]);
+  await assert.rejects(
+    () => device._triggerCapabilityListener('measure_power', 42.5),
+    /Missing capability listener/,
+  );
+  assert.equal(client.callLog.setNodeValue.length, 0);
 
   client.emitEvent({
     type: 'zwjs.event.node.value-updated',

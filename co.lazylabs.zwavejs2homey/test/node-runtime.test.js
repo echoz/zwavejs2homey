@@ -123,6 +123,10 @@ test('extractCapabilityRuntimeVerticals returns value/set_value runtime-compatib
           kind: 'value',
           selector: { commandClass: 50, endpoint: 0, property: 'value' },
         },
+        outboundMapping: {
+          kind: 'set_value',
+          target: { commandClass: 112, endpoint: 0, property: 'targetValue' },
+        },
       },
       {
         capabilityId: 'dim',
@@ -170,6 +174,82 @@ test('extractCapabilityRuntimeVerticals returns value/set_value runtime-compatib
       inboundTransformRef: undefined,
       outboundTarget: { commandClass: 38, endpoint: 0, property: 'targetValue' },
       outboundTransformRef: 'homey_dim_to_zwave_level_0_99',
+    },
+  ]);
+});
+
+test('extractCapabilityRuntimeVerticals enforces capability contracts for known verticals', () => {
+  const slices = extractCapabilityRuntimeVerticals({
+    capabilities: [
+      {
+        capabilityId: 'onoff',
+        inboundMapping: {
+          kind: 'value',
+          selector: { commandClass: 50, endpoint: 0, property: 'value' },
+        },
+        outboundMapping: {
+          kind: 'set_value',
+          target: { commandClass: 50, endpoint: 0, property: 'value' },
+        },
+      },
+      {
+        capabilityId: 'dim',
+        inboundMapping: {
+          kind: 'value',
+          selector: { commandClass: 37, endpoint: 0, property: 'currentValue' },
+        },
+        outboundMapping: {
+          kind: 'set_value',
+          target: { commandClass: 37, endpoint: 0, property: 'targetValue' },
+        },
+      },
+    ],
+  });
+
+  assert.deepEqual(slices, []);
+});
+
+test('extractCapabilityRuntimeVerticals skips invalid capability ids and malformed selector/target shapes', () => {
+  const slices = extractCapabilityRuntimeVerticals({
+    capabilities: [
+      {
+        capabilityId: 123,
+        inboundMapping: {
+          kind: 'value',
+          selector: { commandClass: 50, endpoint: 0, property: 'value' },
+        },
+      },
+      {
+        capabilityId: 'measure_power',
+        inboundMapping: {
+          kind: 'value',
+          selector: { commandClass: 'not-a-number', endpoint: 0, property: 'value' },
+        },
+      },
+      {
+        capabilityId: 'measure_power',
+        inboundMapping: {
+          kind: 'value',
+          selector: { commandClass: 50, endpoint: 0, property: 'value' },
+        },
+      },
+      {
+        capabilityId: 'onoff',
+        outboundMapping: {
+          kind: 'set_value',
+          target: { commandClass: 37, endpoint: 'bad', property: 'targetValue' },
+        },
+      },
+    ],
+  });
+
+  assert.deepEqual(slices, [
+    {
+      capabilityId: 'measure_power',
+      inboundSelector: { commandClass: 50, endpoint: 0, property: 'value' },
+      inboundTransformRef: undefined,
+      outboundTarget: undefined,
+      outboundTransformRef: undefined,
     },
   ]);
 });
@@ -292,7 +372,7 @@ test('coerceCapability inbound/outbound delegates known verticals and filters un
 
   assert.equal(coerceCapabilityOutboundValue('onoff', 0), false);
   assert.equal(coerceCapabilityOutboundValue('dim', 0.5, 'homey_dim_to_zwave_level_0_99'), 50);
-  assert.equal(coerceCapabilityOutboundValue('measure_power', 13.4), 13.4);
+  assert.equal(coerceCapabilityOutboundValue('measure_power', 13.4), undefined);
   assert.equal(coerceCapabilityOutboundValue('measure_power', { invalid: true }), undefined);
 });
 

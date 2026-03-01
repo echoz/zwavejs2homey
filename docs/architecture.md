@@ -70,7 +70,8 @@ Implementation status:
   - `dim` (CC38): `node.get_value` inbound (with level transform), `node.set_value` outbound, `zwjs.event.node.value-updated` sync
 - runtime mapping execution now runs through a generic kernel for compatible compiled slices (`inboundMapping.kind=value`, `outboundMapping.kind=set_value`):
   - `onoff`/`dim` retain specialized coercion behavior
-  - non-specialized capabilities currently pass through primitive payloads (string/number/boolean)
+  - non-specialized capabilities currently support inbound primitive pass-through (string/number/boolean)
+  - outbound writes are currently contract-gated (`onoff`/`dim` only) so unknown capability IDs are read-only by default
 
 Related locked MVP runtime policies:
 
