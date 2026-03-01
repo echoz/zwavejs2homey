@@ -74,6 +74,7 @@ Implementation status:
   - outbound writes are currently contract-gated (`onoff`/`dim` only) so unknown capability IDs are read-only by default
   - runtime mapping now gates selectors/targets against live node defined-value facts and metadata before wiring listeners
   - per-device mapping diagnostics are persisted in `profileResolution.mappingDiagnostics` for operational visibility
+  - runtime bindings are re-synced on startup and on relevant app settings updates (`zwjs_connection`, `compiled_profiles_file`) to avoid stale listeners/mappings
 
 Related locked MVP runtime policies:
 

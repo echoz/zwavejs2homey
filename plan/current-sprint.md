@@ -16,6 +16,17 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 ## Recently Completed
 
 - Latest Phase 5 slice:
+  - refactored node runtime binding into reusable sync flow (`syncRuntimeMappings`) and added explicit refresh entrypoint (`onRuntimeMappingsRefresh`)
+  - node profile resolution metadata now records `syncReason` + `syncedAt` in `profileResolution`
+  - app lifecycle now triggers node runtime rebinds:
+    - startup after compiled-profile load + ZWJS client start
+    - settings updates for `zwjs_connection` and `compiled_profiles_file`
+  - app now iterates paired node devices and invokes runtime refresh to replace stale listeners/mappings after runtime source changes
+  - added regression coverage:
+    - headless node harness refresh test for listener replacement + sync metadata updates
+    - app-level refresh orchestration test for startup/settings-triggered node refresh calls
+
+- Latest Phase 5 slice:
   - added runtime mapping capability gates in `drivers/node/device.ts` before listener wiring:
     - inbound mappings require selector presence in `node.get_defined_value_ids` (and non-`readable:false`)
     - outbound mappings require target presence + writeability checks (`defined_value_ids.writeable` with `node.get_value_metadata` fallback)

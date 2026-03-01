@@ -115,6 +115,26 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
     await this.startZwjsClient(reason);
   }
 
+  private async refreshNodeRuntimeMappings(reason: string): Promise<void> {
+    try {
+      const nodeDriver = this.homey.drivers.getDriver('node');
+      const devices = nodeDriver.getDevices() as Array<{
+        onRuntimeMappingsRefresh?: (refreshReason: string) => Promise<void>;
+      }>;
+      this.log('Refreshing node runtime mappings', {
+        reason,
+        devices: devices.length,
+      });
+      for (const device of devices) {
+        if (typeof device.onRuntimeMappingsRefresh === 'function') {
+          await device.onRuntimeMappingsRefresh(reason);
+        }
+      }
+    } catch (error) {
+      this.error('Failed to refresh node runtime mappings', { reason, error });
+    }
+  }
+
   private onSettingsChanged = (key: string): void => {
     if (this.shuttingDown) return;
     if (key !== ZWJS_CONNECTION_SETTINGS_KEY && key !== COMPILED_PROFILES_PATH_SETTINGS_KEY) {
@@ -124,8 +144,10 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
     this.enqueueLifecycle(async () => {
       if (key === ZWJS_CONNECTION_SETTINGS_KEY) {
         await this.reloadZwjsClient('settings-updated');
+        await this.refreshNodeRuntimeMappings('zwjs-connection-updated');
       } else if (key === COMPILED_PROFILES_PATH_SETTINGS_KEY) {
         await this.loadCompiledProfilesRuntime('settings-updated');
+        await this.refreshNodeRuntimeMappings('compiled-profiles-updated');
       }
     }).catch((error: unknown) => {
       this.error('Failed to apply settings update', { key, error });
@@ -143,6 +165,7 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
     await this.enqueueLifecycle(async () => {
       await this.loadCompiledProfilesRuntime('startup');
       await this.startZwjsClient('startup');
+      await this.refreshNodeRuntimeMappings('startup');
     });
 
     this.log('zwavejs2homey initialized');

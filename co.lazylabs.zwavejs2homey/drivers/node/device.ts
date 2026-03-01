@@ -391,7 +391,7 @@ module.exports = class NodeDevice extends Homey.Device {
     };
   }
 
-  async onInit() {
+  private async syncRuntimeMappings(syncReason: string): Promise<void> {
     const app = this.homey.app as AppRuntimeAccess;
     const ctx = this.getNodeContext();
     const client = app.getZwjsClient?.();
@@ -471,6 +471,8 @@ module.exports = class NodeDevice extends Homey.Device {
 
     await this.setStoreValue('profileResolution', {
       resolvedAt: new Date().toISOString(),
+      syncedAt: new Date().toISOString(),
+      syncReason,
       selector: selector ?? null,
       matchBy: classification.matchBy,
       matchKey: classification.matchKey,
@@ -489,13 +491,20 @@ module.exports = class NodeDevice extends Homey.Device {
       nodeId: ctx.nodeId,
       zwjsTransportConnected: clientStatus?.transportConnected === true,
       zwjsLifecycle: clientStatus?.lifecycle ?? 'stopped',
+      syncReason,
       profileMatchBy: classification.matchBy,
       profileId: classification.profileId,
       fallbackReason: classification.fallbackReason,
       verticalSliceApplied,
     });
-    // Phase 5 follow-up slices:
-    // - register capability listeners based on resolved mappings
+  }
+
+  async onInit() {
+    await this.syncRuntimeMappings('init');
+  }
+
+  async onRuntimeMappingsRefresh(reason = 'runtime-refresh') {
+    await this.syncRuntimeMappings(reason);
   }
 
   async onAdded() {

@@ -453,6 +453,7 @@ test('node device harness wires read/write/event sync for onoff + dim verticals'
   assert.equal(profileResolution?.matchBy, 'product-triple');
   assert.equal(profileResolution?.verticalSliceApplied, true);
   assert.equal(profileResolution?.fallbackReason, null);
+  assert.equal(profileResolution?.syncReason, 'init');
   assert.equal(Array.isArray(profileResolution?.mappingDiagnostics), true);
   assert.equal(profileResolution?.mappingDiagnostics?.length, 2);
   assert.equal(profileResolution?.mappingDiagnostics?.[0]?.inbound?.enabled, true);
@@ -460,6 +461,82 @@ test('node device harness wires read/write/event sync for onoff + dim verticals'
 
   await device.onDeleted();
   assert.equal(client.getListenerCount(), 0);
+});
+
+test('node device harness refresh replaces runtime listeners and updates sync metadata', async () => {
+  const onoffSelector = {
+    commandClass: 37,
+    endpoint: 0,
+    property: 'currentValue',
+  };
+  const dimSelector = {
+    commandClass: 38,
+    endpoint: 0,
+    property: 'currentValue',
+  };
+
+  const nodeValueResultsBySelector = new Map();
+  nodeValueResultsBySelector.set(selectorKey(onoffSelector), {
+    success: true,
+    result: { value: true },
+  });
+  nodeValueResultsBySelector.set(selectorKey(dimSelector), {
+    success: true,
+    result: { value: 99 },
+  });
+
+  const client = createMockZwjsClient({
+    nodeStateResult: {
+      success: true,
+      result: {
+        state: {
+          manufacturerId: '0x001d',
+          productType: '66',
+          productId: '2',
+        },
+      },
+    },
+    nodeValueResultsBySelector,
+    definedValueIdsResult: {
+      success: true,
+      result: [
+        { commandClass: 37, endpoint: 0, property: 'currentValue', readable: true },
+        { commandClass: 37, endpoint: 0, property: 'targetValue', writeable: true },
+        { commandClass: 38, endpoint: 0, property: 'currentValue', readable: true },
+        { commandClass: 38, endpoint: 0, property: 'targetValue', writeable: true },
+      ],
+    },
+  });
+
+  const state = { match: createCompiledProfileMatch() };
+  const app = {
+    getZwjsClient: () => client,
+    getCompiledProfilesStatus: () => createRuntimeStatus(),
+    resolveCompiledProfileEntry: () => state.match,
+  };
+
+  const device = new NodeDevice();
+  device._configureHarness({
+    app,
+    data: { bridgeId: 'main', nodeId: 5 },
+    capabilities: ['onoff', 'dim'],
+  });
+
+  await device.onInit();
+  assert.equal(client.getListenerCount(), 2);
+  assert.equal(device._getStoreValue('profileResolution')?.syncReason, 'init');
+
+  state.match = createGenericProfileMatch();
+  await device.onRuntimeMappingsRefresh('compiled-profiles-updated');
+  assert.equal(client.getListenerCount(), 0);
+  const profileResolution = device._getStoreValue('profileResolution');
+  assert.equal(profileResolution?.syncReason, 'compiled-profiles-updated');
+  assert.equal(profileResolution?.verticalSliceApplied, false);
+  assert.equal(profileResolution?.mappingDiagnostics?.length, 1);
+  assert.equal(
+    profileResolution?.mappingDiagnostics?.[0]?.inbound?.reason,
+    'capability_missing_on_homey_device',
+  );
 });
 
 test('node device harness records explicit fallback when zwjs client is unavailable', async () => {
