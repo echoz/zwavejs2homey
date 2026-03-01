@@ -64,6 +64,7 @@ Implementation status:
 - `drivers/bridge` and `drivers/node` scaffolds are in place in `co.lazylabs.zwavejs2homey`.
 - bridge pairing currently enforces singleton add via a stable `device.data.id`.
 - node pairing currently lists import candidates from live ZWJS (`getNodeList`), skipping controller node (`nodeId = 1`) and already paired `bridgeId + nodeId` entries.
+- app runtime now loads a local compiled-profiles artifact at startup into a shared resolver index; node devices resolve match/fallback classification from that shared runtime state.
 
 Related locked MVP runtime policies:
 

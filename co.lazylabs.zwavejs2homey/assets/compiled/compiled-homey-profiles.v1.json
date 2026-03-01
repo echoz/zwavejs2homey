@@ -1,0 +1,9 @@
+{
+  "schemaVersion": "compiled-homey-profiles/v1",
+  "generatedAt": "1970-01-01T00:00:00.000Z",
+  "source": {
+    "buildProfile": "default-manifest",
+    "pipelineFingerprint": "homey-default-empty-v1"
+  },
+  "entries": []
+}

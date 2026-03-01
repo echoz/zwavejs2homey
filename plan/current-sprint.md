@@ -16,6 +16,13 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 ## Recently Completed
 
 - Latest Phase 5 slice:
+  - added compiled-profile runtime module (`co.lazylabs.zwavejs2homey/compiled-profiles.js`) with artifact path resolution, schema validation, resolver index build, and degraded-status reporting
+  - app startup now loads compiled profiles into a shared in-memory resolver runtime; `compiled_profiles_file` settings changes trigger explicit reload
+  - node device init now fetches node identity (`manufacturerId/productType/productId`) from ZWJS node state, resolves through shared resolver runtime, and persists match/fallback metadata in device store
+  - no-match behavior now explicitly records minimal safe fallback classification (`homeyClass=other`, `confidence=generic`, `uncurated=true`) with reason codes (`no_compiled_profile_match` / artifact unavailable variants)
+  - added runtime helper regression tests in `co.lazylabs.zwavejs2homey/test/compiled-profiles.test.js`
+
+- Latest Phase 5 slice:
   - implemented Homey driver scaffolds in `co.lazylabs.zwavejs2homey/drivers/bridge` and `co.lazylabs.zwavejs2homey/drivers/node`
   - bridge pairing now enforces singleton behavior via stable `device.data.id` and returns one `ZWJS Bridge` candidate only when unpaired
   - node pairing now imports live ZWJS nodes via shared app session, excludes controller node (`nodeId = 1`), dedupes by `bridgeId + nodeId`, and stores lightweight metadata

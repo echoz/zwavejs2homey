@@ -40,3 +40,10 @@ Tradeoffs:
 
 - profile updates are not instant; they require explicit refresh action
 - future dynamic profile delivery will require an additional policy/migration decision
+
+## Implementation Status (2026-03-01)
+
+- app runtime now resolves compiled artifact path from settings key `compiled_profiles_file` with default fallback to bundled local artifact (`assets/compiled/compiled-homey-profiles.v1.json`)
+- artifact is loaded/validated at startup into shared in-memory resolver index state
+- runtime settings updates on `compiled_profiles_file` trigger explicit artifact reload
+- load failure is surfaced as degraded runtime status and consumed by node-device fallback behavior

@@ -4,10 +4,11 @@
   "license": "Apache-2.0",
   "scripts": {
     "build": "tsc",
-    "lint": "eslint --ext .js,.ts --ignore-path .gitignore --ignore-pattern test/** .",
+    "lint": "eslint --ext .js,.ts --ignore-path .gitignore --ignore-pattern '**/test/**' .",
     "test": "npm run build && node --test test/*.test.js"
   },
   "dependencies": {
+    "@zwavejs2homey/compiler": "file:../packages/compiler",
     "@zwavejs2homey/core": "file:../packages/core"
   },
   "devDependencies": {

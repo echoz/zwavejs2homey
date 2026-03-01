@@ -8,7 +8,7 @@ const {
   hasBridgePairDeviceFromData,
   collectExistingNodeIdsFromData,
   buildNodePairCandidates,
-} = require('../.homeybuild/pairing.js');
+} = require('../pairing.js');
 
 test('bridge pairing helpers enforce singleton identity', () => {
   assert.equal(hasBridgePairDeviceFromData([]), false);

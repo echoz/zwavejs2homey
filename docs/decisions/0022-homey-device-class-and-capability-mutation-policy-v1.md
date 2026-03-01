@@ -36,3 +36,8 @@ Tradeoffs:
 
 - slower adoption of improved profiles without explicit user action
 - additional UX work needed for explicit adopt/update flows
+
+## Implementation Status (2026-03-01)
+
+- node device initialization resolves/records classification metadata but does not call class or capability mutation APIs
+- runtime mapping behavior remains non-structural in this slice (no auto-add/remove capability set changes)

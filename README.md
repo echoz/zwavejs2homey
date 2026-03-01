@@ -95,6 +95,19 @@ Supported setting shapes:
 
 Invalid/missing values fall back to `ws://127.0.0.1:3000` with auth `none`.
 
+## Homey Compiled Profiles Setting
+
+The Homey app resolves compiled profile artifacts from:
+
+- settings key `compiled_profiles_file` (absolute path or app-relative path)
+- fallback default: `./assets/compiled/compiled-homey-profiles.v1.json`
+
+Current behavior:
+
+- artifact is loaded/validated at app startup and cached in memory
+- settings changes on `compiled_profiles_file` trigger explicit runtime reload
+- if artifact load fails, app enters degraded profile mode and node devices use safe fallback classification (`homeyClass=other`, no mappings)
+
 ## Key CLI Tools
 
 ### ZWJS inspection (live, read-only)

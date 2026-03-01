@@ -136,6 +136,7 @@
 - [x] Implement Homey driver scaffolds for locked MVP topology (`drivers/bridge`, `drivers/node`)
 - [x] Implement bridge singleton pair behavior and bridge control-plane device lifecycle
 - [x] Implement node pairing/import flow (ZWJS node selection + explicit add)
+- [x] Implement app-level compiled-profile runtime loader/index and node-level match/fallback resolution metadata (artifact-backed resolver cache + no-match safe fallback classification)
 - [ ] Define first supported Homey device/capability vertical slice using compiled profiles
 - [x] Adapter bootstrap hardening: settings-backed ZWJS connection config + managed reload lifecycle in app init/uninit flow
 - [x] Lock adapter curation persistence v1 policy: `this.homey.settings` + versioned payloads (`docs/decisions/0010-homey-adapter-curation-storage-v1.md`)

@@ -36,3 +36,13 @@ Tradeoffs:
 
 - imported no-match devices have limited utility until curated
 - requires clear UX to avoid user confusion about initially empty capabilities
+
+## Implementation Status (2026-03-01)
+
+- node device initialization now resolves compiled profile match via shared app resolver state
+- when no match is found, node devices persist explicit fallback classification metadata:
+  - `homeyClass: other`
+  - `confidence: generic`
+  - `uncurated: true`
+  - fallback reason (`no_compiled_profile_match` or artifact-unavailable variants)
+- fallback path does not block node import

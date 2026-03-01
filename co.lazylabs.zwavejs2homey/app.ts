@@ -9,11 +9,24 @@ import {
   resolveZwjsConnectionConfig,
   ZWJS_CONNECTION_SETTINGS_KEY,
 } from '@zwavejs2homey/core';
+import type {
+  CompiledProfileResolverMatchV1,
+  CompiledProfileResolverSelector,
+  ResolveCompiledProfileEntryOptionsV1,
+} from '@zwavejs2homey/compiler';
+import type { CompiledProfilesRuntime, CompiledProfilesRuntimeStatus } from './compiled-profiles';
+import {
+  COMPILED_PROFILES_PATH_SETTINGS_KEY,
+  resolveCompiledProfileEntryFromRuntime,
+  resolveCompiledProfilesArtifactPath,
+  tryLoadCompiledProfilesRuntimeFromFile,
+} from './compiled-profiles';
 import { ZWJS_DEFAULT_BRIDGE_ID } from './pairing';
 
 module.exports = class Zwavejs2HomeyApp extends Homey.App {
   private zwjsClient?: ZwjsClient;
   private readonly bridgeId = ZWJS_DEFAULT_BRIDGE_ID;
+  private compiledProfilesRuntime?: CompiledProfilesRuntime;
 
   private readonly clientLogger: ClientLogger = {
     info: (msg: string, meta?: unknown) => this.log(msg, meta),
@@ -67,6 +80,30 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
     this.log('zwjs status', this.zwjsClient.getStatus());
   }
 
+  private async loadCompiledProfilesRuntime(reason: string): Promise<void> {
+    const sourcePath = resolveCompiledProfilesArtifactPath(
+      __dirname,
+      this.homey.settings.get(COMPILED_PROFILES_PATH_SETTINGS_KEY),
+    );
+    const runtime = await tryLoadCompiledProfilesRuntimeFromFile(sourcePath);
+    this.compiledProfilesRuntime = runtime;
+    if (runtime.status.loaded) {
+      this.log('Compiled profiles loaded', {
+        reason,
+        sourcePath,
+        entryCount: runtime.status.entryCount,
+        duplicateKeys: runtime.status.duplicateKeys,
+      });
+      return;
+    }
+
+    this.error('Compiled profiles unavailable; node profile fallback mode is active', {
+      reason,
+      sourcePath,
+      errorMessage: runtime.status.errorMessage,
+    });
+  }
+
   private async reloadZwjsClient(reason: string): Promise<void> {
     await this.stopZwjsClient(`${reason}:reload`);
     await this.startZwjsClient(reason);
@@ -74,11 +111,18 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
 
   private onSettingsChanged = (key: string): void => {
     if (this.shuttingDown) return;
-    if (key !== ZWJS_CONNECTION_SETTINGS_KEY) return;
+    if (key !== ZWJS_CONNECTION_SETTINGS_KEY && key !== COMPILED_PROFILES_PATH_SETTINGS_KEY) {
+      return;
+    }
+
     this.enqueueLifecycle(async () => {
-      await this.reloadZwjsClient('settings-updated');
+      if (key === ZWJS_CONNECTION_SETTINGS_KEY) {
+        await this.reloadZwjsClient('settings-updated');
+      } else if (key === COMPILED_PROFILES_PATH_SETTINGS_KEY) {
+        await this.loadCompiledProfilesRuntime('settings-updated');
+      }
     }).catch((error: unknown) => {
-      this.error('Failed to reload ZWJS client after settings update', error);
+      this.error('Failed to apply settings update', { key, error });
     });
   };
 
@@ -91,6 +135,7 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
     this.homey.settings.on('set', this.settingsSetListener);
     this.homey.settings.on('unset', this.settingsUnsetListener);
     await this.enqueueLifecycle(async () => {
+      await this.loadCompiledProfilesRuntime('startup');
       await this.startZwjsClient('startup');
     });
 
@@ -118,5 +163,32 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
 
   getBridgeId(): string {
     return this.bridgeId;
+  }
+
+  getCompiledProfilesStatus(): CompiledProfilesRuntimeStatus {
+    if (this.compiledProfilesRuntime?.status) return this.compiledProfilesRuntime.status;
+    const sourcePath = resolveCompiledProfilesArtifactPath(
+      __dirname,
+      this.homey.settings.get(COMPILED_PROFILES_PATH_SETTINGS_KEY),
+    );
+    return {
+      sourcePath,
+      loaded: false,
+      generatedAt: null,
+      entryCount: 0,
+      duplicateKeys: {
+        productTriple: 0,
+        nodeId: 0,
+        deviceKey: 0,
+      },
+      errorMessage: 'Compiled profile runtime not loaded',
+    };
+  }
+
+  resolveCompiledProfileEntry(
+    selector: CompiledProfileResolverSelector,
+    options?: ResolveCompiledProfileEntryOptionsV1,
+  ): CompiledProfileResolverMatchV1 {
+    return resolveCompiledProfileEntryFromRuntime(this.compiledProfilesRuntime, selector, options);
   }
 };
