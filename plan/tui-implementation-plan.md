@@ -113,8 +113,11 @@ Data flow in both stacks:
 - [x] Section 4B: tests/docs migration for cutover
 - [x] Section 6A: dual-root shell workflow parity (simulate integration in both stacks)
 - [x] Section 6B: panel-first rich TUI UI integration in both stacks
-- [ ] Section 6C: panel scaffold edit mode (typed draft editing + diff/validation)
+- [x] Section 6C: panel scaffold edit mode (typed draft editing + diff/validation)
 - [ ] Section 7: convergence review + final cleanup
+  - [x] Slice 7.1: extract shared draft-editor core used by nodes/rules presenters
+  - [ ] Slice 7.2: extract shared signature workflow core
+  - [ ] Slice 7.3: reduce `app.ts` mode branching via mode adapter dispatch
 
 ## Testing Strategy
 

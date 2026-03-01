@@ -27,6 +27,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
   - removed standalone panel key parser module and now route panel actions from `neo-blessed` keypress events directly
   - switched panel list/detail/bottom panes to native widget scrolling/selection behavior
 
+- Latest convergence slice (Section 7.1):
+  - extracted shared presenter draft-editing core into `packages/tui/src/presenter/draft-editor-core.ts`
+  - rewired both `ExplorerPresenter` and `RulesPresenter` to delegate typed draft edit operations to the shared core
+  - preserved behavior and validation semantics with full workspace gate pass (`npm run check`)
+
 1. Completed Phase 2 HA import foundation:
    - `discovery.py` subset extractor in `packages/compiler`
    - extracted and generated HA artifact contracts

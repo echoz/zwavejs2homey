@@ -112,11 +112,12 @@
 - [x] Section 6A: dual-root shell workflow parity (nodes/rules + simulate)
 - [x] Section 6B: panel-first rich UI integration in nodes and rules stacks
 - [x] Panel renderer migration: full `neo-blessed` adoption (custom panel-frame renderer removed)
-- [ ] Section 6C: structured scaffold edit mode (panel draft editing before write)
+- [x] Section 6C: structured scaffold edit mode (panel draft editing before write)
   - [x] Section 6C slice: data-driven authoring vocab audit + cutover (remove hardcoded typed-select vocab where feasible)
     - [x] audit + ownership classification (`docs/homey-authoring-vocabulary-audit.md`)
     - [x] cutover implementation (artifact/provider-backed vocab in TUI + compiler validation)
 - [ ] Section 7: convergence review (separate stacks vs shared view primitives)
+  - [x] Slice 7.1: shared draft-editor presenter core extraction
 - [ ] Keep Homey adapter implementation frozen until Phase 4 reset completion
 
 Execution note:
