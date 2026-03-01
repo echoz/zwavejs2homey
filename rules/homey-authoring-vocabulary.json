@@ -1,0 +1,2344 @@
+{
+  "schemaVersion": "homey-authoring-vocabulary/v1",
+  "generatedAt": "2026-03-01T05:07:29.955Z",
+  "source": {
+    "homeyLibVersion": "2.45.0",
+    "homeyLibRoot": "/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib",
+    "composeCapabilitiesDir": "co.lazylabs.zwavejs2homey/.homeycompose/capabilities"
+  },
+  "homeyClasses": [
+    {
+      "id": "airconditioning",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "airfryer",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "airpurifier",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "airtreatment",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "amplifier",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "battery",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "bicycle",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "blinds",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "boiler",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "bridge",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "button",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "camera",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "car",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "coffeemachine",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "cooktop",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "curtain",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "dehumidifier",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "diffuser",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "dishwasher",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "doorbell",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "dryer",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "evcharger",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "fan",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "faucet",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "fireplace",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "freezer",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "fridge",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "fridge_and_freezer",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "fryer",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "gameconsole",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "garagedoor",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "grill",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "heater",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "heatpump",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "homealarm",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "hood",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "humidifier",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "kettle",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "lawnmower",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "light",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "lock",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "mediaplayer",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "microwave",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "mop",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "multicooker",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "networkrouter",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "other",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "oven",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "oven_and_microwave",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "petfeeder",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "pump",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "radiator",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "remote",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "scooter",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "sensor",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "service",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "settopbox",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "shutterblinds",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "siren",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "smokealarm",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "socket",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "solarpanel",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "speaker",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "sprinkler",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "sunshade",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "thermostat",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "tv",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "vacuumcleaner",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "vehicle",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "washer",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "washer_and_dryer",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "waterheater",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "waterpurifier",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "watervalve",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    },
+    {
+      "id": "windowcoverings",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/device/classes.json"
+        }
+      ]
+    }
+  ],
+  "capabilityIds": [
+    {
+      "id": "alarm_battery",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "alarm_bin_full",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "alarm_bin_missing",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "alarm_cleaning_pad_missing",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "alarm_co",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "alarm_co2",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "alarm_cold",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "alarm_connectivity",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "alarm_contact",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "alarm_door_fault",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "alarm_fire",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "alarm_freeze_risk",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "alarm_gas",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "alarm_generic",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "alarm_heat",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "alarm_light",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "alarm_lost",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "alarm_moisture",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "alarm_motion",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "alarm_night",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "alarm_noise",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "alarm_occupancy",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "alarm_open",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "alarm_pm01",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "alarm_pm1",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "alarm_pm10",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "alarm_pm25",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "alarm_power",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "alarm_presence",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "alarm_problem",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "alarm_pump_device",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "alarm_pump_supply",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "alarm_rain",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "alarm_running",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "alarm_safety",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "alarm_smoke",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "alarm_stuck",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "alarm_tamper",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "alarm_tank_empty",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "alarm_tank_missing",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "alarm_tank_open",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "alarm_vibration",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "alarm_water",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "audio_output",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "battery_charging_state",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "button",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "channel_down",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "channel_up",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "cooking_time",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "dim",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "dishwasher_program",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "docked",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "ev_charging_state",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "evcharger_charging",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "evcharger_charging_state",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "fan_mode",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "fan_speed",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "garagedoor_closed",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "heater_operation_mode",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "homealarm_state",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "hot_water_mode",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "laundry_dryer_dryness",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "laundry_washer_cycles",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "laundry_washer_program",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "laundry_washer_speed",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "level_aqi",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "level_carbon_filter",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "level_ch2o",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "level_co",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "level_co2",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "level_hepa_filter",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "level_nox",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "level_o3",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "level_pm01",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "level_pm1",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "level_pm10",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "level_pm25",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "level_radon",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "level_so2",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "level_tvoc",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "light_hue",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "light_mode",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "light_saturation",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "light_temperature",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "lock_mode",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "locked",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_aqi",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_battery",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_carbon_filter",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_ch2o",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_co",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_co2",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_content_volume",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_current",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_data_rate",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_data_size",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_distance",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_frequency",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_gust_angle",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_gust_strength",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_hepa_filter",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_humidity",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_luminance",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_moisture",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_monetary",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_noise",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_nox",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_o3",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_odor",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_ph",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_pm01",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_pm1",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_pm10",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_pm25",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_power",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_pressure",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_radon",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_rain",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_rain_intensity",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_rotation",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_signal_strength",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_so2",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_speed",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_temperature",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_tvoc",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_tvoc_index",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_ultraviolet",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_voltage",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_water",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_weight",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_wind_angle",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "measure_wind_strength",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "media_input",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "meter_gas",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "meter_power",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "meter_rain",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "meter_water",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "microwave_mode",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "mower_state",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "onoff",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "operational_state",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "oscillating",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "oven_mode",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "power_boost",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "power_level",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "progress",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "pump_mode",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "pump_setpoint",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "refrigerator_mode",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "speaker_album",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "speaker_artist",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "speaker_duration",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "speaker_next",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "speaker_playing",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "speaker_position",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "speaker_prev",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "speaker_repeat",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "speaker_shuffle",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "speaker_stop",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "speaker_track",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "swing_mode",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "target_humidity",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "target_humidity_max",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "target_humidity_min",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "target_power",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "target_power_mode",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "target_temperature",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "target_temperature_level",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "target_temperature_max",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "target_temperature_min",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "thermostat_mode",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "vacuumcleaner_job_mode",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "vacuumcleaner_state",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "valve_position",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "volume_down",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "volume_mute",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "volume_set",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "volume_up",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "windowcoverings_closed",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "windowcoverings_set",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "windowcoverings_state",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "windowcoverings_tilt_down",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "windowcoverings_tilt_set",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    },
+    {
+      "id": "windowcoverings_tilt_up",
+      "sources": [
+        {
+          "source": "homey-lib-system",
+          "sourceRef": "homey-lib@2.45.0:/home/jeremy/.local/share/mise/installs/node/25.6.1/lib/node_modules/homey/node_modules/homey-lib/assets/capability/capabilities.json"
+        }
+      ]
+    }
+  ]
+}
