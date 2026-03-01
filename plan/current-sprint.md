@@ -527,11 +527,15 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - scaffold write (`W`) and manifest add (`A`) now validate active draft state before confirmation/write
     - write actions are blocked when draft errors exist; warning-only drafts remain writable with warning context on confirmation
     - added panel regression coverage for write-block-on-errors and warning-only write flow
+103. Completed Section 6C in-panel diff preview slice:
+    - first-step write confirmations (`W`/`A`) now include draft diff preview context (`baseDraft` -> `workingDraft`) before execution
+    - diff preview summarizes change counts (`+/-/~`) and includes deterministic path-level change lines with truncation guards
+    - warning-first + diff preview messaging now renders in compact and expanded bottom panes
+    - added panel regression coverage for changed-draft preview and no-change preview confirmation flows
 
 ## Next Tasks
 
 1. Execute Section 6C scaffold edit mode:
-   - add in-panel diff preview before write/manifest confirmations
    - expand panel tests for draft edit flows
    - follow with data-driven vocabulary cutover:
      - audit hardcoded TUI/presenter type vocab (Homey classes, capability IDs, directionality)

@@ -2185,6 +2185,130 @@ interface ActiveOperation {
   cancel: () => void;
 }
 
+interface DraftDiffSummary {
+  totalChanges: number;
+  additions: number;
+  updates: number;
+  removals: number;
+  lines: string[];
+}
+
+function flattenDraftDiffValue(
+  value: unknown,
+  path: string,
+  out: Map<string, unknown>,
+): void {
+  if (Array.isArray(value)) {
+    if (value.length <= 0) {
+      out.set(path, []);
+      return;
+    }
+    for (let index = 0; index < value.length; index += 1) {
+      flattenDraftDiffValue(value[index], `${path}[${index}]`, out);
+    }
+    return;
+  }
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    const keys = Object.keys(record).sort();
+    if (keys.length <= 0) {
+      out.set(path, {});
+      return;
+    }
+    for (const key of keys) {
+      const childPath = path.length > 0 ? `${path}.${key}` : key;
+      flattenDraftDiffValue(record[key], childPath, out);
+    }
+    return;
+  }
+  out.set(path, value);
+}
+
+function valuesEqualForDraftDiff(left: unknown, right: unknown): boolean {
+  if (Object.is(left, right)) return true;
+  if (typeof left !== typeof right) return false;
+  try {
+    return JSON.stringify(left) === JSON.stringify(right);
+  } catch {
+    return String(left) === String(right);
+  }
+}
+
+function formatDraftDiffValue(value: unknown): string {
+  if (value === undefined) return '(unset)';
+  if (typeof value === 'string') return `"${truncateLabel(value, 52)}"`;
+  try {
+    return truncateLabel(JSON.stringify(value), 52);
+  } catch {
+    return truncateLabel(String(value), 52);
+  }
+}
+
+function buildDraftDiffSummary(editor: DraftEditorState | undefined): DraftDiffSummary | null {
+  if (!editor) return null;
+  const baseDraft = editor.baseDraft as
+    | {
+        fileHint?: unknown;
+        bundle?: unknown;
+      }
+    | undefined;
+  const workingDraft = editor.workingDraft as
+    | {
+        fileHint?: unknown;
+        bundle?: unknown;
+      }
+    | undefined;
+  if (!baseDraft || !workingDraft) return null;
+
+  const baseMap = new Map<string, unknown>();
+  const nextMap = new Map<string, unknown>();
+
+  baseMap.set('fileHint', baseDraft.fileHint);
+  nextMap.set('fileHint', workingDraft.fileHint);
+
+  flattenDraftDiffValue(baseDraft.bundle ?? {}, 'bundle', baseMap);
+  flattenDraftDiffValue(workingDraft.bundle ?? {}, 'bundle', nextMap);
+
+  const allPaths = new Set<string>([...baseMap.keys(), ...nextMap.keys()]);
+  const sortedPaths = [...allPaths].sort((a, b) => a.localeCompare(b));
+  const lines: string[] = [];
+  let additions = 0;
+  let updates = 0;
+  let removals = 0;
+
+  for (const path of sortedPaths) {
+    const hasBase = baseMap.has(path);
+    const hasNext = nextMap.has(path);
+    if (!hasBase && hasNext) {
+      additions += 1;
+      lines.push(`+ ${path} = ${formatDraftDiffValue(nextMap.get(path))}`);
+      continue;
+    }
+    if (hasBase && !hasNext) {
+      removals += 1;
+      lines.push(`- ${path} (was ${formatDraftDiffValue(baseMap.get(path))})`);
+      continue;
+    }
+    const baseValue = baseMap.get(path);
+    const nextValue = nextMap.get(path);
+    if (!valuesEqualForDraftDiff(baseValue, nextValue)) {
+      updates += 1;
+      lines.push(
+        `~ ${path}: ${formatDraftDiffValue(baseValue)} -> ${formatDraftDiffValue(nextValue)}`,
+      );
+    }
+  }
+
+  const totalChanges = additions + updates + removals;
+  return {
+    totalChanges,
+    additions,
+    updates,
+    removals,
+    lines,
+  };
+}
+
 export async function runPanelApp(
   config: SessionConfig,
   io: LoggerLike = console,
@@ -3086,7 +3210,18 @@ export async function runPanelApp(
     const confirmLine = `Confirm ${actionLabel}: press ${key} again within ${
       WRITE_CONFIRM_WINDOW_MS / 1000
     }s`;
-    setBottomPaneText(note ? `${confirmLine} | ${note}` : confirmLine);
+    if (!note) {
+      setBottomPaneText(confirmLine);
+      return false;
+    }
+    const noteLines = note.split('\n');
+    const firstNoteLine = noteLines[0];
+    const remainingNote = noteLines.slice(1).join('\n');
+    setBottomPaneText(
+      remainingNote.length > 0
+        ? `${confirmLine} | ${firstNoteLine}\n${remainingNote}`
+        : `${confirmLine} | ${firstNoteLine}`,
+    );
     return false;
   }
 
@@ -3112,21 +3247,37 @@ export async function runPanelApp(
           : getActiveDraftEditorState();
     }
     if (!editor) return { ok: true };
-    if (editor.errors.length > 0) {
-      const firstError = editor.errors[0];
+    const errors = Array.isArray(editor.errors) ? editor.errors : [];
+    const warnings = Array.isArray(editor.warnings) ? editor.warnings : [];
+    if (errors.length > 0) {
+      const firstError = errors[0];
       setBottomPaneText(
-        `Cannot ${actionLabel}: draft has ${editor.errors.length} error(s).\nFirst error: ${firstError}`,
+        `Cannot ${actionLabel}: draft has ${errors.length} error(s).\nFirst error: ${firstError}`,
       );
       return { ok: false };
     }
-    if (editor.warnings.length > 0) {
-      const firstWarning = editor.warnings[0];
-      return {
-        ok: true,
-        note: `Draft warnings: ${editor.warnings.length}. First warning: ${firstWarning}`,
-      };
+    const noteLines: string[] = [];
+    if (warnings.length > 0) {
+      const firstWarning = warnings[0];
+      noteLines.push(`Draft warnings: ${warnings.length}. First warning: ${firstWarning}`);
     }
-    return { ok: true };
+    const diff = buildDraftDiffSummary(editor);
+    if (diff) {
+      if (diff.totalChanges <= 0) {
+        noteLines.push('Diff: no changes from draft baseline.');
+      } else {
+        noteLines.push(
+          `Diff: ${diff.totalChanges} change(s) (+${diff.additions} ~${diff.updates} -${diff.removals}).`,
+        );
+        const maxDetailLines = 6;
+        const detailLines = diff.lines.slice(0, maxDetailLines);
+        noteLines.push(...detailLines);
+        if (diff.lines.length > maxDetailLines) {
+          noteLines.push(`... ${diff.lines.length - maxDetailLines} more change(s)`);
+        }
+      }
+    }
+    return noteLines.length > 0 ? { ok: true, note: noteLines.join('\n') } : { ok: true };
   }
 
   async function runTimedOperation<T>(label: string, run: () => Promise<T>): Promise<T> {

@@ -54,7 +54,7 @@
   - [x] capability field editing (`capabilityId`, `directionality`)
   - [x] typed mapping editors for inbound/outbound selector/target fields
   - [x] live draft validation with write-blocking errors and non-blocking warnings
-  - [ ] in-panel diff preview before write confirmation
+  - [x] in-panel diff preview before write confirmation
   - [ ] data-driven vocab audit and cutover (follow-on slice):
     - [ ] audit hardcoded authoring vocab in TUI/presenters (homey classes, capability IDs, directionality, and related typed selects)
     - [ ] classify each vocab as: SDK-derived, compiler-artifact-derived, or intentionally static

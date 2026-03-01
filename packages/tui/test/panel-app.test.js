@@ -2413,6 +2413,157 @@ test('runPanelApp requires double confirmation for write actions', async () => {
   assert.equal(rendered.includes('Confirm manifest add'), true);
 });
 
+test('runPanelApp shows diff preview on first scaffold write confirmation', async () => {
+  const input = new FakeInput();
+  const output = new FakeOutput();
+  const presenter = {
+    writeCalls: 0,
+    async connect() {},
+    async disconnect() {},
+    getState() {
+      return {
+        explorer: {
+          items: [{ nodeId: 1, name: 'Kitchen', product: 'Switch' }],
+        },
+      };
+    },
+    getStatusSnapshot() {
+      return {
+        mode: 'nodes',
+        connectionState: 'ready',
+        selectedSignature: '29:66:2',
+        cachedNodeCount: 1,
+      };
+    },
+    validateDraftEditorState() {
+      return {
+        errors: [],
+        warnings: [],
+        baseDraft: {
+          signature: '29:66:2',
+          fileHint: 'rules/project/product/product-29-66-2.json',
+          generatedAt: new Date().toISOString(),
+          bundle: {
+            schemaVersion: 'product-rules/v1',
+            metadata: { homeyClass: 'socket' },
+          },
+        },
+        workingDraft: {
+          signature: '29:66:2',
+          fileHint: 'rules/project/product/product-29-66-2-updated.json',
+          generatedAt: new Date().toISOString(),
+          bundle: {
+            schemaVersion: 'product-rules/v1',
+            metadata: { homeyClass: 'light' },
+          },
+        },
+      };
+    },
+    writeScaffoldDraft() {
+      this.writeCalls += 1;
+      return '/tmp/product-29-66-2.json';
+    },
+  };
+  const { capture, deps } = createPanelDeps(presenter, input, output);
+
+  const runPromise = runPanelApp(
+    {
+      mode: 'nodes',
+      uiMode: 'panel',
+      manifestFile: 'rules/manifest.json',
+      url: 'ws://127.0.0.1:3000',
+      schemaVersion: 0,
+      includeValues: 'summary',
+      maxValues: 100,
+    },
+    { log: () => {}, error: () => {} },
+    deps,
+  );
+
+  setTimeout(() => {
+    emitInputKeys(input, ['W', 'q']);
+  }, 5);
+
+  await runPromise;
+
+  assert.equal(presenter.writeCalls, 0);
+  const rendered = capture.text();
+  assert.equal(rendered.includes('Confirm scaffold write'), true);
+  assert.equal(rendered.includes('Diff: 2 change(s)'), true);
+});
+
+test('runPanelApp shows no-change diff preview on first scaffold write confirmation', async () => {
+  const input = new FakeInput();
+  const output = new FakeOutput();
+  const baseDraft = {
+    signature: '29:66:2',
+    fileHint: 'rules/project/product/product-29-66-2.json',
+    generatedAt: new Date().toISOString(),
+    bundle: {
+      schemaVersion: 'product-rules/v1',
+      metadata: { homeyClass: 'socket' },
+    },
+  };
+  const presenter = {
+    writeCalls: 0,
+    async connect() {},
+    async disconnect() {},
+    getState() {
+      return {
+        explorer: {
+          items: [{ nodeId: 1, name: 'Kitchen', product: 'Switch' }],
+        },
+      };
+    },
+    getStatusSnapshot() {
+      return {
+        mode: 'nodes',
+        connectionState: 'ready',
+        selectedSignature: '29:66:2',
+        cachedNodeCount: 1,
+      };
+    },
+    validateDraftEditorState() {
+      return {
+        errors: [],
+        warnings: [],
+        baseDraft,
+        workingDraft: structuredClone(baseDraft),
+      };
+    },
+    writeScaffoldDraft() {
+      this.writeCalls += 1;
+      return '/tmp/product-29-66-2.json';
+    },
+  };
+  const { capture, deps } = createPanelDeps(presenter, input, output);
+
+  const runPromise = runPanelApp(
+    {
+      mode: 'nodes',
+      uiMode: 'panel',
+      manifestFile: 'rules/manifest.json',
+      url: 'ws://127.0.0.1:3000',
+      schemaVersion: 0,
+      includeValues: 'summary',
+      maxValues: 100,
+    },
+    { log: () => {}, error: () => {} },
+    deps,
+  );
+
+  setTimeout(() => {
+    emitInputKeys(input, ['W', 'q']);
+  }, 5);
+
+  await runPromise;
+
+  assert.equal(presenter.writeCalls, 0);
+  const rendered = capture.text();
+  assert.equal(rendered.includes('Confirm scaffold write'), true);
+  assert.equal(rendered.includes('Diff: no changes from draft baseline.'), true);
+});
+
 test('runPanelApp blocks scaffold write when draft validation has errors', async () => {
   const input = new FakeInput();
   const output = new FakeOutput();
