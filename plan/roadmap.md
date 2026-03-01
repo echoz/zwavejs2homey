@@ -114,6 +114,8 @@
 - [x] Panel renderer migration: full `neo-blessed` adoption (custom panel-frame renderer removed)
 - [ ] Section 6C: structured scaffold edit mode (panel draft editing before write)
   - [ ] Section 6C slice: data-driven authoring vocab audit + cutover (remove hardcoded typed-select vocab where feasible)
+    - [x] audit + ownership classification (`docs/homey-authoring-vocabulary-audit.md`)
+    - [ ] cutover implementation (artifact/provider-backed vocab in TUI + compiler validation)
 - [ ] Section 7: convergence review (separate stacks vs shared view primitives)
 - [ ] Keep Homey adapter implementation frozen until Phase 4 reset completion
 

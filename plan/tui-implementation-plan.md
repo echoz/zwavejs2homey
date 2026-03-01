@@ -56,8 +56,8 @@
   - [x] live draft validation with write-blocking errors and non-blocking warnings
   - [x] in-panel diff preview before write confirmation
   - [ ] data-driven vocab audit and cutover (follow-on slice):
-    - [ ] audit hardcoded authoring vocab in TUI/presenters (homey classes, capability IDs, directionality, and related typed selects)
-    - [ ] classify each vocab as: SDK-derived, compiler-artifact-derived, or intentionally static
+    - [x] audit hardcoded authoring vocab in TUI/presenters (homey classes, capability IDs, directionality, and related typed selects)
+    - [x] classify each vocab as: SDK-derived, compiler-artifact-derived, or intentionally static
     - [ ] replace hardcoded selects with vocabulary providers/artifacts where feasible
     - [ ] keep strict/early validation (invalid values blocked in editor)
 

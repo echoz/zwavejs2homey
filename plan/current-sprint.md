@@ -532,6 +532,10 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - diff preview summarizes change counts (`+/-/~`) and includes deterministic path-level change lines with truncation guards
     - warning-first + diff preview messaging now renders in compact and expanded bottom panes
     - added panel regression coverage for changed-draft preview and no-change preview confirmation flows
+104. Completed Section 6C vocabulary audit slice:
+    - audited hardcoded authoring vocab usage across TUI editor, presenters, and compiler validation surfaces
+    - classified vocab domains by ownership (`compiler-artifact-derived` vs `intentionally static`; SDK enum source not available)
+    - documented cutover matrix and next actions in `docs/homey-authoring-vocabulary-audit.md`
 
 ## Next Tasks
 
