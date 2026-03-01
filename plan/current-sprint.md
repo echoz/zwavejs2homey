@@ -16,6 +16,16 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 ## Recently Completed
 
 - Latest Phase 5 slice:
+  - removed capability-ID hardcoded runtime contracts in `node-runtime`:
+    - runtime slice extraction now accepts any valid `value`/`set_value` selector-target pair from compiled profiles
+    - outbound mapping is no longer auto-disabled for unknown capability IDs
+  - refactored runtime coercion to be transform-driven + typed fallback:
+    - transform handlers remain keyed by `transformRef` (`zwave_level_0_99_to_homey_dim`, `homey_dim_to_zwave_level_0_99`)
+    - generic typed coercion now uses live `defined_value_ids.type` hints (e.g. boolean normalization for binary values)
+  - removed legacy single-capability helper exports (`extractOnOffCapabilityVertical`, `extractDimCapabilityVertical`) from runtime API surface
+  - refreshed harness/runtime tests to assert capability-agnostic behavior and value-type gated coercion
+
+- Latest Phase 5 slice:
   - expanded runtime capability contract/coercion coverage in `node-runtime`:
     - added `windowcoverings_set` contract (CC38 in/out + dim-style transform coercion)
     - added `locked` contract (inbound CC98/CC118, outbound CC118 with boolean coercion)

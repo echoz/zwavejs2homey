@@ -61,6 +61,7 @@ interface ValueIdLike {
 interface NodeDefinedValueFacts {
   readable?: boolean;
   writeable?: boolean;
+  type?: string;
 }
 
 function parseNumericIdentity(value: unknown): number | undefined {
@@ -88,6 +89,12 @@ function normalizeComparableValue(value: unknown): string | undefined {
   }
   if (typeof value === 'number' && Number.isFinite(value)) return String(value);
   return undefined;
+}
+
+function normalizeValueTypeHint(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const normalizedType = value.trim();
+  return normalizedType.length > 0 ? normalizedType : undefined;
 }
 
 function toValueIdLookupKey(valueId: ValueIdLike): string | undefined {
@@ -167,12 +174,18 @@ module.exports = class NodeDevice extends Homey.Device {
         if (existing.writeable === undefined && typeof valueId.writeable === 'boolean') {
           existing.writeable = valueId.writeable;
         }
+        if (existing.type === undefined) {
+          const normalizedType = normalizeValueTypeHint(valueId.type);
+          if (normalizedType) existing.type = normalizedType;
+        }
         continue;
       }
 
+      const normalizedType = normalizeValueTypeHint(valueId.type);
       index.set(key, {
         readable: typeof valueId.readable === 'boolean' ? valueId.readable : undefined,
         writeable: typeof valueId.writeable === 'boolean' ? valueId.writeable : undefined,
+        type: normalizedType,
       });
     }
     return index;
@@ -270,6 +283,7 @@ module.exports = class NodeDevice extends Homey.Device {
     }
 
     let enabledInboundSelector: ZwjsValueId | undefined;
+    let enabledInboundValueType: string | undefined;
     if (inboundSelector) {
       const facts = this.getNodeDefinedValueFacts(valueIndex, inboundSelector);
       if (!facts) {
@@ -278,11 +292,13 @@ module.exports = class NodeDevice extends Homey.Device {
         diagnostic.inbound.reason = 'inbound_selector_not_readable';
       } else {
         enabledInboundSelector = inboundSelector;
+        enabledInboundValueType = facts.type;
         diagnostic.inbound.enabled = true;
       }
     }
 
     let enabledOutboundTarget: ZwjsValueId | undefined;
+    let enabledOutboundValueType: string | undefined;
     if (outboundTarget) {
       const facts = this.getNodeDefinedValueFacts(valueIndex, outboundTarget);
       if (!facts) {
@@ -300,6 +316,7 @@ module.exports = class NodeDevice extends Homey.Device {
         }
         if (writeable === true) {
           enabledOutboundTarget = outboundTarget;
+          enabledOutboundValueType = facts.type;
           diagnostic.outbound.enabled = true;
         } else if (writeable === false) {
           diagnostic.outbound.reason = 'outbound_target_not_writeable';
@@ -323,6 +340,7 @@ module.exports = class NodeDevice extends Homey.Device {
             capabilityId,
             valueResult.result,
             inboundTransformRef,
+            enabledInboundValueType,
           );
           if (nextValue !== undefined) {
             await this.setCapabilityValue(capabilityId, nextValue);
@@ -349,6 +367,7 @@ module.exports = class NodeDevice extends Homey.Device {
           capabilityId,
           value,
           outboundTransformRef,
+          enabledOutboundValueType,
         );
         if (outboundValue === undefined) {
           throw new Error(`${capabilityId} capability value is not supported for outbound mapping`);
@@ -373,6 +392,7 @@ module.exports = class NodeDevice extends Homey.Device {
           capabilityId,
           event.event.args?.newValue,
           inboundTransformRef,
+          enabledInboundValueType,
         );
         if (nextValue === undefined) return;
         this.setCapabilityValue(capabilityId, nextValue).catch((error: unknown) => {

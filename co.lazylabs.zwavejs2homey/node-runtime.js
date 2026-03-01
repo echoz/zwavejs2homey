@@ -38,25 +38,6 @@ function isSupportedCapabilityRuntimeValue(value) {
   return false;
 }
 
-const CAPABILITY_RUNTIME_CONTRACTS = {
-  onoff: {
-    inboundCommandClasses: new Set([37]),
-    outboundCommandClasses: new Set([37]),
-  },
-  dim: {
-    inboundCommandClasses: new Set([38]),
-    outboundCommandClasses: new Set([38]),
-  },
-  windowcoverings_set: {
-    inboundCommandClasses: new Set([38]),
-    outboundCommandClasses: new Set([38]),
-  },
-  locked: {
-    inboundCommandClasses: new Set([98, 118]),
-    outboundCommandClasses: new Set([118]),
-  },
-};
-
 function normalizeCapabilityId(value) {
   if (typeof value !== 'string') return undefined;
   const trimmed = value.trim();
@@ -79,13 +60,6 @@ function isValidRuntimeValueIdShape(valueId) {
   return true;
 }
 
-function matchesCommandClassContract(commandClass, contractCommandClasses) {
-  if (!contractCommandClasses) return true;
-  const parsedCommandClass = parseNumericIdentity(commandClass);
-  if (parsedCommandClass === undefined) return false;
-  return contractCommandClasses.has(parsedCommandClass);
-}
-
 function extractCapabilityRuntimeVerticals(profile) {
   if (!isObject(profile) || !Array.isArray(profile.capabilities)) {
     return [];
@@ -103,7 +77,6 @@ function extractCapabilityRuntimeVerticals(profile) {
 
     const inbound = capability.inboundMapping;
     const outbound = capability.outboundMapping;
-    const contract = CAPABILITY_RUNTIME_CONTRACTS[capabilityId];
 
     let inboundCandidate;
     if (isObject(inbound) && inbound.kind === 'value') {
@@ -119,31 +92,12 @@ function extractCapabilityRuntimeVerticals(profile) {
       }
     }
 
-    let inboundSelector;
-    if (inboundCandidate) {
-      if (
-        matchesCommandClassContract(inboundCandidate.commandClass, contract?.inboundCommandClasses)
-      ) {
-        inboundSelector = inboundCandidate;
-      }
-    }
+    const inboundSelector = inboundCandidate;
     const inboundTransformRef = inboundSelector
       ? normalizeComparableValue(inbound.transformRef)
       : undefined;
 
-    // Unknown capability IDs are read-only by default for safety.
-    const outboundSupported = Boolean(contract);
-    let outboundTarget;
-    if (outboundSupported && outboundTargetCandidate) {
-      if (
-        matchesCommandClassContract(
-          outboundTargetCandidate.commandClass,
-          contract?.outboundCommandClasses,
-        )
-      ) {
-        outboundTarget = outboundTargetCandidate;
-      }
-    }
+    const outboundTarget = outboundTargetCandidate;
     const outboundTransformRef = outboundTarget
       ? normalizeComparableValue(outbound.transformRef)
       : undefined;
@@ -159,76 +113,6 @@ function extractCapabilityRuntimeVerticals(profile) {
     });
   }
   return slices;
-}
-
-function extractOnOffCapabilityVertical(profile) {
-  if (!isObject(profile) || !Array.isArray(profile.capabilities)) {
-    return null;
-  }
-
-  for (const capability of profile.capabilities) {
-    if (!isObject(capability) || capability.capabilityId !== 'onoff') {
-      continue;
-    }
-    const inbound = capability.inboundMapping;
-    const outbound = capability.outboundMapping;
-    if (!isObject(inbound) || inbound.kind !== 'value' || !isObject(inbound.selector)) {
-      continue;
-    }
-    if (!isObject(outbound) || outbound.kind !== 'set_value' || !isObject(outbound.target)) {
-      continue;
-    }
-
-    const inboundCc = parseNumericIdentity(inbound.selector.commandClass);
-    const outboundCc = parseNumericIdentity(outbound.target.commandClass);
-    if (inboundCc !== 37 || outboundCc !== 37) {
-      continue;
-    }
-
-    return {
-      capabilityId: 'onoff',
-      inboundSelector: inbound.selector,
-      outboundTarget: outbound.target,
-    };
-  }
-
-  return null;
-}
-
-function extractDimCapabilityVertical(profile) {
-  if (!isObject(profile) || !Array.isArray(profile.capabilities)) {
-    return null;
-  }
-
-  for (const capability of profile.capabilities) {
-    if (!isObject(capability) || capability.capabilityId !== 'dim') {
-      continue;
-    }
-    const inbound = capability.inboundMapping;
-    const outbound = capability.outboundMapping;
-    if (!isObject(inbound) || inbound.kind !== 'value' || !isObject(inbound.selector)) {
-      continue;
-    }
-    if (!isObject(outbound) || outbound.kind !== 'set_value' || !isObject(outbound.target)) {
-      continue;
-    }
-
-    const inboundCc = parseNumericIdentity(inbound.selector.commandClass);
-    const outboundCc = parseNumericIdentity(outbound.target.commandClass);
-    if (inboundCc !== 38 || outboundCc !== 38) {
-      continue;
-    }
-
-    return {
-      capabilityId: 'dim',
-      inboundSelector: inbound.selector,
-      inboundTransformRef: normalizeComparableValue(inbound.transformRef),
-      outboundTarget: outbound.target,
-      outboundTransformRef: normalizeComparableValue(outbound.transformRef),
-    };
-  }
-
-  return null;
 }
 
 function extractValueResultPayload(value) {
@@ -250,16 +134,28 @@ function normalizeNumericValue(value) {
   return undefined;
 }
 
-function coerceOnOffValue(value) {
+function normalizeBooleanValue(value) {
   const payload = extractValueResultPayload(value);
   if (typeof payload === 'boolean') return payload;
-  if (typeof payload === 'number') return payload !== 0;
+  if (typeof payload === 'number') {
+    if (payload === 0) return false;
+    if (payload === 1 || payload === 255) return true;
+    return undefined;
+  }
   if (typeof payload === 'string') {
     const normalized = payload.trim().toLowerCase();
     if (normalized === 'true' || normalized === 'on' || normalized === '1') return true;
     if (normalized === 'false' || normalized === 'off' || normalized === '0') return false;
-    return undefined;
   }
+  return undefined;
+}
+
+function coerceByValueType(value, valueTypeHint) {
+  const normalizedType = normalizeComparableValue(valueTypeHint);
+  if (!normalizedType) return undefined;
+  const lower = normalizedType.toLowerCase();
+  if (lower === 'boolean') return normalizeBooleanValue(value);
+  if (lower === 'number') return normalizeNumericValue(value);
   return undefined;
 }
 
@@ -267,65 +163,85 @@ function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
 
-function coerceDimInboundValue(value, transformRef) {
+function coerceDimInboundTransform(value) {
   const numeric = normalizeNumericValue(value);
   if (numeric === undefined) return undefined;
-  if (transformRef === 'zwave_level_0_99_to_homey_dim') {
-    return clamp(numeric, 0, 99) / 99;
-  }
+  return clamp(numeric, 0, 99) / 99;
+}
+
+function coerceNumericInboundFallback(value) {
+  const numeric = normalizeNumericValue(value);
+  if (numeric === undefined) return undefined;
   if (numeric >= 0 && numeric <= 1) return numeric;
   if (numeric >= 0 && numeric <= 99) return numeric / 99;
   if (numeric === 255) return 1;
   return clamp(numeric, 0, 1);
 }
 
-function coerceDimOutboundValue(value, transformRef) {
+function coerceDimOutboundTransform(value) {
   const numeric = normalizeNumericValue(value);
   if (numeric === undefined) return undefined;
-  if (transformRef === 'homey_dim_to_zwave_level_0_99') {
-    return Math.round(clamp(numeric, 0, 1) * 99);
-  }
+  return Math.round(clamp(numeric, 0, 1) * 99);
+}
+
+function coerceNumericOutboundFallback(value) {
+  const numeric = normalizeNumericValue(value);
+  if (numeric === undefined) return undefined;
   if (numeric >= 0 && numeric <= 1) return Math.round(numeric * 99);
   if (numeric >= 0 && numeric <= 99) return Math.round(numeric);
   return Math.round(clamp(numeric, 0, 99));
 }
 
-function coerceCapabilityInboundValue(capabilityId, value, transformRef) {
-  if (capabilityId === 'onoff') {
-    return coerceOnOffValue(value);
+const INBOUND_TRANSFORMERS = {
+  zwave_level_0_99_to_homey_dim: coerceDimInboundTransform,
+};
+
+const OUTBOUND_TRANSFORMERS = {
+  homey_dim_to_zwave_level_0_99: coerceDimOutboundTransform,
+};
+
+function coerceCapabilityInboundValue(_capabilityId, value, transformRef, valueTypeHint) {
+  const normalizedTransformRef = normalizeComparableValue(transformRef);
+  if (normalizedTransformRef) {
+    const transform = INBOUND_TRANSFORMERS[normalizedTransformRef];
+    if (transform) {
+      return transform(value);
+    }
   }
-  if (capabilityId === 'dim') {
-    return coerceDimInboundValue(value, transformRef);
-  }
-  if (capabilityId === 'windowcoverings_set') {
-    return coerceDimInboundValue(value, transformRef);
-  }
-  if (capabilityId === 'locked') {
-    return coerceOnOffValue(value);
-  }
+
+  const typedValue = coerceByValueType(value, valueTypeHint);
+  if (typedValue !== undefined) return typedValue;
 
   const payload = extractValueResultPayload(value);
   if (!isSupportedCapabilityRuntimeValue(payload)) {
+    if (normalizedTransformRef === 'zwave_level_0_99_to_homey_dim') {
+      return coerceNumericInboundFallback(value);
+    }
     return undefined;
   }
   return payload;
 }
 
-function coerceCapabilityOutboundValue(capabilityId, value, transformRef) {
-  if (capabilityId === 'onoff') {
-    return coerceOnOffValue(value);
-  }
-  if (capabilityId === 'dim') {
-    return coerceDimOutboundValue(value, transformRef);
-  }
-  if (capabilityId === 'windowcoverings_set') {
-    return coerceDimOutboundValue(value, transformRef);
-  }
-  if (capabilityId === 'locked') {
-    return coerceOnOffValue(value);
+function coerceCapabilityOutboundValue(_capabilityId, value, transformRef, valueTypeHint) {
+  const normalizedTransformRef = normalizeComparableValue(transformRef);
+  if (normalizedTransformRef) {
+    const transform = OUTBOUND_TRANSFORMERS[normalizedTransformRef];
+    if (transform) {
+      return transform(value);
+    }
   }
 
-  return undefined;
+  const typedValue = coerceByValueType(value, valueTypeHint);
+  if (typedValue !== undefined) return typedValue;
+
+  const payload = extractValueResultPayload(value);
+  if (!isSupportedCapabilityRuntimeValue(payload)) {
+    if (normalizedTransformRef === 'homey_dim_to_zwave_level_0_99') {
+      return coerceNumericOutboundFallback(value);
+    }
+    return undefined;
+  }
+  return payload;
 }
 
 function selectorMatchesNodeValueUpdatedEvent(selector, eventPayload) {
@@ -387,12 +303,7 @@ function selectorMatchesNodeValueUpdatedEvent(selector, eventPayload) {
 
 module.exports = {
   extractCapabilityRuntimeVerticals,
-  extractOnOffCapabilityVertical,
-  extractDimCapabilityVertical,
   extractValueResultPayload,
-  coerceOnOffValue,
-  coerceDimInboundValue,
-  coerceDimOutboundValue,
   coerceCapabilityInboundValue,
   coerceCapabilityOutboundValue,
   selectorMatchesNodeValueUpdatedEvent,

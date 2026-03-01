@@ -410,10 +410,22 @@ test('node device harness wires read/write/event sync for onoff + dim verticals'
     definedValueIdsResult: {
       success: true,
       result: [
-        { commandClass: 37, endpoint: 0, property: 'currentValue', readable: true },
-        { commandClass: 37, endpoint: 0, property: 'targetValue', writeable: true },
-        { commandClass: 38, endpoint: 0, property: 'currentValue', readable: true },
-        { commandClass: 38, endpoint: 0, property: 'targetValue', writeable: true },
+        {
+          commandClass: 37,
+          endpoint: 0,
+          property: 'currentValue',
+          readable: true,
+          type: 'boolean',
+        },
+        {
+          commandClass: 37,
+          endpoint: 0,
+          property: 'targetValue',
+          writeable: true,
+          type: 'boolean',
+        },
+        { commandClass: 38, endpoint: 0, property: 'currentValue', readable: true, type: 'number' },
+        { commandClass: 38, endpoint: 0, property: 'targetValue', writeable: true, type: 'number' },
       ],
     },
   });
@@ -620,7 +632,7 @@ test('node device harness records explicit fallback when zwjs client is unavaila
   assert.equal(device._getErrors().length, 0);
 });
 
-test('node device harness applies generic inbound mapping but blocks generic outbound writes', async () => {
+test('node device harness applies generic inbound mapping and gates outbound writes by value availability', async () => {
   const measurePowerSelector = {
     commandClass: 50,
     endpoint: 0,
@@ -690,7 +702,12 @@ test('node device harness applies generic inbound mapping but blocks generic out
   const profileResolution = device._getStoreValue('profileResolution');
   assert.equal(profileResolution?.mappingDiagnostics?.length, 1);
   assert.equal(profileResolution?.mappingDiagnostics?.[0]?.inbound?.enabled, true);
-  assert.equal(profileResolution?.mappingDiagnostics?.[0]?.outbound?.configured, false);
+  assert.equal(profileResolution?.mappingDiagnostics?.[0]?.outbound?.configured, true);
+  assert.equal(profileResolution?.mappingDiagnostics?.[0]?.outbound?.enabled, false);
+  assert.equal(
+    profileResolution?.mappingDiagnostics?.[0]?.outbound?.reason,
+    'outbound_target_not_defined',
+  );
   await device.onDeleted();
   assert.equal(client.getListenerCount(), 0);
 });
@@ -814,7 +831,7 @@ test('node device harness records mapping diagnostics for missing inbound select
   );
 });
 
-test('node device harness supports windowcoverings_set outbound mappings via capability contracts', async () => {
+test('node device harness supports transformed outbound mappings without capability-id contracts', async () => {
   const coverSelector = {
     commandClass: 38,
     endpoint: 0,

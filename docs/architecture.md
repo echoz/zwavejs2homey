@@ -65,13 +65,11 @@ Implementation status:
 - bridge pairing currently enforces singleton add via a stable `device.data.id`.
 - node pairing currently lists import candidates from live ZWJS (`getNodeList`), skipping controller node (`nodeId = 1`) and already paired `bridgeId + nodeId` entries.
 - app runtime now loads a local compiled-profiles artifact at startup into a shared resolver index; node devices resolve match/fallback classification from that shared runtime state.
-- first runtime capability vertical set is active for `onoff` and `dim` using compiled mappings:
-  - `onoff` (CC37): `node.get_value` inbound, `node.set_value` outbound, `zwjs.event.node.value-updated` sync
-  - `dim` (CC38): `node.get_value` inbound (with level transform), `node.set_value` outbound, `zwjs.event.node.value-updated` sync
-- runtime mapping execution now runs through a generic kernel for compatible compiled slices (`inboundMapping.kind=value`, `outboundMapping.kind=set_value`):
-  - `onoff`, `dim`, `windowcoverings_set`, and `locked` retain capability-specific coercion/contracts
-  - non-specialized capabilities currently support inbound primitive pass-through (string/number/boolean)
-  - outbound writes are contract-gated; unknown capability IDs remain read-only by default
+- runtime mapping execution runs through a generic kernel for compatible compiled slices (`inboundMapping.kind=value`, `outboundMapping.kind=set_value`):
+  - no capability-ID contract whitelist in runtime mapping extraction
+  - inbound/outbound coercion is transform-driven (`transformRef`) with typed fallback via live value metadata (`type`)
+  - non-transformed values use primitive pass-through (string/number/boolean)
+  - outbound writes are gated by live node facts (selector/target presence + writeability), not capability ID
   - runtime mapping now gates selectors/targets against live node defined-value facts and metadata before wiring listeners
   - per-device mapping diagnostics are persisted in `profileResolution.mappingDiagnostics` for operational visibility
   - runtime bindings are re-synced on startup and on relevant app settings updates (`zwjs_connection`, `compiled_profiles_file`) to avoid stale listeners/mappings
