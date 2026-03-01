@@ -20,3 +20,4 @@ Decision records for major technical boundaries and policy choices.
 - `0014-homey-baseline-recommendation-detection-v1.md`: Adapter detects "new recommended baseline" with stored per-device baseline markers (`pipelineFingerprint` + canonical baseline profile hash)
 - `0015-homey-baseline-hash-canonical-projection-v1.md`: Defines exact v1 canonical projection, canonicalization rules, and marker versioning contract for `baselineProfileHash`
 - `0016-homey-curation-v1-storage-schema.md`: Locks concrete persisted `curation.v1` schema (entry map by `homeyDeviceId`, baseline marker embedding, override/collection validation rules)
+- `0017-homey-mvp-driver-topology-and-pairing-model.md`: Locks Homey MVP runtime shape to `bridge` + `node` drivers and explicit node import pairing semantics (no automatic cross-driver pairing handoff)

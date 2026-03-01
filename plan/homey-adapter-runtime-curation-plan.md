@@ -17,6 +17,7 @@ Related ADRs:
 - `docs/decisions/0014-homey-baseline-recommendation-detection-v1.md`
 - `docs/decisions/0015-homey-baseline-hash-canonical-projection-v1.md`
 - `docs/decisions/0016-homey-curation-v1-storage-schema.md`
+- `docs/decisions/0017-homey-mvp-driver-topology-and-pairing-model.md`
 
 Compiler remains responsible for:
 
@@ -32,6 +33,17 @@ Homey adapter becomes responsible for:
 - runtime curation apply semantics
 - device-instance precedence and recommendation update UX
 - curation UX/workflow
+
+## MVP Topology Assumptions (Locked)
+
+Per ADR 0017, runtime curation work in this plan assumes:
+
+- two Homey drivers exist:
+  - `bridge` driver/device: control-plane endpoint actions/status
+  - `node` driver/devices: compiled-profile execution per imported node
+- node onboarding is explicit import/link from ZWJS into Homey (pairing flow)
+- no automatic cross-driver pairing handoff is required in v1
+- per-device curation UX lives on node-level flows (for example node repair/custom view), not bridge settings
 
 ## Goals (v1)
 

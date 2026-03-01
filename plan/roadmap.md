@@ -125,7 +125,12 @@
 ## Phase 5: Homey Adapter MVP (Next Major Area)
 
 - [x] Start only after compiler runtime-validation readiness milestone is met
+- [x] Lock Homey MVP runtime topology: two drivers (`bridge` singleton control plane + `node` per-node data plane)
+- [x] Lock Homey pairing/import semantics: explicit node import flow from ZWJS; no automatic cross-driver pairing handoff
 - [x] Add compiler-owned compiled profile resolver/index API for adapter/tooling orchestration (`buildCompiledProfileResolverIndexV1`, `resolveCompiledProfileEntryFromIndexV1`)
+- [ ] Implement Homey driver scaffolds for locked MVP topology (`drivers/bridge`, `drivers/node`)
+- [ ] Implement bridge singleton pair behavior and bridge control-plane device lifecycle
+- [ ] Implement node pairing/import flow (ZWJS node selection + explicit add)
 - [ ] Define first supported Homey device/capability vertical slice using compiled profiles
 - [x] Adapter bootstrap hardening: settings-backed ZWJS connection config + managed reload lifecycle in app init/uninit flow
 - [x] Lock adapter curation persistence v1 policy: `this.homey.settings` + versioned payloads (`docs/decisions/0010-homey-adapter-curation-storage-v1.md`)

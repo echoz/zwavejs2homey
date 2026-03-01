@@ -46,6 +46,25 @@ The project is intentionally split into layers:
 - `plan/`
   - roadmaps, active plans, sprint notes
 
+## Homey MVP Shape (Locked)
+
+Per `docs/decisions/0017-homey-mvp-driver-topology-and-pairing-model.md`, the Homey adapter MVP uses two drivers:
+
+- `bridge` driver:
+  - singleton-like bridge device for ZWJS endpoint status and control-plane actions
+  - can expose inclusion controls
+- `node` driver:
+  - one Homey device per imported ZWJS node
+  - applies compiled profile resolution + runtime mappings
+
+Pairing semantics:
+
+- Homey does not become Z-Wave inclusion authority in this architecture.
+- Node onboarding is an import/link flow from ZWJS into Homey.
+- Preferred UX is inclusion + add from node pairing flow.
+- If inclusion is started from bridge UX, node add remains explicit via node pairing.
+- No automatic cross-driver pairing handoff is assumed in v1.
+
 ## Homey App Connection Setting
 
 The Homey app bootstrap reads ZWJS transport settings from `this.homey.settings` key:

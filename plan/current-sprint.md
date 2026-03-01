@@ -11,8 +11,19 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
   - keep compiler + TUI quality gates green while adapter work starts
   - carry forward dual-root TUI curation workflow as contributor tooling baseline
   - build first adapter vertical slice on compiled profile artifacts
+  - implement locked MVP topology and pairing model (`bridge` + `node`, explicit node import)
 
 ## Recently Completed
+
+- Latest Phase 5 decision sync:
+  - locked Homey MVP runtime topology to two drivers:
+    - `bridge` driver/device for endpoint control plane (singleton-like)
+    - `node` driver/devices for imported ZWJS nodes and profile-driven mappings
+  - locked pairing/import semantics:
+    - Homey pairing is explicit node import/link from ZWJS
+    - inclusion can be triggered by bridge UX but does not auto-create node devices or auto-jump pairing
+  - recorded the policy in `docs/decisions/0017-homey-mvp-driver-topology-and-pairing-model.md`
+  - synced architecture/readme/roadmap references to the locked model
 
 - Latest TUI values UX slices:
   - added section-level value semantics (`controls`, `sensors`, `events`, `config`, `diagnostic`, `other`)
@@ -645,8 +656,10 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 ## Next Tasks
 
-1. Start first Homey adapter mapping vertical slice against compiled profile artifacts.
-2. Keep compiler/TUI maintenance pass active for any regressions discovered during adapter integration.
+1. Scaffold Homey `bridge` and `node` drivers aligned with ADR 0017 (singleton bridge + per-node devices).
+2. Implement node pairing import flow (ZWJS node selection + explicit Homey device add).
+3. Wire node device runtime to compiled artifact resolver + first mapping vertical slice.
+4. Keep compiler/TUI maintenance pass active for any regressions discovered during adapter integration.
 
 Note:
 

@@ -41,6 +41,24 @@ Owns:
 - Capability mapping and updates
 - Homey settings and user-facing diagnostics
 
+### Homey MVP Topology (Locked)
+
+Per ADR 0017, the Homey adapter runtime shape in v1 is:
+
+- `bridge` driver:
+  - singleton-like bridge device for ZWJS endpoint/control-plane actions and status
+  - inclusion controls can be exposed here
+- `node` driver:
+  - one Homey device per imported ZWJS node
+  - owns compiled profile resolution and runtime mapping execution
+
+Pairing model in v1:
+
+- Homey pairing is an import/link flow for already-managed ZWJS nodes.
+- Recommended onboarding path is inclusion + add within `node` pairing.
+- If inclusion is started from bridge UX, node creation is still explicit via node pairing.
+- no automatic cross-driver pairing handoff is assumed in v1.
+
 ## Integration Contract (Draft)
 
 The Homey app will import a protocol-first `zwjs` client surface from `@zwavejs2homey/core`.
@@ -127,7 +145,8 @@ Current implemented foundation in `packages/compiler`:
   - adapter curation precedence (v1) is per-device-instance override (`homeyDeviceId`) over compiler baseline, with explicit user adoption flow for new recommendations (`docs/decisions/0013-homey-device-instance-curation-precedence-v1.md`)
   - adapter recommendation prompts are driven by per-device baseline markers (`pipelineFingerprint` + canonical baseline profile hash) to detect meaningful baseline changes (`docs/decisions/0014-homey-baseline-recommendation-detection-v1.md`)
   - canonical baseline hash projection is versioned and explicitly defined (`docs/decisions/0015-homey-baseline-hash-canonical-projection-v1.md`)
-  - decisions are recorded in `docs/decisions/0002-compiler-adapter-boundary.md`, `docs/decisions/0003-defer-curation-seed-artifact.md`, `docs/decisions/0004-generic-fallback-ownership.md`, `docs/decisions/0005-manifest-owned-compile-rule-scope.md`, `docs/decisions/0006-homey-adapter-runtime-rule-order.md`, `docs/decisions/0007-product-and-curation-single-target-bundles.md`, `docs/decisions/0008-manifest-layer-is-single-source-of-truth.md`, `docs/decisions/0009-product-rules-v1-only.md`, `docs/decisions/0010-homey-adapter-curation-storage-v1.md`, `docs/decisions/0011-homey-curation-model-v1-materialized-overrides.md`, `docs/decisions/0012-homey-curation-execution-via-runtime-rule-lowering.md`, `docs/decisions/0013-homey-device-instance-curation-precedence-v1.md`, `docs/decisions/0014-homey-baseline-recommendation-detection-v1.md`, `docs/decisions/0015-homey-baseline-hash-canonical-projection-v1.md`, and `docs/decisions/0016-homey-curation-v1-storage-schema.md`
+  - Homey adapter topology/pairing model is locked to bridge+node drivers and explicit node import semantics (`docs/decisions/0017-homey-mvp-driver-topology-and-pairing-model.md`)
+  - decisions are recorded in `docs/decisions/0002-compiler-adapter-boundary.md`, `docs/decisions/0003-defer-curation-seed-artifact.md`, `docs/decisions/0004-generic-fallback-ownership.md`, `docs/decisions/0005-manifest-owned-compile-rule-scope.md`, `docs/decisions/0006-homey-adapter-runtime-rule-order.md`, `docs/decisions/0007-product-and-curation-single-target-bundles.md`, `docs/decisions/0008-manifest-layer-is-single-source-of-truth.md`, `docs/decisions/0009-product-rules-v1-only.md`, `docs/decisions/0010-homey-adapter-curation-storage-v1.md`, `docs/decisions/0011-homey-curation-model-v1-materialized-overrides.md`, `docs/decisions/0012-homey-curation-execution-via-runtime-rule-lowering.md`, `docs/decisions/0013-homey-device-instance-curation-precedence-v1.md`, `docs/decisions/0014-homey-baseline-recommendation-detection-v1.md`, `docs/decisions/0015-homey-baseline-hash-canonical-projection-v1.md`, `docs/decisions/0016-homey-curation-v1-storage-schema.md`, and `docs/decisions/0017-homey-mvp-driver-topology-and-pairing-model.md`
 - Sequencing decision:
   - complete the compiler runtime-validation pipeline first (real HA-derived + project rulesets, compiled profiles export, live ZWJS validation using compiled artifacts)
   - defer Homey adapter implementation until compiled profiles can be validated end-to-end outside Homey
@@ -173,17 +192,15 @@ Guardrails remain:
 - no compiler semantic redesign in this phase
 - Homey adapter implementation can resume on top of this completed Phase 4 baseline
 
-## Runtime Flow (Target)
+## Runtime Flow (Target, Locked MVP Shape)
 
-1. Homey app starts
-2. Homey app resolves ZWJS connection config from `this.homey.settings` (`zwjs_connection`) and creates `zwjs` protocol client
-3. Core protocol client connects to Z-Wave JS endpoint
-4. Core protocol client emits protocol/canonical events
-5. Homey layer maps events to capabilities/devices
-6. Homey layer translates Homey actions into protocol commands
+1. Homey app starts and initializes shared ZWJS session service from `zwjs_connection`.
+2. Bridge driver/device surfaces control-plane state and actions (including inclusion controls).
+3. Node driver pairing imports/link-selects ZWJS nodes (explicit add).
+4. Node device resolves compiled profile using shared compiler resolver (product triple -> nodeId -> deviceKey).
+5. Node device executes inbound/outbound mappings for runtime I/O.
+6. Node-level curation is applied as adapter-owned runtime overrides (generic first, curation second).
 
 ## Open Questions
 
-- Will Z-Wave JS run in-process, as a child process, or remote TCP/WebSocket endpoint?
-- What is the canonical device identity mapping between Z-Wave JS and Homey devices?
 - How should capability support be declared (static tables vs dynamic feature detection)?
