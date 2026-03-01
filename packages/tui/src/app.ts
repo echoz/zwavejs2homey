@@ -1701,11 +1701,14 @@ function configureDraftEditorVocabulary(vocabulary: {
   homeyClasses: string[];
   capabilityIds: string[];
 }): void {
-  homeyClassOptions =
+  const nextHomeyClasses =
     vocabulary.homeyClasses.length > 0
       ? uniqueSorted(vocabulary.homeyClasses)
       : [...FALLBACK_HOMEY_CLASS_OPTIONS];
-  capabilityIdOptions = uniqueSorted(vocabulary.capabilityIds);
+  homeyClassOptions.splice(0, homeyClassOptions.length, ...nextHomeyClasses);
+
+  const nextCapabilityIds = uniqueSorted(vocabulary.capabilityIds);
+  capabilityIdOptions.splice(0, capabilityIdOptions.length, ...nextCapabilityIds);
 }
 
 function buildDraftValidationVocabulary(vocabulary: {

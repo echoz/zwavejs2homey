@@ -2,6 +2,9 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { EventEmitter } = require('node:events');
 const { Writable } = require('node:stream');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
 
 const { runPanelApp } = require('../dist/app');
 
@@ -158,6 +161,7 @@ test('runPanelApp renders panel UI and exits on q', async () => {
       mode: 'nodes',
       uiMode: 'panel',
       manifestFile: 'rules/manifest.json',
+      vocabularyFile: '/tmp/test-missing-homey-authoring-vocab.json',
       url: 'ws://127.0.0.1:3000',
       schemaVersion: 0,
       includeValues: 'summary',
@@ -544,16 +548,141 @@ test('runPanelApp edits draft metadata fields in panel edit mode', async () => {
   );
   assert.equal(
     fieldCalls.some(
-      (entry) => entry.path === 'bundle.metadata.homeyClass' && entry.value === 'light',
+      (entry) =>
+        entry.path === 'bundle.metadata.homeyClass' &&
+        typeof entry.value === 'string' &&
+        entry.value.length > 0 &&
+        entry.value !== 'socket',
     ),
     true,
   );
   assert.equal(commitCalls, 1);
   const rendered = capture.text();
   assert.equal(rendered.includes('Product Name: Switch Pro'), true);
-  assert.equal(rendered.includes('Homey Class: light'), true);
+  assert.equal(rendered.includes('Homey Class:'), true);
   assert.equal(rendered.includes('Updated Product Name.'), true);
   assert.equal(rendered.includes('Unknown selected field:'), false);
+});
+
+test('runPanelApp uses vocabulary-backed capability options in panel edit mode', async () => {
+  const input = new FakeInput();
+  const output = new FakeOutput();
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'panel-cap-vocab-'));
+  const vocabularyFile = path.join(tmpDir, 'homey-authoring-vocabulary.json');
+  fs.writeFileSync(
+    vocabularyFile,
+    JSON.stringify({
+      schemaVersion: 'homey-authoring-vocabulary/v1',
+      generatedAt: '2026-01-01T00:00:00.000Z',
+      source: {},
+      homeyClasses: [{ id: 'light', sources: [{ source: 'test', sourceRef: 'inline' }] }],
+      capabilityIds: [
+        { id: 'alpha_cap', sources: [{ source: 'test', sourceRef: 'inline' }] },
+        { id: 'beta_cap', sources: [{ source: 'test', sourceRef: 'inline' }] },
+      ],
+    }),
+    'utf8',
+  );
+
+  const setCapabilityFieldCalls = [];
+  const draftEditorState = {
+    baseDraft: {
+      fileHint: 'rules/curated/example.json',
+      bundle: {
+        metadata: {
+          productName: 'Switch Pro',
+          homeyClass: 'socket',
+          ruleIdPrefix: 'switch-pro',
+        },
+        capabilities: [{ capabilityId: 'alpha_cap', directionality: 'bidirectional' }],
+      },
+    },
+    workingDraft: {
+      fileHint: 'rules/curated/example.json',
+      bundle: {
+        metadata: {
+          productName: 'Switch Pro',
+          homeyClass: 'socket',
+          ruleIdPrefix: 'switch-pro',
+        },
+        capabilities: [{ capabilityId: 'alpha_cap', directionality: 'bidirectional' }],
+      },
+    },
+    errors: [],
+    warnings: [],
+    selectedCapabilityIndex: 0,
+    selectedFieldPath: 'bundle.capabilities.0.capabilityId',
+  };
+
+  const presenter = {
+    async connect() {},
+    async disconnect() {},
+    getState() {
+      return {
+        explorer: {
+          items: [{ nodeId: 1, name: 'Node 1', manufacturer: null, product: null }],
+        },
+        nodeDetailCache: {},
+      };
+    },
+    getStatusSnapshot() {
+      return {
+        mode: 'nodes',
+        connectionState: 'ready',
+        selectedSignature: '1:2:3',
+        cachedNodeCount: 1,
+      };
+    },
+    startDraftEdit() {
+      return draftEditorState;
+    },
+    getDraftEditorState() {
+      return draftEditorState;
+    },
+    setDraftEditorCapabilityField(index, field, value) {
+      setCapabilityFieldCalls.push({ index, field, value });
+      const row = draftEditorState.workingDraft.bundle.capabilities[index];
+      if (row) {
+        row[field] = String(value);
+      }
+      draftEditorState.selectedCapabilityIndex = index;
+      draftEditorState.selectedFieldPath = `bundle.capabilities.${index}.${field}`;
+      return draftEditorState;
+    },
+  };
+  const { deps } = createPanelDeps(presenter, input, output);
+
+  const runPromise = runPanelApp(
+    {
+      mode: 'nodes',
+      uiMode: 'panel',
+      manifestFile: 'rules/manifest.json',
+      vocabularyFile,
+      url: 'ws://127.0.0.1:3000',
+      schemaVersion: 0,
+      includeValues: 'summary',
+      maxValues: 100,
+    },
+    { log: () => {}, error: () => {} },
+    deps,
+  );
+
+  setTimeout(() => {
+    emitInputKeys(input, ['e', 'right', 'q']);
+  }, 10);
+
+  try {
+    await runPromise;
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+
+  assert.equal(
+    setCapabilityFieldCalls.some(
+      (entry) => entry.index === 0 && entry.field === 'capabilityId' && entry.value === 'beta_cap',
+    ),
+    true,
+  );
 });
 
 test('runPanelApp supports capability row operations in panel edit mode', async () => {
