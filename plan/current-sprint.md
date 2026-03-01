@@ -16,6 +16,18 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 ## Recently Completed
 
 - Latest Phase 5 slice:
+  - added runtime mapping capability gates in `drivers/node/device.ts` before listener wiring:
+    - inbound mappings require selector presence in `node.get_defined_value_ids` (and non-`readable:false`)
+    - outbound mappings require target presence + writeability checks (`defined_value_ids.writeable` with `node.get_value_metadata` fallback)
+  - added per-capability mapping diagnostics persisted to `profileResolution.mappingDiagnostics`:
+    - configured/enabled flags and explicit skip reasons (missing selector/target, not readable/writeable, writeability unknown, missing capability on Homey device)
+  - expanded headless harness tests to cover gated execution and diagnostics, including:
+    - healthy `onoff`/`dim` mapping path with value-index gating
+    - generic inbound-only path (outbound blocked by contract)
+    - diagnostics for missing inbound selector and non-writeable outbound target
+  - expanded runtime helper tests for contract enforcement and malformed mapping skip behavior
+
+- Latest Phase 5 slice:
   - implemented a generic compiled-mapping runtime kernel for node devices (value/set_value path), replacing per-capability wiring in `drivers/node/device.ts`
   - node runtime now iterates all resolver-matched capability mappings and applies compatible slices when the Homey device exposes that capability
   - added generic capability value coercion hooks in `co.lazylabs.zwavejs2homey/node-runtime.js`:

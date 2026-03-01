@@ -104,11 +104,15 @@ function selectorKey(selector) {
 function createMockZwjsClient({
   nodeStateResult,
   nodeValueResultsBySelector = new Map(),
+  definedValueIdsResult = { success: true, result: [] },
+  nodeValueMetadataResultsBySelector = new Map(),
   setNodeValueResult = { success: true, result: null },
 }) {
   const eventListeners = new Set();
   const callLog = {
     getNodeState: [],
+    getNodeDefinedValueIds: [],
+    getNodeValueMetadata: [],
     getNodeValue: [],
     setNodeValue: [],
   };
@@ -130,6 +134,19 @@ function createMockZwjsClient({
     async getNodeState(nodeId) {
       callLog.getNodeState.push({ nodeId });
       return nodeStateResult;
+    },
+    async getNodeDefinedValueIds(nodeId) {
+      callLog.getNodeDefinedValueIds.push({ nodeId });
+      return definedValueIdsResult;
+    },
+    async getNodeValueMetadata(nodeId, selector) {
+      callLog.getNodeValueMetadata.push({ nodeId, selector });
+      return (
+        nodeValueMetadataResultsBySelector.get(selectorKey(selector)) ?? {
+          success: true,
+          result: {},
+        }
+      );
     },
     async getNodeValue(nodeId, selector) {
       callLog.getNodeValue.push({ nodeId, selector });
@@ -334,6 +351,15 @@ test('node device harness wires read/write/event sync for onoff + dim verticals'
       },
     },
     nodeValueResultsBySelector,
+    definedValueIdsResult: {
+      success: true,
+      result: [
+        { commandClass: 37, endpoint: 0, property: 'currentValue', readable: true },
+        { commandClass: 37, endpoint: 0, property: 'targetValue', writeable: true },
+        { commandClass: 38, endpoint: 0, property: 'currentValue', readable: true },
+        { commandClass: 38, endpoint: 0, property: 'targetValue', writeable: true },
+      ],
+    },
   });
 
   let capturedSelector;
@@ -364,6 +390,7 @@ test('node device harness wires read/write/event sync for onoff + dim verticals'
   });
 
   assert.equal(client.callLog.getNodeState.length, 1);
+  assert.equal(client.callLog.getNodeDefinedValueIds.length, 1);
   assert.equal(client.callLog.getNodeState[0].nodeId, 5);
   assert.equal(client.callLog.getNodeValue.length, 2);
   assert.equal(client.getListenerCount(), 2);
@@ -426,6 +453,10 @@ test('node device harness wires read/write/event sync for onoff + dim verticals'
   assert.equal(profileResolution?.matchBy, 'product-triple');
   assert.equal(profileResolution?.verticalSliceApplied, true);
   assert.equal(profileResolution?.fallbackReason, null);
+  assert.equal(Array.isArray(profileResolution?.mappingDiagnostics), true);
+  assert.equal(profileResolution?.mappingDiagnostics?.length, 2);
+  assert.equal(profileResolution?.mappingDiagnostics?.[0]?.inbound?.enabled, true);
+  assert.equal(profileResolution?.mappingDiagnostics?.[0]?.outbound?.enabled, true);
 
   await device.onDeleted();
   assert.equal(client.getListenerCount(), 0);
@@ -481,6 +512,10 @@ test('node device harness applies generic inbound mapping but blocks generic out
       },
     },
     nodeValueResultsBySelector,
+    definedValueIdsResult: {
+      success: true,
+      result: [{ commandClass: 50, endpoint: 0, property: 'value', readable: true }],
+    },
   });
 
   const app = {
@@ -519,6 +554,129 @@ test('node device harness applies generic inbound mapping but blocks generic out
   });
   await Promise.resolve();
   assert.equal(device._getCapabilityValue('measure_power'), 177.9);
+  const profileResolution = device._getStoreValue('profileResolution');
+  assert.equal(profileResolution?.mappingDiagnostics?.length, 1);
+  assert.equal(profileResolution?.mappingDiagnostics?.[0]?.inbound?.enabled, true);
+  assert.equal(profileResolution?.mappingDiagnostics?.[0]?.outbound?.configured, false);
   await device.onDeleted();
   assert.equal(client.getListenerCount(), 0);
+});
+
+test('node device harness records mapping diagnostics for missing inbound selector and non-writeable outbound target', async () => {
+  const client = createMockZwjsClient({
+    nodeStateResult: {
+      success: true,
+      result: {
+        state: {
+          manufacturerId: '0x001d',
+          productType: '66',
+          productId: '2',
+        },
+      },
+    },
+    definedValueIdsResult: {
+      success: true,
+      result: [
+        {
+          commandClass: 37,
+          endpoint: 0,
+          property: 'targetValue',
+          writeable: false,
+        },
+      ],
+    },
+    nodeValueMetadataResultsBySelector: new Map([
+      [
+        selectorKey({
+          commandClass: 37,
+          endpoint: 0,
+          property: 'targetValue',
+        }),
+        { success: true, result: { writeable: false } },
+      ],
+    ]),
+  });
+
+  const app = {
+    getZwjsClient: () => client,
+    getCompiledProfilesStatus: () => createRuntimeStatus(),
+    resolveCompiledProfileEntry: () => ({
+      by: 'product-triple',
+      key: '29:66:2',
+      entry: {
+        device: {
+          deviceKey: 'main:9',
+          nodeId: 9,
+          manufacturerId: 29,
+          productType: 66,
+          productId: 2,
+        },
+        compiled: {
+          profile: {
+            profileId: 'profile-main-9',
+            match: {},
+            classification: {
+              homeyClass: 'socket',
+              confidence: 'curated',
+              uncurated: false,
+            },
+            capabilities: [
+              {
+                capabilityId: 'onoff',
+                inboundMapping: {
+                  kind: 'value',
+                  selector: {
+                    commandClass: 37,
+                    endpoint: 0,
+                    property: 'currentValue',
+                  },
+                },
+                outboundMapping: {
+                  kind: 'set_value',
+                  target: {
+                    commandClass: 37,
+                    endpoint: 0,
+                    property: 'targetValue',
+                  },
+                },
+              },
+            ],
+            provenance: {
+              layer: 'project-product',
+              ruleId: 'example-diagnostics-profile',
+              action: 'replace',
+            },
+          },
+          report: {},
+        },
+      },
+    }),
+  };
+
+  const device = new NodeDevice();
+  device._configureHarness({
+    app,
+    data: { bridgeId: 'main', nodeId: 9 },
+    capabilities: ['onoff'],
+  });
+
+  await device.onInit();
+
+  assert.equal(device._getCapabilityValue('onoff'), undefined);
+  assert.equal(client.callLog.getNodeValue.length, 0);
+  assert.equal(client.callLog.setNodeValue.length, 0);
+  assert.equal(client.getListenerCount(), 0);
+  assert.equal(client.callLog.getNodeValueMetadata.length, 1);
+
+  const profileResolution = device._getStoreValue('profileResolution');
+  assert.equal(profileResolution?.verticalSliceApplied, false);
+  assert.equal(profileResolution?.mappingDiagnostics?.length, 1);
+  assert.equal(
+    profileResolution?.mappingDiagnostics?.[0]?.inbound?.reason,
+    'inbound_selector_not_defined',
+  );
+  assert.equal(
+    profileResolution?.mappingDiagnostics?.[0]?.outbound?.reason,
+    'outbound_target_not_writeable',
+  );
 });

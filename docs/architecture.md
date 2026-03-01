@@ -72,6 +72,8 @@ Implementation status:
   - `onoff`/`dim` retain specialized coercion behavior
   - non-specialized capabilities currently support inbound primitive pass-through (string/number/boolean)
   - outbound writes are currently contract-gated (`onoff`/`dim` only) so unknown capability IDs are read-only by default
+  - runtime mapping now gates selectors/targets against live node defined-value facts and metadata before wiring listeners
+  - per-device mapping diagnostics are persisted in `profileResolution.mappingDiagnostics` for operational visibility
 
 Related locked MVP runtime policies:
 

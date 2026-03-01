@@ -150,6 +150,7 @@
     - `onoff` inbound value sync + outbound `node.set_value` for compiled CC37 mappings
     - `dim` inbound value sync + outbound `node.set_value` for compiled CC38 mappings (with transform refs)
   - [x] Generic runtime mapping kernel for compiled `inboundMapping.kind=value` + `outboundMapping.kind=set_value` capability slices
+  - [x] Runtime mapping capability gate + diagnostics (defined-value/metadata checks + per-device mapping diagnostics)
 - [ ] Device lifecycle/sync (discovery, create/update, mapping diagnostics)
 - [ ] User curation application in Homey runtime
 
