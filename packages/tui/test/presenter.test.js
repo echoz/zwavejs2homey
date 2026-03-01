@@ -410,3 +410,55 @@ test('ExplorerPresenter draft editor supports capability row add/clone/move/remo
   assert.equal(removed.workingDraft.bundle.capabilities.length, 1);
   assert.equal(removed.workingDraft.bundle.capabilities[0].capabilityId, 'onoff');
 });
+
+test('ExplorerPresenter draft editor supports typed capability mapping field edits', () => {
+  const presenter = new ExplorerPresenter(createChildren());
+  presenter.selectSignature('29:66:2');
+  presenter.createScaffoldFromSignature({});
+  presenter.startDraftEdit();
+
+  presenter.addDraftEditorCapability();
+  presenter.setDraftEditorCapabilityField(0, 'capabilityId', 'onoff');
+  presenter.setDraftEditorCapabilityField(0, 'directionality', 'bidirectional');
+
+  presenter.setDraftEditorCapabilityMappingField(0, 'bundle.capabilities.0.inboundMapping.kind', 'value');
+  presenter.setDraftEditorCapabilityMappingField(
+    0,
+    'bundle.capabilities.0.inboundMapping.selector.commandClass',
+    '37',
+  );
+  presenter.setDraftEditorCapabilityMappingField(
+    0,
+    'bundle.capabilities.0.inboundMapping.selector.property',
+    'currentValue',
+  );
+  presenter.setDraftEditorCapabilityMappingField(0, 'bundle.capabilities.0.outboundMapping.kind', 'set_value');
+  presenter.setDraftEditorCapabilityMappingField(
+    0,
+    'bundle.capabilities.0.outboundMapping.target.commandClass',
+    '37',
+  );
+  presenter.setDraftEditorCapabilityMappingField(
+    0,
+    'bundle.capabilities.0.outboundMapping.target.property',
+    'targetValue',
+  );
+
+  const editor = presenter.getDraftEditorState();
+  const capability = editor.workingDraft.bundle.capabilities[0];
+  assert.equal(capability.inboundMapping.kind, 'value');
+  assert.equal(capability.inboundMapping.selector.commandClass, 37);
+  assert.equal(capability.outboundMapping.kind, 'set_value');
+  assert.equal(capability.outboundMapping.target.commandClass, 37);
+  assert.equal(editor.errors.length, 0);
+
+  assert.throws(
+    () =>
+      presenter.setDraftEditorCapabilityMappingField(
+        0,
+        'bundle.capabilities.0.inboundMapping.selector.commandClass',
+        'not-a-number',
+      ),
+    /must be an integer/,
+  );
+});

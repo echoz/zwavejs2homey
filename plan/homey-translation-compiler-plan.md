@@ -71,6 +71,28 @@ Key design principles:
 
 ## Important Public Interfaces / Types (New)
 
+### 0) Homey Vocabulary Artifact (Planned)
+
+Add a compiler-managed static vocabulary artifact for authoring-time enums used across compiler + tooling.
+
+Purpose:
+
+- provide one source of truth for known Homey classes and capability IDs
+- avoid hardcoded duplicated vocab in TUI/presenters/validators
+- keep deterministic/static behavior without runtime SDK/network dependency
+
+Conceptual artifact:
+
+- `homey-vocabulary/v1`
+- `homeyClasses[]`
+- `capabilityIds[]`
+- optional provenance per entry (`source[]`, e.g. seed, observed, project-defined)
+
+Planned consumers:
+
+- compiler rule validation (reject unknown class/capability values early)
+- TUI scaffold editor typed selects (no freeform when enum is known)
+
 ### 1) Normalized Z-Wave Facts Models (device facts)
 
 Introduce compiler-facing normalized Z-Wave facts models in a new package/module:

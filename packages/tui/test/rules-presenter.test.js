@@ -222,3 +222,78 @@ test('RulesPresenter draft editor supports capability row add/clone/move/remove'
   assert.equal(removed.workingDraft.bundle.capabilities.length, 1);
   assert.equal(removed.workingDraft.bundle.capabilities[0].capabilityId, 'onoff');
 });
+
+test('RulesPresenter draft editor supports typed capability mapping field edits', () => {
+  const fileService = {
+    listManifestRules() {
+      return [];
+    },
+    readManifestRule() {
+      throw new Error('not found');
+    },
+    writeJsonFile() {},
+    resolveAllowedProductRulePath(filePath) {
+      return filePath;
+    },
+    addProductRuleToManifest() {
+      return { manifestFile: '/tmp/manifest.json', entryFilePath: 'x.json', updated: true };
+    },
+  };
+  const presenter = new RulesPresenter(createCuration(), fileService);
+  presenter.initialize({
+    mode: 'rules',
+    manifestFile: 'rules/manifest.json',
+    schemaVersion: 0,
+    includeValues: 'summary',
+    maxValues: 200,
+    url: 'ws://127.0.0.1:3000',
+  });
+  presenter.selectSignature('29:66:2');
+  presenter.createScaffoldFromSignature({});
+  presenter.startDraftEdit();
+
+  presenter.addDraftEditorCapability();
+  presenter.setDraftEditorCapabilityField(0, 'capabilityId', 'onoff');
+  presenter.setDraftEditorCapabilityField(0, 'directionality', 'bidirectional');
+
+  presenter.setDraftEditorCapabilityMappingField(0, 'bundle.capabilities.0.inboundMapping.kind', 'value');
+  presenter.setDraftEditorCapabilityMappingField(
+    0,
+    'bundle.capabilities.0.inboundMapping.selector.commandClass',
+    '37',
+  );
+  presenter.setDraftEditorCapabilityMappingField(
+    0,
+    'bundle.capabilities.0.inboundMapping.selector.property',
+    'currentValue',
+  );
+  presenter.setDraftEditorCapabilityMappingField(0, 'bundle.capabilities.0.outboundMapping.kind', 'set_value');
+  presenter.setDraftEditorCapabilityMappingField(
+    0,
+    'bundle.capabilities.0.outboundMapping.target.commandClass',
+    '37',
+  );
+  presenter.setDraftEditorCapabilityMappingField(
+    0,
+    'bundle.capabilities.0.outboundMapping.target.property',
+    'targetValue',
+  );
+
+  const editor = presenter.getDraftEditorState();
+  const capability = editor.workingDraft.bundle.capabilities[0];
+  assert.equal(capability.inboundMapping.kind, 'value');
+  assert.equal(capability.inboundMapping.selector.commandClass, 37);
+  assert.equal(capability.outboundMapping.kind, 'set_value');
+  assert.equal(capability.outboundMapping.target.commandClass, 37);
+  assert.equal(editor.errors.length, 0);
+
+  assert.throws(
+    () =>
+      presenter.setDraftEditorCapabilityMappingField(
+        0,
+        'bundle.capabilities.0.outboundMapping.target.endpoint',
+        'bad',
+      ),
+    /must be an integer/,
+  );
+});

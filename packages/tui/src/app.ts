@@ -1676,6 +1676,8 @@ const HOMEY_CLASS_OPTIONS = [
 ];
 
 const CAPABILITY_DIRECTION_OPTIONS = ['bidirectional', 'inbound-only', 'outbound-only'];
+const INBOUND_MAPPING_KIND_OPTIONS = ['value', 'event'];
+const OUTBOUND_MAPPING_KIND_OPTIONS = ['set_value', 'invoke_cc_api', 'zwjs_command'];
 
 const DRAFT_METADATA_FIELDS: DraftEditFieldDescriptor[] = [
   {
@@ -1711,12 +1713,114 @@ function getDraftCapabilitiesForEditor(state: DraftEditorState): Array<Record<st
   return raw.map((entry) => asRecord(entry) ?? {});
 }
 
+function asMappingObject(value: unknown): Record<string, unknown> {
+  return asRecord(value) ?? {};
+}
+
+function getInboundMappingKind(entry: Record<string, unknown>): 'value' | 'event' {
+  const inbound = asMappingObject(entry.inboundMapping);
+  return inbound.kind === 'event' ? 'event' : 'value';
+}
+
+function getOutboundMappingKind(
+  entry: Record<string, unknown>,
+): 'set_value' | 'invoke_cc_api' | 'zwjs_command' {
+  const outbound = asMappingObject(entry.outboundMapping);
+  if (outbound.kind === 'invoke_cc_api') return 'invoke_cc_api';
+  if (outbound.kind === 'zwjs_command') return 'zwjs_command';
+  return 'set_value';
+}
+
 function getDraftEditFields(state: DraftEditorState): DraftEditFieldDescriptor[] {
   const capabilityFields = getDraftCapabilitiesForEditor(state).flatMap((entry, index) => {
     const capabilityId =
       typeof entry.capabilityId === 'string' && entry.capabilityId.trim().length > 0
         ? entry.capabilityId.trim()
         : `Capability ${index + 1}`;
+    const inboundKind = getInboundMappingKind(entry);
+    const outboundKind = getOutboundMappingKind(entry);
+    const inboundFields: DraftEditFieldDescriptor[] =
+      inboundKind === 'event'
+        ? [
+            {
+              path: `bundle.capabilities.${index}.inboundMapping.selector.eventType`,
+              label: `${capabilityId} Inbound Event`,
+              type: 'text',
+              section: 'capability',
+              capabilityIndex: index,
+            },
+          ]
+        : [
+            {
+              path: `bundle.capabilities.${index}.inboundMapping.selector.commandClass`,
+              label: `${capabilityId} Inbound CC`,
+              type: 'text',
+              section: 'capability',
+              capabilityIndex: index,
+            },
+            {
+              path: `bundle.capabilities.${index}.inboundMapping.selector.endpoint`,
+              label: `${capabilityId} Inbound Endpoint`,
+              type: 'text',
+              section: 'capability',
+              capabilityIndex: index,
+            },
+            {
+              path: `bundle.capabilities.${index}.inboundMapping.selector.property`,
+              label: `${capabilityId} Inbound Property`,
+              type: 'text',
+              section: 'capability',
+              capabilityIndex: index,
+            },
+            {
+              path: `bundle.capabilities.${index}.inboundMapping.selector.propertyKey`,
+              label: `${capabilityId} Inbound PropertyKey`,
+              type: 'text',
+              section: 'capability',
+              capabilityIndex: index,
+            },
+          ];
+    const outboundFields: DraftEditFieldDescriptor[] =
+      outboundKind === 'set_value'
+        ? [
+            {
+              path: `bundle.capabilities.${index}.outboundMapping.target.commandClass`,
+              label: `${capabilityId} Outbound CC`,
+              type: 'text',
+              section: 'capability',
+              capabilityIndex: index,
+            },
+            {
+              path: `bundle.capabilities.${index}.outboundMapping.target.endpoint`,
+              label: `${capabilityId} Outbound Endpoint`,
+              type: 'text',
+              section: 'capability',
+              capabilityIndex: index,
+            },
+            {
+              path: `bundle.capabilities.${index}.outboundMapping.target.property`,
+              label: `${capabilityId} Outbound Property`,
+              type: 'text',
+              section: 'capability',
+              capabilityIndex: index,
+            },
+            {
+              path: `bundle.capabilities.${index}.outboundMapping.target.propertyKey`,
+              label: `${capabilityId} Outbound PropertyKey`,
+              type: 'text',
+              section: 'capability',
+              capabilityIndex: index,
+            },
+          ]
+        : [
+            {
+              path: `bundle.capabilities.${index}.outboundMapping.target.command`,
+              label: `${capabilityId} Outbound Command`,
+              type: 'text',
+              section: 'capability',
+              capabilityIndex: index,
+            },
+          ];
     return [
       {
         path: `bundle.capabilities.${index}.capabilityId`,
@@ -1733,6 +1837,24 @@ function getDraftEditFields(state: DraftEditorState): DraftEditFieldDescriptor[]
         section: 'capability' as const,
         capabilityIndex: index,
       },
+      {
+        path: `bundle.capabilities.${index}.inboundMapping.kind`,
+        label: `${capabilityId} Inbound Kind`,
+        type: 'select' as const,
+        options: INBOUND_MAPPING_KIND_OPTIONS,
+        section: 'capability' as const,
+        capabilityIndex: index,
+      },
+      ...inboundFields,
+      {
+        path: `bundle.capabilities.${index}.outboundMapping.kind`,
+        label: `${capabilityId} Outbound Kind`,
+        type: 'select' as const,
+        options: OUTBOUND_MAPPING_KIND_OPTIONS,
+        section: 'capability' as const,
+        capabilityIndex: index,
+      },
+      ...outboundFields,
     ];
   });
   return [...DRAFT_METADATA_FIELDS, ...capabilityFields];
@@ -1777,6 +1899,46 @@ function getDraftEditorFieldValue(state: DraftEditorState, path: string): string
       return asNonEmptyString(capability.directionality) ?? '';
     }
   }
+  const inboundFieldMatch = path.match(
+    /^bundle\.capabilities\.(\d+)\.inboundMapping\.(kind|selector\.(commandClass|endpoint|property|propertyKey|eventType))$/,
+  );
+  if (inboundFieldMatch) {
+    const index = Number(inboundFieldMatch[1]);
+    const field = inboundFieldMatch[2];
+    const capabilities = getDraftCapabilitiesForEditor(state);
+    const capability = capabilities[index];
+    if (!capability) return '';
+    const inbound = asMappingObject(capability.inboundMapping);
+    if (field === 'kind') {
+      return asNonEmptyString(inbound.kind) ?? '';
+    }
+    const selector = asMappingObject(inbound.selector);
+    const selectorKey = inboundFieldMatch[3];
+    if (selectorKey === undefined) return '';
+    const value = selector[selectorKey];
+    if (value === null || value === undefined) return '';
+    return String(value);
+  }
+  const outboundFieldMatch = path.match(
+    /^bundle\.capabilities\.(\d+)\.outboundMapping\.(kind|target\.(commandClass|endpoint|property|propertyKey|command))$/,
+  );
+  if (outboundFieldMatch) {
+    const index = Number(outboundFieldMatch[1]);
+    const field = outboundFieldMatch[2];
+    const capabilities = getDraftCapabilitiesForEditor(state);
+    const capability = capabilities[index];
+    if (!capability) return '';
+    const outbound = asMappingObject(capability.outboundMapping);
+    if (field === 'kind') {
+      return asNonEmptyString(outbound.kind) ?? '';
+    }
+    const target = asMappingObject(outbound.target);
+    const targetKey = outboundFieldMatch[3];
+    if (targetKey === undefined) return '';
+    const value = target[targetKey];
+    if (value === null || value === undefined) return '';
+    return String(value);
+  }
   return '';
 }
 
@@ -1818,13 +1980,29 @@ function renderPanelDraftEditor(
       typeof entry.directionality === 'string' && entry.directionality.trim().length > 0
         ? entry.directionality.trim()
         : '(unset)';
-    const selectedCapability =
-      state.selectedFieldPath === `bundle.capabilities.${index}.capabilityId` ||
-      state.selectedFieldPath === `bundle.capabilities.${index}.directionality`;
+    const selectedCapability = state.selectedFieldPath.startsWith(
+      `bundle.capabilities.${index}.`,
+    );
     const prefix = selectedCapability ? '>' : '-';
+    const inbound = asMappingObject(entry.inboundMapping);
+    const inboundKind = getInboundMappingKind(entry);
+    const inboundSelector = asMappingObject(inbound.selector);
+    const inboundSummary =
+      inboundKind === 'event'
+        ? `event:${asNonEmptyString(inboundSelector.eventType) ?? '(unset)'}`
+        : `cc:${inboundSelector.commandClass ?? '-'} ep:${inboundSelector.endpoint ?? 0} prop:${inboundSelector.property ?? '(unset)'} key:${inboundSelector.propertyKey ?? '-'}`;
+    const outbound = asMappingObject(entry.outboundMapping);
+    const outboundKind = getOutboundMappingKind(entry);
+    const outboundTarget = asMappingObject(outbound.target);
+    const outboundSummary =
+      outboundKind === 'set_value'
+        ? `cc:${outboundTarget.commandClass ?? '-'} ep:${outboundTarget.endpoint ?? 0} prop:${outboundTarget.property ?? '(unset)'} key:${outboundTarget.propertyKey ?? '-'}`
+        : `command:${asNonEmptyString(outboundTarget.command) ?? '(unset)'}`;
     return [
       `${prefix} Capability ${index + 1}: ${capabilityId}`,
       `  Directionality: ${directionality}`,
+      `  Inbound (${inboundKind}): ${inboundSummary}`,
+      `  Outbound (${outboundKind}): ${outboundSummary}`,
     ];
   });
   const editStatus =
@@ -2391,6 +2569,38 @@ export async function runPanelApp(
         throw new Error('Capability field edits are unavailable in the current rules presenter.');
       }
       return presenter.setDraftEditorCapabilityField(index, field, value);
+    }
+    const capabilityMappingFieldMatch = path.match(
+      /^bundle\.capabilities\.(\d+)\.(inboundMapping|outboundMapping)\./,
+    );
+    if (capabilityMappingFieldMatch) {
+      const index = Number(capabilityMappingFieldMatch[1]);
+      if (isNodesMode) {
+        const presenter = nodesPresenter as {
+          setDraftEditorCapabilityMappingField?: (
+            index: number,
+            path: string,
+            value: unknown,
+          ) => DraftEditorState;
+        };
+        if (typeof presenter.setDraftEditorCapabilityMappingField !== 'function') {
+          throw new Error(
+            'Capability mapping edits are unavailable in the current nodes presenter.',
+          );
+        }
+        return presenter.setDraftEditorCapabilityMappingField(index, path, value);
+      }
+      const presenter = rulesPresenter as {
+        setDraftEditorCapabilityMappingField?: (
+          index: number,
+          path: string,
+          value: unknown,
+        ) => DraftEditorState;
+      };
+      if (typeof presenter.setDraftEditorCapabilityMappingField !== 'function') {
+        throw new Error('Capability mapping edits are unavailable in the current rules presenter.');
+      }
+      return presenter.setDraftEditorCapabilityMappingField(index, path, value);
     }
     if (isNodesMode) {
       const presenter = nodesPresenter as {

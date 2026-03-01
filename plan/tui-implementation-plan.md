@@ -52,9 +52,14 @@
   - [x] editable draft metadata (`productName`, `homeyClass`, `ruleIdPrefix`, output `filePath`)
   - [x] capability row operations (add/remove/clone/reorder)
   - [x] capability field editing (`capabilityId`, `directionality`)
-  - [ ] typed mapping editors for inbound/outbound selector/target fields
+  - [x] typed mapping editors for inbound/outbound selector/target fields
   - [ ] live draft validation with write-blocking errors and non-blocking warnings
   - [ ] in-panel diff preview before write confirmation
+  - [ ] data-driven vocab audit and cutover (follow-on slice):
+    - [ ] audit hardcoded authoring vocab in TUI/presenters (homey classes, capability IDs, directionality, and related typed selects)
+    - [ ] classify each vocab as: SDK-derived, compiler-artifact-derived, or intentionally static
+    - [ ] replace hardcoded selects with vocabulary providers/artifacts where feasible
+    - [ ] keep strict/early validation (invalid values blocked in editor)
 
 Section 7 does not start until all 6B and 6C slices above are complete.
 

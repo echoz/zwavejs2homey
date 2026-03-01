@@ -516,16 +516,30 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - extracted bottom-pane output shaping (line split, scroll clamp, compact/full visible lines) into a dedicated presenter (`PanelOutputPresenter`)
     - `runPanelApp` now consumes presenter-produced output view-model data for status-bar compact rendering, full output pane rendering, and panel snapshots
     - added focused regression coverage for compact/full output behavior and scroll clamping edge cases
+101. Completed Section 6C typed mapping editor slice:
+    - draft editors (nodes + rules presenters) now support typed inbound/outbound mapping field edits per capability
+    - mapping kinds are typed/selectable (`inbound: value|event`, `outbound: set_value|invoke_cc_api|zwjs_command`) with path-specific field coercion
+    - command-class/endpoint fields are validated/coerced as integers at edit time; property/propertyKey fields are normalized as string|number
+    - panel draft editor now exposes selector/target mapping fields and capability-level inbound/outbound mapping summaries
+    - added presenter regression coverage for mapping field edits and invalid numeric input rejection
 
 ## Next Tasks
 
 1. Execute Section 6C scaffold edit mode:
-   - add typed in-panel scaffold draft editing (capability mappings)
    - add live validation + diff preview before write/manifest confirmations
    - expand panel tests for draft edit flows
-2. Execute Section 7 convergence review:
+   - follow with data-driven vocabulary cutover:
+     - audit hardcoded TUI/presenter type vocab (Homey classes, capability IDs, directionality)
+     - determine source-of-truth strategy per vocab (SDK-derived vs compiler artifact vs intentionally static)
+     - replace hardcoded typed-select vocab with data providers/artifacts where feasible
+     - keep strict editor-time validation/erroring for unsupported values
+2. Plan compiler-managed Homey vocabulary artifact pipeline:
+   - add a compiler-produced vocabulary artifact for authoring enums (classes/capability IDs) with provenance
+   - wire artifact consumption into TUI draft editor selects and compiler-side rule validation
+   - keep static/deterministic generation (no runtime dependency on Homey cloud/API)
+3. Execute Section 7 convergence review:
    - decide whether to keep separate stacks or extract shared view primitives
-3. Keep Homey adapter implementation paused until Phase 4 reset is complete
+4. Keep Homey adapter implementation paused until Phase 4 reset is complete
 
 Note:
 
