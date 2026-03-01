@@ -556,6 +556,163 @@ test('runPanelApp edits draft metadata fields in panel edit mode', async () => {
   assert.equal(rendered.includes('Unknown selected field:'), false);
 });
 
+test('runPanelApp supports capability row operations in panel edit mode', async () => {
+  const input = new FakeInput();
+  const output = new FakeOutput();
+  let addCalls = 0;
+  let cloneCalls = 0;
+  let removeCalls = 0;
+  let moveCalls = 0;
+  const workingDraft = {
+    signature: '29:66:2',
+    fileHint: 'product-29-66-2.json',
+    generatedAt: new Date().toISOString(),
+    bundle: {
+      metadata: { productName: 'Switch', homeyClass: 'socket', ruleIdPrefix: 'switch' },
+      capabilities: [
+        { capabilityId: 'onoff', directionality: 'bidirectional' },
+        { capabilityId: 'dim', directionality: 'outbound-only' },
+      ],
+    },
+  };
+  const draftEditorState = {
+    baseDraft: structuredClone(workingDraft),
+    workingDraft,
+    dirty: false,
+    errors: [],
+    warnings: [],
+    selectedCapabilityIndex: 1,
+    selectedFieldPath: 'bundle.metadata.productName',
+    lastValidatedAt: new Date().toISOString(),
+  };
+  const presenter = {
+    async connect() {},
+    async disconnect() {},
+    getState() {
+      return {
+        explorer: {
+          items: [{ nodeId: 1, name: 'Kitchen', product: 'Switch', manufacturer: 'Zooz' }],
+        },
+      };
+    },
+    getStatusSnapshot() {
+      return {
+        mode: 'nodes',
+        connectionState: 'ready',
+        selectedSignature: '29:66:2',
+        cachedNodeCount: 1,
+      };
+    },
+    startDraftEdit() {
+      return draftEditorState;
+    },
+    getDraftEditorState() {
+      return draftEditorState;
+    },
+    setDraftEditorField() {
+      return draftEditorState;
+    },
+    setDraftEditorSelectedField(path) {
+      draftEditorState.selectedFieldPath = path;
+      return draftEditorState;
+    },
+    setDraftEditorCapabilityField(index, field, value) {
+      const row = draftEditorState.workingDraft.bundle.capabilities[index];
+      if (row) {
+        row[field] = String(value);
+      }
+      draftEditorState.selectedCapabilityIndex = index;
+      draftEditorState.selectedFieldPath = `bundle.capabilities.${index}.${field}`;
+      return draftEditorState;
+    },
+    addDraftEditorCapability() {
+      addCalls += 1;
+      draftEditorState.workingDraft.bundle.capabilities.push({
+        capabilityId: '',
+        directionality: 'bidirectional',
+      });
+      const index = draftEditorState.workingDraft.bundle.capabilities.length - 1;
+      draftEditorState.selectedCapabilityIndex = index;
+      draftEditorState.selectedFieldPath = `bundle.capabilities.${index}.capabilityId`;
+      return draftEditorState;
+    },
+    cloneDraftEditorCapability(index) {
+      cloneCalls += 1;
+      const row = draftEditorState.workingDraft.bundle.capabilities[index];
+      draftEditorState.workingDraft.bundle.capabilities.splice(index + 1, 0, { ...row });
+      draftEditorState.selectedCapabilityIndex = index + 1;
+      draftEditorState.selectedFieldPath = `bundle.capabilities.${index + 1}.capabilityId`;
+      return draftEditorState;
+    },
+    removeDraftEditorCapability(index) {
+      removeCalls += 1;
+      draftEditorState.workingDraft.bundle.capabilities.splice(index, 1);
+      const nextIndex = Math.max(
+        0,
+        Math.min(draftEditorState.workingDraft.bundle.capabilities.length - 1, index),
+      );
+      draftEditorState.selectedCapabilityIndex = nextIndex;
+      draftEditorState.selectedFieldPath =
+        draftEditorState.workingDraft.bundle.capabilities.length > 0
+          ? `bundle.capabilities.${nextIndex}.capabilityId`
+          : 'bundle.metadata.productName';
+      return draftEditorState;
+    },
+    moveDraftEditorCapability(index, delta) {
+      moveCalls += 1;
+      const targetIndex = index + delta;
+      if (
+        targetIndex < 0 ||
+        targetIndex >= draftEditorState.workingDraft.bundle.capabilities.length
+      ) {
+        return draftEditorState;
+      }
+      const [row] = draftEditorState.workingDraft.bundle.capabilities.splice(index, 1);
+      draftEditorState.workingDraft.bundle.capabilities.splice(targetIndex, 0, row);
+      draftEditorState.selectedCapabilityIndex = targetIndex;
+      draftEditorState.selectedFieldPath = `bundle.capabilities.${targetIndex}.capabilityId`;
+      return draftEditorState;
+    },
+    commitDraftEditorState() {
+      return draftEditorState.workingDraft;
+    },
+  };
+  const { capture, deps } = createPanelDeps(presenter, input, output);
+
+  const runPromise = runPanelApp(
+    {
+      mode: 'nodes',
+      uiMode: 'panel',
+      manifestFile: 'rules/manifest.json',
+      url: 'ws://127.0.0.1:3000',
+      schemaVersion: 0,
+      includeValues: 'summary',
+      maxValues: 100,
+    },
+    { log: () => {}, error: () => {} },
+    deps,
+  );
+
+  setTimeout(() => {
+    emitInputKeys(input, ['e']);
+  }, 5);
+  setTimeout(() => {
+    emitInputKeys(input, ['<', '*', '-', '+', 'q']);
+  }, 25);
+
+  await runPromise;
+
+  assert.equal(addCalls, 1);
+  assert.equal(cloneCalls, 1);
+  assert.equal(removeCalls, 1);
+  assert.equal(moveCalls >= 1, true);
+  assert.equal(draftEditorState.workingDraft.bundle.capabilities.length, 3);
+  const rendered = capture.text();
+  assert.equal(rendered.includes('Added capability row'), true);
+  assert.equal(rendered.includes('Cloned capability row'), true);
+  assert.equal(rendered.includes('Removed capability row'), true);
+});
+
 test('runPanelApp hydrates visible list identity without opening node detail', async () => {
   const input = new FakeInput();
   const output = new FakeOutput();

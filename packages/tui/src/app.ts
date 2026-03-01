@@ -620,6 +620,7 @@ function renderPanelHelp(mode: SessionConfig['mode']): string {
     'enter open/fetch selected value (right pane) | up/down selects values (right+values) | F fetch full values | r refresh',
     'i inspect | v validate | m simulate | d simulate(dry-run) | p scaffold-preview',
     'e edit scaffold draft (requires scaffold preview) | esc exit edit mode',
+    'edit mode capability rows: + add | * clone | - remove | < > reorder',
     'n toggle neighbors in node detail',
     'z toggle values in node detail',
     '1-6 toggle value subsections (controls/sensors/events/config/diagnostic/other)',
@@ -1646,6 +1647,8 @@ interface DraftEditFieldDescriptor {
   label: string;
   type: 'text' | 'select';
   options?: string[];
+  section?: 'metadata' | 'capability';
+  capabilityIndex?: number;
 }
 
 const HOMEY_CLASS_OPTIONS = [
@@ -1661,32 +1664,74 @@ const HOMEY_CLASS_OPTIONS = [
   'fan',
 ];
 
-const DRAFT_EDIT_FIELDS: DraftEditFieldDescriptor[] = [
+const CAPABILITY_DIRECTION_OPTIONS = ['bidirectional', 'inbound-only', 'outbound-only'];
+
+const DRAFT_METADATA_FIELDS: DraftEditFieldDescriptor[] = [
   {
     path: 'bundle.metadata.productName',
     label: 'Product Name',
     type: 'text',
+    section: 'metadata',
   },
   {
     path: 'bundle.metadata.homeyClass',
     label: 'Homey Class',
     type: 'select',
     options: HOMEY_CLASS_OPTIONS,
+    section: 'metadata',
   },
   {
     path: 'bundle.metadata.ruleIdPrefix',
     label: 'Rule ID Prefix',
     type: 'text',
+    section: 'metadata',
   },
   {
     path: 'fileHint',
     label: 'Output File',
     type: 'text',
+    section: 'metadata',
   },
 ];
 
-function getDraftEditFieldByPath(path: string): DraftEditFieldDescriptor | undefined {
-  return DRAFT_EDIT_FIELDS.find((entry) => entry.path === path);
+function getDraftCapabilitiesForEditor(state: DraftEditorState): Array<Record<string, unknown>> {
+  const bundle = asRecord(state.workingDraft.bundle);
+  const raw = Array.isArray(bundle?.capabilities) ? bundle.capabilities : [];
+  return raw.map((entry) => asRecord(entry) ?? {});
+}
+
+function getDraftEditFields(state: DraftEditorState): DraftEditFieldDescriptor[] {
+  const capabilityFields = getDraftCapabilitiesForEditor(state).flatMap((entry, index) => {
+    const capabilityId =
+      typeof entry.capabilityId === 'string' && entry.capabilityId.trim().length > 0
+        ? entry.capabilityId.trim()
+        : `Capability ${index + 1}`;
+    return [
+      {
+        path: `bundle.capabilities.${index}.capabilityId`,
+        label: `${capabilityId} ID`,
+        type: 'text' as const,
+        section: 'capability' as const,
+        capabilityIndex: index,
+      },
+      {
+        path: `bundle.capabilities.${index}.directionality`,
+        label: `${capabilityId} Direction`,
+        type: 'select' as const,
+        options: CAPABILITY_DIRECTION_OPTIONS,
+        section: 'capability' as const,
+        capabilityIndex: index,
+      },
+    ];
+  });
+  return [...DRAFT_METADATA_FIELDS, ...capabilityFields];
+}
+
+function getDraftEditFieldByPath(
+  state: DraftEditorState,
+  path: string,
+): DraftEditFieldDescriptor | undefined {
+  return getDraftEditFields(state).find((entry) => entry.path === path);
 }
 
 function getDraftEditorFieldValue(state: DraftEditorState, path: string): string {
@@ -1704,6 +1749,22 @@ function getDraftEditorFieldValue(state: DraftEditorState, path: string): string
   if (path === 'bundle.metadata.ruleIdPrefix') {
     const metadata = asRecord(state.workingDraft.bundle?.metadata);
     return asNonEmptyString(metadata?.ruleIdPrefix) ?? '';
+  }
+  const capabilityFieldMatch = path.match(
+    /^bundle\.capabilities\.(\d+)\.(capabilityId|directionality)$/,
+  );
+  if (capabilityFieldMatch) {
+    const index = Number(capabilityFieldMatch[1]);
+    const field = capabilityFieldMatch[2];
+    const capabilities = getDraftCapabilitiesForEditor(state);
+    const capability = capabilities[index];
+    if (!capability) return '';
+    if (field === 'capabilityId') {
+      return asNonEmptyString(capability.capabilityId) ?? '';
+    }
+    if (field === 'directionality') {
+      return asNonEmptyString(capability.directionality) ?? '';
+    }
   }
   return '';
 }
@@ -1726,19 +1787,8 @@ function renderPanelDraftEditor(
   } = {},
 ): string {
   const workingBundle = state.workingDraft.bundle ?? {};
-  const capabilities =
-    Array.isArray(workingBundle.capabilities) && workingBundle.capabilities.length > 0
-      ? workingBundle.capabilities
-      : [];
-  const sampleCapabilities = capabilities.slice(0, 6).map((entry, index) => {
-    const record = asRecord(entry);
-    const capabilityId =
-      record && typeof record.capabilityId === 'string' ? record.capabilityId : `cap-${index + 1}`;
-    const directionality =
-      record && typeof record.directionality === 'string' ? record.directionality : '?';
-    return `- ${capabilityId} (${directionality})`;
-  });
-  const fieldLines = DRAFT_EDIT_FIELDS.map((field) => {
+  const capabilities = getDraftCapabilitiesForEditor(state);
+  const fieldLines = DRAFT_METADATA_FIELDS.map((field) => {
     const value = getDraftEditorFieldValue(state, field.path);
     const isSelected = state.selectedFieldPath === field.path;
     const prefix = isSelected ? '> ' : '- ';
@@ -1747,6 +1797,24 @@ function renderPanelDraftEditor(
         ? ` [options:${field.options.join(', ')}]`
         : '';
     return `${prefix}${field.label}: ${value || '(unset)'}${suffix}`;
+  });
+  const capabilityLines = capabilities.flatMap((entry, index) => {
+    const capabilityId =
+      typeof entry.capabilityId === 'string' && entry.capabilityId.trim().length > 0
+        ? entry.capabilityId.trim()
+        : '(unset)';
+    const directionality =
+      typeof entry.directionality === 'string' && entry.directionality.trim().length > 0
+        ? entry.directionality.trim()
+        : '(unset)';
+    const selectedCapability =
+      state.selectedFieldPath === `bundle.capabilities.${index}.capabilityId` ||
+      state.selectedFieldPath === `bundle.capabilities.${index}.directionality`;
+    const prefix = selectedCapability ? '>' : '-';
+    return [
+      `${prefix} Capability ${index + 1}: ${capabilityId}`,
+      `  Directionality: ${directionality}`,
+    ];
   });
   const editStatus =
     options.editingFieldPath && options.editingBuffer !== undefined
@@ -1801,10 +1869,7 @@ function renderPanelDraftEditor(
     '',
     'Capabilities',
     `Count: ${capabilities.length}`,
-    ...sampleCapabilities,
-    capabilities.length > sampleCapabilities.length
-      ? `... ${capabilities.length - sampleCapabilities.length} more`
-      : null,
+    ...(capabilityLines.length > 0 ? capabilityLines : ['(none)']),
     '',
     'Validation',
     state.errors.length > 0 ? `Errors (${state.errors.length}):` : 'Errors: none',
@@ -2282,6 +2347,37 @@ export async function runPanelApp(
   }
 
   function setDraftFieldValue(path: string, value: string): DraftEditorState {
+    const capabilityFieldMatch = path.match(
+      /^bundle\.capabilities\.(\d+)\.(capabilityId|directionality)$/,
+    );
+    if (capabilityFieldMatch) {
+      const index = Number(capabilityFieldMatch[1]);
+      const field = capabilityFieldMatch[2] as 'capabilityId' | 'directionality';
+      if (isNodesMode) {
+        const presenter = nodesPresenter as {
+          setDraftEditorCapabilityField?: (
+            index: number,
+            field: 'capabilityId' | 'directionality',
+            value: unknown,
+          ) => DraftEditorState;
+        };
+        if (typeof presenter.setDraftEditorCapabilityField !== 'function') {
+          throw new Error('Capability field edits are unavailable in the current nodes presenter.');
+        }
+        return presenter.setDraftEditorCapabilityField(index, field, value);
+      }
+      const presenter = rulesPresenter as {
+        setDraftEditorCapabilityField?: (
+          index: number,
+          field: 'capabilityId' | 'directionality',
+          value: unknown,
+        ) => DraftEditorState;
+      };
+      if (typeof presenter.setDraftEditorCapabilityField !== 'function') {
+        throw new Error('Capability field edits are unavailable in the current rules presenter.');
+      }
+      return presenter.setDraftEditorCapabilityField(index, field, value);
+    }
     if (isNodesMode) {
       const presenter = nodesPresenter as {
         setDraftEditorField?: (path: string, value: unknown) => DraftEditorState;
@@ -2320,21 +2416,80 @@ export async function runPanelApp(
     presenter.commitDraftEditorState();
   }
 
+  function addDraftCapabilityRow(): DraftEditorState | undefined {
+    if (isNodesMode) {
+      const presenter = nodesPresenter as {
+        addDraftEditorCapability?: () => DraftEditorState;
+      };
+      if (typeof presenter.addDraftEditorCapability !== 'function') return undefined;
+      return presenter.addDraftEditorCapability();
+    }
+    const presenter = rulesPresenter as {
+      addDraftEditorCapability?: () => DraftEditorState;
+    };
+    if (typeof presenter.addDraftEditorCapability !== 'function') return undefined;
+    return presenter.addDraftEditorCapability();
+  }
+
+  function cloneDraftCapabilityRow(index: number): DraftEditorState | undefined {
+    if (isNodesMode) {
+      const presenter = nodesPresenter as {
+        cloneDraftEditorCapability?: (index?: number) => DraftEditorState;
+      };
+      if (typeof presenter.cloneDraftEditorCapability !== 'function') return undefined;
+      return presenter.cloneDraftEditorCapability(index);
+    }
+    const presenter = rulesPresenter as {
+      cloneDraftEditorCapability?: (index?: number) => DraftEditorState;
+    };
+    if (typeof presenter.cloneDraftEditorCapability !== 'function') return undefined;
+    return presenter.cloneDraftEditorCapability(index);
+  }
+
+  function removeDraftCapabilityRow(index: number): DraftEditorState | undefined {
+    if (isNodesMode) {
+      const presenter = nodesPresenter as {
+        removeDraftEditorCapability?: (index?: number) => DraftEditorState;
+      };
+      if (typeof presenter.removeDraftEditorCapability !== 'function') return undefined;
+      return presenter.removeDraftEditorCapability(index);
+    }
+    const presenter = rulesPresenter as {
+      removeDraftEditorCapability?: (index?: number) => DraftEditorState;
+    };
+    if (typeof presenter.removeDraftEditorCapability !== 'function') return undefined;
+    return presenter.removeDraftEditorCapability(index);
+  }
+
+  function moveDraftCapabilityRow(index: number, delta: -1 | 1): DraftEditorState | undefined {
+    if (isNodesMode) {
+      const presenter = nodesPresenter as {
+        moveDraftEditorCapability?: (index: number, delta: -1 | 1) => DraftEditorState;
+      };
+      if (typeof presenter.moveDraftEditorCapability !== 'function') return undefined;
+      return presenter.moveDraftEditorCapability(index, delta);
+    }
+    const presenter = rulesPresenter as {
+      moveDraftEditorCapability?: (index: number, delta: -1 | 1) => DraftEditorState;
+    };
+    if (typeof presenter.moveDraftEditorCapability !== 'function') return undefined;
+    return presenter.moveDraftEditorCapability(index, delta);
+  }
+
   function moveDraftFieldSelection(delta: -1 | 1): DraftEditorState | undefined {
     const editor = getActiveDraftEditorState();
     if (!editor) return undefined;
-    const currentIndex = DRAFT_EDIT_FIELDS.findIndex(
-      (entry) => entry.path === editor.selectedFieldPath,
-    );
+    const fields = getDraftEditFields(editor);
+    const currentIndex = fields.findIndex((entry) => entry.path === editor.selectedFieldPath);
     const baseIndex = currentIndex >= 0 ? currentIndex : 0;
-    const nextIndex = Math.max(0, Math.min(DRAFT_EDIT_FIELDS.length - 1, baseIndex + delta));
-    return setSelectedDraftField(DRAFT_EDIT_FIELDS[nextIndex].path);
+    const nextIndex = Math.max(0, Math.min(fields.length - 1, baseIndex + delta));
+    return setSelectedDraftField(fields[nextIndex].path);
   }
 
   function cycleDraftSelectField(delta: -1 | 1): DraftEditorState | undefined {
     const editor = getActiveDraftEditorState();
     if (!editor) return undefined;
-    const field = getDraftEditFieldByPath(editor.selectedFieldPath);
+    const field = getDraftEditFieldByPath(editor, editor.selectedFieldPath);
     if (!field || field.type !== 'select' || !field.options || field.options.length <= 0) {
       return undefined;
     }
@@ -2343,6 +2498,17 @@ export async function runPanelApp(
     const baseIndex = currentIndex >= 0 ? currentIndex : 0;
     const nextIndex = (baseIndex + delta + field.options.length) % field.options.length;
     return setDraftFieldValue(field.path, field.options[nextIndex]);
+  }
+
+  function getSelectedDraftCapabilityIndex(editor?: DraftEditorState): number | undefined {
+    const current = editor ?? getActiveDraftEditorState();
+    if (!current) return undefined;
+    const match = current.selectedFieldPath.match(/^bundle\.capabilities\.(\d+)\./);
+    if (match) return Number(match[1]);
+    const caps = getDraftCapabilitiesForEditor(current);
+    if (caps.length <= 0) return undefined;
+    const index = Math.max(0, Math.min(caps.length - 1, current.selectedCapabilityIndex ?? 0));
+    return index;
   }
 
   function nodeNeedsListIdentity(nodeId: number): boolean {
@@ -3122,7 +3288,7 @@ export async function runPanelApp(
           setBottomPaneText('Draft editor is unavailable.');
           return;
         }
-        const selectedField = getDraftEditFieldByPath(editor.selectedFieldPath);
+        const selectedField = getDraftEditFieldByPath(editor, editor.selectedFieldPath);
         if (!selectedField) {
           setBottomPaneText(`Unknown selected field: ${editor.selectedFieldPath}`);
           return;
@@ -3497,6 +3663,71 @@ export async function runPanelApp(
           pendingReturnLikeCounterpart = null;
           pendingReturnLikeExpiresAt = 0;
         }
+        if (
+          panelMode === 'edit-draft' &&
+          focusedPane === 'right' &&
+          !filterMode &&
+          !draftFieldEdit
+        ) {
+          try {
+            if (char === '+') {
+              const editor = addDraftCapabilityRow();
+              if (editor) {
+                setBottomPaneText(`Added capability row ${editor.selectedCapabilityIndex + 1}.`);
+                renderFrame();
+                return;
+              }
+            }
+            if (char === '*') {
+              const selectedIndex = getSelectedDraftCapabilityIndex();
+              if (selectedIndex === undefined) {
+                setBottomPaneText('No capability row selected to clone.');
+              } else {
+                const editor = cloneDraftCapabilityRow(selectedIndex);
+                if (editor) {
+                  setBottomPaneText(
+                    `Cloned capability row ${selectedIndex + 1} -> ${editor.selectedCapabilityIndex + 1}.`,
+                  );
+                }
+              }
+              renderFrame();
+              return;
+            }
+            if (char === '-') {
+              const selectedIndex = getSelectedDraftCapabilityIndex();
+              if (selectedIndex === undefined) {
+                setBottomPaneText('No capability row selected to remove.');
+              } else {
+                const editor = removeDraftCapabilityRow(selectedIndex);
+                if (editor) {
+                  setBottomPaneText(`Removed capability row ${selectedIndex + 1}.`);
+                }
+              }
+              renderFrame();
+              return;
+            }
+            if (char === '<' || char === '>') {
+              const selectedIndex = getSelectedDraftCapabilityIndex();
+              if (selectedIndex === undefined) {
+                setBottomPaneText('No capability row selected to reorder.');
+              } else {
+                const direction = char === '<' ? -1 : 1;
+                const editor = moveDraftCapabilityRow(selectedIndex, direction);
+                if (editor) {
+                  setBottomPaneText(
+                    `Moved capability row ${selectedIndex + 1} to ${editor.selectedCapabilityIndex + 1}.`,
+                  );
+                }
+              }
+              renderFrame();
+              return;
+            }
+          } catch (error) {
+            setBottomPaneText(`Error: ${error instanceof Error ? error.message : String(error)}`);
+            renderFrame();
+            return;
+          }
+        }
         const parsedIntent = keypressToPanelIntent(char, key);
         if (!filterMode && parsedIntent.type === 'start-filter') {
           filterMode = true;
@@ -3521,8 +3752,11 @@ export async function runPanelApp(
           if (name === 'return' || name === 'enter') {
             try {
               setDraftFieldValue(draftFieldEdit.path, draftFieldEdit.value);
+              const editor = getActiveDraftEditorState();
               const label =
-                getDraftEditFieldByPath(draftFieldEdit.path)?.label ?? draftFieldEdit.path;
+                (editor
+                  ? getDraftEditFieldByPath(editor, draftFieldEdit.path)?.label
+                  : undefined) ?? draftFieldEdit.path;
               draftFieldEdit = null;
               setBottomPaneText(`Updated ${label}.`);
             } catch (error) {

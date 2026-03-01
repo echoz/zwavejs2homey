@@ -382,3 +382,31 @@ test('ExplorerPresenter draft editor lifecycle mutates and commits scaffold draf
     'product-29-66-2-edited.json',
   );
 });
+
+test('ExplorerPresenter draft editor supports capability row add/clone/move/remove', () => {
+  const presenter = new ExplorerPresenter(createChildren());
+  presenter.selectSignature('29:66:2');
+  presenter.createScaffoldFromSignature({});
+  presenter.startDraftEdit();
+
+  const added = presenter.addDraftEditorCapability();
+  assert.equal(
+    added.errors.some((entry) => entry.includes('capabilityId is required')),
+    true,
+  );
+
+  presenter.setDraftEditorCapabilityField(0, 'capabilityId', 'onoff');
+  presenter.setDraftEditorCapabilityField(0, 'directionality', 'bidirectional');
+  const cloned = presenter.cloneDraftEditorCapability(0);
+  assert.equal(cloned.selectedCapabilityIndex, 1);
+  assert.equal(cloned.workingDraft.bundle.capabilities.length, 2);
+
+  presenter.setDraftEditorCapabilityField(1, 'capabilityId', 'dim');
+  const moved = presenter.moveDraftEditorCapability(1, -1);
+  assert.equal(moved.selectedCapabilityIndex, 0);
+  assert.equal(moved.workingDraft.bundle.capabilities[0].capabilityId, 'dim');
+
+  const removed = presenter.removeDraftEditorCapability(0);
+  assert.equal(removed.workingDraft.bundle.capabilities.length, 1);
+  assert.equal(removed.workingDraft.bundle.capabilities[0].capabilityId, 'onoff');
+});

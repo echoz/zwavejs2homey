@@ -498,11 +498,17 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - edit interactions now support field selection (`up/down`), select-field cycling (`left/right`), and text field editing (`enter`, type, `enter`)
     - `esc` in edit mode now commits draft editor state before returning to detail mode
     - panel test harness updated for arrow-left/right key mapping and metadata edit flow coverage
+97. Completed Section 6C capability rows + typed capability field editing slice:
+    - draft editors (nodes + rules presenters) now support capability row add/clone/remove/reorder operations
+    - capability field editing is typed for `capabilityId` and `directionality` (`bidirectional` / `inbound-only` / `outbound-only`)
+    - panel edit mode now supports capability operations with direct key actions (`+`, `*`, `-`, `<`, `>`)
+    - validation now includes capability row constraints (`capabilityId` required, directionality validity, duplicate capability warnings)
+    - added presenter + panel regression tests for capability row operations and defaults
 
 ## Next Tasks
 
 1. Execute Section 6C scaffold edit mode:
-   - add typed in-panel scaffold draft editing (metadata + capability mappings)
+   - add typed in-panel scaffold draft editing (capability mappings)
    - add live validation + diff preview before write/manifest confirmations
    - expand panel tests for draft edit flows
 2. Execute Section 7 convergence review:

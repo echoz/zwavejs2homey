@@ -171,3 +171,54 @@ test('RulesPresenter draft editor lifecycle mutates and commits scaffold draft',
   const written = presenter.writeScaffoldDraft(undefined, { confirm: true });
   assert.equal(written, 'rules/project/product/_scratch/rule.json');
 });
+
+test('RulesPresenter draft editor supports capability row add/clone/move/remove', () => {
+  const fileService = {
+    listManifestRules() {
+      return [];
+    },
+    readManifestRule() {
+      throw new Error('not found');
+    },
+    writeJsonFile() {},
+    resolveAllowedProductRulePath(filePath) {
+      return filePath;
+    },
+    addProductRuleToManifest() {
+      return { manifestFile: '/tmp/manifest.json', entryFilePath: 'x.json', updated: true };
+    },
+  };
+  const presenter = new RulesPresenter(createCuration(), fileService);
+  presenter.initialize({
+    mode: 'rules',
+    manifestFile: 'rules/manifest.json',
+    schemaVersion: 0,
+    includeValues: 'summary',
+    maxValues: 200,
+    url: 'ws://127.0.0.1:3000',
+  });
+  presenter.selectSignature('29:66:2');
+  presenter.createScaffoldFromSignature({});
+  presenter.startDraftEdit();
+
+  const added = presenter.addDraftEditorCapability();
+  assert.equal(
+    added.errors.some((entry) => entry.includes('capabilityId is required')),
+    true,
+  );
+
+  presenter.setDraftEditorCapabilityField(0, 'capabilityId', 'onoff');
+  presenter.setDraftEditorCapabilityField(0, 'directionality', 'bidirectional');
+  const cloned = presenter.cloneDraftEditorCapability(0);
+  assert.equal(cloned.selectedCapabilityIndex, 1);
+  assert.equal(cloned.workingDraft.bundle.capabilities.length, 2);
+
+  presenter.setDraftEditorCapabilityField(1, 'capabilityId', 'dim');
+  const moved = presenter.moveDraftEditorCapability(1, -1);
+  assert.equal(moved.selectedCapabilityIndex, 0);
+  assert.equal(moved.workingDraft.bundle.capabilities[0].capabilityId, 'dim');
+
+  const removed = presenter.removeDraftEditorCapability(0);
+  assert.equal(removed.workingDraft.bundle.capabilities.length, 1);
+  assert.equal(removed.workingDraft.bundle.capabilities[0].capabilityId, 'onoff');
+});

@@ -50,7 +50,8 @@
   - [x] presenter draft-editor API foundation (`start/get/set/validate/reset/commit/clear`)
   - [x] typed draft editing (no freeform JSON editor in v1)
   - [x] editable draft metadata (`productName`, `homeyClass`, `ruleIdPrefix`, output `filePath`)
-  - [ ] capability row operations (add/remove/clone/reorder)
+  - [x] capability row operations (add/remove/clone/reorder)
+  - [x] capability field editing (`capabilityId`, `directionality`)
   - [ ] typed mapping editors for inbound/outbound selector/target fields
   - [ ] live draft validation with write-blocking errors and non-blocking warnings
   - [ ] in-panel diff preview before write confirmation

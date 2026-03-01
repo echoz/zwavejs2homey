@@ -21,6 +21,16 @@ export interface ExplorerPresenterChildren {
   curation: CurationWorkflowChildPresenterLike;
 }
 
+type DraftCapabilityDirectionality = 'bidirectional' | 'inbound-only' | 'outbound-only';
+
+interface DraftCapabilityShape {
+  capabilityId: string;
+  directionality: DraftCapabilityDirectionality;
+  inboundMapping?: Record<string, unknown>;
+  outboundMapping?: Record<string, unknown>;
+  flags?: Record<string, unknown>;
+}
+
 function nowIso(): string {
   return new Date().toISOString();
 }
@@ -100,6 +110,53 @@ function setByPath(
     ...target,
     [head]: setByPath(nested, tail, value),
   };
+}
+
+function isDirectionality(value: unknown): value is DraftCapabilityDirectionality {
+  return value === 'bidirectional' || value === 'inbound-only' || value === 'outbound-only';
+}
+
+function normalizeDraftCapability(entry: unknown): DraftCapabilityShape {
+  const record = entry && typeof entry === 'object' ? (entry as Record<string, unknown>) : {};
+  const capabilityId =
+    typeof record.capabilityId === 'string' && record.capabilityId.trim().length > 0
+      ? record.capabilityId.trim()
+      : '';
+  const directionality = isDirectionality(record.directionality)
+    ? record.directionality
+    : 'bidirectional';
+  return {
+    capabilityId,
+    directionality,
+    inboundMapping:
+      record.inboundMapping && typeof record.inboundMapping === 'object'
+        ? (record.inboundMapping as Record<string, unknown>)
+        : undefined,
+    outboundMapping:
+      record.outboundMapping && typeof record.outboundMapping === 'object'
+        ? (record.outboundMapping as Record<string, unknown>)
+        : undefined,
+    flags:
+      record.flags && typeof record.flags === 'object'
+        ? (record.flags as Record<string, unknown>)
+        : undefined,
+  };
+}
+
+function getDraftCapabilities(bundle: Record<string, unknown>): DraftCapabilityShape[] {
+  const raw = Array.isArray(bundle.capabilities) ? bundle.capabilities : [];
+  return raw.map((entry) => normalizeDraftCapability(entry));
+}
+
+function setDraftCapabilities(
+  bundle: Record<string, unknown>,
+  capabilities: DraftCapabilityShape[],
+): Record<string, unknown> {
+  return { ...bundle, capabilities: capabilities.map((entry) => ({ ...entry })) };
+}
+
+function selectedCapabilityPath(index: number, field: 'capabilityId' | 'directionality'): string {
+  return `bundle.capabilities.${index}.${field}`;
 }
 
 export class ExplorerPresenter {
@@ -435,6 +492,39 @@ export class ExplorerPresenter {
     return this.validateDraftEditorState();
   }
 
+  setDraftEditorCapabilityField(
+    index: number,
+    field: 'capabilityId' | 'directionality',
+    value: unknown,
+  ): DraftEditorState {
+    const editor = this.getDraftEditorStateOrThrow();
+    const workingDraft = cloneScaffoldDraft(editor.workingDraft);
+    const capabilities = getDraftCapabilities(workingDraft.bundle);
+    if (index < 0 || index >= capabilities.length) {
+      throw new Error(`Capability index out of range: ${index}`);
+    }
+    const next = capabilities[index];
+    if (field === 'capabilityId') {
+      next.capabilityId = String(value ?? '').trim();
+    } else {
+      const directionality = String(value ?? '').trim();
+      if (!isDirectionality(directionality)) {
+        throw new Error(`Unsupported directionality: ${directionality}`);
+      }
+      next.directionality = directionality;
+    }
+    workingDraft.bundle = setDraftCapabilities(workingDraft.bundle, capabilities);
+    this.draftEditorState = {
+      ...editor,
+      workingDraft,
+      selectedCapabilityIndex: index,
+      selectedFieldPath: selectedCapabilityPath(index, field),
+      dirty: JSON.stringify(editor.baseDraft) !== JSON.stringify(workingDraft),
+      lastValidatedAt: nowIso(),
+    };
+    return this.validateDraftEditorState();
+  }
+
   setDraftEditorSelectedField(path: string): DraftEditorState {
     const editor = this.getDraftEditorStateOrThrow();
     this.draftEditorState = {
@@ -445,12 +535,134 @@ export class ExplorerPresenter {
     return this.getDraftEditorStateOrThrow();
   }
 
+  addDraftEditorCapability(): DraftEditorState {
+    const editor = this.getDraftEditorStateOrThrow();
+    const workingDraft = cloneScaffoldDraft(editor.workingDraft);
+    const capabilities = getDraftCapabilities(workingDraft.bundle);
+    capabilities.push({
+      capabilityId: '',
+      directionality: 'bidirectional',
+    });
+    const index = capabilities.length - 1;
+    workingDraft.bundle = setDraftCapabilities(workingDraft.bundle, capabilities);
+    this.draftEditorState = {
+      ...editor,
+      workingDraft,
+      selectedCapabilityIndex: index,
+      selectedFieldPath: selectedCapabilityPath(index, 'capabilityId'),
+      dirty: JSON.stringify(editor.baseDraft) !== JSON.stringify(workingDraft),
+      lastValidatedAt: nowIso(),
+    };
+    return this.validateDraftEditorState();
+  }
+
+  cloneDraftEditorCapability(index?: number): DraftEditorState {
+    const editor = this.getDraftEditorStateOrThrow();
+    const workingDraft = cloneScaffoldDraft(editor.workingDraft);
+    const capabilities = getDraftCapabilities(workingDraft.bundle);
+    if (capabilities.length === 0) {
+      throw new Error('No capability rows available to clone.');
+    }
+    const selectedIndex = Math.max(
+      0,
+      Math.min(capabilities.length - 1, index ?? editor.selectedCapabilityIndex ?? 0),
+    );
+    const source = capabilities[selectedIndex];
+    capabilities.splice(selectedIndex + 1, 0, { ...source });
+    const nextIndex = selectedIndex + 1;
+    workingDraft.bundle = setDraftCapabilities(workingDraft.bundle, capabilities);
+    this.draftEditorState = {
+      ...editor,
+      workingDraft,
+      selectedCapabilityIndex: nextIndex,
+      selectedFieldPath: selectedCapabilityPath(nextIndex, 'capabilityId'),
+      dirty: JSON.stringify(editor.baseDraft) !== JSON.stringify(workingDraft),
+      lastValidatedAt: nowIso(),
+    };
+    return this.validateDraftEditorState();
+  }
+
+  removeDraftEditorCapability(index?: number): DraftEditorState {
+    const editor = this.getDraftEditorStateOrThrow();
+    const workingDraft = cloneScaffoldDraft(editor.workingDraft);
+    const capabilities = getDraftCapabilities(workingDraft.bundle);
+    if (capabilities.length === 0) {
+      throw new Error('No capability rows available to remove.');
+    }
+    const selectedIndex = Math.max(
+      0,
+      Math.min(capabilities.length - 1, index ?? editor.selectedCapabilityIndex ?? 0),
+    );
+    capabilities.splice(selectedIndex, 1);
+    const nextIndex = Math.max(0, Math.min(capabilities.length - 1, selectedIndex));
+    workingDraft.bundle = setDraftCapabilities(workingDraft.bundle, capabilities);
+    this.draftEditorState = {
+      ...editor,
+      workingDraft,
+      selectedCapabilityIndex: nextIndex,
+      selectedFieldPath:
+        capabilities.length > 0
+          ? selectedCapabilityPath(nextIndex, 'capabilityId')
+          : 'bundle.metadata.productName',
+      dirty: JSON.stringify(editor.baseDraft) !== JSON.stringify(workingDraft),
+      lastValidatedAt: nowIso(),
+    };
+    return this.validateDraftEditorState();
+  }
+
+  moveDraftEditorCapability(index: number, delta: -1 | 1): DraftEditorState {
+    const editor = this.getDraftEditorStateOrThrow();
+    const workingDraft = cloneScaffoldDraft(editor.workingDraft);
+    const capabilities = getDraftCapabilities(workingDraft.bundle);
+    if (capabilities.length === 0) {
+      throw new Error('No capability rows available to move.');
+    }
+    if (index < 0 || index >= capabilities.length) {
+      throw new Error(`Capability index out of range: ${index}`);
+    }
+    const targetIndex = index + delta;
+    if (targetIndex < 0 || targetIndex >= capabilities.length) {
+      return this.getDraftEditorStateOrThrow();
+    }
+    const [moved] = capabilities.splice(index, 1);
+    capabilities.splice(targetIndex, 0, moved);
+    workingDraft.bundle = setDraftCapabilities(workingDraft.bundle, capabilities);
+    this.draftEditorState = {
+      ...editor,
+      workingDraft,
+      selectedCapabilityIndex: targetIndex,
+      selectedFieldPath: selectedCapabilityPath(targetIndex, 'capabilityId'),
+      dirty: JSON.stringify(editor.baseDraft) !== JSON.stringify(workingDraft),
+      lastValidatedAt: nowIso(),
+    };
+    return this.validateDraftEditorState();
+  }
+
   validateDraftEditorState(): DraftEditorState {
     const editor = this.getDraftEditorStateOrThrow();
     const errors: string[] = [];
     const warnings: string[] = [];
     if (editor.workingDraft.fileHint.trim().length <= 0) {
       errors.push('fileHint is required');
+    }
+    const capabilities = getDraftCapabilities(editor.workingDraft.bundle);
+    const seenCapabilityIds = new Set<string>();
+    for (let index = 0; index < capabilities.length; index += 1) {
+      const entry = capabilities[index];
+      const rowId = `capabilities[${index}]`;
+      if (!entry.capabilityId) {
+        errors.push(`${rowId}.capabilityId is required`);
+      } else {
+        const key = entry.capabilityId.toLowerCase();
+        if (seenCapabilityIds.has(key)) {
+          warnings.push(`duplicate capabilityId: ${entry.capabilityId}`);
+        } else {
+          seenCapabilityIds.add(key);
+        }
+      }
+      if (!isDirectionality(entry.directionality)) {
+        errors.push(`${rowId}.directionality is invalid`);
+      }
     }
 
     this.draftEditorState = {
