@@ -150,6 +150,11 @@ export {
   createMutationPolicyPreset,
   getMutationPolicyPresetAllowlist,
 } from './client/mutation-policy-presets';
+export {
+  resolveZwjsConnectionConfig,
+  ZWJS_CONNECTION_SETTINGS_KEY,
+} from './zwjs-connection-config';
+export type { ResolvedZwjsConnectionConfig } from './zwjs-connection-config';
 
 import { ZwjsClientImpl } from './client/zwjs-client';
 import type { ZwjsClient, ZwjsClientConfig } from './client/types';

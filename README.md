@@ -45,6 +45,22 @@ The project is intentionally split into layers:
 - `plan/`
   - roadmaps, active plans, sprint notes
 
+## Homey App Connection Setting
+
+The Homey app bootstrap reads ZWJS transport settings from `this.homey.settings` key:
+
+- `zwjs_connection`
+
+Supported setting shapes:
+
+- URL string: `"ws://192.168.1.15:3000"`
+- Object:
+  - `{ "url": "ws://192.168.1.15:3000", "token": "..." }`
+  - `{ "url": "wss://example", "auth": { "type": "none" } }`
+  - `{ "url": "wss://example", "auth": { "type": "bearer", "token": "..." } }`
+
+Invalid/missing values fall back to `ws://127.0.0.1:3000` with auth `none`.
+
 ## Key CLI Tools
 
 ### ZWJS inspection (live, read-only)

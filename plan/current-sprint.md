@@ -7,9 +7,10 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 ## In Progress
 
-- Transition out of Phase 4 reset and prepare Phase 5 Homey adapter implementation:
+- Phase 5 Homey adapter early implementation:
   - keep compiler + TUI quality gates green while adapter work starts
   - carry forward dual-root TUI curation workflow as contributor tooling baseline
+  - build first adapter vertical slice on compiled profile artifacts
 
 ## Recently Completed
 
@@ -40,6 +41,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
   - introduced mode adapters in `packages/tui/src/app.ts` for shell and panel shared workflows
   - rewired shell command dispatch to adapter methods (init/list/show/signature/inspect/validate/simulate/scaffold/status/log)
   - rewired panel shared curation + draft-editing dispatch through adapter/draft surfaces while preserving nodes-only behaviors
+
+- Latest Phase 5 slice:
+  - added settings-backed ZWJS connection config resolution in `packages/core/src/zwjs-connection-config.ts`
+  - added core regression coverage for defaults/settings/auth/url validation (`packages/core/test/zwjs-connection-config.test.js`)
+  - hardened Homey app bootstrap lifecycle to reload ZWJS client on `zwjs_connection` settings changes and stop cleanly on app uninit (`co.lazylabs.zwavejs2homey/app.ts`)
 
 1. Completed Phase 2 HA import foundation:
    - `discovery.py` subset extractor in `packages/compiler`
@@ -579,7 +585,7 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 ## Next Tasks
 
-1. Start Phase 5 Homey adapter implementation slices against compiled profile artifacts.
+1. Start first Homey adapter mapping vertical slice against compiled profile artifacts.
 2. Keep compiler/TUI maintenance pass active for any regressions discovered during adapter integration.
 
 Note:

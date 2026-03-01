@@ -3,7 +3,7 @@
 ## Current Focus (Active)
 
 - [x] Phase 4 reset: dual-root panel TUI flow delivered (`--url` nodes root, `--rules-only` rules root)
-- [ ] Start Phase 5 Homey adapter implementation slices on top of the completed compiler + TUI foundation
+- [x] Start Phase 5 Homey adapter implementation slices on top of the completed compiler + TUI foundation
 
 ## Phase 1: Foundation (Completed)
 
@@ -124,8 +124,9 @@
 
 ## Phase 5: Homey Adapter MVP (Next Major Area)
 
-- [ ] Start only after compiler runtime-validation readiness milestone is met
+- [x] Start only after compiler runtime-validation readiness milestone is met
 - [ ] Define first supported Homey device/capability vertical slice using compiled profiles
+- [x] Adapter bootstrap hardening: settings-backed ZWJS connection config + managed reload lifecycle in app init/uninit flow
 - [x] Lock adapter curation persistence v1 policy: `this.homey.settings` + versioned payloads (`docs/decisions/0010-homey-adapter-curation-storage-v1.md`)
 - [x] Lock adapter curation execution direction: persist materialized overrides, lower to runtime rules, execute with shared engine order semantics (`docs/decisions/0012-homey-curation-execution-via-runtime-rule-lowering.md`)
 - [x] Lock adapter precedence/update direction: instance-scoped curation (`homeyDeviceId`) overrides baseline by default; baseline improvements are surfaced as user-adopted recommendations (`docs/decisions/0013-homey-device-instance-curation-precedence-v1.md`)

@@ -175,7 +175,7 @@ Guardrails remain:
 ## Runtime Flow (Target)
 
 1. Homey app starts
-2. Homey app creates `zwjs` protocol client
+2. Homey app resolves ZWJS connection config from `this.homey.settings` (`zwjs_connection`) and creates `zwjs` protocol client
 3. Core protocol client connects to Z-Wave JS endpoint
 4. Core protocol client emits protocol/canonical events
 5. Homey layer maps events to capabilities/devices
