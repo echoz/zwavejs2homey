@@ -504,6 +504,10 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - panel edit mode now supports capability operations with direct key actions (`+`, `*`, `-`, `<`, `>`)
     - validation now includes capability row constraints (`capabilityId` required, directionality validity, duplicate capability warnings)
     - added presenter + panel regression tests for capability row operations and defaults
+98. Completed panel chrome presenter slice (view/presenter separation step):
+    - extracted header/footer contextual help generation into a dedicated presenter (`PanelChromePresenter`)
+    - `runPanelApp` now consumes presenter-produced chrome view-model output instead of composing footer/header directly in the view loop
+    - added focused regression coverage for panel chrome contexts (filter, detail, scaffold edit, confirm/cancel hints)
 
 ## Next Tasks
 

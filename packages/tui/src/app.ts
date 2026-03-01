@@ -23,6 +23,12 @@ import {
   ExplorerSessionPresenter,
   type ExplorerSessionChildPresenterLike,
 } from './presenter/explorer-session-presenter';
+import {
+  PanelChromePresenter,
+  type PanelChromeConfirmAction,
+  type PanelChromeFocus,
+  type PanelChromeMode,
+} from './presenter/panel-chrome-presenter';
 import { RulesPresenter } from './presenter/rules-presenter';
 import {
   CompilerCurationServiceImpl,
@@ -212,6 +218,7 @@ interface ReadlineLike {
 interface RunAppDeps {
   presenter?: ExplorerPresenter;
   rulesPresenter?: RulesPresenter;
+  panelChromePresenter?: PanelChromePresenter;
   explorerService?: ZwjsExplorerService;
   curationService?: CompilerCurationService;
   fileService?: WorkspaceFileService;
@@ -1969,13 +1976,13 @@ function resolvePrintableKeypress(
   return sequence.length === 1 && sequence >= ' ' ? sequence : '';
 }
 
-type PanelFocus = 'left' | 'right' | 'bottom';
-type PanelMode = 'detail' | 'edit-draft';
+type PanelFocus = PanelChromeFocus;
+type PanelMode = PanelChromeMode;
 interface DraftFieldEditSession {
   path: string;
   value: string;
 }
-type ConfirmAction = 'scaffold-write' | 'manifest-add';
+type ConfirmAction = PanelChromeConfirmAction;
 
 interface PendingConfirm {
   action: ConfirmAction;
@@ -2009,6 +2016,7 @@ export async function runPanelApp(
     });
   const rulesPresenter =
     deps.rulesPresenter ?? new RulesPresenter(curationChildPresenter, fileService);
+  const panelChromePresenter = deps.panelChromePresenter ?? new PanelChromePresenter();
   const canHydrateListIdentity =
     typeof (nodesPresenter as { showNodeDetail?: unknown }).showNodeDetail === 'function';
   const input = deps.stdin ?? defaultStdin;
@@ -3057,19 +3065,22 @@ export async function runPanelApp(
     const status = isNodesMode
       ? nodesPresenter.getStatusSnapshot()
       : rulesPresenter.getStatusSnapshot();
-    const selectedSignature = status.selectedSignature
-      ? `sig=${status.selectedSignature}`
-      : 'sig=-';
-    const header = `ZWJS ${config.mode} (${config.uiMode}) ${selectedSignature}`;
     clearExpiredPendingConfirm();
-    const statusSuffix = activeOperation
-      ? ` | running: ${activeOperation.label} (press c to cancel)`
-      : pendingConfirm
-        ? ` | confirm pending: ${pendingConfirm.action}`
-        : '';
-    const footer = filterMode
-      ? `Filter mode: type to search | backspace delete | enter apply | esc apply${statusSuffix}`
-      : `q quit | arrows move/scroll | pgup/pgdn page | / filter | enter open/fetch-selected | e edit-draft | esc exit-edit | F fetch-full | i/v/m loop | n neighbors | z values | 1-6 subsections | b bottom-size | c cancel${statusSuffix}`;
+    const chrome = panelChromePresenter.build({
+      sessionMode: config.mode,
+      uiMode: config.uiMode,
+      selectedSignature: status.selectedSignature,
+      filterMode,
+      draftFieldEditActive: draftFieldEdit !== null,
+      panelMode,
+      focusedPane,
+      hasNodeDetail: currentNodeDetail !== null,
+      valuesExpanded,
+      pendingConfirmAction: pendingConfirm?.action,
+      activeOperationLabel: activeOperation?.label,
+    });
+    const header = chrome.header;
+    const footer = chrome.footer;
 
     requestVisibleListIdentityHydration();
 
