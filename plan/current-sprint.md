@@ -15,6 +15,12 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 ## Recently Completed
 
+- Latest policy-boundary guard slice:
+  - added repo-level hardcoding policy guard tooling (`tools/hardcoding-policy-guard*.mjs`)
+  - guard scans runtime source roots for protected Homey class/capability literals and fails outside approved policy modules
+  - integrated `npm run policy:guard` into root `npm run check`
+  - added regression tests for parser strictness and violation/pass detection (`packages/core/test/hardcoding-policy-guard-tool.test.js`)
+
 - Latest hardcoding audit pass:
   - completed repo-wide scan for capability/class mapping hardcoding patterns outside policy modules
   - moved remaining TUI command-class magic numbers into policy constants consumed by `value-semantics.ts`

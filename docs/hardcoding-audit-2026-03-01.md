@@ -20,6 +20,14 @@ rg -n "'onoff'|'dim'|'windowcoverings_set'|'locked'|'measure_|'alarm_|'enum_sele
 
 ## Findings
 
+### Guardrail Status
+
+Status: **enforced**
+
+- Added `npm run policy:guard` (`tools/hardcoding-policy-guard*.mjs`).
+- Guard fails CI/local checks if protected capability/class literals are introduced outside approved policy modules.
+- Root `npm run check` now includes this guard.
+
 ### 1) Homey runtime mapping/coercion
 
 Status: **cleaned**

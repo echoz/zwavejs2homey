@@ -347,6 +347,7 @@ This runs:
 
 - formatting check
 - lint (Homey app)
+- hardcoding policy guard (`npm run policy:guard`)
 - compiler tests
 - core tests
 - Homey app TypeScript build
