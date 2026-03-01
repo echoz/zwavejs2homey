@@ -65,10 +65,12 @@ The project is intentionally split into layers:
 
 Phase 4 reset status:
 
+- complete
 - core CLI cutover complete (`compiler:simulate`)
 - dual-root startup active (`--url` nodes root, `--rules-only` rules root)
 - signature simulation workflow available in both roots
 - panel-first UI is now the default runtime (`--ui panel`), with shell fallback (`--ui shell`)
+- convergence cleanup complete (shared draft editor core, shared signature workflow core, and mode-adapter dispatch in `app.ts`)
 
 Panel keys (default `--ui panel`):
 

@@ -2,8 +2,8 @@
 
 ## Current Focus (Active)
 
-- [ ] Phase 4 reset: ship dual-root panel TUI flow (`--url` nodes root, `--rules-only` rules root)
-- [ ] Hold new Homey adapter design/implementation slices until Phase 4 reset checkpoint is complete
+- [x] Phase 4 reset: dual-root panel TUI flow delivered (`--url` nodes root, `--rules-only` rules root)
+- [ ] Start Phase 5 Homey adapter implementation slices on top of the completed compiler + TUI foundation
 
 ## Phase 1: Foundation (Completed)
 
@@ -105,7 +105,7 @@
   - [x] expose vocabulary for downstream tooling (TUI scaffold editor typed selects)
 - [ ] Add second real catalog source adapter when a concrete source format is available
 
-## Phase 4: ZWJS Explorer + Curation TUI (In Progress)
+## Phase 4: ZWJS Explorer + Curation TUI (Completed)
 
 - [x] Drafted reset MVP spec and implementation plan (`plan/tui-explorer-curation-spec.md`, `plan/tui-implementation-plan.md`)
 - [x] Section 4B: migrate tests/docs/help to simulate-centric workflow
@@ -120,11 +120,7 @@
   - [x] Slice 7.1: shared draft-editor presenter core extraction
   - [x] Slice 7.2: shared signature workflow core extraction
   - [x] Slice 7.3: `app.ts` mode adapter dispatch for shell + panel shared workflows
-- [ ] Keep Homey adapter implementation frozen until Phase 4 reset completion
-
-Execution note:
-
-- Section 7 stays blocked until Section 6C scaffold edit mode is complete.
+- [x] Homey adapter freeze for Phase 4 reset is lifted
 
 ## Phase 5: Homey Adapter MVP (Next Major Area)
 

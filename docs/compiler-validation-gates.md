@@ -2,7 +2,7 @@
 
 This document explains how to configure `compiler:validate-live` quality gates so live validation is repeatable and catches meaningful regressions.
 
-Phase 4 reset note:
+Workflow note:
 
 - simulation-centric signature iteration (`compiler:simulate`) is the replacement workflow
 

@@ -7,10 +7,9 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 ## In Progress
 
-- Phase 4 reset execution (before Homey adapter implementation):
-  - follow with dual-root rich TUI implementation (`--url` nodes root, `--rules-only` rules root)
-  - complete scaffold edit mode in panel TUI before convergence review
-  - keep Homey adapter implementation paused until reset sections are complete
+- Transition out of Phase 4 reset and prepare Phase 5 Homey adapter implementation:
+  - keep compiler + TUI quality gates green while adapter work starts
+  - carry forward dual-root TUI curation workflow as contributor tooling baseline
 
 ## Recently Completed
 
@@ -580,13 +579,12 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 ## Next Tasks
 
-1. Execute Section 7 convergence review:
-   - decide whether to keep separate stacks or extract shared view primitives
-2. Keep Homey adapter implementation paused until Phase 4 reset is complete
+1. Start Phase 5 Homey adapter implementation slices against compiled profile artifacts.
+2. Keep compiler/TUI maintenance pass active for any regressions discovered during adapter integration.
 
 Note:
 
-- Section 7 is intentionally blocked until Section 6C scaffold edit mode is complete.
+- Phase 4 reset sections (through Section 7.3 convergence) are complete.
 
 ## Risks / Unknowns
 

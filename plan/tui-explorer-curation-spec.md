@@ -1,5 +1,9 @@
 # ZWJS Explorer + Curation TUI Spec (Reset MVP)
 
+## Status
+
+- Delivered in Phase 4 (dual-root panel/shell workflows + scaffold editing + simulation loop)
+
 ## Summary
 
 Build a rich terminal UI that supports two contributor-first entry points:
@@ -80,8 +84,9 @@ Use existing tooling/libs as backend primitives:
 
 ## Delivery Order (Locked)
 
-2. tests/docs migration for that cutover
-3. simulate integration in both root workflows
+1. tests/docs migration for CLI cutover
+2. simulate integration in both root workflows
+3. panel scaffold edit mode
 4. convergence review for optional view/presenter de-duplication
 
 ## Success Criteria

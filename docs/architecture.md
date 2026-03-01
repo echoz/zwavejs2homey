@@ -136,14 +136,14 @@ Reference plan:
 - `plan/homey-translation-compiler-plan.md`
 - `plan/tui-implementation-plan.md`
 
-## Phase 4 TUI Architecture (Reset In Progress)
+## Phase 4 TUI Architecture (Reset Completed)
 
-Phase 4 is now executing a reset sequence:
+Phase 4 completed this reset sequence:
 
-2. test/docs/help migration for that cutover
-3. dual-root TUI implementation on top of the updated CLI/tooling contracts
-4. structured scaffold edit mode in panel TUI
-5. convergence review after edit mode is complete
+1. test/docs/help migration for CLI cutover
+2. dual-root TUI implementation on top of the updated CLI/tooling contracts
+3. structured scaffold edit mode in panel TUI
+4. convergence review and shared presenter/app flow extraction
 
 Reset architecture direction:
 
@@ -154,13 +154,13 @@ Reset architecture direction:
 - current status: panel-first runtime is implemented as default (`--ui panel`) with shell fallback (`--ui shell`)
 - panel renderer implementation is now fully `neo-blessed`-based (custom frame-string renderer removed)
 
-Implementation structure (current direction):
+Implementation structure (delivered):
 
 1. separate nodes stack (views + presenters)
 2. separate rules stack (views + presenters)
 3. shared services/core adapters where practical
-4. implement scaffold edit mode for typed draft authoring in panel UX
-5. convergence review after both stacks + edit mode are complete (optional view-layer de-duplication)
+4. typed scaffold edit mode for panel authoring UX
+5. shared convergence layers for draft editing, signature workflows, and mode-adapter dispatch
 
 Data flow remains:
 
@@ -170,7 +170,7 @@ Guardrails remain:
 
 - no ZWJS mutation behavior in this phase
 - no compiler semantic redesign in this phase
-- Homey adapter implementation remains paused until Phase 4 reset completion
+- Homey adapter implementation can resume on top of this completed Phase 4 baseline
 
 ## Runtime Flow (Target)
 

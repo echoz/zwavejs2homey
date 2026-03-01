@@ -1,8 +1,12 @@
 # ZWJS Explorer + Curation TUI Implementation Plan (Reset)
 
+## Status
+
+- Completed (Sections 1 through 7.3 delivered)
+
 ## Scope and Guardrails
 
-- Phase: 4 (must complete before Homey adapter implementation resumes)
+- Phase: 4 (completed; Homey adapter implementation may resume)
 - Goal: deliver a panel-first dual-root TUI over existing compiler/ZWJS workflows
 - Non-goals:
   - no ZWJS mutation behavior
@@ -45,7 +49,7 @@
   - runtime rendering uses `neo-blessed` widgets/layout only
   - removed custom string-frame renderer path (`panel-layout`)
   - panel tests consume render snapshots from `runPanelApp` (renderer-agnostic assertions)
-- [ ] structured scaffold edit mode (Section 6C):
+- [x] structured scaffold edit mode (Section 6C):
   - [x] edit mode entry/exit scaffolding in panel (`e` / `esc`) with draft editor placeholder rendering
   - [x] presenter draft-editor API foundation (`start/get/set/validate/reset/commit/clear`)
   - [x] typed draft editing (no freeform JSON editor in v1)
@@ -55,13 +59,13 @@
   - [x] typed mapping editors for inbound/outbound selector/target fields
   - [x] live draft validation with write-blocking errors and non-blocking warnings
   - [x] in-panel diff preview before write confirmation
-  - [ ] data-driven vocab audit and cutover (follow-on slice):
+  - [x] data-driven vocab audit and cutover (follow-on slice):
     - [x] audit hardcoded authoring vocab in TUI/presenters (homey classes, capability IDs, directionality, and related typed selects)
     - [x] classify each vocab as: SDK-derived, compiler-artifact-derived, or intentionally static
     - [x] replace hardcoded selects with vocabulary providers/artifacts where feasible
     - [x] keep strict/early validation (invalid values blocked in editor)
 
-Section 7 does not start until all 6B and 6C slices above are complete.
+Section 7 completed after all 6B and 6C slices above were complete.
 
 ## Startup and Root Flows
 
@@ -139,4 +143,4 @@ Quality gate:
 
 - contributor can complete rule curation from either root using simulation + scaffold edit workflow
 - ZWJS operations remain read-only
-- Homey adapter work remains paused until this reset plan is complete
+- reset completion unblocks Homey adapter work
