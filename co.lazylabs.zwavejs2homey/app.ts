@@ -9,9 +9,11 @@ import {
   resolveZwjsConnectionConfig,
   ZWJS_CONNECTION_SETTINGS_KEY,
 } from '@zwavejs2homey/core';
+import { ZWJS_DEFAULT_BRIDGE_ID } from './pairing';
 
 module.exports = class Zwavejs2HomeyApp extends Homey.App {
   private zwjsClient?: ZwjsClient;
+  private readonly bridgeId = ZWJS_DEFAULT_BRIDGE_ID;
 
   private readonly clientLogger: ClientLogger = {
     info: (msg: string, meta?: unknown) => this.log(msg, meta),
@@ -108,5 +110,13 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
     await this.enqueueLifecycle(async () => {
       await this.stopZwjsClient('shutdown');
     });
+  }
+
+  getZwjsClient(): ZwjsClient | undefined {
+    return this.zwjsClient;
+  }
+
+  getBridgeId(): string {
+    return this.bridgeId;
   }
 };

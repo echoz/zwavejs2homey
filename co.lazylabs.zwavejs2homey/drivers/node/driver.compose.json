@@ -1,0 +1,20 @@
+{
+  "name": {
+    "en": "ZWJS Node"
+  },
+  "class": "other",
+  "capabilities": [],
+  "platforms": ["local"],
+  "connectivity": [],
+  "pair": [
+    {
+      "id": "list_devices",
+      "template": "list_devices"
+    }
+  ],
+  "images": {
+    "small": "{{driverAssetsPath}}/images/small.png",
+    "large": "{{driverAssetsPath}}/images/large.png",
+    "xlarge": "{{driverAssetsPath}}/images/xlarge.png"
+  }
+}

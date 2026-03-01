@@ -57,3 +57,9 @@ Tradeoffs:
 - Keep one shared app-level ZWJS session service used by both drivers.
 - Node devices should consume the shared compiler artifact resolver API for profile selection.
 - Device-level curation UI should live in node repair flow (`onRepair`) or equivalent explicit per-device editor flow.
+
+## Implementation Status (2026-03-01)
+
+- `bridge` and `node` driver scaffolds are implemented in `co.lazylabs.zwavejs2homey/drivers`.
+- `bridge` pairing enforces singleton behavior through stable `device.data.id = zwjs-bridge-main`.
+- `node` pairing imports from live ZWJS node list, filters controller node (`nodeId = 1`), and dedupes by `bridgeId + nodeId`.

@@ -59,6 +59,12 @@ Pairing model in v1:
 - If inclusion is started from bridge UX, node creation is still explicit via node pairing.
 - no automatic cross-driver pairing handoff is assumed in v1.
 
+Implementation status:
+
+- `drivers/bridge` and `drivers/node` scaffolds are in place in `co.lazylabs.zwavejs2homey`.
+- bridge pairing currently enforces singleton add via a stable `device.data.id`.
+- node pairing currently lists import candidates from live ZWJS (`getNodeList`), skipping controller node (`nodeId = 1`) and already paired `bridgeId + nodeId` entries.
+
 Related locked MVP runtime policies:
 
 - shared app-level ZWJS session ownership + inclusion lock (`docs/decisions/0018-homey-zwjs-session-and-inclusion-lock-v1.md`)

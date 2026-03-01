@@ -65,6 +65,12 @@ Pairing semantics:
 - If inclusion is started from bridge UX, node add remains explicit via node pairing.
 - No automatic cross-driver pairing handoff is assumed in v1.
 
+Current implementation status:
+
+- driver scaffolds are implemented in `co.lazylabs.zwavejs2homey/drivers/bridge` and `co.lazylabs.zwavejs2homey/drivers/node`
+- bridge pairing is singleton-gated via stable bridge identity (`zwjs-bridge-main`)
+- node pairing imports candidates from live ZWJS, skips controller node (`nodeId = 1`), and dedupes already paired `bridgeId + nodeId`
+
 Additional locked MVP runtime policies:
 
 - one shared app-level ZWJS session service with serialized inclusion/exclusion lock (`docs/decisions/0018-homey-zwjs-session-and-inclusion-lock-v1.md`)

@@ -133,9 +133,9 @@
 - [x] Lock no-profile-match runtime behavior (minimal safe fallback + curation prompt)
 - [x] Lock class/capability structural mutation policy (explicit user-driven update only)
 - [x] Add compiler-owned compiled profile resolver/index API for adapter/tooling orchestration (`buildCompiledProfileResolverIndexV1`, `resolveCompiledProfileEntryFromIndexV1`)
-- [ ] Implement Homey driver scaffolds for locked MVP topology (`drivers/bridge`, `drivers/node`)
-- [ ] Implement bridge singleton pair behavior and bridge control-plane device lifecycle
-- [ ] Implement node pairing/import flow (ZWJS node selection + explicit add)
+- [x] Implement Homey driver scaffolds for locked MVP topology (`drivers/bridge`, `drivers/node`)
+- [x] Implement bridge singleton pair behavior and bridge control-plane device lifecycle
+- [x] Implement node pairing/import flow (ZWJS node selection + explicit add)
 - [ ] Define first supported Homey device/capability vertical slice using compiled profiles
 - [x] Adapter bootstrap hardening: settings-backed ZWJS connection config + managed reload lifecycle in app init/uninit flow
 - [x] Lock adapter curation persistence v1 policy: `this.homey.settings` + versioned payloads (`docs/decisions/0010-homey-adapter-curation-storage-v1.md`)

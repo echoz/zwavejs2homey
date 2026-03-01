@@ -45,6 +45,12 @@ Per ADR 0017, runtime curation work in this plan assumes:
 - no automatic cross-driver pairing handoff is required in v1
 - per-device curation UX lives on node-level flows (for example node repair/custom view), not bridge settings
 
+Current implementation baseline:
+
+- `bridge` and `node` driver scaffolds exist in `co.lazylabs.zwavejs2homey/drivers`
+- bridge pairing singleton gating is implemented (`zwjs-bridge-main`)
+- node pairing imports/dedupes ZWJS nodes using `bridgeId + nodeId`
+
 ## Goals (v1)
 
 - Let users correct mappings in the Homey app without rebuilding compiler outputs

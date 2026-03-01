@@ -4,7 +4,9 @@
   "version": "1.0.0",
   "compatibility": ">=12.4.0",
   "sdk": 3,
-  "platforms": ["local"],
+  "platforms": [
+    "local"
+  ],
   "name": {
     "en": "zwavejs2homey"
   },
@@ -12,7 +14,9 @@
     "en": "Z-Wave JS Bridge"
   },
   "brandColor": "#2484bf",
-  "category": ["tools"],
+  "category": [
+    "tools"
+  ],
   "permissions": [],
   "images": {
     "small": "/assets/images/small.png",
@@ -22,5 +26,53 @@
   "author": {
     "name": "Jeremy Foo",
     "email": "f6fmxkbhnh@privaterelay.appleid.com"
-  }
+  },
+  "drivers": [
+    {
+      "name": {
+        "en": "ZWJS Bridge"
+      },
+      "class": "other",
+      "capabilities": [],
+      "platforms": [
+        "local"
+      ],
+      "connectivity": [],
+      "pair": [
+        {
+          "id": "list_devices",
+          "template": "list_devices"
+        }
+      ],
+      "images": {
+        "small": "/drivers/bridge/assets/images/small.png",
+        "large": "/drivers/bridge/assets/images/large.png",
+        "xlarge": "/drivers/bridge/assets/images/xlarge.png"
+      },
+      "id": "bridge"
+    },
+    {
+      "name": {
+        "en": "ZWJS Node"
+      },
+      "class": "other",
+      "capabilities": [],
+      "platforms": [
+        "local"
+      ],
+      "connectivity": [],
+      "pair": [
+        {
+          "id": "list_devices",
+          "template": "list_devices"
+        }
+      ],
+      "images": {
+        "small": "/drivers/node/assets/images/small.png",
+        "large": "/drivers/node/assets/images/large.png",
+        "xlarge": "/drivers/node/assets/images/xlarge.png"
+      },
+      "id": "node"
+    }
+  ]
 }

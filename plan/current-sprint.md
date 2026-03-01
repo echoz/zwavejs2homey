@@ -15,6 +15,13 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 ## Recently Completed
 
+- Latest Phase 5 slice:
+  - implemented Homey driver scaffolds in `co.lazylabs.zwavejs2homey/drivers/bridge` and `co.lazylabs.zwavejs2homey/drivers/node`
+  - bridge pairing now enforces singleton behavior via stable `device.data.id` and returns one `ZWJS Bridge` candidate only when unpaired
+  - node pairing now imports live ZWJS nodes via shared app session, excludes controller node (`nodeId = 1`), dedupes by `bridgeId + nodeId`, and stores lightweight metadata
+  - app runtime now exposes shared accessors (`getZwjsClient()`, `getBridgeId()`) used by both drivers/devices
+  - extracted pairing logic into `co.lazylabs.zwavejs2homey/pairing.ts` with regression coverage in `co.lazylabs.zwavejs2homey/test/pairing.test.js`
+
 - Latest Phase 5 decision sync:
   - locked Homey MVP runtime topology to two drivers:
     - `bridge` driver/device for endpoint control plane (singleton-like)
