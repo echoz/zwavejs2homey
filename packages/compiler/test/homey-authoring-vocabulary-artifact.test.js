@@ -3,8 +3,8 @@ const assert = require('node:assert/strict');
 
 const compiler = require('../dist/index.js');
 
-test('createHomeyVocabularyArtifactV1 creates valid artifact', () => {
-  const artifact = compiler.createHomeyVocabularyArtifactV1(
+test('createHomeyAuthoringVocabularyArtifactV1 creates valid artifact', () => {
+  const artifact = compiler.createHomeyAuthoringVocabularyArtifactV1(
     {
       homeyClasses: [
         {
@@ -42,21 +42,21 @@ test('createHomeyVocabularyArtifactV1 creates valid artifact', () => {
     new Date('2026-03-01T00:00:00.000Z'),
   );
 
-  assert.equal(artifact.schemaVersion, 'homey-vocabulary/v1');
+  assert.equal(artifact.schemaVersion, 'homey-authoring-vocabulary/v1');
   assert.equal(artifact.generatedAt, '2026-03-01T00:00:00.000Z');
-  assert.doesNotThrow(() => compiler.assertHomeyVocabularyArtifactV1(artifact));
+  assert.doesNotThrow(() => compiler.assertHomeyAuthoringVocabularyArtifactV1(artifact));
 
-  const lookup = compiler.createHomeyVocabularyLookupV1(artifact);
+  const lookup = compiler.createHomeyAuthoringVocabularyLookupV1(artifact);
   assert.equal(lookup.homeyClasses.has('socket'), true);
   assert.equal(lookup.capabilityIds.has('onoff'), true);
   assert.equal(lookup.capabilityIds.has('missing_capability'), false);
 });
 
-test('assertHomeyVocabularyArtifactV1 rejects malformed artifact', () => {
+test('assertHomeyAuthoringVocabularyArtifactV1 rejects malformed artifact', () => {
   assert.throws(
     () =>
-      compiler.assertHomeyVocabularyArtifactV1({
-        schemaVersion: 'homey-vocabulary/v1',
+      compiler.assertHomeyAuthoringVocabularyArtifactV1({
+        schemaVersion: 'homey-authoring-vocabulary/v1',
         generatedAt: '2026-03-01T00:00:00.000Z',
         source: {},
         homeyClasses: [{ id: '', sources: [] }],

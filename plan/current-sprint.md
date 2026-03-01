@@ -554,10 +554,10 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 105. Completed Section 6C vocabulary cutover slice:
 
 
-    - added compiler `homey-vocabulary/v1` artifact contract (`create/assert/load/lookup`)
-    - added `compiler:vocabulary` build CLI (`tools/homey-vocabulary-build*.mjs`) sourcing system vocab from `homey-lib` and custom capability IDs from `.homeycompose/capabilities`
+    - added compiler `homey-authoring-vocabulary/v1` artifact contract (`create/assert/load/lookup`)
+    - added `compiler:homey-vocabulary` build CLI (`tools/homey-authoring-vocabulary-build*.mjs`) sourcing system vocab from `homey-lib` and custom capability IDs from `.homeycompose/capabilities`
     - wired vocabulary-aware compiler rule validation hooks (`RuleValidationOptions.vocabulary`) for `homeyClass`/`capabilityId` membership enforcement
-    - wired TUI draft editor to load vocabulary artifact (`--vocabulary-file`, default `rules/homey-vocabulary.json`)
+    - wired TUI draft editor to load vocabulary artifact (`--vocabulary-file`, default `rules/homey-authoring-vocabulary.json`)
     - replaced hardcoded Homey class select with vocabulary-backed options
     - switched capability ID field to vocabulary-backed select when capability vocab exists
     - added strict draft validation for unknown `homeyClass` / `capabilityId` values

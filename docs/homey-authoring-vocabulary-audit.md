@@ -37,7 +37,7 @@ Goal:
 
 Planned artifact:
 
-- `homey-vocabulary/v1`
+- `homey-authoring-vocabulary/v1`
 - `homeyClasses[]`
 - `capabilityIds[]`
 - optional per-entry provenance (`sources[]`)
@@ -63,20 +63,20 @@ Planned artifact:
 ## Implemented Cutover (Current)
 
 1. Added compiler artifact contract:
-   - `homey-vocabulary/v1` (`packages/compiler/src/emit/homey-vocabulary-artifact.ts`)
+   - `homey-authoring-vocabulary/v1` (`packages/compiler/src/emit/homey-authoring-vocabulary-artifact.ts`)
    - strict assert/create/load helpers + lookup sets
 2. Added build CLI:
-   - `npm run compiler:vocabulary`
+   - `npm run compiler:homey-vocabulary`
    - source inputs:
      - Homey system lists from `homey-lib` (`assets/device/classes.json`, `assets/capability/capabilities.json`)
      - project custom capabilities from `.homeycompose/capabilities/*.json`
-   - default output: `rules/homey-vocabulary.json`
+   - default output: `rules/homey-authoring-vocabulary.json`
 3. Added compiler rule-validation support for vocabulary membership:
    - rejects unknown `device-identity.homeyClass`
    - rejects unknown `capability` / `remove-capability` IDs
    - available via `RuleValidationOptions.vocabulary`
 4. Added TUI vocabulary provider and consumption:
-   - loads `--vocabulary-file` (default `rules/homey-vocabulary.json`)
+   - loads `--vocabulary-file` (default `rules/homey-authoring-vocabulary.json`)
    - metadata `homeyClass` select is vocabulary-backed
    - capability ID field becomes vocabulary-backed select when capability vocab is available
    - draft validation blocks unknown homey class/capability IDs

@@ -11,12 +11,12 @@ const {
 
 test('loadHomeyAuthoringVocabulary loads valid artifact file', () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zwjs2homey-tui-vocab-'));
-  const vocabFile = path.join(tmpDir, 'homey-vocabulary.json');
+  const vocabFile = path.join(tmpDir, 'homey-authoring-vocabulary.json');
   fs.writeFileSync(
     vocabFile,
     `${JSON.stringify(
       {
-        schemaVersion: 'homey-vocabulary/v1',
+        schemaVersion: 'homey-authoring-vocabulary/v1',
         generatedAt: '2026-03-01T00:00:00.000Z',
         source: {},
         homeyClasses: [{ id: 'socket', sources: [{ source: 'homey-lib-system', sourceRef: 'x' }] }],

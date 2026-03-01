@@ -42,12 +42,12 @@ export type {
   CompiledHomeyProfilesArtifactV1,
 } from './emit/compiled-profiles-artifact';
 export type {
-  HomeyVocabularyArtifactV1,
-  HomeyVocabularyEntryV1,
-  HomeyVocabularyLookupV1,
-  HomeyVocabularySourceKind,
-  HomeyVocabularySourceRefV1,
-} from './emit/homey-vocabulary-artifact';
+  HomeyAuthoringVocabularyArtifactV1,
+  HomeyAuthoringVocabularyEntryV1,
+  HomeyAuthoringVocabularyLookupV1,
+  HomeyAuthoringVocabularySourceKind,
+  HomeyAuthoringVocabularySourceRefV1,
+} from './emit/homey-authoring-vocabulary-artifact';
 export type {
   CapabilityRuleAction,
   DeviceIdentityRuleAction,
@@ -69,13 +69,13 @@ export {
   createCompiledHomeyProfilesArtifactV1,
 } from './emit/compiled-profiles-artifact';
 export {
-  HOMEY_VOCABULARY_ARTIFACT_V1,
-  HomeyVocabularyArtifactError,
-  assertHomeyVocabularyArtifactV1,
-  createHomeyVocabularyArtifactV1,
-  createHomeyVocabularyLookupV1,
-  loadHomeyVocabularyArtifact,
-} from './emit/homey-vocabulary-artifact';
+  HOMEY_AUTHORING_VOCABULARY_ARTIFACT_V1,
+  HomeyAuthoringVocabularyArtifactError,
+  assertHomeyAuthoringVocabularyArtifactV1,
+  createHomeyAuthoringVocabularyArtifactV1,
+  createHomeyAuthoringVocabularyLookupV1,
+  loadHomeyAuthoringVocabularyArtifact,
+} from './emit/homey-authoring-vocabulary-artifact';
 export {
   CatalogDeviceArtifactError,
   assertCatalogDevicesArtifactV1,

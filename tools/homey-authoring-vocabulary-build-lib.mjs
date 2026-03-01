@@ -6,12 +6,12 @@ import { formatJsonCompact, formatJsonPretty } from './output-format-lib.mjs';
 
 const require = createRequire(import.meta.url);
 const {
-  assertHomeyVocabularyArtifactV1,
-  createHomeyVocabularyArtifactV1,
+  assertHomeyAuthoringVocabularyArtifactV1,
+  createHomeyAuthoringVocabularyArtifactV1,
 } = require('../packages/compiler/dist');
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const DEFAULT_OUTPUT_FILE = path.join(REPO_ROOT, 'rules', 'homey-vocabulary.json');
+const DEFAULT_OUTPUT_FILE = path.join(REPO_ROOT, 'rules', 'homey-authoring-vocabulary.json');
 const DEFAULT_COMPOSE_CAPABILITIES_DIR = path.join(
   REPO_ROOT,
   'co.lazylabs.zwavejs2homey',
@@ -163,7 +163,7 @@ function mapToEntries(map) {
 export function getUsageText() {
   return [
     'Usage:',
-    '  homey-vocabulary-build [--output-file <rules/homey-vocabulary.json>]',
+    '  homey-authoring-vocabulary-build [--output-file <rules/homey-authoring-vocabulary.json>]',
     '                        [--homey-lib-root <path/to/homey-lib>]',
     '                        [--compose-capabilities-dir <path/to/.homeycompose/capabilities>]',
     '                        [--format summary|json|json-pretty|json-compact]',
@@ -193,7 +193,7 @@ export function parseCliArgs(argv) {
   };
 }
 
-export function buildHomeyVocabularyArtifact(command) {
+export function buildHomeyAuthoringVocabularyArtifact(command) {
   const homeyLibRoot = discoverHomeyLibRoot(command.homeyLibRoot);
   const systemVocabulary = loadHomeyLibSystemVocabulary(homeyLibRoot);
   const composeCapabilities = loadComposeCapabilities(command.composeCapabilitiesDir);
@@ -226,7 +226,7 @@ export function buildHomeyVocabularyArtifact(command) {
     addSourceEntry(capabilitySources, capability.id, 'homey-compose-custom', capability.sourceRef);
   }
 
-  const artifact = createHomeyVocabularyArtifactV1(
+  const artifact = createHomeyAuthoringVocabularyArtifactV1(
     {
       homeyClasses: mapToEntries(classSources),
       capabilityIds: mapToEntries(capabilitySources),
@@ -237,7 +237,7 @@ export function buildHomeyVocabularyArtifact(command) {
       composeCapabilitiesDir: toDisplayPath(command.composeCapabilitiesDir),
     },
   );
-  assertHomeyVocabularyArtifactV1(artifact);
+  assertHomeyAuthoringVocabularyArtifactV1(artifact);
   return artifact;
 }
 
@@ -248,7 +248,7 @@ export function formatBuildOutput(artifact, format) {
     entry.sources.some((source) => source.source === 'homey-compose-custom'),
   ).length;
   return [
-    `Homey vocabulary artifact: ${artifact.schemaVersion}`,
+    `Homey authoring vocabulary artifact: ${artifact.schemaVersion}`,
     `Homey classes: ${artifact.homeyClasses.length}`,
     `Capability IDs: ${artifact.capabilityIds.length}`,
     `Custom capability IDs: ${customCapabilityCount}`,
@@ -259,7 +259,7 @@ export function formatBuildOutput(artifact, format) {
 }
 
 export async function runBuildCommand(command, io = console) {
-  const artifact = buildHomeyVocabularyArtifact(command);
+  const artifact = buildHomeyAuthoringVocabularyArtifact(command);
   fs.mkdirSync(path.dirname(command.outputFile), { recursive: true });
   fs.writeFileSync(command.outputFile, `${formatJsonPretty(artifact)}\n`, 'utf8');
   io.log(formatBuildOutput(artifact, command.format));

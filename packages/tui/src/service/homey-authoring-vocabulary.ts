@@ -67,8 +67,8 @@ export function loadHomeyAuthoringVocabulary(filePath: string): HomeyAuthoringVo
   try {
     const parsed = JSON.parse(fs.readFileSync(resolvedPath, 'utf8'));
     const object = asObject(parsed);
-    if (!object || object.schemaVersion !== 'homey-vocabulary/v1') {
-      throw new Error('schemaVersion must be "homey-vocabulary/v1"');
+    if (!object || object.schemaVersion !== 'homey-authoring-vocabulary/v1') {
+      throw new Error('schemaVersion must be "homey-authoring-vocabulary/v1"');
     }
     return {
       source: 'artifact',

@@ -5,7 +5,7 @@ const os = require('node:os');
 const path = require('node:path');
 
 async function loadLib() {
-  return import('../../../tools/homey-vocabulary-build-lib.mjs');
+  return import('../../../tools/homey-authoring-vocabulary-build-lib.mjs');
 }
 
 function writeJson(filePath, value) {
@@ -24,7 +24,7 @@ function createStubHomeyLib(tmpDir) {
   return root;
 }
 
-test('parseCliArgs validates supported formats for homey-vocabulary-build', async () => {
+test('parseCliArgs validates supported formats for homey-authoring-vocabulary-build', async () => {
   const { parseCliArgs } = await loadLib();
   const invalid = parseCliArgs(['--format', 'yaml']);
   assert.equal(invalid.ok, false);
@@ -33,22 +33,22 @@ test('parseCliArgs validates supported formats for homey-vocabulary-build', asyn
   assert.equal(parsed.command.format, 'json-compact');
 });
 
-test('buildHomeyVocabularyArtifact merges homey-lib system and compose custom capabilities', async () => {
-  const { buildHomeyVocabularyArtifact } = await loadLib();
+test('buildHomeyAuthoringVocabularyArtifact merges homey-lib system and compose custom capabilities', async () => {
+  const { buildHomeyAuthoringVocabularyArtifact } = await loadLib();
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zwjs2homey-vocab-build-'));
   const homeyLibRoot = createStubHomeyLib(tmpDir);
   const composeDir = path.join(tmpDir, '.homeycompose', 'capabilities');
   writeJson(path.join(composeDir, 'zwjs_custom.json'), { title: { en: 'Custom' } });
   writeJson(path.join(composeDir, 'onoff.json'), { title: { en: 'Override' } });
 
-  const artifact = buildHomeyVocabularyArtifact({
+  const artifact = buildHomeyAuthoringVocabularyArtifact({
     outputFile: path.join(tmpDir, 'out.json'),
     homeyLibRoot,
     composeCapabilitiesDir: composeDir,
     format: 'summary',
   });
 
-  assert.equal(artifact.schemaVersion, 'homey-vocabulary/v1');
+  assert.equal(artifact.schemaVersion, 'homey-authoring-vocabulary/v1');
   assert.equal(artifact.homeyClasses.map((entry) => entry.id).join(','), 'light,socket');
   assert.equal(artifact.capabilityIds.map((entry) => entry.id).join(','), 'dim,onoff,zwjs_custom');
 
@@ -70,7 +70,7 @@ test('runBuildCommand writes artifact file', async () => {
   const homeyLibRoot = createStubHomeyLib(tmpDir);
   const composeDir = path.join(tmpDir, '.homeycompose', 'capabilities');
   fs.mkdirSync(composeDir, { recursive: true });
-  const outputFile = path.join(tmpDir, 'rules', 'homey-vocabulary.json');
+  const outputFile = path.join(tmpDir, 'rules', 'homey-authoring-vocabulary.json');
   const logs = [];
 
   await runBuildCommand(
@@ -85,9 +85,9 @@ test('runBuildCommand writes artifact file', async () => {
 
   assert.equal(fs.existsSync(outputFile), true);
   const parsed = JSON.parse(fs.readFileSync(outputFile, 'utf8'));
-  assert.equal(parsed.schemaVersion, 'homey-vocabulary/v1');
+  assert.equal(parsed.schemaVersion, 'homey-authoring-vocabulary/v1');
   assert.equal(
-    logs.some((line) => /Homey vocabulary artifact/i.test(line)),
+    logs.some((line) => /Homey authoring vocabulary artifact/i.test(line)),
     true,
   );
   assert.equal(

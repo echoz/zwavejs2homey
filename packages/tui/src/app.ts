@@ -114,9 +114,9 @@ export function getUsageText(): string {
     'Usage:',
     '  compiler-tui --url ws://host:port [--token <bearer>] [--schema-version 0]',
     '               [--include-values none|summary|full] [--max-values N] [--start-node <id>]',
-    '               [--manifest-file <rules/manifest.json>] [--vocabulary-file <rules/homey-vocabulary.json>] [--ui panel|shell]',
+    '               [--manifest-file <rules/manifest.json>] [--vocabulary-file <rules/homey-authoring-vocabulary.json>] [--ui panel|shell]',
     '  compiler-tui --rules-only [--manifest-file <rules/manifest.json>]',
-    '               [--url ws://host:port] [--token <bearer>] [--schema-version 0] [--vocabulary-file <rules/homey-vocabulary.json>] [--ui panel|shell]',
+    '               [--url ws://host:port] [--token <bearer>] [--schema-version 0] [--vocabulary-file <rules/homey-authoring-vocabulary.json>] [--ui panel|shell]',
     '               [--include-values none|summary|full] [--max-values N]',
     '',
     'Panel Mode Keys (default):',
@@ -201,7 +201,7 @@ export function parseCliArgs(
       mode: rulesOnly ? 'rules' : 'nodes',
       uiMode,
       manifestFile: flags.get('--manifest-file') ?? 'rules/manifest.json',
-      vocabularyFile: flags.get('--vocabulary-file') ?? 'rules/homey-vocabulary.json',
+      vocabularyFile: flags.get('--vocabulary-file') ?? 'rules/homey-authoring-vocabulary.json',
       url,
       token: flags.get('--token'),
       schemaVersion: schemaVersionResult.value,
@@ -263,7 +263,7 @@ export async function runApp(
   deps: RunAppDeps = {},
 ): Promise<void> {
   const authoringVocabulary = loadHomeyAuthoringVocabulary(
-    config.vocabularyFile ?? 'rules/homey-vocabulary.json',
+    config.vocabularyFile ?? 'rules/homey-authoring-vocabulary.json',
   );
   configureDraftEditorVocabulary(authoringVocabulary);
   const draftValidationVocabulary = buildDraftValidationVocabulary(authoringVocabulary);
@@ -2354,7 +2354,7 @@ export async function runPanelApp(
   deps: RunAppDeps = {},
 ): Promise<void> {
   const authoringVocabulary = loadHomeyAuthoringVocabulary(
-    config.vocabularyFile ?? 'rules/homey-vocabulary.json',
+    config.vocabularyFile ?? 'rules/homey-authoring-vocabulary.json',
   );
   configureDraftEditorVocabulary(authoringVocabulary);
   const draftValidationVocabulary = buildDraftValidationVocabulary(authoringVocabulary);

@@ -83,7 +83,7 @@ Purpose:
 
 Artifact:
 
-- `homey-vocabulary/v1`
+- `homey-authoring-vocabulary/v1`
 - `homeyClasses[]`
 - `capabilityIds[]`
 - optional provenance per entry (`source[]`, e.g. seed, observed, project-defined)
@@ -96,8 +96,8 @@ Current consumers:
 
 Build command:
 
-- `npm run compiler:vocabulary`
-- default output: `rules/homey-vocabulary.json`
+- `npm run compiler:homey-vocabulary`
+- default output: `rules/homey-authoring-vocabulary.json`
 - source inputs:
   - Homey system classes/capabilities from `homey-lib` assets
   - app-local custom capability IDs from `.homeycompose/capabilities/*.json`

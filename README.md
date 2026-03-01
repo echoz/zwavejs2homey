@@ -60,7 +60,7 @@ The project is intentionally split into layers:
 - `npm run compiler:tui -- --url ws://HOST:PORT --start-node 12 --include-values full`
 - `npm run compiler:tui -- --rules-only --manifest-file rules/manifest.json`
 - `npm run compiler:tui -- --rules-only --url ws://HOST:PORT --manifest-file rules/manifest.json`
-- `npm run compiler:tui -- --url ws://HOST:PORT --vocabulary-file rules/homey-vocabulary.json`
+- `npm run compiler:tui -- --url ws://HOST:PORT --vocabulary-file rules/homey-authoring-vocabulary.json`
 - `npm run compiler:tui -- --url ws://HOST:PORT --ui shell` (fallback shell mode)
 
 Phase 4 reset status:
@@ -133,11 +133,12 @@ This emits a `compiled-homey-profiles/v1` artifact.
 
 ### Homey vocabulary artifact build
 
-- `npm run compiler:vocabulary -- --help`
-- `npm run compiler:vocabulary -- --output-file rules/homey-vocabulary.json`
-- `npm run compiler:vocabulary -- --homey-lib-root <path/to/homey-lib> --compose-capabilities-dir co.lazylabs.zwavejs2homey/.homeycompose/capabilities`
+- `npm run compiler:homey-vocabulary -- --help`
+- `npm run compiler:homey-vocabulary -- --output-file rules/homey-authoring-vocabulary.json`
+- `npm run compiler:homey-vocabulary -- --homey-lib-root <path/to/homey-lib> --compose-capabilities-dir co.lazylabs.zwavejs2homey/.homeycompose/capabilities`
+- legacy alias: `npm run compiler:vocabulary -- ...`
 
-This emits a `homey-vocabulary/v1` artifact consumed by TUI authoring and compiler vocabulary-aware validation paths.
+This emits a `homey-authoring-vocabulary/v1` artifact consumed by TUI authoring and compiler vocabulary-aware validation paths.
 
 ### Live validation workflow (build + apply + markdown summary)
 

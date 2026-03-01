@@ -1,4 +1,4 @@
-import { parseCliArgs, runBuildCommand } from './homey-vocabulary-build-lib.mjs';
+import { parseCliArgs, runBuildCommand } from './homey-authoring-vocabulary-build-lib.mjs';
 
 async function main() {
   const parsed = parseCliArgs(process.argv.slice(2));
