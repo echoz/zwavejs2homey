@@ -3033,3 +3033,206 @@ test('runPanelApp reports timeout for long-running operation', async () => {
   const rendered = capture.text();
   assert.equal(rendered.toLowerCase().includes('timed out'), true);
 });
+
+test('runPanelApp routes rules-mode panel actions through rules presenter workflows', async () => {
+  const input = new FakeInput();
+  const output = new FakeOutput();
+  let nodeConnectCalls = 0;
+  let nodeDisconnectCalls = 0;
+  const ruleItems = [
+    {
+      index: 1,
+      filePath: 'rules/project/product/product-29-66-2.json',
+      layer: 'project-product',
+      name: 'Device',
+      signature: '29:66:2',
+      ruleCount: 1,
+      exists: true,
+    },
+  ];
+  const rulesPresenter = {
+    initializeCalls: 0,
+    showRuleDetailCalls: [],
+    signatureCalls: [],
+    inspectCalls: [],
+    validateCalls: [],
+    simulateCalls: [],
+    scaffoldCalls: [],
+    writeCalls: [],
+    manifestCalls: [],
+    initialize() {
+      this.initializeCalls += 1;
+      return ruleItems;
+    },
+    getRules() {
+      return ruleItems;
+    },
+    showRuleDetail(index) {
+      this.showRuleDetailCalls.push(index);
+      return {
+        index,
+        filePath: 'rules/project/product/product-29-66-2.json',
+        layer: 'project-product',
+        name: 'Device',
+        signature: '29:66:2',
+        ruleCount: 1,
+        exists: true,
+        manifestFile: '/tmp/manifest.json',
+        absoluteFilePath: '/tmp/product-29-66-2.json',
+        content: { schemaVersion: 'product-rules/v1', rules: [] },
+      };
+    },
+    selectSignatureFromRule(index) {
+      this.signatureCalls.push(index);
+      return '29:66:2';
+    },
+    async inspectSelectedSignature(options) {
+      this.inspectCalls.push(options);
+      return {
+        signature: '29:66:2',
+        totalNodes: 1,
+        outcomeCounts: { curated: 1 },
+        nodes: [],
+      };
+    },
+    async validateSelectedSignature(options) {
+      this.validateCalls.push(options);
+      return {
+        signature: '29:66:2',
+        totalNodes: 1,
+        reviewNodes: 0,
+        outcomes: { curated: 1 },
+      };
+    },
+    async simulateSelectedSignature(options) {
+      this.simulateCalls.push(options);
+      return {
+        signature: '29:66:2',
+        dryRun: false,
+        inspectSkipped: false,
+        inspectFormat: 'list',
+        inspectCommandLine: 'inspect',
+        validateCommandLine: 'validate',
+        gatePassed: true,
+        totalNodes: 1,
+        reviewNodes: 0,
+        outcomes: { curated: 1 },
+        reportFile: null,
+        summaryJsonFile: null,
+      };
+    },
+    createScaffoldFromSignature(options) {
+      this.scaffoldCalls.push(options);
+      return {
+        signature: '29:66:2',
+        fileHint: 'rules/project/product/product-29-66-2.json',
+        generatedAt: new Date().toISOString(),
+        bundle: {
+          schemaVersion: 'product-rules/v1',
+          metadata: {
+            productName: 'Device',
+            homeyClass: 'socket',
+            ruleIdPrefix: 'device',
+          },
+          capabilities: [],
+        },
+      };
+    },
+    writeScaffoldDraft(filePath, options) {
+      this.writeCalls.push({ filePath, options });
+      return filePath ?? 'rules/project/product/product-29-66-2.json';
+    },
+    addDraftToManifest(options) {
+      this.manifestCalls.push(options);
+      return {
+        manifestFile: 'rules/manifest.json',
+        entryFilePath: 'rules/project/product/product-29-66-2.json',
+        updated: true,
+      };
+    },
+    getStatusSnapshot() {
+      return {
+        mode: 'rules',
+        connectionState: 'ready',
+        selectedRuleIndex: 1,
+        selectedSignature: '29:66:2',
+        cachedNodeCount: 1,
+      };
+    },
+    getRunLog() {
+      return [
+        {
+          timestamp: new Date().toISOString(),
+          level: 'info',
+          message: 'Rules mode smoke log',
+        },
+      ];
+    },
+  };
+  const nodesPresenter = {
+    async connect() {
+      nodeConnectCalls += 1;
+    },
+    async disconnect() {
+      nodeDisconnectCalls += 1;
+    },
+    getState() {
+      return { explorer: { items: [] } };
+    },
+    getStatusSnapshot() {
+      return {
+        mode: 'nodes',
+        connectionState: 'disconnected',
+        selectedSignature: undefined,
+        cachedNodeCount: 0,
+      };
+    },
+  };
+  const { capture, deps } = createPanelDeps(nodesPresenter, input, output, { rulesPresenter });
+
+  const runPromise = runPanelApp(
+    {
+      mode: 'rules',
+      uiMode: 'panel',
+      manifestFile: 'rules/manifest.json',
+      schemaVersion: 0,
+      includeValues: 'summary',
+      maxValues: 100,
+    },
+    { log: () => {}, error: () => {} },
+    deps,
+  );
+
+  setTimeout(() => {
+    emitInputKeys(input, ['enter', 'i', 'v', 'm', 'p', 'W', 'W', 'A', 'A', 's', 'l', 'q']);
+  }, 5);
+
+  await runPromise;
+
+  assert.equal(nodeConnectCalls, 0);
+  assert.equal(nodeDisconnectCalls, 0);
+  assert.equal(rulesPresenter.initializeCalls, 1);
+  assert.deepEqual(rulesPresenter.showRuleDetailCalls, [1]);
+  assert.equal(rulesPresenter.signatureCalls.length >= 4, true);
+  assert.equal(rulesPresenter.inspectCalls.length, 1);
+  assert.equal(rulesPresenter.inspectCalls[0].nodeId, undefined);
+  assert.equal(rulesPresenter.inspectCalls[0].manifestFile, undefined);
+  assert.equal(rulesPresenter.validateCalls.length, 1);
+  assert.equal(rulesPresenter.validateCalls[0].nodeId, undefined);
+  assert.equal(rulesPresenter.validateCalls[0].manifestFile, undefined);
+  assert.equal(rulesPresenter.simulateCalls.length, 1);
+  assert.equal(rulesPresenter.simulateCalls[0].nodeId, undefined);
+  assert.equal(rulesPresenter.simulateCalls[0].manifestFile, undefined);
+  assert.equal(rulesPresenter.simulateCalls[0].dryRun, false);
+  assert.equal(rulesPresenter.scaffoldCalls.length, 1);
+  assert.equal(rulesPresenter.writeCalls.length, 1);
+  assert.equal(rulesPresenter.writeCalls[0].options.confirm, true);
+  assert.equal(rulesPresenter.manifestCalls.length, 1);
+  assert.equal(rulesPresenter.manifestCalls[0].confirm, true);
+
+  const rendered = capture.text();
+  assert.equal(rendered.includes('Mode: rules'), true);
+  assert.equal(rendered.includes('Simulation signature: 29:66:2'), true);
+  assert.equal(rendered.includes('Manifest: rules/manifest.json'), true);
+  assert.equal(rendered.includes('Rules mode smoke log'), true);
+});
