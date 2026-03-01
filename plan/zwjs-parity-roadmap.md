@@ -429,13 +429,14 @@ Cover advanced operational domains once P0/P1/P2 needs are stable.
 - Zniffer command/event typing
 - Firmware and advanced route maintenance workflows
 
-### Current Status (2026-02-23)
+### Current Status (updated 2026-03-01)
 
 - P3 implementation slices are complete for the planned subset (`P3.1` / `P3.2` / `P3.3`)
-- Remaining P3 work is operational validation and fixture expansion only:
+- Remaining P3 work is operational validation and fixture expansion only.
+- Current decision (March 1, 2026): defer these validations for now while focusing Homey adapter slices:
   - non-production live validation for zniffer workflows (`P3.2`)
   - non-production live validation for firmware workflows (`P3.3`)
-  - capture observed variants to tighten result/event fixtures over time
+- Resume with `docs/zwjs-nonprod-live-validation-checklist.md` when a safe non-production setup is available.
 
 ### Slices (Decision Complete)
 
@@ -638,5 +639,5 @@ This roadmap is considered complete when:
 ## Immediate Next Tasks (Recommended Sequence)
 
 1. Treat roadmap phases P0/P1/P2/P3 planned subsets as complete and keep the matrix current as future wrappers/events are added
-2. Prioritize non-production live validation for zniffer and firmware workflows using `docs/zwjs-nonprod-live-validation-checklist.md`
-3. Expand protocol parity only as needed by Homey adapter slices (demand-driven wrappers/events/fixtures)
+2. Expand protocol parity only as needed by Homey adapter slices (demand-driven wrappers/events/fixtures)
+3. Resume non-production live validation for zniffer/firmware only when a safe non-production setup is available, using `docs/zwjs-nonprod-live-validation-checklist.md`

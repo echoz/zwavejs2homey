@@ -271,7 +271,14 @@ These are included to prevent architectural confusion and to show where UI/backe
 - `ZWJS-G6` (P0/P1): add long-tail specialized controller/node event typing as new events are observed in live traffic
 - `ZWJS-G7` (P3): expand endpoint/virtual-endpoint wrappers beyond current implemented subset as concrete use-cases appear
 
-### External Validation Blockers (Environment-Dependent)
+### External Validation Blockers (Deferred for Now)
+
+Decision on March 1, 2026:
+
+- `ZWJS-G2` and `ZWJS-G3` are intentionally deferred while we focus on Homey adapter delivery.
+- They remain tracked and should be resumed when a safe non-production setup is available.
+
+Deferred items:
 
 - `ZWJS-G2` (P3): non-production zniffer operational validation + observed fixture capture (requires zniffer-capable non-production setup)
 - `ZWJS-G3` (P3): non-production firmware workflow validation + observed fixture capture (requires firmware-safe non-production setup)

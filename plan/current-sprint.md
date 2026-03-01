@@ -628,6 +628,13 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - reclassified `ZWJS-G2`/`ZWJS-G3` as external validation blockers (non-production hardware/setup required)
     - synced roadmap wording so remaining open parity items clearly reflect environment dependency rather than code implementation gaps
 
+111. Logged parity-validation deferral decision:
+
+
+    - confirmed `ZWJS-G2` (zniffer non-prod validation) and `ZWJS-G3` (firmware non-prod validation) are intentionally deferred for now
+    - documented that focus remains on Homey adapter delivery until a safe non-production validation setup is available
+    - synced capability matrix + roadmap + parity roadmap language to reflect “deferred, environment-dependent” status
+
 ## Next Tasks
 
 1. Start first Homey adapter mapping vertical slice against compiled profile artifacts.
