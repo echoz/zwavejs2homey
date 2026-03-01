@@ -13,6 +13,7 @@ const ALLOWED_CLI_FLAGS = new Set([
   '--node',
   '--manifest-file',
   '--rules-file',
+  '--vocabulary-file',
   '--catalog-file',
   '--token',
   '--schema-version',
@@ -121,6 +122,7 @@ export function getUsageText() {
     'Usage:',
     '  homey-compile-baseline --url ws://host:port (--all-nodes | --node <id>)',
     '                        [--manifest-file <manifest.json> | --rules-file <rules.json> [--rules-file ...]]',
+    '                        [--vocabulary-file <rules/homey-authoring-vocabulary.json>]',
     '                        [--catalog-file <catalog.json>]',
     '                        [--token ...] [--schema-version 0]',
     '                        [--include-values none|summary|full] [--max-values N]',
@@ -305,6 +307,9 @@ export function parseCliArgs(argv, options = {}) {
       includeControllerNodes: flags.has('--include-controller-nodes'),
       manifestFile,
       rulesFiles,
+      vocabularyFile: flags.get('--vocabulary-file')
+        ? resolveFilePath(flags.get('--vocabulary-file'))
+        : undefined,
       catalogFile: flags.get('--catalog-file')
         ? resolveFilePath(flags.get('--catalog-file'))
         : undefined,
@@ -341,6 +346,7 @@ function buildCommonValidateArgs(command) {
   if (command.rulesFiles.length > 0) {
     for (const filePath of command.rulesFiles) args.push('--rules-file', filePath);
   }
+  if (command.vocabularyFile) args.push('--vocabulary-file', command.vocabularyFile);
   if (command.catalogFile) args.push('--catalog-file', command.catalogFile);
   if (command.includeValues) args.push('--include-values', command.includeValues);
   if (command.maxValues !== undefined) args.push('--max-values', String(command.maxValues));

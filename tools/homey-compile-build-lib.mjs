@@ -6,6 +6,10 @@ import { fileURLToPath } from 'node:url';
 import { formatJsonCompact, formatJsonPretty } from './output-format-lib.mjs';
 import { connectAndInitialize, fetchNodeDetails, fetchNodesList } from './zwjs-inspect-lib.mjs';
 import {
+  DEFAULT_HOMEY_AUTHORING_VOCABULARY_FILE,
+  resolveCompilerRuleVocabulary,
+} from './homey-rule-vocabulary-lib.mjs';
+import {
   isControllerLikeZwjsNodeDetail,
   normalizeCompilerDeviceFactsFromZwjsDetail,
 } from './zwjs-to-compiler-facts-lib.mjs';
@@ -14,7 +18,7 @@ const require = createRequire(import.meta.url);
 const {
   compileProfilePlanFromLoadedRuleSetManifest,
   createCompiledHomeyProfilesArtifactV1,
-  loadJsonRuleSetManifest,
+  loadJsonRuleSetManifestWithOptions,
 } = require('../packages/compiler/dist');
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -128,6 +132,7 @@ export function getUsageText() {
     '  homey-compile-build (--device-file <device.json> [--device-file <device2.json> ...] | --url ws://host:port (--all-nodes | --node <id>))',
     '                     [--manifest-file <manifest.json> | --rules-file <rules.json> [--rules-file ...]]',
     '                     (defaults to rules/manifest.json when neither is provided)',
+    '                     [--vocabulary-file <rules/homey-authoring-vocabulary.json>]',
     '                     [--catalog-file <catalog.json>]',
     '                     [--schema-version 0] [--token ...]',
     '                     [--include-values none|summary|full] [--max-values N]',
@@ -230,6 +235,9 @@ export function parseCliArgs(argv, options = {}) {
       manifestFile,
       rulesFiles,
       ruleInputMode,
+      vocabularyFile: resolveFilePath(
+        flags.get('--vocabulary-file') ?? DEFAULT_HOMEY_AUTHORING_VOCABULARY_FILE,
+      ),
       catalogFile: flags.get('--catalog-file'),
       outputFile: flags.get('--output-file'),
       format,
@@ -277,10 +285,14 @@ export async function buildCompiledProfilesArtifact(command, deps = {}) {
   const compileLoadedRuleSetImpl =
     deps.compileProfilePlanFromLoadedRuleSetManifestImpl ??
     compileProfilePlanFromLoadedRuleSetManifest;
-  const loadRuleSetImpl = deps.loadJsonRuleSetManifestImpl ?? loadJsonRuleSetManifest;
+  const loadRuleSetImpl =
+    deps.loadJsonRuleSetManifestWithOptionsImpl ??
+    deps.loadJsonRuleSetManifestImpl ??
+    loadJsonRuleSetManifestWithOptions;
   const createArtifactImpl =
     deps.createCompiledHomeyProfilesArtifactV1Impl ?? createCompiledHomeyProfilesArtifactV1;
   const devices = await loadDevices(command, deps);
+  const ruleVocabulary = resolveCompilerRuleVocabulary(command.vocabularyFile);
   const manifestFilePath = command.manifestFile ? resolveFilePath(command.manifestFile) : undefined;
   const normalizedRulesFiles = manifestFilePath
     ? undefined
@@ -288,7 +300,9 @@ export async function buildCompiledProfilesArtifact(command, deps = {}) {
   const manifestEntries = manifestFilePath
     ? coerceManifestEntries(readJson(manifestFilePath), manifestFilePath)
     : (normalizedRulesFiles ?? []).map((filePath) => ({ filePath }));
-  const loadedRuleSet = loadRuleSetImpl(manifestEntries);
+  const loadedRuleSet = loadRuleSetImpl(manifestEntries, {
+    vocabulary: ruleVocabulary.vocabulary,
+  });
   const catalogFilePath = command.catalogFile ? resolveFilePath(command.catalogFile) : undefined;
   if (catalogFilePath) assertReadableFile(catalogFilePath, '--catalog-file');
   const catalogArtifact = catalogFilePath ? readJson(catalogFilePath) : undefined;
@@ -322,6 +336,7 @@ export async function buildCompiledProfilesArtifact(command, deps = {}) {
       buildProfile: deriveBuildProfile(command),
       manifestFile: manifestFilePath,
       rulesFiles: normalizedRulesFiles,
+      vocabularyFile: ruleVocabulary.vocabularyFile,
       catalogFile: catalogFilePath,
       ruleSources,
     }),

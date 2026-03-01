@@ -91,6 +91,7 @@ Artifact:
 Current consumers:
 
 - compiler rule validation hooks (`RuleValidationOptions.vocabulary`) for early class/capability membership rejection
+- compiler CLI workflows (`build` / `inspect` / `inspect-live` + validation flows that compose them) with default vocabulary enforcement
 - TUI scaffold editor typed selects (homeyClass always vocabulary-backed; capabilityId vocabulary-backed when capability vocab is available)
 - TUI draft validation (reject unknown `homeyClass`/`capabilityId`)
 

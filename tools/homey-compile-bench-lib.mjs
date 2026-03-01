@@ -2,11 +2,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { performance } from 'node:perf_hooks';
+import { resolveCompilerRuleVocabulary } from './homey-rule-vocabulary-lib.mjs';
 
 const require = createRequire(import.meta.url);
 const {
   compileProfilePlanFromLoadedRuleSetManifest,
-  loadJsonRuleSetManifest,
+  loadJsonRuleSetManifestWithOptions,
 } = require('../packages/compiler/dist');
 
 function parseFlagMap(argv) {
@@ -35,6 +36,7 @@ export function getUsageText() {
     'Usage:',
     '  homey-compile-bench --device-file <device.json> --rules-file <rules.json> [--rules-file <rules2.json> ...]',
     '  homey-compile-bench --device-file <device.json> --manifest <manifest.json>',
+    '                    [--vocabulary-file <rules/homey-authoring-vocabulary.json>]',
     '                    [--iterations 200] [--warmup 20] [--homey-class <class>] [--driver-template <id>]',
   ].join('\n');
 }
@@ -72,6 +74,7 @@ export function parseCliArgs(argv) {
       rulesFiles,
       iterations,
       warmup,
+      vocabularyFile: flags.get('--vocabulary-file'),
       homeyClass: flags.get('--homey-class'),
       driverTemplateId: flags.get('--driver-template'),
     },
@@ -129,8 +132,12 @@ export function runCompileBenchmark(command, deps = {}) {
   const compileLoadedImpl =
     deps.compileProfilePlanFromLoadedRuleSetManifestImpl ??
     compileProfilePlanFromLoadedRuleSetManifest;
-  const loadRuleSetImpl = deps.loadJsonRuleSetManifestImpl ?? loadJsonRuleSetManifest;
+  const loadRuleSetImpl =
+    deps.loadJsonRuleSetManifestWithOptionsImpl ??
+    deps.loadJsonRuleSetManifestImpl ??
+    loadJsonRuleSetManifestWithOptions;
   const readJsonImpl = deps.readJsonImpl ?? readJson;
+  const ruleVocabulary = resolveCompilerRuleVocabulary(command.vocabularyFile);
 
   const setupStart = performance.now();
   const device = readJsonImpl(command.deviceFile);
@@ -143,7 +150,9 @@ export function runCompileBenchmark(command, deps = {}) {
         return coerceManifestEntries(manifest, manifestPath);
       })()
     : command.rulesFiles.map((filePath) => ({ filePath }));
-  const loadedRuleSet = loadRuleSetImpl(manifestEntries);
+  const loadedRuleSet = loadRuleSetImpl(manifestEntries, {
+    vocabulary: ruleVocabulary.vocabulary,
+  });
   const setupMs = performance.now() - setupStart;
 
   const options = {

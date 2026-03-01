@@ -7,9 +7,13 @@ import {
   formatNdjson,
   isSupportedDiagnosticFormat,
 } from './output-format-lib.mjs';
+import { resolveCompilerRuleVocabulary } from './homey-rule-vocabulary-lib.mjs';
 
 const require = createRequire(import.meta.url);
-const { compileProfilePlanFromRuleSetManifest } = require('../packages/compiler/dist');
+const {
+  compileProfilePlanFromLoadedRuleSetManifest,
+  loadJsonRuleSetManifestWithOptions,
+} = require('../packages/compiler/dist');
 
 function parseFlagMap(argv) {
   const flags = new Map();
@@ -41,6 +45,7 @@ export function getUsageText() {
     'Usage:',
     '  homey-compile-inspect --device-file <device.json> --rules-file <rules.json> [--rules-file <rules2.json> ...]',
     '  homey-compile-inspect --device-file <device.json> --manifest <manifest.json>',
+    '                     [--vocabulary-file <rules/homey-authoring-vocabulary.json>]',
     '                     [--catalog-file <catalog.json>]',
     '                     [--focus all|unmatched|suppressed|curation]',
     '                     [--top <n>]',
@@ -110,6 +115,7 @@ export function parseCliArgs(argv) {
       explainCapabilityId: flags.get('--explain'),
       explainAll: flags.has('--explain-all'),
       explainOnly: flags.has('--explain-only'),
+      vocabularyFile: flags.get('--vocabulary-file'),
       catalogFile: flags.get('--catalog-file'),
       homeyClass: flags.get('--homey-class'),
       driverTemplateId: flags.get('--driver-template'),
@@ -149,11 +155,14 @@ function coerceManifestEntries(raw, manifestPath) {
 
 export function compileFromFiles(command) {
   const device = readJson(command.deviceFile);
+  const ruleVocabulary = resolveCompilerRuleVocabulary(command.vocabularyFile);
   const manifestEntries = command.manifest
     ? coerceManifestEntries(readJson(command.manifest), command.manifest)
     : command.rulesFiles.map((filePath) => ({ filePath }));
-
-  const compiled = compileProfilePlanFromRuleSetManifest(device, manifestEntries, {
+  const loadedRuleSet = loadJsonRuleSetManifestWithOptions(manifestEntries, {
+    vocabulary: ruleVocabulary.vocabulary,
+  });
+  const compiled = compileProfilePlanFromLoadedRuleSetManifest(device, loadedRuleSet, {
     catalogArtifact: command.catalogFile ? readJson(command.catalogFile) : undefined,
     homeyClass: command.homeyClass,
     driverTemplateId: command.driverTemplateId,

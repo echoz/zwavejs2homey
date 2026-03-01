@@ -16,6 +16,7 @@ const ALLOWED_CLI_FLAGS = new Set([
   '--node',
   '--manifest-file',
   '--rules-file',
+  '--vocabulary-file',
   '--compiled-file',
   '--catalog-file',
   '--token',
@@ -995,6 +996,7 @@ export function getUsageText() {
     'Usage:',
     '  homey-compile-validate-live --url ws://host:port (--all-nodes | --node <id>)',
     '                            [--manifest-file <manifest.json> | --rules-file <rules.json> [--rules-file ...]]',
+    '                            [--vocabulary-file <rules/homey-authoring-vocabulary.json>]',
     '                            [--compiled-file <compiled-homey-profiles.json>]',
     '                            (defaults to rules/manifest.json when no rules source is provided)',
     '                            [--catalog-file <catalog.json>]',
@@ -1083,6 +1085,7 @@ export function parseCliArgs(argv, options = {}) {
       '--node',
       '--manifest-file',
       '--rules-file',
+      '--vocabulary-file',
       '--compiled-file',
       '--catalog-file',
       '--token',
@@ -1186,6 +1189,7 @@ export function parseCliArgs(argv, options = {}) {
   let schemaVersion;
   let top = 5;
   let catalogFile;
+  let vocabularyFile;
   let token;
   let includeControllerNodes = false;
   let signature;
@@ -1214,6 +1218,9 @@ export function parseCliArgs(argv, options = {}) {
     }
 
     token = flags.get('--token');
+    vocabularyFile = flags.get('--vocabulary-file')
+      ? resolveFilePath(flags.get('--vocabulary-file'))
+      : undefined;
     includeControllerNodes = flags.has('--include-controller-nodes');
     signature = flags.get('--signature');
     if (signature !== undefined && !/^\d+:\d+:\d+$/.test(signature)) {
@@ -1395,6 +1402,7 @@ export function parseCliArgs(argv, options = {}) {
       manifestFile,
       rulesFiles,
       ruleInputMode,
+      vocabularyFile,
       compiledFile,
       inputSummaryJsonFile,
       baselineSummaryJsonFile,
@@ -1535,6 +1543,7 @@ export async function runValidateLiveCommand(command, io = console, deps = {}) {
       deviceFiles: [],
       manifestFile: commandWithBaseline.manifestFile,
       rulesFiles: commandWithBaseline.rulesFiles,
+      vocabularyFile: commandWithBaseline.vocabularyFile,
       catalogFile: commandWithBaseline.catalogFile,
       outputFile: undefined,
       format: 'summary',
@@ -1556,6 +1565,7 @@ export async function runValidateLiveCommand(command, io = console, deps = {}) {
       compiledFile: commandWithBaseline.artifactFile,
       manifestFile: undefined,
       rulesFiles: [],
+      vocabularyFile: commandWithBaseline.vocabularyFile,
       catalogFile: commandWithBaseline.catalogFile,
       format: 'json-compact',
       includeValues: commandWithBaseline.includeValues,

@@ -140,6 +140,17 @@ This emits a `compiled-homey-profiles/v1` artifact.
 
 This emits a `homey-authoring-vocabulary/v1` artifact consumed by TUI authoring and compiler vocabulary-aware validation paths.
 
+Rule vocabulary enforcement is built into compiler workflows:
+
+- `compiler:build`
+- `compiler:inspect`
+- `compiler:inspect-live` (manifest/rules mode)
+- `compiler:validate-live` / `compiler:baseline` / `compiler:simulate` (through build/inspect stages)
+
+These commands load `rules/homey-authoring-vocabulary.json` by default and fail fast on unknown
+`homeyClass` / `capabilityId` in rules. Use `--vocabulary-file <path>` to point at a different
+artifact.
+
 ### Live validation workflow (build + apply + markdown summary)
 
 - `npm run compiler:validate-live -- --help`

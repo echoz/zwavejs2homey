@@ -13,6 +13,7 @@ import {
   isControllerLikeZwjsNodeDetail,
   normalizeCompilerDeviceFactsFromZwjsDetail,
 } from './zwjs-to-compiler-facts-lib.mjs';
+import { resolveCompilerRuleVocabulary } from './homey-rule-vocabulary-lib.mjs';
 
 export {
   isControllerLikeZwjsNodeDetail,
@@ -23,8 +24,7 @@ const require = createRequire(import.meta.url);
 const {
   assertCompiledHomeyProfilesArtifactV1,
   compileProfilePlanFromLoadedRuleSetManifest,
-  compileProfilePlanFromRuleSetManifest,
-  loadJsonRuleSetManifest,
+  loadJsonRuleSetManifestWithOptions,
 } = require('../packages/compiler/dist');
 
 function parseFlagMap(argv) {
@@ -82,6 +82,7 @@ export function getUsageText() {
     'Usage:',
     '  homey-compile-inspect-live --url ws://host:port (--all-nodes | --node <id>)',
     '                           (--compiled-file <compiled-profiles.json> | --manifest-file <manifest.json> | --rules-file <rules.json> [--rules-file ...])',
+    '                           [--vocabulary-file <rules/homey-authoring-vocabulary.json>]',
     '                           [--catalog-file <catalog.json>]',
     '                           [--format list|summary|markdown|json|json-pretty|json-compact|ndjson]',
     '                           [--schema-version 0] [--token ...]',
@@ -196,6 +197,7 @@ export function parseCliArgs(argv) {
       compiledFile,
       manifestFile,
       rulesFiles,
+      vocabularyFile: flags.get('--vocabulary-file'),
       catalogFile: flags.get('--catalog-file'),
       format,
       includeValues,
@@ -410,12 +412,13 @@ export async function runLiveInspectCommand(command, io = console, deps = {}) {
   const connect = deps.connectAndInitializeImpl ?? connectAndInitialize;
   const fetchList = deps.fetchNodesListImpl ?? fetchNodesList;
   const fetchDetail = deps.fetchNodeDetailsImpl ?? fetchNodeDetails;
-  const compileFromManifestImpl =
-    deps.compileProfilePlanFromRuleSetManifestImpl ?? compileProfilePlanFromRuleSetManifest;
   const compileFromLoadedImpl =
     deps.compileProfilePlanFromLoadedRuleSetManifestImpl ??
     compileProfilePlanFromLoadedRuleSetManifest;
-  const loadRuleSetImpl = deps.loadJsonRuleSetManifestImpl ?? loadJsonRuleSetManifest;
+  const loadRuleSetImpl =
+    deps.loadJsonRuleSetManifestWithOptionsImpl ??
+    deps.loadJsonRuleSetManifestImpl ??
+    loadJsonRuleSetManifestWithOptions;
 
   const manifestEntries = command.compiledFile
     ? null
@@ -430,11 +433,15 @@ export async function runLiveInspectCommand(command, io = console, deps = {}) {
   const compiledArtifactIndex = compiledArtifact
     ? buildCompiledArtifactIndex(compiledArtifact)
     : null;
-  const canUseLoadedRuleSetPath =
-    !compiledArtifactIndex &&
-    manifestEntries &&
-    deps.compileProfilePlanFromRuleSetManifestImpl === undefined;
-  const loadedRuleSet = canUseLoadedRuleSetPath ? loadRuleSetImpl(manifestEntries) : null;
+  const ruleVocabulary = compiledArtifactIndex
+    ? null
+    : resolveCompilerRuleVocabulary(command.vocabularyFile);
+  const loadedRuleSet =
+    !compiledArtifactIndex && manifestEntries
+      ? loadRuleSetImpl(manifestEntries, {
+          vocabulary: ruleVocabulary?.vocabulary,
+        })
+      : null;
 
   const client = await connect({
     url: command.url,
@@ -468,11 +475,7 @@ export async function runLiveInspectCommand(command, io = console, deps = {}) {
               homeyClass: command.homeyClass,
               driverTemplateId: command.driverTemplateId,
             })
-          : compileFromManifestImpl(deviceFacts, manifestEntries, {
-              catalogArtifact,
-              homeyClass: command.homeyClass,
-              driverTemplateId: command.driverTemplateId,
-            });
+          : buildNoCompiledProfileResult(deviceFacts);
       results.push({
         node: { ...node, name: detail?.state?.name ?? node.name ?? null },
         detail,
