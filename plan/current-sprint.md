@@ -599,6 +599,15 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - added regression coverage for CLI parsing and capture behavior (max-event stop path + typed summary classification)
     - updated README/capability-matrix/parity-roadmap docs with the concrete `ZWJS-G1` workflow command
 
+108. Completed `ZWJS-G1` live-observation + typing-tightening slice:
+
+
+    - captured active `driver.logging` traffic from the live ZWJS instance (10 events over 120s) and confirmed end-to-end specialized event emission
+    - tightened specialized logging guard semantics to require valid `message` shape (`string|string[]`) and object-shaped `context` when present
+    - extended `ZwjsDriverLoggingEventPayload` with observed stable fields (`level`, tags, direction, context, label, timestamp, multiline, secondaryTagPadding)
+    - added observed multiline driver-logging fixture and normalizer regression tests (positive observed-shape case + invalid-message negative case)
+    - updated parity/capability docs to mark `ZWJS-G1` as closed and move follow-on variant capture into on-demand backlog
+
 ## Next Tasks
 
 1. Start first Homey adapter mapping vertical slice against compiled profile artifacts.

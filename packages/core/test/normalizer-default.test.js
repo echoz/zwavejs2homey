@@ -195,6 +195,31 @@ test('emits specialized driver logging event', () => {
   assert.equal(specialized.event.formattedMessage, 'Controller ready');
 });
 
+test('emits specialized driver logging event for observed multiline payload shape', () => {
+  const msg = loadFixture('zwjs-server', 'event.driver.logging.observed.multiline.json');
+  const out = normalizer.normalizeIncoming(msg);
+  const specialized = out.events.find((e) => e.type === 'zwjs.event.driver.logging');
+  assert.ok(specialized);
+  assert.equal(specialized.event.multiline, true);
+  assert.equal(specialized.event.context.nodeId, 20);
+  assert.equal(specialized.event.direction, '\u00ab ');
+  assert.equal(typeof specialized.event.timestamp, 'string');
+});
+
+test('does not emit specialized driver logging event when message has invalid type', () => {
+  const out = normalizer.normalizeIncoming({
+    type: 'event',
+    event: {
+      source: 'driver',
+      event: 'logging',
+      formattedMessage: 'bad logging payload',
+      message: { text: 'invalid' },
+    },
+  });
+  const specialized = out.events.find((e) => e.type === 'zwjs.event.driver.logging');
+  assert.equal(specialized, undefined);
+});
+
 test('emits specialized driver log-config-updated event', () => {
   const msg = loadFixture('zwjs-server', 'event.driver.log-config-updated.json');
   const out = normalizer.normalizeIncoming(msg);

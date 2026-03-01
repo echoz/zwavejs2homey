@@ -615,6 +615,21 @@ export interface ZwjsDriverLoggingEventPayload extends ZwjsProtocolEventPayload 
   event: 'logging';
   formattedMessage: string;
   message: string | string[];
+  level?: string;
+  primaryTags?: string;
+  secondaryTags?: string;
+  direction?: string;
+  context?: {
+    nodeId?: number;
+    source?: string;
+    type?: string;
+    direction?: string;
+    [key: string]: unknown;
+  };
+  label?: string;
+  timestamp?: string;
+  multiline?: boolean;
+  secondaryTagPadding?: number;
   [key: string]: unknown;
 }
 export interface ZwjsDriverLogConfigUpdatedEventPayload extends ZwjsProtocolEventPayload {

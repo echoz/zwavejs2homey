@@ -44,6 +44,10 @@ function isNodeEventBase(
   );
 }
 
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((entry) => typeof entry === 'string');
+}
+
 export function isZwjsNodeValueUpdatedEvent(
   event: ZwjsProtocolEventPayload,
 ): event is ZwjsNodeValueUpdatedEventPayload {
@@ -124,10 +128,17 @@ export function isZwjsNodeSleepEvent(
 export function isZwjsDriverLoggingEvent(
   event: ZwjsProtocolEventPayload,
 ): event is ZwjsDriverLoggingEventPayload {
+  const hasMessage = typeof event.message === 'string' || isStringArray(event.message);
+  const contextOk =
+    !Object.prototype.hasOwnProperty.call(event, 'context') ||
+    (typeof event.context === 'object' && event.context !== null);
+
   return (
     event.source === 'driver' &&
     event.event === 'logging' &&
-    typeof event.formattedMessage === 'string'
+    typeof event.formattedMessage === 'string' &&
+    hasMessage &&
+    contextOk
   );
 }
 

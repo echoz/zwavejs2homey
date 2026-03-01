@@ -1,0 +1,22 @@
+{
+  "type": "event",
+  "event": {
+    "source": "driver",
+    "event": "logging",
+    "formattedMessage": "2026-03-01 07:12:51.362 CNTRLR « [Node 020] received Binary Switch state:\n                                 current value:      true",
+    "level": "info",
+    "primaryTags": "[Node 020]",
+    "message": "received Binary Switch state:\ncurrent value:      true",
+    "direction": "« ",
+    "context": {
+      "nodeId": 20,
+      "source": "controller",
+      "type": "node",
+      "direction": "inbound"
+    },
+    "label": "CNTRLR",
+    "timestamp": "2026-03-01 07:12:51.362",
+    "multiline": true,
+    "secondaryTagPadding": -1
+  }
+}

@@ -170,14 +170,17 @@ Provide broad typed read coverage for diagnostics and operational introspection.
 - Log streaming wrapper pair
 - Event typing for common controller and node progress/diagnostic events
 
-### Current Status (2026-02-23)
+### Current Status (updated 2026-03-01)
 
 - P1 implementation slices are complete for the planned subset (`P1.1` / `P1.2` / `P1.3`)
-- Remaining P1 work is observational validation only for active `driver.logging` traffic:
+- Active `driver.logging` observational validation is now completed:
   - wrapper pair is implemented and live-validated read-only
   - specialized `driver.logging` event typing is implemented and fixture-tested
-  - no logging events were observed during prior read-only validation windows
-  - capture workflow now has dedicated tooling via `zwjs:inspect logs capture` (report + ndjson payload export)
+  - dedicated capture tooling is available via `zwjs:inspect logs capture` (summary report + NDJSON payload export)
+  - live capture on 2026-03-01 observed 10 `driver.logging` events with stable baseline payload keys (`formattedMessage`, `message`, `level`, `direction`, `context`, `label`, `timestamp`, `multiline`, `secondaryTagPadding`)
+- Remaining P1 work is on-demand expansion only:
+  - capture additional `driver.logging` payload variants if new fields appear in real traffic
+  - expand lower-priority read wrappers/events only when adapter workflows require them
 
 ### Slices (Decision Complete)
 
@@ -207,7 +210,10 @@ Progress (completed subset):
 - Added fixture-backed mocked transport tests for no-filter and filtered start commands and stop command
 - Driver `logging` event specialized typing/normalizer coverage already exists from earlier slice
 - Live wrapper validation completed on 2026-02-23 (`start_listening_logs`/`stop_listening_logs` succeeded)
-- No `driver.logging` events were observed during two read-only validation windows (filtered and unfiltered), so event-stream live observation remains pending active log output
+- Added dedicated live capture workflow (`zwjs:inspect logs capture`) with summary + payload artifact export
+- Live driver logging capture completed on 2026-03-01 with active traffic:
+  - captured 10 `driver.logging` events over a 120-second window
+  - observed stable baseline payload keys and added observed multiline fixture coverage
 
 #### P1.2 Controller/Node Read Wrapper Expansion Set A
 
