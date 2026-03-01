@@ -71,6 +71,11 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
       url: resolved.clientConfig.url,
       auth: resolved.clientConfig.auth,
       logger: this.clientLogger,
+      mutationPolicy: {
+        enabled: true,
+        requireAllowList: true,
+        allowCommands: ['node.set_value'],
+      },
     });
     nextClient.onEvent((event: ZwjsClientEvent) => {
       this.log('zwjs event', event.type);

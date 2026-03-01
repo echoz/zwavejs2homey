@@ -65,6 +65,7 @@ Implementation status:
 - bridge pairing currently enforces singleton add via a stable `device.data.id`.
 - node pairing currently lists import candidates from live ZWJS (`getNodeList`), skipping controller node (`nodeId = 1`) and already paired `bridgeId + nodeId` entries.
 - app runtime now loads a local compiled-profiles artifact at startup into a shared resolver index; node devices resolve match/fallback classification from that shared runtime state.
+- first runtime capability vertical is active for `onoff` using compiled CC37 mappings (`node.get_value` inbound, `node.set_value` outbound, `zwjs.event.node.value-updated` sync).
 
 Related locked MVP runtime policies:
 

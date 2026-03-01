@@ -137,7 +137,7 @@
 - [x] Implement bridge singleton pair behavior and bridge control-plane device lifecycle
 - [x] Implement node pairing/import flow (ZWJS node selection + explicit add)
 - [x] Implement app-level compiled-profile runtime loader/index and node-level match/fallback resolution metadata (artifact-backed resolver cache + no-match safe fallback classification)
-- [ ] Define first supported Homey device/capability vertical slice using compiled profiles
+- [x] Define first supported Homey device/capability vertical slice using compiled profiles (initial `onoff` path for CC37 value in/out mappings)
 - [x] Adapter bootstrap hardening: settings-backed ZWJS connection config + managed reload lifecycle in app init/uninit flow
 - [x] Lock adapter curation persistence v1 policy: `this.homey.settings` + versioned payloads (`docs/decisions/0010-homey-adapter-curation-storage-v1.md`)
 - [x] Lock adapter curation execution direction: persist materialized overrides, lower to runtime rules, execute with shared engine order semantics (`docs/decisions/0012-homey-curation-execution-via-runtime-rule-lowering.md`)
@@ -146,6 +146,7 @@
 - [x] Lock canonical baseline hash projection contract: explicit field whitelist/canonicalization/versioning for recommendation markers (`docs/decisions/0015-homey-baseline-hash-canonical-projection-v1.md`)
 - [x] Lock concrete `curation.v1` stored schema contract (entry map by `homeyDeviceId`, baseline marker embedding, strict schema validation semantics) (`docs/decisions/0016-homey-curation-v1-storage-schema.md`)
 - [ ] Implement adapter execution of inbound/outbound mappings
+  - [x] First vertical: `onoff` capability inbound value sync + outbound `node.set_value` for compiled CC37 mappings
 - [ ] Device lifecycle/sync (discovery, create/update, mapping diagnostics)
 - [ ] User curation application in Homey runtime
 

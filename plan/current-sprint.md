@@ -16,6 +16,16 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 ## Recently Completed
 
 - Latest Phase 5 slice:
+  - implemented first compiled-profile-backed runtime capability vertical for node devices (`onoff`)
+  - added profile vertical extraction/matching helpers in `co.lazylabs.zwavejs2homey/node-runtime.js`
+  - node init now applies compiled `onoff` inbound/outbound mapping when compatible profile is resolved:
+    - initial state pull via `getNodeValue` and Homey capability sync
+    - outbound capability listener issues `node.set_value`
+    - inbound live updates consume `zwjs.event.node.value-updated`
+  - app ZWJS client mutation policy now explicitly allows `node.set_value` only
+  - added node-runtime helper regression tests (`co.lazylabs.zwavejs2homey/test/node-runtime.test.js`)
+
+- Latest Phase 5 slice:
   - added compiled-profile runtime module (`co.lazylabs.zwavejs2homey/compiled-profiles.js`) with artifact path resolution, schema validation, resolver index build, and degraded-status reporting
   - app startup now loads compiled profiles into a shared in-memory resolver runtime; `compiled_profiles_file` settings changes trigger explicit reload
   - node device init now fetches node identity (`manufacturerId/productType/productId`) from ZWJS node state, resolves through shared resolver runtime, and persists match/fallback metadata in device store
