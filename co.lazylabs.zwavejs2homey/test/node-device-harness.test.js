@@ -133,10 +133,12 @@ function createMockZwjsClient({
     },
     async getNodeValue(nodeId, selector) {
       callLog.getNodeValue.push({ nodeId, selector });
-      return nodeValueResultsBySelector.get(selectorKey(selector)) ?? {
-        success: false,
-        error: { errorCode: 'missing_selector_fixture' },
-      };
+      return (
+        nodeValueResultsBySelector.get(selectorKey(selector)) ?? {
+          success: false,
+          error: { errorCode: 'missing_selector_fixture' },
+        }
+      );
     },
     async setNodeValue(payload) {
       callLog.setNodeValue.push(payload);
@@ -233,6 +235,60 @@ function createCompiledProfileMatch() {
           provenance: {
             layer: 'project-product',
             ruleId: 'example-profile',
+            action: 'replace',
+          },
+        },
+        report: {},
+      },
+    },
+  };
+}
+
+function createGenericProfileMatch() {
+  return {
+    by: 'product-triple',
+    key: '29:66:2',
+    entry: {
+      device: {
+        deviceKey: 'main:8',
+        nodeId: 8,
+        manufacturerId: 29,
+        productType: 66,
+        productId: 2,
+      },
+      compiled: {
+        profile: {
+          profileId: 'profile-main-8',
+          match: {},
+          classification: {
+            homeyClass: 'socket',
+            confidence: 'curated',
+            uncurated: false,
+          },
+          capabilities: [
+            {
+              capabilityId: 'measure_power',
+              inboundMapping: {
+                kind: 'value',
+                selector: {
+                  commandClass: 50,
+                  endpoint: 0,
+                  property: 'value',
+                },
+              },
+              outboundMapping: {
+                kind: 'set_value',
+                target: {
+                  commandClass: 112,
+                  endpoint: 0,
+                  property: 'targetValue',
+                },
+              },
+            },
+          ],
+          provenance: {
+            layer: 'project-product',
+            ruleId: 'example-generic-profile',
             action: 'replace',
           },
         },
@@ -398,4 +454,79 @@ test('node device harness records explicit fallback when zwjs client is unavaila
   assert.equal(profileResolution?.fallbackReason, 'zwjs_client_unavailable');
   assert.equal(profileResolution?.verticalSliceApplied, false);
   assert.equal(device._getErrors().length, 0);
+});
+
+test('node device harness applies generic value/set_value mappings for non-specialized capabilities', async () => {
+  const measurePowerSelector = {
+    commandClass: 50,
+    endpoint: 0,
+    property: 'value',
+  };
+
+  const nodeValueResultsBySelector = new Map();
+  nodeValueResultsBySelector.set(selectorKey(measurePowerSelector), {
+    success: true,
+    result: { value: 215.7 },
+  });
+
+  const client = createMockZwjsClient({
+    nodeStateResult: {
+      success: true,
+      result: {
+        state: {
+          manufacturerId: '0x001d',
+          productType: '66',
+          productId: '2',
+        },
+      },
+    },
+    nodeValueResultsBySelector,
+  });
+
+  const app = {
+    getZwjsClient: () => client,
+    getCompiledProfilesStatus: () => createRuntimeStatus(),
+    resolveCompiledProfileEntry: () => createGenericProfileMatch(),
+  };
+
+  const device = new NodeDevice();
+  device._configureHarness({
+    app,
+    data: { bridgeId: 'main', nodeId: 8 },
+    capabilities: ['measure_power'],
+  });
+
+  await device.onInit();
+  assert.equal(device._getCapabilityValue('measure_power'), 215.7);
+  assert.equal(client.getListenerCount(), 1);
+
+  await device._triggerCapabilityListener('measure_power', 42.5);
+  assert.deepEqual(client.callLog.setNodeValue, [
+    {
+      nodeId: 8,
+      valueId: {
+        commandClass: 112,
+        endpoint: 0,
+        property: 'targetValue',
+      },
+      value: 42.5,
+    },
+  ]);
+
+  client.emitEvent({
+    type: 'zwjs.event.node.value-updated',
+    event: {
+      nodeId: 8,
+      args: {
+        commandClass: 50,
+        endpoint: 0,
+        propertyName: 'value',
+        newValue: 177.9,
+      },
+    },
+  });
+  await Promise.resolve();
+  assert.equal(device._getCapabilityValue('measure_power'), 177.9);
+  await device.onDeleted();
+  assert.equal(client.getListenerCount(), 0);
 });

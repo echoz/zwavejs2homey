@@ -9,11 +9,10 @@ import {
   resolveNodeProfileClassification,
 } from '../../compiled-profiles';
 import {
-  coerceDimInboundValue,
-  coerceDimOutboundValue,
-  coerceOnOffValue,
-  extractDimCapabilityVertical,
-  extractOnOffCapabilityVertical,
+  coerceCapabilityInboundValue,
+  coerceCapabilityOutboundValue,
+  extractCapabilityRuntimeVerticals,
+  type CapabilityRuntimeVerticalSlice,
   selectorMatchesNodeValueUpdatedEvent,
 } from '../../node-runtime';
 
@@ -44,141 +43,99 @@ module.exports = class NodeDevice extends Homey.Device {
     this.zwjsEventUnsubscribers = [];
   }
 
-  private async applyOnOffVerticalSlice(
+  private async applyCapabilityVerticalSlice(
     client: ZwjsClient,
     nodeId: number,
-    slice: NonNullable<ReturnType<typeof extractOnOffCapabilityVertical>>,
+    slice: CapabilityRuntimeVerticalSlice,
   ): Promise<boolean> {
-    if (!this.hasCapability('onoff')) {
+    const {
+      capabilityId,
+      inboundSelector,
+      inboundTransformRef,
+      outboundTarget,
+      outboundTransformRef,
+    } = slice;
+    if (!this.hasCapability(capabilityId)) {
       return false;
     }
 
-    try {
-      const valueResult = await client.getNodeValue(nodeId, slice.inboundSelector);
-      if (!valueResult.success) {
-        this.error('NodeDevice failed to read onoff inbound value', {
-          nodeId,
-          error: valueResult.error,
-        });
-      } else {
-        const nextValue = coerceOnOffValue(valueResult.result);
-        if (nextValue !== undefined) {
-          await this.setCapabilityValue('onoff', nextValue);
-        } else {
-          this.error('NodeDevice received non-boolean onoff inbound value', {
+    if (inboundSelector) {
+      try {
+        const valueResult = await client.getNodeValue(nodeId, inboundSelector);
+        if (!valueResult.success) {
+          this.error('NodeDevice failed to read inbound value', {
             nodeId,
-            value: valueResult.result,
+            capabilityId,
+            error: valueResult.error,
           });
+        } else {
+          const nextValue = coerceCapabilityInboundValue(
+            capabilityId,
+            valueResult.result,
+            inboundTransformRef,
+          );
+          if (nextValue !== undefined) {
+            await this.setCapabilityValue(capabilityId, nextValue);
+          } else {
+            this.error('NodeDevice failed to coerce inbound value', {
+              nodeId,
+              capabilityId,
+              value: valueResult.result,
+            });
+          }
         }
-      }
-    } catch (error) {
-      this.error('NodeDevice failed to read onoff inbound value', {
-        nodeId,
-        error,
-      });
-    }
-
-    this.registerCapabilityListener('onoff', async (value: unknown) => {
-      const outboundValue = coerceOnOffValue(value);
-      if (outboundValue === undefined) {
-        throw new Error('onoff capability value must be boolean-like');
-      }
-
-      const mutationResult = await client.setNodeValue({
-        nodeId,
-        valueId: slice.outboundTarget,
-        value: outboundValue,
-      });
-      if (!mutationResult.success) {
-        throw new Error(`setNodeValue failed (${mutationResult.error.errorCode ?? 'unknown'})`);
-      }
-    });
-
-    const unsubscribe = client.onEvent((event) => {
-      if (event.type !== 'zwjs.event.node.value-updated') return;
-      if (event.event.nodeId !== nodeId) return;
-      if (!selectorMatchesNodeValueUpdatedEvent(slice.inboundSelector, event.event)) return;
-      const nextValue = coerceOnOffValue(event.event.args?.newValue);
-      if (nextValue === undefined) return;
-      this.setCapabilityValue('onoff', nextValue).catch((error: unknown) => {
-        this.error('NodeDevice failed to apply onoff value-updated event', {
+      } catch (error) {
+        this.error('NodeDevice failed to read inbound value', {
           nodeId,
+          capabilityId,
           error,
         });
-      });
-    });
-    this.zwjsEventUnsubscribers.push(unsubscribe);
-    return true;
-  }
-
-  private async applyDimVerticalSlice(
-    client: ZwjsClient,
-    nodeId: number,
-    slice: NonNullable<ReturnType<typeof extractDimCapabilityVertical>>,
-  ): Promise<boolean> {
-    if (!this.hasCapability('dim')) {
-      return false;
+      }
     }
 
-    try {
-      const valueResult = await client.getNodeValue(nodeId, slice.inboundSelector);
-      if (!valueResult.success) {
-        this.error('NodeDevice failed to read dim inbound value', {
-          nodeId,
-          error: valueResult.error,
-        });
-      } else {
-        const nextValue = coerceDimInboundValue(valueResult.result, slice.inboundTransformRef);
-        if (nextValue !== undefined) {
-          await this.setCapabilityValue('dim', nextValue);
-        } else {
-          this.error('NodeDevice received non-numeric dim inbound value', {
-            nodeId,
-            value: valueResult.result,
-          });
+    if (outboundTarget) {
+      this.registerCapabilityListener(capabilityId, async (value: unknown) => {
+        const outboundValue = coerceCapabilityOutboundValue(
+          capabilityId,
+          value,
+          outboundTransformRef,
+        );
+        if (outboundValue === undefined) {
+          throw new Error(`${capabilityId} capability value is not supported for outbound mapping`);
         }
-      }
-    } catch (error) {
-      this.error('NodeDevice failed to read dim inbound value', {
-        nodeId,
-        error,
+
+        const mutationResult = await client.setNodeValue({
+          nodeId,
+          valueId: outboundTarget,
+          value: outboundValue,
+        });
+        if (!mutationResult.success) {
+          throw new Error(`setNodeValue failed (${mutationResult.error.errorCode ?? 'unknown'})`);
+        }
       });
     }
-
-    this.registerCapabilityListener('dim', async (value: unknown) => {
-      const outboundValue = coerceDimOutboundValue(value, slice.outboundTransformRef);
-      if (outboundValue === undefined) {
-        throw new Error('dim capability value must be numeric');
-      }
-
-      const mutationResult = await client.setNodeValue({
-        nodeId,
-        valueId: slice.outboundTarget,
-        value: outboundValue,
-      });
-      if (!mutationResult.success) {
-        throw new Error(`setNodeValue failed (${mutationResult.error.errorCode ?? 'unknown'})`);
-      }
-    });
-
-    const unsubscribe = client.onEvent((event) => {
-      if (event.type !== 'zwjs.event.node.value-updated') return;
-      if (event.event.nodeId !== nodeId) return;
-      if (!selectorMatchesNodeValueUpdatedEvent(slice.inboundSelector, event.event)) return;
-      const nextValue = coerceDimInboundValue(
-        event.event.args?.newValue,
-        slice.inboundTransformRef,
-      );
-      if (nextValue === undefined) return;
-      this.setCapabilityValue('dim', nextValue).catch((error: unknown) => {
-        this.error('NodeDevice failed to apply dim value-updated event', {
-          nodeId,
-          error,
+    if (inboundSelector) {
+      const unsubscribe = client.onEvent((event) => {
+        if (event.type !== 'zwjs.event.node.value-updated') return;
+        if (event.event.nodeId !== nodeId) return;
+        if (!selectorMatchesNodeValueUpdatedEvent(inboundSelector, event.event)) return;
+        const nextValue = coerceCapabilityInboundValue(
+          capabilityId,
+          event.event.args?.newValue,
+          inboundTransformRef,
+        );
+        if (nextValue === undefined) return;
+        this.setCapabilityValue(capabilityId, nextValue).catch((error: unknown) => {
+          this.error('NodeDevice failed to apply value-updated event', {
+            nodeId,
+            capabilityId,
+            error,
+          });
         });
       });
-    });
-    this.zwjsEventUnsubscribers.push(unsubscribe);
-    return true;
+      this.zwjsEventUnsubscribers.push(unsubscribe);
+    }
+    return Boolean(inboundSelector || outboundTarget);
   }
 
   async onInit() {
@@ -205,15 +162,13 @@ module.exports = class NodeDevice extends Homey.Device {
           match = app.resolveCompiledProfileEntry?.(selector) ?? { by: 'none' };
           classification = resolveNodeProfileClassification(match, resolverStatus);
           if (match.entry) {
-            const onoffSlice = extractOnOffCapabilityVertical(match.entry.compiled.profile);
-            if (onoffSlice) {
-              const applied = await this.applyOnOffVerticalSlice(client, ctx.nodeId, onoffSlice);
-              if (applied) verticalSliceApplied = true;
-            }
-
-            const dimSlice = extractDimCapabilityVertical(match.entry.compiled.profile);
-            if (dimSlice) {
-              const applied = await this.applyDimVerticalSlice(client, ctx.nodeId, dimSlice);
+            const mappingSlices = extractCapabilityRuntimeVerticals(match.entry.compiled.profile);
+            for (const mappingSlice of mappingSlices) {
+              const applied = await this.applyCapabilityVerticalSlice(
+                client,
+                ctx.nodeId,
+                mappingSlice,
+              );
               if (applied) verticalSliceApplied = true;
             }
           }

@@ -16,6 +16,17 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 ## Recently Completed
 
 - Latest Phase 5 slice:
+  - implemented a generic compiled-mapping runtime kernel for node devices (value/set_value path), replacing per-capability wiring in `drivers/node/device.ts`
+  - node runtime now iterates all resolver-matched capability mappings and applies compatible slices when the Homey device exposes that capability
+  - added generic capability value coercion hooks in `co.lazylabs.zwavejs2homey/node-runtime.js`:
+    - specialized coercion still applies for `onoff` and `dim`
+    - non-specialized capabilities now pass through string/number/boolean payloads for runtime mapping
+  - preserved existing event-driven inbound sync path (`zwjs.event.node.value-updated`) and outbound `node.set_value` writes for compatible mappings
+  - extended tests:
+    - runtime helper coverage for generic extraction/coercion (`co.lazylabs.zwavejs2homey/test/node-runtime.test.js`)
+    - headless harness coverage for generic non-specialized mapping execution (`co.lazylabs.zwavejs2homey/test/node-device-harness.test.js`)
+
+- Latest Phase 5 slice:
   - implemented first compiled-profile-backed runtime capability vertical set for node devices (`onoff` + `dim`)
   - added profile vertical extraction/matching helpers in `co.lazylabs.zwavejs2homey/node-runtime.js`
   - node init now applies compiled `onoff`/`dim` inbound/outbound mappings when compatible profile is resolved:

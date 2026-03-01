@@ -1,12 +1,15 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
+  extractCapabilityRuntimeVerticals,
   coerceDimInboundValue,
   coerceDimOutboundValue,
   extractOnOffCapabilityVertical,
   extractDimCapabilityVertical,
   extractValueResultPayload,
   coerceOnOffValue,
+  coerceCapabilityInboundValue,
+  coerceCapabilityOutboundValue,
   selectorMatchesNodeValueUpdatedEvent,
 } = require('../node-runtime.js');
 
@@ -98,6 +101,77 @@ test('extractDimCapabilityVertical returns the dim slice when profile is compati
     },
     outboundTransformRef: 'homey_dim_to_zwave_level_0_99',
   });
+});
+
+test('extractCapabilityRuntimeVerticals returns value/set_value runtime-compatible mappings', () => {
+  const slices = extractCapabilityRuntimeVerticals({
+    capabilities: [
+      {
+        capabilityId: 'onoff',
+        inboundMapping: {
+          kind: 'value',
+          selector: { commandClass: 37, endpoint: 0, property: 'currentValue' },
+        },
+        outboundMapping: {
+          kind: 'set_value',
+          target: { commandClass: 37, endpoint: 0, property: 'targetValue' },
+        },
+      },
+      {
+        capabilityId: 'measure_power',
+        inboundMapping: {
+          kind: 'value',
+          selector: { commandClass: 50, endpoint: 0, property: 'value' },
+        },
+      },
+      {
+        capabilityId: 'dim',
+        outboundMapping: {
+          kind: 'set_value',
+          target: { commandClass: 38, endpoint: 0, property: 'targetValue' },
+          transformRef: 'homey_dim_to_zwave_level_0_99',
+        },
+      },
+      {
+        capabilityId: 'ignored_event',
+        inboundMapping: {
+          kind: 'event',
+          selector: { eventType: 'node.notification' },
+        },
+      },
+      {
+        capabilityId: 'ignored_command',
+        outboundMapping: {
+          kind: 'zwjs_command',
+          target: { command: 'node.foo' },
+        },
+      },
+    ],
+  });
+
+  assert.deepEqual(slices, [
+    {
+      capabilityId: 'onoff',
+      inboundSelector: { commandClass: 37, endpoint: 0, property: 'currentValue' },
+      inboundTransformRef: undefined,
+      outboundTarget: { commandClass: 37, endpoint: 0, property: 'targetValue' },
+      outboundTransformRef: undefined,
+    },
+    {
+      capabilityId: 'measure_power',
+      inboundSelector: { commandClass: 50, endpoint: 0, property: 'value' },
+      inboundTransformRef: undefined,
+      outboundTarget: undefined,
+      outboundTransformRef: undefined,
+    },
+    {
+      capabilityId: 'dim',
+      inboundSelector: undefined,
+      inboundTransformRef: undefined,
+      outboundTarget: { commandClass: 38, endpoint: 0, property: 'targetValue' },
+      outboundTransformRef: 'homey_dim_to_zwave_level_0_99',
+    },
+  ]);
 });
 
 test('extractOnOffCapabilityVertical rejects incompatible capability mappings', () => {
@@ -202,6 +276,24 @@ test('coerceDim inbound/outbound values with transform refs and fallbacks', () =
   assert.equal(coerceDimOutboundValue(75), 75);
   assert.equal(coerceDimOutboundValue('0.1', 'homey_dim_to_zwave_level_0_99'), 10);
   assert.equal(coerceDimOutboundValue('x', 'homey_dim_to_zwave_level_0_99'), undefined);
+});
+
+test('coerceCapability inbound/outbound delegates known verticals and filters unsupported values', () => {
+  assert.equal(coerceCapabilityInboundValue('onoff', { value: 1 }), true);
+  assert.equal(
+    coerceCapabilityInboundValue('dim', { value: 99 }, 'zwave_level_0_99_to_homey_dim'),
+    1,
+  );
+  assert.equal(coerceCapabilityInboundValue('measure_power', { value: 44.2 }), 44.2);
+  assert.equal(
+    coerceCapabilityInboundValue('measure_power', { value: { nested: true } }),
+    undefined,
+  );
+
+  assert.equal(coerceCapabilityOutboundValue('onoff', 0), false);
+  assert.equal(coerceCapabilityOutboundValue('dim', 0.5, 'homey_dim_to_zwave_level_0_99'), 50);
+  assert.equal(coerceCapabilityOutboundValue('measure_power', 13.4), 13.4);
+  assert.equal(coerceCapabilityOutboundValue('measure_power', { invalid: true }), undefined);
 });
 
 test('selectorMatchesNodeValueUpdatedEvent matches compatible selector payloads', () => {

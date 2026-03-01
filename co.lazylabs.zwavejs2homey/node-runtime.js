@@ -31,6 +31,45 @@ function normalizeComparableValue(value) {
   return undefined;
 }
 
+function isSupportedCapabilityRuntimeValue(value) {
+  if (typeof value === 'string') return true;
+  if (typeof value === 'number' && Number.isFinite(value)) return true;
+  if (typeof value === 'boolean') return true;
+  return false;
+}
+
+function extractCapabilityRuntimeVerticals(profile) {
+  if (!isObject(profile) || !Array.isArray(profile.capabilities)) {
+    return [];
+  }
+
+  const slices = [];
+  for (const capability of profile.capabilities) {
+    if (!isObject(capability) || !normalizeComparableValue(capability.capabilityId)) {
+      continue;
+    }
+
+    const inbound = capability.inboundMapping;
+    const outbound = capability.outboundMapping;
+    const hasInbound = isObject(inbound) && inbound.kind === 'value' && isObject(inbound.selector);
+    const hasOutbound = Boolean(
+      isObject(outbound) && outbound.kind === 'set_value' && isObject(outbound.target),
+    );
+    if (!hasInbound && !hasOutbound) continue;
+
+    slices.push({
+      capabilityId: capability.capabilityId.trim(),
+      inboundSelector: hasInbound ? inbound.selector : undefined,
+      inboundTransformRef: hasInbound ? normalizeComparableValue(inbound.transformRef) : undefined,
+      outboundTarget: hasOutbound ? outbound.target : undefined,
+      outboundTransformRef: hasOutbound
+        ? normalizeComparableValue(outbound.transformRef)
+        : undefined,
+    });
+  }
+  return slices;
+}
+
 function extractOnOffCapabilityVertical(profile) {
   if (!isObject(profile) || !Array.isArray(profile.capabilities)) {
     return null;
@@ -160,6 +199,35 @@ function coerceDimOutboundValue(value, transformRef) {
   return Math.round(clamp(numeric, 0, 99));
 }
 
+function coerceCapabilityInboundValue(capabilityId, value, transformRef) {
+  if (capabilityId === 'onoff') {
+    return coerceOnOffValue(value);
+  }
+  if (capabilityId === 'dim') {
+    return coerceDimInboundValue(value, transformRef);
+  }
+
+  const payload = extractValueResultPayload(value);
+  if (!isSupportedCapabilityRuntimeValue(payload)) {
+    return undefined;
+  }
+  return payload;
+}
+
+function coerceCapabilityOutboundValue(capabilityId, value, transformRef) {
+  if (capabilityId === 'onoff') {
+    return coerceOnOffValue(value);
+  }
+  if (capabilityId === 'dim') {
+    return coerceDimOutboundValue(value, transformRef);
+  }
+
+  if (!isSupportedCapabilityRuntimeValue(value)) {
+    return undefined;
+  }
+  return value;
+}
+
 function selectorMatchesNodeValueUpdatedEvent(selector, eventPayload) {
   if (!isObject(selector) || !isObject(eventPayload) || !isObject(eventPayload.args)) {
     return false;
@@ -218,11 +286,14 @@ function selectorMatchesNodeValueUpdatedEvent(selector, eventPayload) {
 }
 
 module.exports = {
+  extractCapabilityRuntimeVerticals,
   extractOnOffCapabilityVertical,
   extractDimCapabilityVertical,
   extractValueResultPayload,
   coerceOnOffValue,
   coerceDimInboundValue,
   coerceDimOutboundValue,
+  coerceCapabilityInboundValue,
+  coerceCapabilityOutboundValue,
   selectorMatchesNodeValueUpdatedEvent,
 };
