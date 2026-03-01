@@ -77,7 +77,7 @@ function createDraftEditorState(draft: ScaffoldDraft): DraftEditorState {
     errors: [],
     warnings: [],
     selectedCapabilityIndex: 0,
-    selectedFieldPath: 'metadata.productName',
+    selectedFieldPath: 'bundle.metadata.productName',
     lastValidatedAt: nowIso(),
   };
 }

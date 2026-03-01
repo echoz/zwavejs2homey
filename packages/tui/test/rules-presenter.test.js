@@ -158,6 +158,7 @@ test('RulesPresenter draft editor lifecycle mutates and commits scaffold draft',
 
   const editor = presenter.startDraftEdit();
   assert.equal(editor.dirty, false);
+  assert.equal(editor.selectedFieldPath, 'bundle.metadata.productName');
   const mutated = presenter.setDraftEditorField(
     'fileHint',
     'rules/project/product/_scratch/rule.json',

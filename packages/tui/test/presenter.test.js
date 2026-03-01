@@ -370,6 +370,7 @@ test('ExplorerPresenter draft editor lifecycle mutates and commits scaffold draf
 
   const editor = presenter.startDraftEdit();
   assert.equal(editor.dirty, false);
+  assert.equal(editor.selectedFieldPath, 'bundle.metadata.productName');
   const mutated = presenter.setDraftEditorField('fileHint', 'product-29-66-2-edited.json');
   assert.equal(mutated.dirty, true);
   assert.equal(mutated.errors.length, 0);

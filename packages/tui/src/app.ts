@@ -1981,9 +1981,12 @@ export async function runPanelApp(
   let listIdentityHydrationInFlight: Promise<void> | null = null;
   const listIdentityHydrationPendingNodeIds = new Set<number>();
   const listIdentityHydrationAttemptedNodeIds = new Set<number>();
+  let pendingReturnLikeCounterpart: 'enter' | 'return' | null = null;
+  let pendingReturnLikeExpiresAt = 0;
 
   const OPERATION_TIMEOUT_MS = Math.max(1, deps.panelOperationTimeoutMs ?? 45_000);
   const WRITE_CONFIRM_WINDOW_MS = 6_000;
+  const RETURN_KEYPRESS_DEDUP_MS = 24;
 
   const screen = blessed.screen({
     smartCSR: true,
@@ -3475,8 +3478,24 @@ export async function runPanelApp(
         char: string,
         key: { name?: string; ctrl?: boolean; sequence?: string },
       ) => {
-        if (key.name === 'enter' && key.sequence === '\r') {
-          return;
+        const keyName = (key.name ?? '').toLowerCase();
+        const isReturnLike = key.sequence === '\r' && (keyName === 'enter' || keyName === 'return');
+        if (isReturnLike) {
+          const now = Date.now();
+          if (
+            pendingReturnLikeCounterpart !== null &&
+            now <= pendingReturnLikeExpiresAt &&
+            keyName === pendingReturnLikeCounterpart
+          ) {
+            pendingReturnLikeCounterpart = null;
+            pendingReturnLikeExpiresAt = 0;
+            return;
+          }
+          pendingReturnLikeCounterpart = keyName === 'enter' ? 'return' : 'enter';
+          pendingReturnLikeExpiresAt = now + RETURN_KEYPRESS_DEDUP_MS;
+        } else {
+          pendingReturnLikeCounterpart = null;
+          pendingReturnLikeExpiresAt = 0;
         }
         const parsedIntent = keypressToPanelIntent(char, key);
         if (!filterMode && parsedIntent.type === 'start-filter') {

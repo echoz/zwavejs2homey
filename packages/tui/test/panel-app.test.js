@@ -369,7 +369,7 @@ test('runPanelApp enters and exits scaffold edit mode from panel', async () => {
     errors: [],
     warnings: [],
     selectedCapabilityIndex: 0,
-    selectedFieldPath: 'metadata.productName',
+    selectedFieldPath: 'bundle.metadata.productName',
     lastValidatedAt: new Date().toISOString(),
   };
   const presenter = {
@@ -553,6 +553,7 @@ test('runPanelApp edits draft metadata fields in panel edit mode', async () => {
   assert.equal(rendered.includes('Product Name: Switch Pro'), true);
   assert.equal(rendered.includes('Homey Class: light'), true);
   assert.equal(rendered.includes('Updated Product Name.'), true);
+  assert.equal(rendered.includes('Unknown selected field:'), false);
 });
 
 test('runPanelApp hydrates visible list identity without opening node detail', async () => {
