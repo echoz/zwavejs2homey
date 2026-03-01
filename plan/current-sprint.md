@@ -15,6 +15,13 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 ## Recently Completed
 
+- Latest Phase 5 curation-foundation slice:
+  - added adapter curation runtime module (`co.lazylabs.zwavejs2homey/curation.js`) for `curation.v1` load + strict schema validation
+  - enforced entry-key identity contract (`entries[homeyDeviceId]` must match `targetDevice.homeyDeviceId`)
+  - implemented deterministic collection-array dedupe and add/remove overlap rejection for curation collections
+  - integrated app runtime curation load on startup and `curation.v1` settings updates with node runtime refresh trigger (`curation-updated`)
+  - added regression coverage for curation schema/runtime behavior and settings-driven refresh orchestration
+
 - Latest policy-boundary guard slice:
   - added repo-level hardcoding policy guard tooling (`tools/hardcoding-policy-guard*.mjs`)
   - guard scans runtime source roots for protected Homey class/capability literals and fails outside approved policy modules

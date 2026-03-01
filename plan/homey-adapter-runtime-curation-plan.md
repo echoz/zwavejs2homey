@@ -4,6 +4,18 @@
 
 Design and implement a Homey adapter-owned runtime curation system that applies user corrections to compiled Homey device profiles at runtime, without changing compiler responsibilities.
 
+## Implementation Status
+
+- [x] Phase A (schema + validation) baseline is in place via `co.lazylabs.zwavejs2homey/curation.js`:
+  - strict `curation.v1` top-level + entry schema validation
+  - entry key/target identity enforcement
+  - deterministic collection dedupe + add/remove overlap rejection
+- [x] Phase D (storage integration) baseline is in place:
+  - app runtime loads `curation.v1` from Homey settings at startup
+  - app runtime reloads curation on `curation.v1` settings updates
+  - curation updates trigger node runtime refresh (`curation-updated`)
+- [ ] Phase B/C/E/F remain open (lowering/apply, recommendation markers, admin flow)
+
 Related ADRs:
 
 - `docs/decisions/0002-compiler-adapter-boundary.md`

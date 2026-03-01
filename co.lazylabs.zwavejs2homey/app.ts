@@ -22,12 +22,19 @@ import {
   resolveCompiledProfilesArtifactPath,
   tryLoadCompiledProfilesRuntimeFromFile,
 } from './compiled-profiles';
+import type { HomeyCurationEntryV1, HomeyCurationRuntimeStatusV1 } from './curation';
+import {
+  CURATION_SETTINGS_KEY,
+  loadCurationRuntimeFromSettings,
+  resolveCurationEntryFromRuntime,
+} from './curation';
 import { ZWJS_DEFAULT_BRIDGE_ID } from './pairing';
 
 module.exports = class Zwavejs2HomeyApp extends Homey.App {
   private zwjsClient?: ZwjsClient;
   private readonly bridgeId = ZWJS_DEFAULT_BRIDGE_ID;
   private compiledProfilesRuntime?: CompiledProfilesRuntime;
+  private curationRuntime = loadCurationRuntimeFromSettings(undefined);
 
   private readonly clientLogger: ClientLogger = {
     info: (msg: string, meta?: unknown) => this.log(msg, meta),
@@ -137,6 +144,25 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
     await this.startZwjsClient(reason);
   }
 
+  private loadCurationRuntime(reason: string): void {
+    const runtime = loadCurationRuntimeFromSettings(this.homey.settings.get(CURATION_SETTINGS_KEY));
+    this.curationRuntime = runtime;
+    if (runtime.status.loaded) {
+      this.log('Curation settings loaded', {
+        reason,
+        source: runtime.status.source,
+        entryCount: runtime.status.entryCount,
+      });
+      return;
+    }
+    this.error('Curation settings invalid; curation is disabled until fixed', {
+      reason,
+      source: runtime.status.source,
+      errorMessage: runtime.status.errorMessage,
+      settingsKey: CURATION_SETTINGS_KEY,
+    });
+  }
+
   private async refreshNodeRuntimeMappings(reason: string): Promise<void> {
     try {
       const nodeDriver = this.homey.drivers.getDriver('node');
@@ -205,7 +231,13 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
 
   private onSettingsChanged = (key: string): void => {
     if (this.shuttingDown) return;
-    if (key !== ZWJS_CONNECTION_SETTINGS_KEY && key !== COMPILED_PROFILES_PATH_SETTINGS_KEY) {
+    if (
+      ![
+        ZWJS_CONNECTION_SETTINGS_KEY,
+        COMPILED_PROFILES_PATH_SETTINGS_KEY,
+        CURATION_SETTINGS_KEY,
+      ].includes(key)
+    ) {
       return;
     }
 
@@ -216,6 +248,9 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
       } else if (key === COMPILED_PROFILES_PATH_SETTINGS_KEY) {
         await this.loadCompiledProfilesRuntime('settings-updated');
         await this.refreshNodeRuntimeMappings('compiled-profiles-updated');
+      } else if (key === CURATION_SETTINGS_KEY) {
+        this.loadCurationRuntime('settings-updated');
+        await this.refreshNodeRuntimeMappings('curation-updated');
       }
     }).catch((error: unknown) => {
       this.error('Failed to apply settings update', { key, error });
@@ -232,6 +267,7 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
     this.homey.settings.on('unset', this.settingsUnsetListener);
     await this.enqueueLifecycle(async () => {
       await this.loadCompiledProfilesRuntime('startup');
+      this.loadCurationRuntime('startup');
       await this.startZwjsClient('startup');
       await this.refreshNodeRuntimeMappings('startup');
     });
@@ -287,5 +323,13 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
     options?: ResolveCompiledProfileEntryOptionsV1,
   ): CompiledProfileResolverMatchV1 {
     return resolveCompiledProfileEntryFromRuntime(this.compiledProfilesRuntime, selector, options);
+  }
+
+  getCurationStatus(): HomeyCurationRuntimeStatusV1 {
+    return this.curationRuntime.status;
+  }
+
+  resolveCurationEntry(homeyDeviceId: string): HomeyCurationEntryV1 | undefined {
+    return resolveCurationEntryFromRuntime(this.curationRuntime, homeyDeviceId);
   }
 };

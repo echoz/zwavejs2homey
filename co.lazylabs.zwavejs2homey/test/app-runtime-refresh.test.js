@@ -195,6 +195,14 @@ test('app refreshes node runtime mappings on startup and settings changes', asyn
   await flushEventQueue();
   assert.equal(refreshCalls.includes('zwjs-connection-updated'), true);
 
+  app.homey.settings.set('curation.v1', {
+    schemaVersion: 'homey-curation/v1',
+    updatedAt: '2026-03-01T00:00:00.000Z',
+    entries: {},
+  });
+  await flushEventQueue();
+  assert.equal(refreshCalls.includes('curation-updated'), true);
+
   await app.onUninit();
 });
 

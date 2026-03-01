@@ -145,6 +145,7 @@
 - [x] Lock recommendation detection policy: per-device baseline markers use canonical baseline profile hash changes to trigger recommendation prompts (`docs/decisions/0014-homey-baseline-recommendation-detection-v1.md`)
 - [x] Lock canonical baseline hash projection contract: explicit field whitelist/canonicalization/versioning for recommendation markers (`docs/decisions/0015-homey-baseline-hash-canonical-projection-v1.md`)
 - [x] Lock concrete `curation.v1` stored schema contract (entry map by `homeyDeviceId`, baseline marker embedding, strict schema validation semantics) (`docs/decisions/0016-homey-curation-v1-storage-schema.md`)
+- [x] Implement adapter `curation.v1` runtime loader + strict schema validation + settings-driven runtime refresh trigger
 - [ ] Implement adapter execution of inbound/outbound mappings
   - [x] First vertical set:
     - `onoff` inbound value sync + outbound `node.set_value` for compiled CC37 mappings
