@@ -1,0 +1,28 @@
+{
+  "type": "result",
+  "success": true,
+  "result": {
+    "type": "number",
+    "readable": true,
+    "writeable": true,
+    "label": "Over-current threshold",
+    "description": "Sets over-current threshold in amperes.",
+    "info": "Observed from live node metadata",
+    "name": "Over-current threshold",
+    "default": 20,
+    "min": 1,
+    "max": 30,
+    "unit": "A",
+    "valueSize": 2,
+    "format": "unsigned",
+    "allowManualEntry": true,
+    "isFromConfig": true,
+    "states": {
+      "1": "1A",
+      "30": "30A"
+    },
+    "ccSpecific": {
+      "parameter": 120
+    }
+  }
+}

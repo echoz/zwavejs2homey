@@ -83,6 +83,12 @@ Progress (completed subset):
 - Added `node.get_value` envelope helper for observed result shapes (`{ value: ... }` and `{}`) plus fixture-backed tests
 - `ZwjsNodeValueResult` improved to partial envelope typing, while remaining broad for command-class-specific payloads
 - Added `hasZwjsNodeValue()` helper to distinguish empty envelopes from envelopes with explicit values in observed server responses
+- Added observed command-class sample guards and typed extraction helpers for:
+  - CC 37/38 `duration` object values
+  - CC 98 lock-handle flags boolean-array values
+  - CC 134 firmware versions string-array values
+- Expanded runtime metadata typing/guards for observed fields (`minLength`, `maxLength`, `valueSize`, `format`, `allowManualEntry`, `isFromConfig`, `name`, `info`, `ccSpecific`, `valueChangeOptions`)
+- Added observed fixtures + regression tests for rich metadata and command-class sample value payloads
 
 #### P0.2 Real-Instance Read Validation for Value Flows (Read-Only)
 

@@ -244,6 +244,14 @@ export interface ZwjsNodeValueEnvelopeResult {
   [key: string]: unknown;
 }
 
+export interface ZwjsDurationValue {
+  value: number;
+  unit: string;
+}
+
+export type ZwjsLockHandleFlagsValue = boolean[];
+export type ZwjsFirmwareVersionsValue = string[];
+
 export type ZwjsNodeValueResult =
   | string
   | number
@@ -256,12 +264,22 @@ export interface ZwjsNodeValueMetadataResult {
   type?: string;
   label?: string;
   description?: string;
+  info?: string;
+  name?: string;
   readable?: boolean;
   writeable?: boolean;
   unit?: string;
   min?: number;
   max?: number;
   steps?: number;
+  minLength?: number;
+  maxLength?: number;
+  valueSize?: number;
+  format?: string;
+  allowManualEntry?: boolean;
+  isFromConfig?: boolean;
+  valueChangeOptions?: Record<string, unknown> | Array<unknown>;
+  ccSpecific?: Record<string, unknown> | null;
   states?: Record<string, unknown> | Array<unknown>;
   default?: unknown;
   [key: string]: unknown;

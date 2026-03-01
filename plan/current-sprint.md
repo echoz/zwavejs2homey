@@ -608,6 +608,26 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - added observed multiline driver-logging fixture and normalizer regression tests (positive observed-shape case + invalid-message negative case)
     - updated parity/capability docs to mark `ZWJS-G1` as closed and move follow-on variant capture into on-demand backlog
 
+109. Completed `ZWJS-G4` node-value typing closure slice:
+
+
+    - sampled live node value/value-metadata payloads across representative production nodes (read-only)
+    - expanded `ZwjsNodeValueMetadataResult` with observed stable fields (`minLength`, `maxLength`, `valueSize`, `format`, `allowManualEntry`, `isFromConfig`, `name`, `info`, `ccSpecific`, `valueChangeOptions`)
+    - added runtime metadata guards (`isZwjsNodeValueMetadataResult`, `hasZwjsNodeValueMetadataBounds`, `isZwjsNodeValueMetadataDuration`)
+    - added command-class-specific sample guards/extractors for observed value families:
+      - CC 37/38 duration objects
+      - CC 98 lock-handle boolean arrays
+      - CC 134 firmware-version string arrays
+    - added observed fixtures + regression tests for value and metadata sample shapes
+    - updated parity/capability docs to mark `ZWJS-G4` as closed and move future variant expansion to on-demand follow-up
+
+110. Completed actionable-gap triage pass for ZwjsClient parity:
+
+
+    - updated capability matrix to mark code-actionable gaps as closed (`ZWJS-G1`, `ZWJS-G4`)
+    - reclassified `ZWJS-G2`/`ZWJS-G3` as external validation blockers (non-production hardware/setup required)
+    - synced roadmap wording so remaining open parity items clearly reflect environment dependency rather than code implementation gaps
+
 ## Next Tasks
 
 1. Start first Homey adapter mapping vertical slice against compiled profile artifacts.

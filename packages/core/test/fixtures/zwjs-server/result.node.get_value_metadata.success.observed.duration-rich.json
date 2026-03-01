@@ -1,0 +1,13 @@
+{
+  "type": "result",
+  "success": true,
+  "result": {
+    "type": "duration",
+    "readable": true,
+    "writeable": true,
+    "label": "Remaining duration",
+    "min": 0,
+    "max": 127,
+    "valueChangeOptions": []
+  }
+}

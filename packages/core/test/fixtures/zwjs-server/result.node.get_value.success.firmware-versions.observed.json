@@ -1,0 +1,7 @@
+{
+  "type": "result",
+  "success": true,
+  "result": {
+    "value": ["10.11", "2.2"]
+  }
+}

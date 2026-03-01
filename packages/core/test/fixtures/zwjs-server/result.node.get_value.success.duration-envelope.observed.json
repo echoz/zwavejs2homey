@@ -1,0 +1,10 @@
+{
+  "type": "result",
+  "success": true,
+  "result": {
+    "value": {
+      "value": 1,
+      "unit": "seconds"
+    }
+  }
+}

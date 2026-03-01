@@ -68,6 +68,9 @@ export type {
   ZwjsNodeValueMetadataResult,
   ZwjsNodeValueEnvelopeResult,
   ZwjsNodeValueResult,
+  ZwjsDurationValue,
+  ZwjsLockHandleFlagsValue,
+  ZwjsFirmwareVersionsValue,
   ZwjsNodeSupportedNotificationEventsResult,
   ZwjsNodeFirmwareUpdateCapabilitiesResult,
   ZwjsNodeFirmwareUpdateCapabilitiesCachedResult,
@@ -143,9 +146,23 @@ export {
 } from './protocol/value-id-guards';
 export {
   extractZwjsNodeValue,
+  extractZwjsDurationValue,
+  extractZwjsFirmwareVersionsValue,
+  extractZwjsLockHandleFlagsValue,
   hasZwjsNodeValue,
+  isZwjsDurationValue,
+  isZwjsFirmwareVersionsValue,
+  isZwjsFirmwareVersionsValueSample,
+  isZwjsLockHandleFlagsValue,
+  isZwjsLockHandleFlagsValueSample,
   isZwjsNodeValueEnvelopeResult,
+  isZwjsSwitchDurationValueSample,
 } from './protocol/value-result-guards';
+export {
+  hasZwjsNodeValueMetadataBounds,
+  isZwjsNodeValueMetadataDuration,
+  isZwjsNodeValueMetadataResult,
+} from './protocol/value-metadata-guards';
 export {
   createMutationPolicyPreset,
   getMutationPolicyPresetAllowlist,
