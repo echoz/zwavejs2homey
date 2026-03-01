@@ -52,6 +52,7 @@ import {
   type ValueSemanticSection,
   semanticCapabilityScore,
 } from './view/value-semantics';
+import { COMMAND_CLASS_RELEVANCE_SCORES } from './view/value-semantics-policy';
 import {
   renderInspectSummary,
   renderRuleDetail,
@@ -1511,28 +1512,8 @@ function toCommandClassNumber(commandClass: unknown): number | undefined {
 }
 
 function scoreCommandClass(commandClass: number | undefined): number {
-  switch (commandClass) {
-    case 37:
-    case 38:
-      return 30; // primary actuator values
-    case 48:
-    case 49:
-    case 50:
-      return 24; // primary sensor/meter values
-    case 113:
-      return 16; // notifications
-    case 91:
-      return 14; // central scene
-    case 128:
-      return 12; // battery
-    case 114:
-    case 115:
-      return -8; // manufacturer/powerlevel diagnostics
-    case 112:
-      return -4; // configuration often secondary
-    default:
-      return 0;
-  }
+  if (commandClass === undefined) return 0;
+  return COMMAND_CLASS_RELEVANCE_SCORES[commandClass] ?? 0;
 }
 
 function scoreNodeValue(entry: NodeValueDetail): number {

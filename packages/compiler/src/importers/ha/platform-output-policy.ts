@@ -135,7 +135,8 @@ export function resolveHaPlatformOutput(
   if (!policy) return null;
 
   const capabilityId =
-    policy.capabilityByPrimaryCommandClass?.[primaryValue.commandClass] ?? policy.defaultCapabilityId;
+    policy.capabilityByPrimaryCommandClass?.[primaryValue.commandClass] ??
+    policy.defaultCapabilityId;
 
   return {
     homeyClass: policy.homeyClass,

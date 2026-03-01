@@ -115,6 +115,7 @@ Current implemented foundation in `packages/compiler`:
   - source extractor subset from `discovery.py`
   - extracted artifact contract
   - translation to generated `ha-derived` rules
+  - policy-driven platform output mapping/conflict resolution (`platform-output-policy.ts`) instead of inline importer switches
   - device class constraint propagation (`device_class_generic` / `device_class_specific`) to prevent over-broad matches (e.g. dimmer vs cover on CC 38)
   - tooling (`ha-import:extract`, `ha-import:report`)
 - Catalog tooling and artifacts:
@@ -197,6 +198,7 @@ Reset architecture direction:
 - simulation-centric curation flow in both roots
 - current status: panel-first runtime is implemented as default (`--ui panel`) with shell fallback (`--ui shell`)
 - panel renderer implementation is now fully `neo-blessed`-based (custom frame-string renderer removed)
+- value semantic annotation + relevance scoring now read from policy tables (`value-semantics-policy.ts`) instead of inline capability switch logic
 
 Implementation structure (delivered):
 

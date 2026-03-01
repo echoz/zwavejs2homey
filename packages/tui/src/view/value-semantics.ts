@@ -1,4 +1,26 @@
 import type { NodeValueDetail } from '../model/types';
+import {
+  CAPABILITY_RELEVANCE_SCORES,
+  COMMAND_CLASS_RELEVANCE_SCORES,
+  CONFIG_HINT_TOKENS,
+  CONFIG_SECTION_COMMAND_CLASSES,
+  CONTROL_SECTION_CAPABILITIES,
+  CONTROL_SECTION_COMMAND_CLASSES,
+  DIAGNOSTIC_HINT_TOKENS,
+  DIAGNOSTIC_SECTION_COMMAND_CLASSES,
+  DIRECT_COMMAND_CLASS_SEMANTICS,
+  EVENT_SECTION_CAPABILITIES,
+  EVENT_SECTION_COMMAND_CLASSES,
+  NOTIFICATION_CAPABILITY_HINTS,
+  SENSOR_CAPABILITY_HINTS,
+  SENSOR_SECTION_CAPABILITIES,
+  SENSOR_SECTION_COMMAND_CLASSES,
+  SEMANTIC_CAPABILITY_IDS,
+  SWITCH_MULTILEVEL_BINARY_HINT_TOKENS,
+  SWITCH_MULTILEVEL_BINARY_STATES_HINT_TOKENS,
+  SWITCH_MULTILEVEL_DIM_CONFIDENCE_TOKENS,
+  SWITCH_MULTILEVEL_DIM_METADATA_TOKENS,
+} from './value-semantics-policy';
 
 export type ValueDirection = 'read' | 'write' | 'read-write' | 'unknown';
 export type ValueConfidence = 'high' | 'medium' | 'low';
@@ -54,19 +76,12 @@ function hasAny(text: string, patterns: string[]): boolean {
 }
 
 function inferSensorCapability(text: string, unit: string): string | null {
-  if (hasAny(text, ['temperature', 'temp']) || ['c', 'f'].includes(unit)) {
-    return 'measure_temperature';
-  }
-  if (hasAny(text, ['humidity', 'relative humidity']) || unit === '%') return 'measure_humidity';
-  if (hasAny(text, ['luminance', 'illuminance', 'lux']) || unit === 'lux') {
-    return 'measure_luminance';
-  }
-  if (hasAny(text, ['power']) || ['w', 'kw'].includes(unit)) return 'measure_power';
-  if (hasAny(text, ['energy']) || ['kwh', 'wh'].includes(unit)) return 'meter_power';
-  if (hasAny(text, ['voltage']) || unit === 'v') return 'measure_voltage';
-  if (hasAny(text, ['current']) || ['a', 'ma'].includes(unit)) return 'measure_current';
-  if (hasAny(text, ['pressure']) || ['pa', 'hpa', 'kpa', 'bar', 'mbar'].includes(unit)) {
-    return 'measure_pressure';
+  for (const hint of SENSOR_CAPABILITY_HINTS) {
+    const tokenMatch = hint.tokens ? hasAny(text, hint.tokens) : false;
+    const unitMatch = hint.units ? hint.units.includes(unit) : false;
+    if (tokenMatch || unitMatch) {
+      return hint.capabilityId;
+    }
   }
   return null;
 }
@@ -106,57 +121,44 @@ export function annotateNodeValue(entry: NodeValueDetail): ValueSemanticAnnotati
   let source: ValueSemanticSource = 'heuristic';
 
   if (commandClass === 37) {
-    capabilityId = 'onoff';
+    capabilityId = SEMANTIC_CAPABILITY_IDS.onoff;
     confidence = 'high';
   } else if (commandClass === 38) {
     if (
-      hasAny(mergedText, ['switch', 'binary']) ||
-      (hasStates && hasAny(JSON.stringify(states).toLowerCase(), ['off', 'on']))
+      hasAny(mergedText, SWITCH_MULTILEVEL_BINARY_HINT_TOKENS) ||
+      (hasStates &&
+        hasAny(JSON.stringify(states).toLowerCase(), SWITCH_MULTILEVEL_BINARY_STATES_HINT_TOKENS))
     ) {
-      capabilityId = 'onoff';
+      capabilityId = SEMANTIC_CAPABILITY_IDS.onoff;
       confidence = 'high';
       source = hasStates || labelText.length > 0 ? 'metadata' : 'heuristic';
     } else {
-      capabilityId = 'dim';
-      confidence = hasAny(mergedText, ['level', 'dimmer', 'targetvalue', 'currentvalue'])
-        ? 'high'
-        : 'medium';
-      source = hasAny(mergedText, ['level', 'dimmer']) ? 'metadata' : 'heuristic';
+      capabilityId = SEMANTIC_CAPABILITY_IDS.dim;
+      confidence = hasAny(mergedText, SWITCH_MULTILEVEL_DIM_CONFIDENCE_TOKENS) ? 'high' : 'medium';
+      source = hasAny(mergedText, SWITCH_MULTILEVEL_DIM_METADATA_TOKENS) ? 'metadata' : 'heuristic';
     }
   } else if (commandClass === 48) {
-    if (hasAny(mergedText, ['motion', 'pir'])) capabilityId = 'alarm_motion';
-    else if (hasAny(mergedText, ['contact', 'door', 'window'])) capabilityId = 'alarm_contact';
-    else if (hasAny(mergedText, ['smoke', 'fire'])) capabilityId = 'alarm_smoke';
-    else if (hasAny(mergedText, ['water', 'leak', 'flood'])) capabilityId = 'alarm_water';
-    else if (hasAny(mergedText, ['tamper'])) capabilityId = 'alarm_tamper';
-    else capabilityId = 'alarm_generic';
-    confidence = hasAny(mergedText, ['motion', 'contact', 'door', 'window']) ? 'high' : 'medium';
+    const notificationHint = NOTIFICATION_CAPABILITY_HINTS.find((hint) =>
+      hasAny(mergedText, hint.tokens),
+    );
+    capabilityId = notificationHint?.capabilityId ?? SEMANTIC_CAPABILITY_IDS.alarmGeneric;
+    confidence = notificationHint?.confidence ?? 'medium';
     source = mergedText.length > 0 ? 'metadata' : 'heuristic';
   } else if (commandClass === 49 || commandClass === 50) {
-    capabilityId = inferSensorCapability(mergedText, unit) ?? 'measure_generic';
-    confidence = capabilityId === 'measure_generic' ? 'medium' : 'high';
+    capabilityId =
+      inferSensorCapability(mergedText, unit) ?? SEMANTIC_CAPABILITY_IDS.measureGeneric;
+    confidence = capabilityId === SEMANTIC_CAPABILITY_IDS.measureGeneric ? 'medium' : 'high';
     source = mergedText.length > 0 || unit.length > 0 ? 'metadata' : 'heuristic';
-  } else if (commandClass === 91) {
-    capabilityId = 'button_action';
-    confidence = 'high';
-  } else if (commandClass === 98) {
-    capabilityId = 'locked';
-    confidence = 'high';
-  } else if (commandClass === 113) {
-    capabilityId = 'alarm_generic';
-    confidence = 'medium';
-  } else if (commandClass === 121) {
-    capabilityId = 'windowcoverings_set';
-    confidence = 'high';
-  } else if (commandClass === 128) {
-    capabilityId = 'measure_battery';
-    confidence = 'high';
+  } else if (commandClass && DIRECT_COMMAND_CLASS_SEMANTICS[commandClass]) {
+    const semantic = DIRECT_COMMAND_CLASS_SEMANTICS[commandClass];
+    capabilityId = semantic.capabilityId;
+    confidence = semantic.confidence;
   } else if (hasStates) {
-    capabilityId = 'enum_select';
+    capabilityId = SEMANTIC_CAPABILITY_IDS.enumSelect;
     confidence = 'medium';
     source = 'metadata';
   } else if (direction === 'write' || direction === 'read-write') {
-    capabilityId = 'number_value';
+    capabilityId = SEMANTIC_CAPABILITY_IDS.numberValue;
     confidence = 'low';
   }
 
@@ -186,39 +188,7 @@ export function formatValueSemanticTag(annotation: ValueSemanticAnnotation): str
 
 export function semanticCapabilityScore(capabilityId: string | null): number {
   if (!capabilityId) return 0;
-  switch (capabilityId) {
-    case 'onoff':
-      return 24;
-    case 'dim':
-      return 22;
-    case 'windowcoverings_set':
-      return 20;
-    case 'locked':
-      return 18;
-    case 'measure_temperature':
-    case 'measure_humidity':
-    case 'measure_luminance':
-    case 'measure_power':
-    case 'meter_power':
-    case 'measure_battery':
-      return 16;
-    case 'alarm_motion':
-    case 'alarm_contact':
-    case 'alarm_smoke':
-    case 'alarm_water':
-    case 'alarm_tamper':
-    case 'alarm_generic':
-      return 14;
-    case 'button_action':
-      return 12;
-    case 'enum_select':
-      return 8;
-    case 'measure_generic':
-    case 'number_value':
-      return 4;
-    default:
-      return 0;
-  }
+  return CAPABILITY_RELEVANCE_SCORES[capabilityId] ?? 0;
 }
 
 export function classifyNodeValueSection(entry: NodeValueDetail): ValueSemanticSection {
@@ -233,77 +203,39 @@ export function classifyNodeValueSection(entry: NodeValueDetail): ValueSemanticS
   const commandClass = toCommandClass(entry);
   const semantic = annotateNodeValue(entry);
   const hasStates = states ? Object.keys(states).length > 0 : false;
-  const diagnosticHints = [
-    'interview',
-    'firmware',
-    'version',
-    'status',
-    'health',
-    'protocol',
-    'serial',
-    'sdk',
-    'statistics',
-    'route',
-    'rssi',
-  ];
-  const configHints = [
-    'configuration',
-    'config',
-    'parameter',
-    'setpoint',
-    'threshold',
-    'offset',
-    'calibration',
-    'protection',
-  ];
-
-  if (commandClass === 112 || hasAny(text, configHints)) return 'config';
-  if (commandClass === 114 || commandClass === 115 || hasAny(text, diagnosticHints)) {
+  if (
+    (commandClass !== undefined && CONFIG_SECTION_COMMAND_CLASSES.has(commandClass)) ||
+    hasAny(text, CONFIG_HINT_TOKENS)
+  ) {
+    return 'config';
+  }
+  if (
+    (commandClass !== undefined && DIAGNOSTIC_SECTION_COMMAND_CLASSES.has(commandClass)) ||
+    hasAny(text, DIAGNOSTIC_HINT_TOKENS)
+  ) {
     return 'diagnostic';
   }
 
   const capability = semantic.capabilityId;
-  if (
-    capability === 'measure_temperature' ||
-    capability === 'measure_humidity' ||
-    capability === 'measure_luminance' ||
-    capability === 'measure_power' ||
-    capability === 'meter_power' ||
-    capability === 'measure_voltage' ||
-    capability === 'measure_current' ||
-    capability === 'measure_pressure' ||
-    capability === 'measure_battery' ||
-    capability === 'measure_generic'
-  ) {
+  if (capability && SENSOR_SECTION_CAPABILITIES.has(capability)) {
     return 'sensors';
   }
-  if (
-    capability === 'alarm_motion' ||
-    capability === 'alarm_contact' ||
-    capability === 'alarm_smoke' ||
-    capability === 'alarm_water' ||
-    capability === 'alarm_tamper' ||
-    capability === 'alarm_generic' ||
-    capability === 'button_action'
-  ) {
+  if (capability && EVENT_SECTION_CAPABILITIES.has(capability)) {
     return 'events';
   }
-  if (
-    capability === 'onoff' ||
-    capability === 'dim' ||
-    capability === 'windowcoverings_set' ||
-    capability === 'locked' ||
-    capability === 'enum_select' ||
-    capability === 'number_value'
-  ) {
+  if (capability && CONTROL_SECTION_CAPABILITIES.has(capability)) {
     return 'controls';
   }
 
-  if (commandClass === 49 || commandClass === 50 || commandClass === 128 || unit.length > 0) {
+  if (
+    (commandClass !== undefined && SENSOR_SECTION_COMMAND_CLASSES.has(commandClass)) ||
+    unit.length > 0
+  ) {
     return 'sensors';
   }
-  if (commandClass === 48 || commandClass === 91 || commandClass === 113) return 'events';
-  if (commandClass === 37 || commandClass === 38 || commandClass === 98 || commandClass === 121) {
+  if (commandClass !== undefined && EVENT_SECTION_COMMAND_CLASSES.has(commandClass))
+    return 'events';
+  if (commandClass !== undefined && CONTROL_SECTION_COMMAND_CLASSES.has(commandClass)) {
     return 'controls';
   }
   if (semantic.direction === 'write' || semantic.direction === 'read-write' || hasStates) {

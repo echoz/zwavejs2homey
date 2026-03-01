@@ -15,6 +15,17 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 ## Recently Completed
 
+- Latest compiler hardcoding-cleanup slice:
+  - refactored HA importer output/conflict decisions to shared policy tables:
+    - moved platform -> (`homeyClass`, `driverTemplateId`, `capabilityId`) mapping into `packages/compiler/src/importers/ha/platform-output-policy.ts`
+    - replaced inline switch/ternary logic in extraction + translation paths with `resolveHaPlatformOutput` / `resolveHaCapabilityConflict`
+  - added dedicated regression coverage (`packages/compiler/test/ha-platform-output-policy.test.js`)
+
+- Latest TUI hardcoding-cleanup slice:
+  - extracted value semantics/scoring policy constants into `packages/tui/src/view/value-semantics-policy.ts`
+  - rewired semantic annotation + section classification + command-class relevance scoring to use policy tables/sets instead of inline switches
+  - preserved existing behavior with full TUI workspace test pass
+
 - Latest Phase 5 slice:
   - removed capability-ID hardcoded runtime contracts in `node-runtime`:
     - runtime slice extraction now accepts any valid `value`/`set_value` selector-target pair from compiled profiles
