@@ -172,6 +172,15 @@ export {
   loadHaDerivedGeneratedRuleArtifact,
 } from './importers/ha/generated-rule-artifact';
 export type { HaExtractedDiscoveryInputV1 } from './importers/ha/translate-extracted-discovery';
+export type {
+  HaCapabilityConflict,
+  HaPlatformOutput,
+  HaPrimaryValueRef,
+} from './importers/ha/platform-output-policy';
+export {
+  resolveHaCapabilityConflict,
+  resolveHaPlatformOutput,
+} from './importers/ha/platform-output-policy';
 export {
   HaExtractedDiscoveryArtifactError,
   loadHaExtractedDiscoveryArtifact,

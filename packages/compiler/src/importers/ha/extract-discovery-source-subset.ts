@@ -5,6 +5,7 @@ import type {
   HaExtractedDiscoveryInputV1,
   HaExtractedDiscoveryEntryV1,
 } from './translate-extracted-discovery';
+import { resolveHaPlatformOutput } from './platform-output-policy';
 
 export type HaSourceSubsetUnsupportedReason =
   | 'unsupported-platform'
@@ -75,7 +76,6 @@ type ParsedValueMatcher = NonNullable<HaExtractedDiscoveryEntryV1['valueMatch']>
 type ParsedCompanion = NonNullable<
   NonNullable<HaExtractedDiscoveryEntryV1['companions']>['requiredValues']
 >[number];
-type ParsedOutput = HaExtractedDiscoveryEntryV1['output'];
 type ParsedPropertyKey = string | number | null;
 
 interface AliasSchemaDef {
@@ -508,94 +508,6 @@ function parseDeviceMatch(block: string): HaExtractedDiscoveryEntryV1['deviceMat
   return Object.keys(result).length > 0 ? result : undefined;
 }
 
-function mapPlatformToOutput(
-  platform: string,
-  primaryValue: ParsedValueMatcher,
-): ParsedOutput | null {
-  switch (platform) {
-    case 'FAN':
-      return {
-        homeyClass: 'fan',
-        driverTemplateId: 'ha-import-fan',
-        capabilityId: 'dim',
-      };
-    case 'CLIMATE':
-      return {
-        homeyClass: 'thermostat',
-        driverTemplateId: 'ha-import-thermostat',
-        capabilityId: 'target_temperature',
-      };
-    case 'SWITCH':
-      return {
-        homeyClass: 'socket',
-        driverTemplateId: 'ha-import-switch',
-        capabilityId: 'onoff',
-      };
-    case 'LIGHT':
-      return {
-        homeyClass: 'light',
-        driverTemplateId: 'ha-import-light',
-        capabilityId: primaryValue.commandClass === 38 ? 'dim' : 'onoff',
-      };
-    case 'BINARY_SENSOR':
-      return {
-        homeyClass: 'sensor',
-        driverTemplateId: 'ha-import-binary-sensor',
-        capabilityId: 'alarm_generic',
-      };
-    case 'LOCK':
-      return {
-        homeyClass: 'lock',
-        driverTemplateId: 'ha-import-lock',
-        capabilityId: 'locked',
-      };
-    case 'SELECT':
-      return {
-        homeyClass: 'other',
-        driverTemplateId: 'ha-import-select',
-        capabilityId: 'enum_select',
-      };
-    case 'COVER':
-      return {
-        homeyClass: 'curtain',
-        driverTemplateId: 'ha-import-cover',
-        capabilityId: 'windowcoverings_set',
-      };
-    case 'SENSOR':
-      return {
-        homeyClass: 'sensor',
-        driverTemplateId: 'ha-import-sensor',
-        capabilityId: 'measure_generic',
-      };
-    case 'NUMBER':
-      return {
-        homeyClass: 'other',
-        driverTemplateId: 'ha-import-number',
-        capabilityId: 'number_value',
-      };
-    case 'BUTTON':
-      return {
-        homeyClass: 'button',
-        driverTemplateId: 'ha-import-button',
-        capabilityId: 'button_action',
-      };
-    case 'SIREN':
-      return {
-        homeyClass: 'alarm',
-        driverTemplateId: 'ha-import-siren',
-        capabilityId: 'alarm_siren',
-      };
-    case 'HUMIDIFIER':
-      return {
-        homeyClass: 'humidifier',
-        driverTemplateId: 'ha-import-humidifier',
-        capabilityId: 'dim',
-      };
-    default:
-      return null;
-  }
-}
-
 function slug(value: string): string {
   return value
     .toLowerCase()
@@ -642,7 +554,10 @@ function buildEntryFromBlock(
         },
       };
     }
-    const output = mapPlatformToOutput(platform, primary.value);
+    const output = resolveHaPlatformOutput(platform, {
+      commandClass: primary.value.commandClass,
+      property: primary.value.property,
+    });
     if (!output) {
       return {
         unsupported: {

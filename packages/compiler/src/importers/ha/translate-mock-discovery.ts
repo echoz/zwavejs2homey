@@ -1,5 +1,6 @@
 import type { HaDerivedGeneratedRuleArtifactV1 } from './generated-rule-artifact';
 import type { MappingRule } from '../../rules/types';
+import { resolveHaCapabilityConflict } from './platform-output-policy';
 
 export class HaMockTranslationError extends Error {
   constructor(message: string) {
@@ -369,20 +370,13 @@ function toRule(definition: HaMockDiscoveryDefinitionV1): MappingRule | null {
     });
   }
   if (definition.output.capabilityId) {
-    const conflict =
-      definition.match.commandClass === 38 &&
-      String(definition.match.property) === 'currentValue' &&
-      definition.output.capabilityId === 'windowcoverings_set'
-        ? { key: 'cover.position_control', mode: 'exclusive' as const, priority: 90 }
-        : definition.match.commandClass === 38 &&
-            String(definition.match.property) === 'currentValue' &&
-            definition.output.capabilityId === 'dim'
-          ? { key: 'cover.position_control', mode: 'exclusive' as const, priority: 40 }
-          : definition.match.commandClass === 38 &&
-              String(definition.match.property) === 'currentValue' &&
-              definition.output.capabilityId === 'number_value'
-            ? { key: 'cover.position_control', mode: 'exclusive' as const, priority: 10 }
-            : undefined;
+    const conflict = resolveHaCapabilityConflict(
+      {
+        commandClass: definition.match.commandClass,
+        property: definition.match.property,
+      },
+      definition.output.capabilityId,
+    );
 
     const flags = {
       ...(definition.output.assumedState !== undefined
