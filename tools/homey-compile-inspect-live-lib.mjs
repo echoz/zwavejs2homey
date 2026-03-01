@@ -24,6 +24,7 @@ const require = createRequire(import.meta.url);
 const {
   assertCompiledHomeyProfilesArtifactV1,
   compileProfilePlanFromLoadedRuleSetManifest,
+  compileProfilePlanFromRuleSetManifest,
   loadJsonRuleSetManifestWithOptions,
 } = require('../packages/compiler/dist');
 
@@ -412,6 +413,8 @@ export async function runLiveInspectCommand(command, io = console, deps = {}) {
   const connect = deps.connectAndInitializeImpl ?? connectAndInitialize;
   const fetchList = deps.fetchNodesListImpl ?? fetchNodesList;
   const fetchDetail = deps.fetchNodeDetailsImpl ?? fetchNodeDetails;
+  const compileFromManifestImpl =
+    deps.compileProfilePlanFromRuleSetManifestImpl ?? compileProfilePlanFromRuleSetManifest;
   const compileFromLoadedImpl =
     deps.compileProfilePlanFromLoadedRuleSetManifestImpl ??
     compileProfilePlanFromLoadedRuleSetManifest;
@@ -433,15 +436,18 @@ export async function runLiveInspectCommand(command, io = console, deps = {}) {
   const compiledArtifactIndex = compiledArtifact
     ? buildCompiledArtifactIndex(compiledArtifact)
     : null;
-  const ruleVocabulary = compiledArtifactIndex
-    ? null
-    : resolveCompilerRuleVocabulary(command.vocabularyFile);
-  const loadedRuleSet =
-    !compiledArtifactIndex && manifestEntries
-      ? loadRuleSetImpl(manifestEntries, {
-          vocabulary: ruleVocabulary?.vocabulary,
-        })
-      : null;
+  const canUseLoadedRuleSetPath =
+    !compiledArtifactIndex &&
+    manifestEntries &&
+    deps.compileProfilePlanFromRuleSetManifestImpl === undefined;
+  const ruleVocabulary = canUseLoadedRuleSetPath
+    ? resolveCompilerRuleVocabulary(command.vocabularyFile)
+    : null;
+  const loadedRuleSet = canUseLoadedRuleSetPath
+    ? loadRuleSetImpl(manifestEntries, {
+        vocabulary: ruleVocabulary?.vocabulary,
+      })
+    : null;
 
   const client = await connect({
     url: command.url,
@@ -475,7 +481,11 @@ export async function runLiveInspectCommand(command, io = console, deps = {}) {
               homeyClass: command.homeyClass,
               driverTemplateId: command.driverTemplateId,
             })
-          : buildNoCompiledProfileResult(deviceFacts);
+          : compileFromManifestImpl(deviceFacts, manifestEntries, {
+              catalogArtifact,
+              homeyClass: command.homeyClass,
+              driverTemplateId: command.driverTemplateId,
+            });
       results.push({
         node: { ...node, name: detail?.state?.name ?? node.name ?? null },
         detail,

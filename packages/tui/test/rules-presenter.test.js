@@ -256,7 +256,11 @@ test('RulesPresenter draft editor supports typed capability mapping field edits'
   presenter.setDraftEditorCapabilityField(0, 'capabilityId', 'onoff');
   presenter.setDraftEditorCapabilityField(0, 'directionality', 'bidirectional');
 
-  presenter.setDraftEditorCapabilityMappingField(0, 'bundle.capabilities.0.inboundMapping.kind', 'value');
+  presenter.setDraftEditorCapabilityMappingField(
+    0,
+    'bundle.capabilities.0.inboundMapping.kind',
+    'value',
+  );
   presenter.setDraftEditorCapabilityMappingField(
     0,
     'bundle.capabilities.0.inboundMapping.selector.commandClass',
@@ -267,7 +271,11 @@ test('RulesPresenter draft editor supports typed capability mapping field edits'
     'bundle.capabilities.0.inboundMapping.selector.property',
     'currentValue',
   );
-  presenter.setDraftEditorCapabilityMappingField(0, 'bundle.capabilities.0.outboundMapping.kind', 'set_value');
+  presenter.setDraftEditorCapabilityMappingField(
+    0,
+    'bundle.capabilities.0.outboundMapping.kind',
+    'set_value',
+  );
   presenter.setDraftEditorCapabilityMappingField(
     0,
     'bundle.capabilities.0.outboundMapping.target.commandClass',
