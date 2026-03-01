@@ -315,6 +315,62 @@ function createGenericProfileMatch() {
   };
 }
 
+function createCoverProfileMatch() {
+  return {
+    by: 'product-triple',
+    key: '622:17235:23089',
+    entry: {
+      device: {
+        deviceKey: 'main:23',
+        nodeId: 23,
+        manufacturerId: 622,
+        productType: 17235,
+        productId: 23089,
+      },
+      compiled: {
+        profile: {
+          profileId: 'profile-main-23',
+          match: {},
+          classification: {
+            homeyClass: 'curtain',
+            confidence: 'curated',
+            uncurated: false,
+          },
+          capabilities: [
+            {
+              capabilityId: 'windowcoverings_set',
+              inboundMapping: {
+                kind: 'value',
+                selector: {
+                  commandClass: 38,
+                  endpoint: 0,
+                  property: 'currentValue',
+                },
+                transformRef: 'zwave_level_0_99_to_homey_dim',
+              },
+              outboundMapping: {
+                kind: 'set_value',
+                target: {
+                  commandClass: 38,
+                  endpoint: 0,
+                  property: 'targetValue',
+                },
+                transformRef: 'homey_dim_to_zwave_level_0_99',
+              },
+            },
+          ],
+          provenance: {
+            layer: 'project-product',
+            ruleId: 'example-cover-profile',
+            action: 'replace',
+          },
+        },
+        report: {},
+      },
+    },
+  };
+}
+
 const NodeDevice = loadNodeDeviceClass();
 
 test('node device harness wires read/write/event sync for onoff + dim verticals', async () => {
@@ -756,4 +812,67 @@ test('node device harness records mapping diagnostics for missing inbound select
     profileResolution?.mappingDiagnostics?.[0]?.outbound?.reason,
     'outbound_target_not_writeable',
   );
+});
+
+test('node device harness supports windowcoverings_set outbound mappings via capability contracts', async () => {
+  const coverSelector = {
+    commandClass: 38,
+    endpoint: 0,
+    property: 'currentValue',
+  };
+  const nodeValueResultsBySelector = new Map();
+  nodeValueResultsBySelector.set(selectorKey(coverSelector), {
+    success: true,
+    result: { value: 99 },
+  });
+
+  const client = createMockZwjsClient({
+    nodeStateResult: {
+      success: true,
+      result: {
+        state: {
+          manufacturerId: '622',
+          productType: '17235',
+          productId: '23089',
+        },
+      },
+    },
+    nodeValueResultsBySelector,
+    definedValueIdsResult: {
+      success: true,
+      result: [
+        { commandClass: 38, endpoint: 0, property: 'currentValue', readable: true },
+        { commandClass: 38, endpoint: 0, property: 'targetValue', writeable: true },
+      ],
+    },
+  });
+
+  const app = {
+    getZwjsClient: () => client,
+    getCompiledProfilesStatus: () => createRuntimeStatus(),
+    resolveCompiledProfileEntry: () => createCoverProfileMatch(),
+  };
+
+  const device = new NodeDevice();
+  device._configureHarness({
+    app,
+    data: { bridgeId: 'main', nodeId: 23 },
+    capabilities: ['windowcoverings_set'],
+  });
+
+  await device.onInit();
+  assert.equal(device._getCapabilityValue('windowcoverings_set'), 1);
+
+  await device._triggerCapabilityListener('windowcoverings_set', 0.5);
+  assert.deepEqual(client.callLog.setNodeValue, [
+    {
+      nodeId: 23,
+      valueId: {
+        commandClass: 38,
+        endpoint: 0,
+        property: 'targetValue',
+      },
+      value: 50,
+    },
+  ]);
 });

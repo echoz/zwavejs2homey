@@ -137,6 +137,30 @@ test('extractCapabilityRuntimeVerticals returns value/set_value runtime-compatib
         },
       },
       {
+        capabilityId: 'windowcoverings_set',
+        inboundMapping: {
+          kind: 'value',
+          selector: { commandClass: 38, endpoint: 0, property: 'currentValue' },
+          transformRef: 'zwave_level_0_99_to_homey_dim',
+        },
+        outboundMapping: {
+          kind: 'set_value',
+          target: { commandClass: 38, endpoint: 0, property: 'targetValue' },
+          transformRef: 'homey_dim_to_zwave_level_0_99',
+        },
+      },
+      {
+        capabilityId: 'locked',
+        inboundMapping: {
+          kind: 'value',
+          selector: { commandClass: 118, endpoint: 0, property: 'locked' },
+        },
+        outboundMapping: {
+          kind: 'set_value',
+          target: { commandClass: 118, endpoint: 0, property: 'locked' },
+        },
+      },
+      {
         capabilityId: 'ignored_event',
         inboundMapping: {
           kind: 'event',
@@ -175,6 +199,20 @@ test('extractCapabilityRuntimeVerticals returns value/set_value runtime-compatib
       outboundTarget: { commandClass: 38, endpoint: 0, property: 'targetValue' },
       outboundTransformRef: 'homey_dim_to_zwave_level_0_99',
     },
+    {
+      capabilityId: 'windowcoverings_set',
+      inboundSelector: { commandClass: 38, endpoint: 0, property: 'currentValue' },
+      inboundTransformRef: 'zwave_level_0_99_to_homey_dim',
+      outboundTarget: { commandClass: 38, endpoint: 0, property: 'targetValue' },
+      outboundTransformRef: 'homey_dim_to_zwave_level_0_99',
+    },
+    {
+      capabilityId: 'locked',
+      inboundSelector: { commandClass: 118, endpoint: 0, property: 'locked' },
+      inboundTransformRef: undefined,
+      outboundTarget: { commandClass: 118, endpoint: 0, property: 'locked' },
+      outboundTransformRef: undefined,
+    },
   ]);
 });
 
@@ -203,10 +241,40 @@ test('extractCapabilityRuntimeVerticals enforces capability contracts for known 
           target: { commandClass: 37, endpoint: 0, property: 'targetValue' },
         },
       },
+      {
+        capabilityId: 'windowcoverings_set',
+        inboundMapping: {
+          kind: 'value',
+          selector: { commandClass: 37, endpoint: 0, property: 'currentValue' },
+        },
+        outboundMapping: {
+          kind: 'set_value',
+          target: { commandClass: 37, endpoint: 0, property: 'targetValue' },
+        },
+      },
+      {
+        capabilityId: 'locked',
+        inboundMapping: {
+          kind: 'value',
+          selector: { commandClass: 118, endpoint: 0, property: 'locked' },
+        },
+        outboundMapping: {
+          kind: 'set_value',
+          target: { commandClass: 98, endpoint: 0, property: 'currentMode' },
+        },
+      },
     ],
   });
 
-  assert.deepEqual(slices, []);
+  assert.deepEqual(slices, [
+    {
+      capabilityId: 'locked',
+      inboundSelector: { commandClass: 118, endpoint: 0, property: 'locked' },
+      inboundTransformRef: undefined,
+      outboundTarget: undefined,
+      outboundTransformRef: undefined,
+    },
+  ]);
 });
 
 test('extractCapabilityRuntimeVerticals skips invalid capability ids and malformed selector/target shapes', () => {
@@ -364,6 +432,15 @@ test('coerceCapability inbound/outbound delegates known verticals and filters un
     coerceCapabilityInboundValue('dim', { value: 99 }, 'zwave_level_0_99_to_homey_dim'),
     1,
   );
+  assert.equal(
+    coerceCapabilityInboundValue(
+      'windowcoverings_set',
+      { value: 99 },
+      'zwave_level_0_99_to_homey_dim',
+    ),
+    1,
+  );
+  assert.equal(coerceCapabilityInboundValue('locked', { value: 1 }), true);
   assert.equal(coerceCapabilityInboundValue('measure_power', { value: 44.2 }), 44.2);
   assert.equal(
     coerceCapabilityInboundValue('measure_power', { value: { nested: true } }),
@@ -372,6 +449,11 @@ test('coerceCapability inbound/outbound delegates known verticals and filters un
 
   assert.equal(coerceCapabilityOutboundValue('onoff', 0), false);
   assert.equal(coerceCapabilityOutboundValue('dim', 0.5, 'homey_dim_to_zwave_level_0_99'), 50);
+  assert.equal(
+    coerceCapabilityOutboundValue('windowcoverings_set', 0.5, 'homey_dim_to_zwave_level_0_99'),
+    50,
+  );
+  assert.equal(coerceCapabilityOutboundValue('locked', true), true);
   assert.equal(coerceCapabilityOutboundValue('measure_power', 13.4), undefined);
   assert.equal(coerceCapabilityOutboundValue('measure_power', { invalid: true }), undefined);
 });

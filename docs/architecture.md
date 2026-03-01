@@ -69,9 +69,9 @@ Implementation status:
   - `onoff` (CC37): `node.get_value` inbound, `node.set_value` outbound, `zwjs.event.node.value-updated` sync
   - `dim` (CC38): `node.get_value` inbound (with level transform), `node.set_value` outbound, `zwjs.event.node.value-updated` sync
 - runtime mapping execution now runs through a generic kernel for compatible compiled slices (`inboundMapping.kind=value`, `outboundMapping.kind=set_value`):
-  - `onoff`/`dim` retain specialized coercion behavior
+  - `onoff`, `dim`, `windowcoverings_set`, and `locked` retain capability-specific coercion/contracts
   - non-specialized capabilities currently support inbound primitive pass-through (string/number/boolean)
-  - outbound writes are currently contract-gated (`onoff`/`dim` only) so unknown capability IDs are read-only by default
+  - outbound writes are contract-gated; unknown capability IDs remain read-only by default
   - runtime mapping now gates selectors/targets against live node defined-value facts and metadata before wiring listeners
   - per-device mapping diagnostics are persisted in `profileResolution.mappingDiagnostics` for operational visibility
   - runtime bindings are re-synced on startup and on relevant app settings updates (`zwjs_connection`, `compiled_profiles_file`) to avoid stale listeners/mappings

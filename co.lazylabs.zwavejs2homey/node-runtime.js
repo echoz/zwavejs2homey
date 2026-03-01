@@ -47,6 +47,14 @@ const CAPABILITY_RUNTIME_CONTRACTS = {
     inboundCommandClasses: new Set([38]),
     outboundCommandClasses: new Set([38]),
   },
+  windowcoverings_set: {
+    inboundCommandClasses: new Set([38]),
+    outboundCommandClasses: new Set([38]),
+  },
+  locked: {
+    inboundCommandClasses: new Set([98, 118]),
+    outboundCommandClasses: new Set([118]),
+  },
 };
 
 function normalizeCapabilityId(value) {
@@ -289,6 +297,12 @@ function coerceCapabilityInboundValue(capabilityId, value, transformRef) {
   if (capabilityId === 'dim') {
     return coerceDimInboundValue(value, transformRef);
   }
+  if (capabilityId === 'windowcoverings_set') {
+    return coerceDimInboundValue(value, transformRef);
+  }
+  if (capabilityId === 'locked') {
+    return coerceOnOffValue(value);
+  }
 
   const payload = extractValueResultPayload(value);
   if (!isSupportedCapabilityRuntimeValue(payload)) {
@@ -303,6 +317,12 @@ function coerceCapabilityOutboundValue(capabilityId, value, transformRef) {
   }
   if (capabilityId === 'dim') {
     return coerceDimOutboundValue(value, transformRef);
+  }
+  if (capabilityId === 'windowcoverings_set') {
+    return coerceDimOutboundValue(value, transformRef);
+  }
+  if (capabilityId === 'locked') {
+    return coerceOnOffValue(value);
   }
 
   return undefined;

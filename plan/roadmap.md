@@ -151,6 +151,7 @@
     - `dim` inbound value sync + outbound `node.set_value` for compiled CC38 mappings (with transform refs)
   - [x] Generic runtime mapping kernel for compiled `inboundMapping.kind=value` + `outboundMapping.kind=set_value` capability slices
   - [x] Runtime mapping capability gate + diagnostics (defined-value/metadata checks + per-device mapping diagnostics)
+  - [x] Expanded outbound contract coverage for `windowcoverings_set` and `locked` capability runtime mappings
 - [ ] Device lifecycle/sync (discovery, create/update, mapping diagnostics)
   - [x] Runtime rebind path for mapped node devices on app startup and settings-driven runtime reloads (`zwjs_connection`, `compiled_profiles_file`)
   - [x] Targeted node rebind path from selected node lifecycle events (`interview-completed`, `value-added`, `metadata-updated`) with per-node refresh dispatch

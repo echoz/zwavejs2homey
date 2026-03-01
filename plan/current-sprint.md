@@ -16,6 +16,15 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 ## Recently Completed
 
 - Latest Phase 5 slice:
+  - expanded runtime capability contract/coercion coverage in `node-runtime`:
+    - added `windowcoverings_set` contract (CC38 in/out + dim-style transform coercion)
+    - added `locked` contract (inbound CC98/CC118, outbound CC118 with boolean coercion)
+  - kept unknown capability IDs outbound-disabled by default (inbound-only primitive pass-through remains)
+  - expanded regression coverage:
+    - runtime extraction/coercion tests for new contracts (`test/node-runtime.test.js`)
+    - headless harness test for `windowcoverings_set` outbound write path (`test/node-device-harness.test.js`)
+
+- Latest Phase 5 slice:
   - added targeted node runtime rebind dispatch from ZWJS node lifecycle events in app runtime:
     - `zwjs.event.node.interview-completed`
     - `zwjs.event.node.value-added`
