@@ -126,6 +126,19 @@ function emitInputKeys(input, tokens) {
 test('runPanelApp renders panel UI and exits on q', async () => {
   const input = new FakeInput();
   const output = new FakeOutput();
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'panel-vocab-required-'));
+  const vocabularyFile = path.join(tmpDir, 'homey-authoring-vocabulary.json');
+  fs.writeFileSync(
+    vocabularyFile,
+    JSON.stringify({
+      schemaVersion: 'homey-authoring-vocabulary/v1',
+      generatedAt: '2026-01-01T00:00:00.000Z',
+      source: {},
+      homeyClasses: [{ id: 'socket', sources: [{ source: 'test', sourceRef: 'inline' }] }],
+      capabilityIds: [{ id: 'onoff', sources: [{ source: 'test', sourceRef: 'inline' }] }],
+    }),
+    'utf8',
+  );
   const presenter = {
     connectCalls: 0,
     disconnectCalls: 0,
@@ -161,7 +174,7 @@ test('runPanelApp renders panel UI and exits on q', async () => {
       mode: 'nodes',
       uiMode: 'panel',
       manifestFile: 'rules/manifest.json',
-      vocabularyFile: '/tmp/test-missing-homey-authoring-vocab.json',
+      vocabularyFile,
       url: 'ws://127.0.0.1:3000',
       schemaVersion: 0,
       includeValues: 'summary',

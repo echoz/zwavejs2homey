@@ -2,25 +2,17 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 export interface HomeyAuthoringVocabulary {
-  source: 'artifact' | 'fallback';
   filePath: string;
   homeyClasses: string[];
   capabilityIds: string[];
-  warning?: string;
 }
 
-export const FALLBACK_HOMEY_CLASS_OPTIONS = [
-  'other',
-  'socket',
-  'light',
-  'sensor',
-  'button',
-  'lock',
-  'thermostat',
-  'windowcoverings',
-  'speaker',
-  'fan',
-];
+export class HomeyAuthoringVocabularyError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'HomeyAuthoringVocabularyError';
+  }
+}
 
 function uniqueSorted(values: string[]): string[] {
   return [...new Set(values.filter((value) => typeof value === 'string' && value.length > 0))].sort(
@@ -49,19 +41,33 @@ function extractIds(list: unknown, fieldPath: string): string[] {
 }
 
 function resolveFilePath(filePath: string): string {
-  return path.isAbsolute(filePath) ? filePath : path.resolve(filePath);
+  if (path.isAbsolute(filePath)) return filePath;
+  const direct = path.resolve(filePath);
+  if (fs.existsSync(direct)) return direct;
+
+  // Support running from workspace subdirectories (e.g. packages/tui tests).
+  let currentDir = process.cwd();
+  while (true) {
+    const candidate = path.join(currentDir, filePath);
+    if (fs.existsSync(candidate)) return candidate;
+    const parent = path.dirname(currentDir);
+    if (parent === currentDir) break;
+    currentDir = parent;
+  }
+
+  return direct;
 }
 
 export function loadHomeyAuthoringVocabulary(filePath: string): HomeyAuthoringVocabulary {
   const resolvedPath = resolveFilePath(filePath);
   if (!fs.existsSync(resolvedPath)) {
-    return {
-      source: 'fallback',
-      filePath: resolvedPath,
-      homeyClasses: [...FALLBACK_HOMEY_CLASS_OPTIONS],
-      capabilityIds: [],
-      warning: `Vocabulary artifact not found at ${resolvedPath}; using fallback Homey classes.`,
-    };
+    throw new HomeyAuthoringVocabularyError(
+      [
+        `Vocabulary artifact not found: ${resolvedPath}`,
+        'Generate/refresh it with:',
+        '  npm run compiler:homey-vocabulary',
+      ].join('\n'),
+    );
   }
 
   try {
@@ -70,22 +76,27 @@ export function loadHomeyAuthoringVocabulary(filePath: string): HomeyAuthoringVo
     if (!object || object.schemaVersion !== 'homey-authoring-vocabulary/v1') {
       throw new Error('schemaVersion must be "homey-authoring-vocabulary/v1"');
     }
+    const homeyClasses = extractIds(object.homeyClasses, 'homeyClasses');
+    const capabilityIds = extractIds(object.capabilityIds, 'capabilityIds');
+    if (homeyClasses.length <= 0) {
+      throw new Error('homeyClasses must contain at least one entry');
+    }
+    if (capabilityIds.length <= 0) {
+      throw new Error('capabilityIds must contain at least one entry');
+    }
     return {
-      source: 'artifact',
       filePath: resolvedPath,
-      homeyClasses: extractIds(object.homeyClasses, 'homeyClasses'),
-      capabilityIds: extractIds(object.capabilityIds, 'capabilityIds'),
+      homeyClasses,
+      capabilityIds,
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    return {
-      source: 'fallback',
-      filePath: resolvedPath,
-      homeyClasses: [...FALLBACK_HOMEY_CLASS_OPTIONS],
-      capabilityIds: [],
-      warning:
-        `Failed to load vocabulary artifact at ${resolvedPath}: ${message}. ` +
-        'Using fallback Homey classes.',
-    };
+    throw new HomeyAuthoringVocabularyError(
+      [
+        `Failed to load vocabulary artifact at ${resolvedPath}: ${message}`,
+        'Regenerate it with:',
+        '  npm run compiler:homey-vocabulary',
+      ].join('\n'),
+    );
   }
 }

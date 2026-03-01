@@ -207,6 +207,11 @@ This emits a `compiled-homey-profiles/v1` artifact.
 
 This emits a `homey-authoring-vocabulary/v1` artifact consumed by TUI authoring and compiler vocabulary-aware validation paths.
 
+TUI authoring now requires this artifact and fails fast when it is missing/invalid/empty.
+If startup fails with a vocabulary error, regenerate via:
+
+- `npm run compiler:homey-vocabulary`
+
 Rule vocabulary enforcement is built into compiler workflows:
 
 - `compiler:build`

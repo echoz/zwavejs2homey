@@ -15,6 +15,12 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 ## Recently Completed
 
+- Latest TUI vocabulary policy slice:
+  - removed fallback Homey class behavior from vocabulary loading
+  - TUI now fails fast when `homey-authoring-vocabulary/v1` is missing/invalid/empty and prints regeneration guidance (`npm run compiler:homey-vocabulary`)
+  - hardened relative vocabulary path resolution to locate repo-root artifacts when running from workspace subdirectories
+  - refreshed TUI tests for strict vocabulary requirements
+
 - Latest compiler hardcoding-cleanup slice:
   - refactored HA importer output/conflict decisions to shared policy tables:
     - moved platform -> (`homeyClass`, `driverTemplateId`, `capabilityId`) mapping into `packages/compiler/src/importers/ha/platform-output-policy.ts`

@@ -199,6 +199,7 @@ Reset architecture direction:
 - current status: panel-first runtime is implemented as default (`--ui panel`) with shell fallback (`--ui shell`)
 - panel renderer implementation is now fully `neo-blessed`-based (custom frame-string renderer removed)
 - value semantic annotation + relevance scoring now read from policy tables (`value-semantics-policy.ts`) instead of inline capability switch logic
+- TUI startup is strict on `homey-authoring-vocabulary/v1`: missing/invalid/empty artifacts are fatal and surface regeneration guidance (`npm run compiler:homey-vocabulary`)
 
 Implementation structure (delivered):
 

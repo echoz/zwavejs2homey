@@ -1,7 +1,27 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
 
 const { getUsageText, parseCliArgs, runApp } = require('../dist/app');
+
+function writeRequiredVocabularyFixture() {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zwjs2homey-app-vocab-'));
+  const vocabularyFile = path.join(tmpDir, 'homey-authoring-vocabulary.json');
+  fs.writeFileSync(
+    vocabularyFile,
+    JSON.stringify({
+      schemaVersion: 'homey-authoring-vocabulary/v1',
+      generatedAt: '2026-01-01T00:00:00.000Z',
+      source: {},
+      homeyClasses: [{ id: 'socket', sources: [{ source: 'test', sourceRef: 'inline' }] }],
+      capabilityIds: [{ id: 'onoff', sources: [{ source: 'test', sourceRef: 'inline' }] }],
+    }),
+    'utf8',
+  );
+  return vocabularyFile;
+}
 
 test('getUsageText includes scaffold homey-class override', () => {
   assert.match(getUsageText(), /scaffold preview .*--homey-class <class>/);
@@ -61,6 +81,7 @@ test('parseCliArgs accepts --ui shell override', () => {
 });
 
 test('runApp executes interactive command flow through parent+child presenters', async () => {
+  const vocabularyFile = writeRequiredVocabularyFixture();
   const commands = [
     'list',
     'show 2',
@@ -195,6 +216,7 @@ test('runApp executes interactive command flow through parent+child presenters',
       mode: 'nodes',
       uiMode: 'shell',
       manifestFile: 'rules/manifest.json',
+      vocabularyFile,
       url: 'ws://127.0.0.1:3000',
       schemaVersion: 0,
       includeValues: 'summary',
@@ -245,6 +267,7 @@ test('runApp executes interactive command flow through parent+child presenters',
 });
 
 test('runApp supports rules-only root command flow', async () => {
+  const vocabularyFile = writeRequiredVocabularyFixture();
   const commands = ['list', 'show 1', 'signature --from-rule 1', 'status', 'quit'];
   let index = 0;
   let closeCalls = 0;
@@ -317,6 +340,7 @@ test('runApp supports rules-only root command flow', async () => {
       mode: 'rules',
       uiMode: 'shell',
       manifestFile: 'rules/manifest.json',
+      vocabularyFile,
       schemaVersion: 0,
       includeValues: 'summary',
       maxValues: 50,

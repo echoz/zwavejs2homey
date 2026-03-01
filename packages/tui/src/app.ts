@@ -41,10 +41,7 @@ import {
   type WorkspaceFileService,
 } from './service/workspace-file-service';
 import { ZwjsExplorerServiceImpl, type ZwjsExplorerService } from './service/zwjs-explorer-service';
-import {
-  FALLBACK_HOMEY_CLASS_OPTIONS,
-  loadHomeyAuthoringVocabulary,
-} from './service/homey-authoring-vocabulary';
+import { loadHomeyAuthoringVocabulary } from './service/homey-authoring-vocabulary';
 import { parseShellCommand } from './view/command-parser';
 import {
   annotateNodeValue,
@@ -540,13 +537,9 @@ export async function runApp(
   );
   configureDraftEditorVocabulary(authoringVocabulary);
   const draftValidationVocabulary = buildDraftValidationVocabulary(authoringVocabulary);
-  if (authoringVocabulary.warning) {
-    io.log(`Vocabulary: ${authoringVocabulary.warning}`);
-  } else {
-    io.log(
-      `Vocabulary: loaded ${authoringVocabulary.homeyClasses.length} classes, ${authoringVocabulary.capabilityIds.length} capabilities from ${authoringVocabulary.filePath}`,
-    );
-  }
+  io.log(
+    `Vocabulary: loaded ${authoringVocabulary.homeyClasses.length} classes, ${authoringVocabulary.capabilityIds.length} capabilities from ${authoringVocabulary.filePath}`,
+  );
 
   const explorerService = deps.explorerService ?? new ZwjsExplorerServiceImpl();
   const curationService = deps.curationService ?? new CompilerCurationServiceImpl();
@@ -1862,7 +1855,7 @@ interface DraftEditFieldDescriptor {
   capabilityIndex?: number;
 }
 
-let homeyClassOptions = [...FALLBACK_HOMEY_CLASS_OPTIONS];
+let homeyClassOptions: string[] = [];
 let capabilityIdOptions: string[] = [];
 
 function uniqueSorted(values: string[]): string[] {
@@ -1875,13 +1868,16 @@ function configureDraftEditorVocabulary(vocabulary: {
   homeyClasses: string[];
   capabilityIds: string[];
 }): void {
-  const nextHomeyClasses =
-    vocabulary.homeyClasses.length > 0
-      ? uniqueSorted(vocabulary.homeyClasses)
-      : [...FALLBACK_HOMEY_CLASS_OPTIONS];
+  const nextHomeyClasses = uniqueSorted(vocabulary.homeyClasses);
+  if (nextHomeyClasses.length <= 0) {
+    throw new Error('homeyClasses vocabulary is empty');
+  }
   homeyClassOptions.splice(0, homeyClassOptions.length, ...nextHomeyClasses);
 
   const nextCapabilityIds = uniqueSorted(vocabulary.capabilityIds);
+  if (nextCapabilityIds.length <= 0) {
+    throw new Error('capabilityIds vocabulary is empty');
+  }
   capabilityIdOptions.splice(0, capabilityIdOptions.length, ...nextCapabilityIds);
 }
 
@@ -1890,9 +1886,8 @@ function buildDraftValidationVocabulary(vocabulary: {
   capabilityIds: string[];
 }): DraftValidationVocabulary {
   return {
-    homeyClasses: vocabulary.homeyClasses.length > 0 ? new Set(vocabulary.homeyClasses) : undefined,
-    capabilityIds:
-      vocabulary.capabilityIds.length > 0 ? new Set(vocabulary.capabilityIds) : undefined,
+    homeyClasses: new Set(vocabulary.homeyClasses),
+    capabilityIds: new Set(vocabulary.capabilityIds),
   };
 }
 
@@ -2535,13 +2530,9 @@ export async function runPanelApp(
   );
   configureDraftEditorVocabulary(authoringVocabulary);
   const draftValidationVocabulary = buildDraftValidationVocabulary(authoringVocabulary);
-  if (authoringVocabulary.warning) {
-    io.log(`Vocabulary: ${authoringVocabulary.warning}`);
-  } else {
-    io.log(
-      `Vocabulary: loaded ${authoringVocabulary.homeyClasses.length} classes, ${authoringVocabulary.capabilityIds.length} capabilities from ${authoringVocabulary.filePath}`,
-    );
-  }
+  io.log(
+    `Vocabulary: loaded ${authoringVocabulary.homeyClasses.length} classes, ${authoringVocabulary.capabilityIds.length} capabilities from ${authoringVocabulary.filePath}`,
+  );
 
   const explorerService = deps.explorerService ?? new ZwjsExplorerServiceImpl();
   const curationService = deps.curationService ?? new CompilerCurationServiceImpl();
