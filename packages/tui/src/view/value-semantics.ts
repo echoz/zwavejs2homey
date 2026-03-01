@@ -13,9 +13,14 @@ import {
   EVENT_SECTION_COMMAND_CLASSES,
   NOTIFICATION_CAPABILITY_HINTS,
   SENSOR_CAPABILITY_HINTS,
+  METER_COMMAND_CLASS,
+  NOTIFICATION_COMMAND_CLASS,
   SENSOR_SECTION_CAPABILITIES,
   SENSOR_SECTION_COMMAND_CLASSES,
   SEMANTIC_CAPABILITY_IDS,
+  SENSOR_MULTILEVEL_COMMAND_CLASS,
+  SWITCH_BINARY_COMMAND_CLASS,
+  SWITCH_MULTILEVEL_COMMAND_CLASS,
   SWITCH_MULTILEVEL_BINARY_HINT_TOKENS,
   SWITCH_MULTILEVEL_BINARY_STATES_HINT_TOKENS,
   SWITCH_MULTILEVEL_DIM_CONFIDENCE_TOKENS,
@@ -120,10 +125,10 @@ export function annotateNodeValue(entry: NodeValueDetail): ValueSemanticAnnotati
   let confidence: ValueConfidence = 'low';
   let source: ValueSemanticSource = 'heuristic';
 
-  if (commandClass === 37) {
+  if (commandClass === SWITCH_BINARY_COMMAND_CLASS) {
     capabilityId = SEMANTIC_CAPABILITY_IDS.onoff;
     confidence = 'high';
-  } else if (commandClass === 38) {
+  } else if (commandClass === SWITCH_MULTILEVEL_COMMAND_CLASS) {
     if (
       hasAny(mergedText, SWITCH_MULTILEVEL_BINARY_HINT_TOKENS) ||
       (hasStates &&
@@ -137,14 +142,17 @@ export function annotateNodeValue(entry: NodeValueDetail): ValueSemanticAnnotati
       confidence = hasAny(mergedText, SWITCH_MULTILEVEL_DIM_CONFIDENCE_TOKENS) ? 'high' : 'medium';
       source = hasAny(mergedText, SWITCH_MULTILEVEL_DIM_METADATA_TOKENS) ? 'metadata' : 'heuristic';
     }
-  } else if (commandClass === 48) {
+  } else if (commandClass === NOTIFICATION_COMMAND_CLASS) {
     const notificationHint = NOTIFICATION_CAPABILITY_HINTS.find((hint) =>
       hasAny(mergedText, hint.tokens),
     );
     capabilityId = notificationHint?.capabilityId ?? SEMANTIC_CAPABILITY_IDS.alarmGeneric;
     confidence = notificationHint?.confidence ?? 'medium';
     source = mergedText.length > 0 ? 'metadata' : 'heuristic';
-  } else if (commandClass === 49 || commandClass === 50) {
+  } else if (
+    commandClass === SENSOR_MULTILEVEL_COMMAND_CLASS ||
+    commandClass === METER_COMMAND_CLASS
+  ) {
     capabilityId =
       inferSensorCapability(mergedText, unit) ?? SEMANTIC_CAPABILITY_IDS.measureGeneric;
     confidence = capabilityId === SEMANTIC_CAPABILITY_IDS.measureGeneric ? 'medium' : 'high';

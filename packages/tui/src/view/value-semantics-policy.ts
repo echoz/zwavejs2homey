@@ -17,6 +17,12 @@ export interface DirectCommandClassSemantic {
   confidence: SemanticConfidence;
 }
 
+export const SWITCH_BINARY_COMMAND_CLASS = 37;
+export const SWITCH_MULTILEVEL_COMMAND_CLASS = 38;
+export const NOTIFICATION_COMMAND_CLASS = 48;
+export const SENSOR_MULTILEVEL_COMMAND_CLASS = 49;
+export const METER_COMMAND_CLASS = 50;
+
 export const SEMANTIC_CAPABILITY_IDS = {
   onoff: 'onoff',
   dim: 'dim',

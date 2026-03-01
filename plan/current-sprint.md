@@ -15,6 +15,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 ## Recently Completed
 
+- Latest hardcoding audit pass:
+  - completed repo-wide scan for capability/class mapping hardcoding patterns outside policy modules
+  - moved remaining TUI command-class magic numbers into policy constants consumed by `value-semantics.ts`
+  - recorded audit scope/findings in `docs/hardcoding-audit-2026-03-01.md`
+
 - Latest TUI vocabulary policy slice:
   - removed fallback Homey class behavior from vocabulary loading
   - TUI now fails fast when `homey-authoring-vocabulary/v1` is missing/invalid/empty and prints regeneration guidance (`npm run compiler:homey-vocabulary`)
