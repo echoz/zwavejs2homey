@@ -10,6 +10,7 @@
   "description": {
     "en": "Z-Wave JS Bridge"
   },
+  "brandColor": "#2484bf",
   "category": ["tools"],
   "permissions": [],
   "images": {
