@@ -177,6 +177,7 @@ Provide broad typed read coverage for diagnostics and operational introspection.
   - wrapper pair is implemented and live-validated read-only
   - specialized `driver.logging` event typing is implemented and fixture-tested
   - no logging events were observed during prior read-only validation windows
+  - capture workflow now has dedicated tooling via `zwjs:inspect logs capture` (report + ndjson payload export)
 
 ### Slices (Decision Complete)
 

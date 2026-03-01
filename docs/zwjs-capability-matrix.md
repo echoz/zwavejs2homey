@@ -246,6 +246,12 @@ These are included to prevent architectural confusion and to show where UI/backe
 - `ZWJS-G3` (P3): run non-production firmware workflow validation (read + mutation-gated paths) and add fixtures for observed result/event variants
 - `ZWJS-G4` (P0): deepen `node.get_value` / metadata typing from command-class-specific payload samples used by mapping workflows
 
+`ZWJS-G1` workflow:
+
+- run `npm run zwjs:inspect -- logs capture --url ws://HOST:PORT --duration-seconds 60 --max-events 200 --output-file /tmp/zwjs-driver-logging-report.json --events-file /tmp/zwjs-driver-logging-events.ndjson`
+- if `driver.logging events` remains `0`, generate traffic that emits active driver logs and rerun capture
+- add/update fixtures from observed payload variants and tighten specialized typing only where fields are stable
+
 ### On-Demand Expansion Gaps
 
 - `ZWJS-G5` (P1/P2): expand additional read and mutation wrappers only when adapter workflows require them

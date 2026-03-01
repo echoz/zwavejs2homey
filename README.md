@@ -68,6 +68,8 @@ Invalid/missing values fall back to `ws://127.0.0.1:3000` with auth `none`.
 - `npm run zwjs:inspect -- --help`
 - `npm run zwjs:inspect -- nodes list --url ws://HOST:PORT --format table`
 - `npm run zwjs:inspect -- nodes show <nodeId> --url ws://HOST:PORT --format json --include-values full`
+- `npm run zwjs:inspect -- logs capture --url ws://HOST:PORT --duration-seconds 60 --max-events 200 --format summary`
+- `npm run zwjs:inspect -- logs capture --url ws://HOST:PORT --filter-source driver --filter-label Zw* --output-file /tmp/zwjs-driver-logging-report.json --events-file /tmp/zwjs-driver-logging-events.ndjson`
 
 ### ZWJS Explorer TUI (Dual Root)
 

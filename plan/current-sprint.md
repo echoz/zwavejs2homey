@@ -590,6 +590,15 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - updated vocabulary audit doc to mark cutover sections/work items as implemented/current
     - rewrote ZWJS capability matrix gap section into explicit actionable gap IDs (`ZWJS-G1..G7`) with current date context and pointers to execution/checklist docs
 
+107. Completed `ZWJS-G1` capture-tooling slice:
+
+
+    - expanded `zwjs:inspect` with `logs capture` command (`summary|json` output, duration/max-event controls, optional log filter flags)
+    - added typed `driver.logging` capture summary diagnostics (typed-field counters + payload-shape histogram + sample payload extraction)
+    - added artifact export flags for repeatable validation (`--output-file` JSON report, `--events-file` NDJSON captured payloads)
+    - added regression coverage for CLI parsing and capture behavior (max-event stop path + typed summary classification)
+    - updated README/capability-matrix/parity-roadmap docs with the concrete `ZWJS-G1` workflow command
+
 ## Next Tasks
 
 1. Start first Homey adapter mapping vertical slice against compiled profile artifacts.
