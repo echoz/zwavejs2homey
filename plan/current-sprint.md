@@ -513,46 +513,61 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - `runPanelApp` now consumes presenter-produced pane title view-model output for list/detail/output labels
     - added focused regression coverage for list pagination/filter titles, detail range titles, and compact-vs-expanded output labels
 100. Completed panel output presenter slice (view/presenter separation step):
+
+
     - extracted bottom-pane output shaping (line split, scroll clamp, compact/full visible lines) into a dedicated presenter (`PanelOutputPresenter`)
     - `runPanelApp` now consumes presenter-produced output view-model data for status-bar compact rendering, full output pane rendering, and panel snapshots
     - added focused regression coverage for compact/full output behavior and scroll clamping edge cases
+
 101. Completed Section 6C typed mapping editor slice:
+
+
     - draft editors (nodes + rules presenters) now support typed inbound/outbound mapping field edits per capability
     - mapping kinds are typed/selectable (`inbound: value|event`, `outbound: set_value|invoke_cc_api|zwjs_command`) with path-specific field coercion
     - command-class/endpoint fields are validated/coerced as integers at edit time; property/propertyKey fields are normalized as string|number
     - panel draft editor now exposes selector/target mapping fields and capability-level inbound/outbound mapping summaries
     - added presenter regression coverage for mapping field edits and invalid numeric input rejection
+
 102. Completed Section 6C live validation + write gating slice:
+
+
     - panel draft editing now surfaces validation status in update feedback (`Validation: ok|warnings|errors`)
     - scaffold write (`W`) and manifest add (`A`) now validate active draft state before confirmation/write
     - write actions are blocked when draft errors exist; warning-only drafts remain writable with warning context on confirmation
     - added panel regression coverage for write-block-on-errors and warning-only write flow
+
 103. Completed Section 6C in-panel diff preview slice:
+
+
     - first-step write confirmations (`W`/`A`) now include draft diff preview context (`baseDraft` -> `workingDraft`) before execution
     - diff preview summarizes change counts (`+/-/~`) and includes deterministic path-level change lines with truncation guards
     - warning-first + diff preview messaging now renders in compact and expanded bottom panes
     - added panel regression coverage for changed-draft preview and no-change preview confirmation flows
+
 104. Completed Section 6C vocabulary audit slice:
+
+
     - audited hardcoded authoring vocab usage across TUI editor, presenters, and compiler validation surfaces
     - classified vocab domains by ownership (`compiler-artifact-derived` vs `intentionally static`; SDK enum source not available)
     - documented cutover matrix and next actions in `docs/homey-authoring-vocabulary-audit.md`
 
+105. Completed Section 6C vocabulary cutover slice:
+
+
+    - added compiler `homey-vocabulary/v1` artifact contract (`create/assert/load/lookup`)
+    - added `compiler:vocabulary` build CLI (`tools/homey-vocabulary-build*.mjs`) sourcing system vocab from `homey-lib` and custom capability IDs from `.homeycompose/capabilities`
+    - wired vocabulary-aware compiler rule validation hooks (`RuleValidationOptions.vocabulary`) for `homeyClass`/`capabilityId` membership enforcement
+    - wired TUI draft editor to load vocabulary artifact (`--vocabulary-file`, default `rules/homey-vocabulary.json`)
+    - replaced hardcoded Homey class select with vocabulary-backed options
+    - switched capability ID field to vocabulary-backed select when capability vocab exists
+    - added strict draft validation for unknown `homeyClass` / `capabilityId` values
+    - added compiler/core/tui regression coverage for artifact, tool, loader, and validation behavior
+
 ## Next Tasks
 
-1. Execute Section 6C scaffold edit mode:
-   - expand panel tests for draft edit flows
-   - follow with data-driven vocabulary cutover:
-     - audit hardcoded TUI/presenter type vocab (Homey classes, capability IDs, directionality)
-     - determine source-of-truth strategy per vocab (SDK-derived vs compiler artifact vs intentionally static)
-     - replace hardcoded typed-select vocab with data providers/artifacts where feasible
-     - keep strict editor-time validation/erroring for unsupported values
-2. Plan compiler-managed Homey vocabulary artifact pipeline:
-   - add a compiler-produced vocabulary artifact for authoring enums (classes/capability IDs) with provenance
-   - wire artifact consumption into TUI draft editor selects and compiler-side rule validation
-   - keep static/deterministic generation (no runtime dependency on Homey cloud/API)
-3. Execute Section 7 convergence review:
+1. Execute Section 7 convergence review:
    - decide whether to keep separate stacks or extract shared view primitives
-4. Keep Homey adapter implementation paused until Phase 4 reset is complete
+2. Keep Homey adapter implementation paused until Phase 4 reset is complete
 
 Note:
 

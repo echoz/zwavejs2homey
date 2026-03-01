@@ -20,6 +20,7 @@
     "compiler:baseline": "node tools/homey-compile-baseline.mjs",
     "compiler:simulate": "node tools/homey-compile-simulate.mjs",
     "compiler:build": "node tools/homey-compile-build.mjs",
+    "compiler:vocabulary": "node tools/homey-vocabulary-build.mjs",
     "compiler:bench": "node tools/homey-compile-bench.mjs",
     "ha-import:extract": "node tools/ha-import-extract.mjs",
     "ha-import:report": "node tools/ha-import-report.mjs",

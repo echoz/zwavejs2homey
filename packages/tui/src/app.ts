@@ -18,7 +18,7 @@ import {
   CurationWorkflowPresenter,
   type CurationWorkflowChildPresenterLike,
 } from './presenter/curation-workflow-presenter';
-import { ExplorerPresenter } from './presenter/explorer-presenter';
+import { ExplorerPresenter, type DraftValidationVocabulary } from './presenter/explorer-presenter';
 import {
   ExplorerSessionPresenter,
   type ExplorerSessionChildPresenterLike,
@@ -41,6 +41,10 @@ import {
   type WorkspaceFileService,
 } from './service/workspace-file-service';
 import { ZwjsExplorerServiceImpl, type ZwjsExplorerService } from './service/zwjs-explorer-service';
+import {
+  FALLBACK_HOMEY_CLASS_OPTIONS,
+  loadHomeyAuthoringVocabulary,
+} from './service/homey-authoring-vocabulary';
 import { parseShellCommand } from './view/command-parser';
 import {
   annotateNodeValue,
@@ -110,9 +114,9 @@ export function getUsageText(): string {
     'Usage:',
     '  compiler-tui --url ws://host:port [--token <bearer>] [--schema-version 0]',
     '               [--include-values none|summary|full] [--max-values N] [--start-node <id>]',
-    '               [--manifest-file <rules/manifest.json>] [--ui panel|shell]',
+    '               [--manifest-file <rules/manifest.json>] [--vocabulary-file <rules/homey-vocabulary.json>] [--ui panel|shell]',
     '  compiler-tui --rules-only [--manifest-file <rules/manifest.json>]',
-    '               [--url ws://host:port] [--token <bearer>] [--schema-version 0] [--ui panel|shell]',
+    '               [--url ws://host:port] [--token <bearer>] [--schema-version 0] [--vocabulary-file <rules/homey-vocabulary.json>] [--ui panel|shell]',
     '               [--include-values none|summary|full] [--max-values N]',
     '',
     'Panel Mode Keys (default):',
@@ -197,6 +201,7 @@ export function parseCliArgs(
       mode: rulesOnly ? 'rules' : 'nodes',
       uiMode,
       manifestFile: flags.get('--manifest-file') ?? 'rules/manifest.json',
+      vocabularyFile: flags.get('--vocabulary-file') ?? 'rules/homey-vocabulary.json',
       url,
       token: flags.get('--token'),
       schemaVersion: schemaVersionResult.value,
@@ -257,6 +262,19 @@ export async function runApp(
   io: LoggerLike = console,
   deps: RunAppDeps = {},
 ): Promise<void> {
+  const authoringVocabulary = loadHomeyAuthoringVocabulary(
+    config.vocabularyFile ?? 'rules/homey-vocabulary.json',
+  );
+  configureDraftEditorVocabulary(authoringVocabulary);
+  const draftValidationVocabulary = buildDraftValidationVocabulary(authoringVocabulary);
+  if (authoringVocabulary.warning) {
+    io.log(`Vocabulary: ${authoringVocabulary.warning}`);
+  } else {
+    io.log(
+      `Vocabulary: loaded ${authoringVocabulary.homeyClasses.length} classes, ${authoringVocabulary.capabilityIds.length} capabilities from ${authoringVocabulary.filePath}`,
+    );
+  }
+
   const explorerService = deps.explorerService ?? new ZwjsExplorerServiceImpl();
   const curationService = deps.curationService ?? new CompilerCurationServiceImpl();
   const fileService = deps.fileService ?? new WorkspaceFileServiceImpl();
@@ -266,12 +284,20 @@ export async function runApp(
     deps.curationChildPresenter ?? new CurationWorkflowPresenter(curationService, fileService);
   const nodesPresenter =
     deps.presenter ??
-    new ExplorerPresenter({
-      explorer: explorerChildPresenter,
-      curation: curationChildPresenter,
-    });
+    new ExplorerPresenter(
+      {
+        explorer: explorerChildPresenter,
+        curation: curationChildPresenter,
+      },
+      {
+        draftVocabulary: draftValidationVocabulary,
+      },
+    );
   const rulesPresenter =
-    deps.rulesPresenter ?? new RulesPresenter(curationChildPresenter, fileService);
+    deps.rulesPresenter ??
+    new RulesPresenter(curationChildPresenter, fileService, {
+      draftVocabulary: draftValidationVocabulary,
+    });
   const createInterfaceImpl = deps.createInterfaceImpl ?? createInterface;
   const input = deps.stdin ?? defaultStdin;
   const output = deps.stdout ?? defaultStdout;
@@ -1662,18 +1688,36 @@ interface DraftEditFieldDescriptor {
   capabilityIndex?: number;
 }
 
-const HOMEY_CLASS_OPTIONS = [
-  'other',
-  'socket',
-  'light',
-  'sensor',
-  'button',
-  'lock',
-  'thermostat',
-  'windowcoverings',
-  'speaker',
-  'fan',
-];
+let homeyClassOptions = [...FALLBACK_HOMEY_CLASS_OPTIONS];
+let capabilityIdOptions: string[] = [];
+
+function uniqueSorted(values: string[]): string[] {
+  return [...new Set(values.filter((value) => value.length > 0))].sort((a, b) =>
+    a.localeCompare(b),
+  );
+}
+
+function configureDraftEditorVocabulary(vocabulary: {
+  homeyClasses: string[];
+  capabilityIds: string[];
+}): void {
+  homeyClassOptions =
+    vocabulary.homeyClasses.length > 0
+      ? uniqueSorted(vocabulary.homeyClasses)
+      : [...FALLBACK_HOMEY_CLASS_OPTIONS];
+  capabilityIdOptions = uniqueSorted(vocabulary.capabilityIds);
+}
+
+function buildDraftValidationVocabulary(vocabulary: {
+  homeyClasses: string[];
+  capabilityIds: string[];
+}): DraftValidationVocabulary {
+  return {
+    homeyClasses: vocabulary.homeyClasses.length > 0 ? new Set(vocabulary.homeyClasses) : undefined,
+    capabilityIds:
+      vocabulary.capabilityIds.length > 0 ? new Set(vocabulary.capabilityIds) : undefined,
+  };
+}
 
 const CAPABILITY_DIRECTION_OPTIONS = ['bidirectional', 'inbound-only', 'outbound-only'];
 const INBOUND_MAPPING_KIND_OPTIONS = ['value', 'event'];
@@ -1690,7 +1734,7 @@ const DRAFT_METADATA_FIELDS: DraftEditFieldDescriptor[] = [
     path: 'bundle.metadata.homeyClass',
     label: 'Homey Class',
     type: 'select',
-    options: HOMEY_CLASS_OPTIONS,
+    options: homeyClassOptions,
     section: 'metadata',
   },
   {
@@ -1825,7 +1869,8 @@ function getDraftEditFields(state: DraftEditorState): DraftEditFieldDescriptor[]
       {
         path: `bundle.capabilities.${index}.capabilityId`,
         label: `${capabilityId} ID`,
-        type: 'text' as const,
+        type: capabilityIdOptions.length > 0 ? ('select' as const) : ('text' as const),
+        ...(capabilityIdOptions.length > 0 ? { options: capabilityIdOptions } : {}),
         section: 'capability' as const,
         capabilityIndex: index,
       },
@@ -1983,9 +2028,7 @@ function renderPanelDraftEditor(
       typeof entry.directionality === 'string' && entry.directionality.trim().length > 0
         ? entry.directionality.trim()
         : '(unset)';
-    const selectedCapability = state.selectedFieldPath.startsWith(
-      `bundle.capabilities.${index}.`,
-    );
+    const selectedCapability = state.selectedFieldPath.startsWith(`bundle.capabilities.${index}.`);
     const prefix = selectedCapability ? '>' : '-';
     const inbound = asMappingObject(entry.inboundMapping);
     const inboundKind = getInboundMappingKind(entry);
@@ -2193,11 +2236,7 @@ interface DraftDiffSummary {
   lines: string[];
 }
 
-function flattenDraftDiffValue(
-  value: unknown,
-  path: string,
-  out: Map<string, unknown>,
-): void {
+function flattenDraftDiffValue(value: unknown, path: string, out: Map<string, unknown>): void {
   if (Array.isArray(value)) {
     if (value.length <= 0) {
       out.set(path, []);
@@ -2314,6 +2353,19 @@ export async function runPanelApp(
   io: LoggerLike = console,
   deps: RunAppDeps = {},
 ): Promise<void> {
+  const authoringVocabulary = loadHomeyAuthoringVocabulary(
+    config.vocabularyFile ?? 'rules/homey-vocabulary.json',
+  );
+  configureDraftEditorVocabulary(authoringVocabulary);
+  const draftValidationVocabulary = buildDraftValidationVocabulary(authoringVocabulary);
+  if (authoringVocabulary.warning) {
+    io.log(`Vocabulary: ${authoringVocabulary.warning}`);
+  } else {
+    io.log(
+      `Vocabulary: loaded ${authoringVocabulary.homeyClasses.length} classes, ${authoringVocabulary.capabilityIds.length} capabilities from ${authoringVocabulary.filePath}`,
+    );
+  }
+
   const explorerService = deps.explorerService ?? new ZwjsExplorerServiceImpl();
   const curationService = deps.curationService ?? new CompilerCurationServiceImpl();
   const fileService = deps.fileService ?? new WorkspaceFileServiceImpl();
@@ -2323,12 +2375,20 @@ export async function runPanelApp(
     deps.curationChildPresenter ?? new CurationWorkflowPresenter(curationService, fileService);
   const nodesPresenter =
     deps.presenter ??
-    new ExplorerPresenter({
-      explorer: explorerChildPresenter,
-      curation: curationChildPresenter,
-    });
+    new ExplorerPresenter(
+      {
+        explorer: explorerChildPresenter,
+        curation: curationChildPresenter,
+      },
+      {
+        draftVocabulary: draftValidationVocabulary,
+      },
+    );
   const rulesPresenter =
-    deps.rulesPresenter ?? new RulesPresenter(curationChildPresenter, fileService);
+    deps.rulesPresenter ??
+    new RulesPresenter(curationChildPresenter, fileService, {
+      draftVocabulary: draftValidationVocabulary,
+    });
   const panelChromePresenter = deps.panelChromePresenter ?? new PanelChromePresenter();
   const panelLayoutPresenter = deps.panelLayoutPresenter ?? new PanelLayoutPresenter();
   const panelOutputPresenter = deps.panelOutputPresenter ?? new PanelOutputPresenter();
@@ -3601,7 +3661,9 @@ export async function runPanelApp(
             const editor = moveDraftFieldSelection(-1);
             if (editor) {
               const selectedField = getDraftEditFieldByPath(editor, editor.selectedFieldPath);
-              setBottomPaneText(`Selected field: ${selectedField?.label ?? editor.selectedFieldPath}`);
+              setBottomPaneText(
+                `Selected field: ${selectedField?.label ?? editor.selectedFieldPath}`,
+              );
             }
           }
         } else if (isNodesMode && valuesExpanded && currentNodeDetail) {
@@ -3627,7 +3689,9 @@ export async function runPanelApp(
             const editor = moveDraftFieldSelection(1);
             if (editor) {
               const selectedField = getDraftEditFieldByPath(editor, editor.selectedFieldPath);
-              setBottomPaneText(`Selected field: ${selectedField?.label ?? editor.selectedFieldPath}`);
+              setBottomPaneText(
+                `Selected field: ${selectedField?.label ?? editor.selectedFieldPath}`,
+              );
             }
           }
         } else if (isNodesMode && valuesExpanded && currentNodeDetail) {
@@ -3648,10 +3712,7 @@ export async function runPanelApp(
         if (editor) {
           const selectedField = getDraftEditFieldByPath(editor, editor.selectedFieldPath);
           setBottomPaneText(
-            formatDraftUpdateMessage(
-              selectedField?.label ?? editor.selectedFieldPath,
-              editor,
-            ),
+            formatDraftUpdateMessage(selectedField?.label ?? editor.selectedFieldPath, editor),
           );
           return;
         }

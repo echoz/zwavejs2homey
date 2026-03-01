@@ -16,13 +16,13 @@ Goal:
 
 ## Audit Matrix
 
-| Vocabulary | Current Usage | Current Source | Classification | Decision |
-| --- | --- | --- | --- | --- |
-| `homeyClass` values (e.g. `socket`, `light`) | TUI metadata select in `packages/tui/src/app.ts` (`HOMEY_CLASS_OPTIONS`) | hardcoded list | `compiler-artifact-derived` | Move to compiler-produced vocabulary artifact and consume in TUI/provider + compiler validation |
-| `capabilityId` values | TUI capability field currently freeform text; compiler validates only non-empty string | none (implicit) | `compiler-artifact-derived` | Introduce artifact-backed capability ID vocabulary; use typed select/search in TUI and compiler membership validation |
-| `directionality` (`bidirectional`, `inbound-only`, `outbound-only`) | TUI select + presenter validation + compiler model type union | hardcoded but aligned with core model | `intentionally static` | Keep static in compiler model; TUI should import from shared model/provider instead of redefining literals |
-| inbound mapping kind (`value`, `event`) | TUI select + presenter validation + compiler validation | hardcoded but aligned with compiler model | `intentionally static` | Keep static in model; remove duplicate literals by importing shared constants/types |
-| outbound mapping kind (`set_value`, `invoke_cc_api`, `zwjs_command`) | TUI select + presenter validation + compiler validation | hardcoded but aligned with compiler model | `intentionally static` | Keep static in model; remove duplicate literals by importing shared constants/types |
+| Vocabulary                                                           | Current Usage                                                                          | Current Source                            | Classification              | Decision                                                                                                              |
+| -------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ----------------------------------------- | --------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `homeyClass` values (e.g. `socket`, `light`)                         | TUI metadata select in `packages/tui/src/app.ts` (`HOMEY_CLASS_OPTIONS`)               | hardcoded list                            | `compiler-artifact-derived` | Move to compiler-produced vocabulary artifact and consume in TUI/provider + compiler validation                       |
+| `capabilityId` values                                                | TUI capability field currently freeform text; compiler validates only non-empty string | none (implicit)                           | `compiler-artifact-derived` | Introduce artifact-backed capability ID vocabulary; use typed select/search in TUI and compiler membership validation |
+| `directionality` (`bidirectional`, `inbound-only`, `outbound-only`)  | TUI select + presenter validation + compiler model type union                          | hardcoded but aligned with core model     | `intentionally static`      | Keep static in compiler model; TUI should import from shared model/provider instead of redefining literals            |
+| inbound mapping kind (`value`, `event`)                              | TUI select + presenter validation + compiler validation                                | hardcoded but aligned with compiler model | `intentionally static`      | Keep static in model; remove duplicate literals by importing shared constants/types                                   |
+| outbound mapping kind (`set_value`, `invoke_cc_api`, `zwjs_command`) | TUI select + presenter validation + compiler validation                                | hardcoded but aligned with compiler model | `intentionally static`      | Keep static in model; remove duplicate literals by importing shared constants/types                                   |
 
 ## Findings
 
@@ -59,3 +59,24 @@ Planned artifact:
 1. Add shared constants for intentionally static enums (directionality + mapping kinds) to remove duplicated literals.
 2. Implement compiler vocabulary artifact build/validate tooling.
 3. Wire TUI and compiler validation to one vocabulary provider contract.
+
+## Implemented Cutover (Current)
+
+1. Added compiler artifact contract:
+   - `homey-vocabulary/v1` (`packages/compiler/src/emit/homey-vocabulary-artifact.ts`)
+   - strict assert/create/load helpers + lookup sets
+2. Added build CLI:
+   - `npm run compiler:vocabulary`
+   - source inputs:
+     - Homey system lists from `homey-lib` (`assets/device/classes.json`, `assets/capability/capabilities.json`)
+     - project custom capabilities from `.homeycompose/capabilities/*.json`
+   - default output: `rules/homey-vocabulary.json`
+3. Added compiler rule-validation support for vocabulary membership:
+   - rejects unknown `device-identity.homeyClass`
+   - rejects unknown `capability` / `remove-capability` IDs
+   - available via `RuleValidationOptions.vocabulary`
+4. Added TUI vocabulary provider and consumption:
+   - loads `--vocabulary-file` (default `rules/homey-vocabulary.json`)
+   - metadata `homeyClass` select is vocabulary-backed
+   - capability ID field becomes vocabulary-backed select when capability vocab is available
+   - draft validation blocks unknown homey class/capability IDs

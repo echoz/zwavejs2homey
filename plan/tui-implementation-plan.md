@@ -58,8 +58,8 @@
   - [ ] data-driven vocab audit and cutover (follow-on slice):
     - [x] audit hardcoded authoring vocab in TUI/presenters (homey classes, capability IDs, directionality, and related typed selects)
     - [x] classify each vocab as: SDK-derived, compiler-artifact-derived, or intentionally static
-    - [ ] replace hardcoded selects with vocabulary providers/artifacts where feasible
-    - [ ] keep strict/early validation (invalid values blocked in editor)
+    - [x] replace hardcoded selects with vocabulary providers/artifacts where feasible
+    - [x] keep strict/early validation (invalid values blocked in editor)
 
 Section 7 does not start until all 6B and 6C slices above are complete.
 

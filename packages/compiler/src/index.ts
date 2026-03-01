@@ -42,6 +42,13 @@ export type {
   CompiledHomeyProfilesArtifactV1,
 } from './emit/compiled-profiles-artifact';
 export type {
+  HomeyVocabularyArtifactV1,
+  HomeyVocabularyEntryV1,
+  HomeyVocabularyLookupV1,
+  HomeyVocabularySourceKind,
+  HomeyVocabularySourceRefV1,
+} from './emit/homey-vocabulary-artifact';
+export type {
   CapabilityRuleAction,
   DeviceIdentityRuleAction,
   IgnoreValueRuleAction,
@@ -61,6 +68,14 @@ export {
   assertCompiledHomeyProfilesArtifactV1,
   createCompiledHomeyProfilesArtifactV1,
 } from './emit/compiled-profiles-artifact';
+export {
+  HOMEY_VOCABULARY_ARTIFACT_V1,
+  HomeyVocabularyArtifactError,
+  assertHomeyVocabularyArtifactV1,
+  createHomeyVocabularyArtifactV1,
+  createHomeyVocabularyLookupV1,
+  loadHomeyVocabularyArtifact,
+} from './emit/homey-vocabulary-artifact';
 export {
   CatalogDeviceArtifactError,
   assertCatalogDevicesArtifactV1,
@@ -133,8 +148,10 @@ export {
   loadJsonRuleFile,
   loadJsonRuleFiles,
   loadJsonRuleSetManifest,
+  loadJsonRuleSetManifestWithOptions,
   validateJsonRuleArray,
 } from './compiler/rule-loader';
+export type { RuleValidationOptions, RuleValidationVocabulary } from './compiler/rule-validation';
 export type { HaDerivedGeneratedRuleArtifactV1 } from './importers/ha/generated-rule-artifact';
 export {
   HaGeneratedRuleArtifactError,

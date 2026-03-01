@@ -71,7 +71,7 @@ Key design principles:
 
 ## Important Public Interfaces / Types (New)
 
-### 0) Homey Vocabulary Artifact (Planned)
+### 0) Homey Vocabulary Artifact (Implemented)
 
 Add a compiler-managed static vocabulary artifact for authoring-time enums used across compiler + tooling.
 
@@ -81,17 +81,26 @@ Purpose:
 - avoid hardcoded duplicated vocab in TUI/presenters/validators
 - keep deterministic/static behavior without runtime SDK/network dependency
 
-Conceptual artifact:
+Artifact:
 
 - `homey-vocabulary/v1`
 - `homeyClasses[]`
 - `capabilityIds[]`
 - optional provenance per entry (`source[]`, e.g. seed, observed, project-defined)
 
-Planned consumers:
+Current consumers:
 
-- compiler rule validation (reject unknown class/capability values early)
-- TUI scaffold editor typed selects (no freeform when enum is known)
+- compiler rule validation hooks (`RuleValidationOptions.vocabulary`) for early class/capability membership rejection
+- TUI scaffold editor typed selects (homeyClass always vocabulary-backed; capabilityId vocabulary-backed when capability vocab is available)
+- TUI draft validation (reject unknown `homeyClass`/`capabilityId`)
+
+Build command:
+
+- `npm run compiler:vocabulary`
+- default output: `rules/homey-vocabulary.json`
+- source inputs:
+  - Homey system classes/capabilities from `homey-lib` assets
+  - app-local custom capability IDs from `.homeycompose/capabilities/*.json`
 
 ### 1) Normalized Z-Wave Facts Models (device facts)
 

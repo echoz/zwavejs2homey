@@ -99,10 +99,10 @@
 - [x] Decide full migration policy for product authoring format (`project-product` uses `product-rules/v1` only; ADR 0009)
 - [x] DSL simplification slice 2: add explicit action-level defaults/shorthands with canonical expansion (no runtime inference)
 - [x] DSL hardening follow-up: strict unknown-field rejection for canonical mapping selector/target/watcher nested shapes
-- [ ] Add compiler-managed Homey vocabulary artifact pipeline:
-  - [ ] produce static vocabulary artifact for Homey classes/capability IDs with source provenance
-  - [ ] consume vocabulary in compiler rule validation for early invalid-value rejection
-  - [ ] expose vocabulary for downstream tooling (TUI scaffold editor typed selects)
+- [x] Add compiler-managed Homey vocabulary artifact pipeline:
+  - [x] produce static vocabulary artifact for Homey classes/capability IDs with source provenance
+  - [x] consume vocabulary in compiler rule validation for early invalid-value rejection
+  - [x] expose vocabulary for downstream tooling (TUI scaffold editor typed selects)
 - [ ] Add second real catalog source adapter when a concrete source format is available
 
 ## Phase 4: ZWJS Explorer + Curation TUI (In Progress)
@@ -113,9 +113,9 @@
 - [x] Section 6B: panel-first rich UI integration in nodes and rules stacks
 - [x] Panel renderer migration: full `neo-blessed` adoption (custom panel-frame renderer removed)
 - [ ] Section 6C: structured scaffold edit mode (panel draft editing before write)
-  - [ ] Section 6C slice: data-driven authoring vocab audit + cutover (remove hardcoded typed-select vocab where feasible)
+  - [x] Section 6C slice: data-driven authoring vocab audit + cutover (remove hardcoded typed-select vocab where feasible)
     - [x] audit + ownership classification (`docs/homey-authoring-vocabulary-audit.md`)
-    - [ ] cutover implementation (artifact/provider-backed vocab in TUI + compiler validation)
+    - [x] cutover implementation (artifact/provider-backed vocab in TUI + compiler validation)
 - [ ] Section 7: convergence review (separate stacks vs shared view primitives)
 - [ ] Keep Homey adapter implementation frozen until Phase 4 reset completion
 

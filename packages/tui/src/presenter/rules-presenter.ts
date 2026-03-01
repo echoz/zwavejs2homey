@@ -13,6 +13,7 @@ import type {
 } from '../model/types';
 import type { CurationWorkflowChildPresenterLike } from './curation-workflow-presenter';
 import type { WorkspaceFileService } from '../service/workspace-file-service';
+import type { DraftValidationVocabulary } from './explorer-presenter';
 
 type DraftCapabilityDirectionality = 'bidirectional' | 'inbound-only' | 'outbound-only';
 type DraftInboundMappingKind = 'value' | 'event';
@@ -24,6 +25,10 @@ interface DraftCapabilityShape {
   inboundMapping?: Record<string, unknown>;
   outboundMapping?: Record<string, unknown>;
   flags?: Record<string, unknown>;
+}
+
+export interface RulesPresenterOptions {
+  draftVocabulary?: DraftValidationVocabulary;
 }
 
 function nowIso(): string {
@@ -102,9 +107,7 @@ function parseOptionalIntegerInput(value: unknown, fieldPath: string): number | 
   return Number(text);
 }
 
-function parseOptionalPropertyTokenInput(
-  value: unknown,
-): string | number | undefined {
+function parseOptionalPropertyTokenInput(value: unknown): string | number | undefined {
   const text = String(value ?? '').trim();
   if (text.length <= 0) return undefined;
   if (/^-?\d+$/.test(text)) return Number(text);
@@ -121,7 +124,10 @@ function normalizeToValueSelector(value: unknown): Record<string, unknown> {
   const selector: Record<string, unknown> = {};
   if (typeof source.commandClass === 'number' && Number.isInteger(source.commandClass)) {
     selector.commandClass = source.commandClass;
-  } else if (typeof source.commandClass === 'string' && /^-?\d+$/.test(source.commandClass.trim())) {
+  } else if (
+    typeof source.commandClass === 'string' &&
+    /^-?\d+$/.test(source.commandClass.trim())
+  ) {
     selector.commandClass = Number(source.commandClass.trim());
   }
   if (typeof source.endpoint === 'number' && Number.isInteger(source.endpoint)) {
@@ -206,6 +212,7 @@ export class RulesPresenter {
   constructor(
     private readonly curation: CurationWorkflowChildPresenterLike,
     private readonly fileService: WorkspaceFileService,
+    private readonly options: RulesPresenterOptions = {},
   ) {}
 
   initialize(config: SessionConfig): RuleSummary[] {
@@ -737,6 +744,16 @@ export class RulesPresenter {
     if (editor.workingDraft.fileHint.trim().length <= 0) {
       errors.push('fileHint is required');
     }
+    const metadata = asOptionalRecord(editor.workingDraft.bundle?.metadata);
+    const homeyClass = parseOptionalTextInput(metadata?.homeyClass);
+    if (
+      homeyClass &&
+      this.options.draftVocabulary?.homeyClasses &&
+      this.options.draftVocabulary.homeyClasses.size > 0 &&
+      !this.options.draftVocabulary.homeyClasses.has(homeyClass)
+    ) {
+      errors.push(`metadata.homeyClass is unknown: ${homeyClass}`);
+    }
     const capabilities = getDraftCapabilities(editor.workingDraft.bundle);
     const seenCapabilityIds = new Set<string>();
     for (let index = 0; index < capabilities.length; index += 1) {
@@ -750,6 +767,13 @@ export class RulesPresenter {
           warnings.push(`duplicate capabilityId: ${entry.capabilityId}`);
         } else {
           seenCapabilityIds.add(key);
+        }
+        if (
+          this.options.draftVocabulary?.capabilityIds &&
+          this.options.draftVocabulary.capabilityIds.size > 0 &&
+          !this.options.draftVocabulary.capabilityIds.has(entry.capabilityId)
+        ) {
+          errors.push(`${rowId}.capabilityId is unknown: ${entry.capabilityId}`);
         }
       }
       if (!isDirectionality(entry.directionality)) {
@@ -810,7 +834,8 @@ export class RulesPresenter {
               errors.push(`${rowId}.outboundMapping.target.propertyKey must be string/number`);
             }
           } else {
-            const hasCommandTarget = typeof target.command === 'string' && target.command.length > 0;
+            const hasCommandTarget =
+              typeof target.command === 'string' && target.command.length > 0;
             const hasValueTarget =
               typeof target.commandClass === 'number' &&
               ['string', 'number'].includes(typeof target.property);

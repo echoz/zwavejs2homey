@@ -8,6 +8,7 @@ export interface SessionConfig {
   mode: SessionMode;
   uiMode: UiMode;
   manifestFile: string;
+  vocabularyFile?: string;
   url?: string;
   token?: string;
   schemaVersion: number;

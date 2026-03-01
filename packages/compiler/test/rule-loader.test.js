@@ -14,6 +14,34 @@ test('loadJsonRuleFile loads valid rule arrays', () => {
   assert.equal(rules[0].ruleId, 'ha-onoff');
 });
 
+test('loadJsonRuleFile rejects unknown capabilityId when vocabulary validation is provided', () => {
+  const filePath = path.join(fixturesDir, 'rules-switch-meter.json');
+  assert.throws(
+    () =>
+      compiler.loadJsonRuleFile(filePath, {
+        vocabulary: {
+          homeyClasses: new Set(['socket']),
+          capabilityIds: new Set(['onoff']),
+        },
+      }),
+    (error) => error && error.filePath === filePath && /unknown capabilityId/i.test(error.message),
+  );
+});
+
+test('loadJsonRuleFile rejects unknown homeyClass when vocabulary validation is provided', () => {
+  const filePath = path.join(fixturesDir, 'rules-action-compact.json');
+  assert.throws(
+    () =>
+      compiler.loadJsonRuleFile(filePath, {
+        vocabulary: {
+          homeyClasses: new Set(['sensor']),
+          capabilityIds: new Set(['onoff', 'alarm_motion']),
+        },
+      }),
+    (error) => error && error.filePath === filePath && /unknown homeyClass/i.test(error.message),
+  );
+});
+
 test('loadJsonRuleFile expands compact scalar matcher syntax to canonical arrays', () => {
   const filePath = path.join(fixturesDir, 'rules-switch-meter-compact.json');
   const rules = compiler.loadJsonRuleFile(filePath);

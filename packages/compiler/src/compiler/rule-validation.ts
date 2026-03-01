@@ -11,8 +11,14 @@ export class RuleFileLoadError extends Error {
   }
 }
 
+export interface RuleValidationVocabulary {
+  homeyClasses?: ReadonlySet<string>;
+  capabilityIds?: ReadonlySet<string>;
+}
+
 export interface RuleValidationOptions {
   declaredLayer?: MappingRule['layer'];
+  vocabulary?: RuleValidationVocabulary;
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -841,6 +847,7 @@ function validateRuleActionShape(
   ruleId: string,
   layer: MappingRule['layer'],
   actionIndex: number,
+  options?: RuleValidationOptions,
 ): void {
   if (!isObject(action) || typeof action.type !== 'string') {
     throw new RuleFileLoadError(
@@ -880,6 +887,16 @@ function validateRuleActionShape(
     if (typeof action.capabilityId !== 'string' || action.capabilityId.length === 0) {
       throw new RuleFileLoadError(
         `Rule "${ruleId}" capability action ${actionIndex} requires a non-empty capabilityId`,
+        filePath,
+      );
+    }
+    if (
+      options?.vocabulary?.capabilityIds &&
+      options.vocabulary.capabilityIds.size > 0 &&
+      !options.vocabulary.capabilityIds.has(action.capabilityId)
+    ) {
+      throw new RuleFileLoadError(
+        `Rule "${ruleId}" capability action ${actionIndex} uses unknown capabilityId "${action.capabilityId}"`,
         filePath,
       );
     }
@@ -933,6 +950,17 @@ function validateRuleActionShape(
         filePath,
       );
     }
+    if (
+      typeof action.homeyClass === 'string' &&
+      options?.vocabulary?.homeyClasses &&
+      options.vocabulary.homeyClasses.size > 0 &&
+      !options.vocabulary.homeyClasses.has(action.homeyClass)
+    ) {
+      throw new RuleFileLoadError(
+        `Rule "${ruleId}" device-identity action ${actionIndex} uses unknown homeyClass "${action.homeyClass}"`,
+        filePath,
+      );
+    }
     return;
   }
 
@@ -963,6 +991,16 @@ function validateRuleActionShape(
     if (typeof action.capabilityId !== 'string' || action.capabilityId.length === 0) {
       throw new RuleFileLoadError(
         `Rule "${ruleId}" remove-capability action ${actionIndex} requires a non-empty capabilityId`,
+        filePath,
+      );
+    }
+    if (
+      options?.vocabulary?.capabilityIds &&
+      options.vocabulary.capabilityIds.size > 0 &&
+      !options.vocabulary.capabilityIds.has(action.capabilityId)
+    ) {
+      throw new RuleFileLoadError(
+        `Rule "${ruleId}" remove-capability action ${actionIndex} uses unknown capabilityId "${action.capabilityId}"`,
         filePath,
       );
     }
@@ -1021,20 +1059,18 @@ function validateRuleShape(
   }
   validateRuleConstraintsShape(rule, filePath, String(rule.ruleId));
   for (const [actionIndex, action] of rule.actions.entries()) {
-    validateRuleActionShape(action, filePath, String(rule.ruleId), rule.layer, actionIndex);
+    validateRuleActionShape(
+      action,
+      filePath,
+      String(rule.ruleId),
+      rule.layer,
+      actionIndex,
+      options,
+    );
   }
 }
 
-export function validateJsonRuleArray(value: unknown, filePath: string): MappingRule[] {
-  if (!Array.isArray(value)) {
-    throw new RuleFileLoadError('Rule file must contain a JSON array of rules', filePath);
-  }
-
-  value.forEach((rule, index) => validateRuleShape(rule, filePath, index));
-  return value as MappingRule[];
-}
-
-export function validateJsonRuleArrayWithOptions(
+export function validateJsonRuleArray(
   value: unknown,
   filePath: string,
   options?: RuleValidationOptions,
@@ -1045,4 +1081,12 @@ export function validateJsonRuleArrayWithOptions(
 
   value.forEach((rule, index) => validateRuleShape(rule, filePath, index, options));
   return value as MappingRule[];
+}
+
+export function validateJsonRuleArrayWithOptions(
+  value: unknown,
+  filePath: string,
+  options?: RuleValidationOptions,
+): MappingRule[] {
+  return validateJsonRuleArray(value, filePath, options);
 }

@@ -8,6 +8,7 @@ import type { MappingRule } from '../rules/types';
 import { loadHaDerivedGeneratedRuleArtifact } from '../importers/ha/generated-rule-artifact';
 import {
   RuleFileLoadError,
+  type RuleValidationOptions,
   validateJsonRuleArray,
   validateJsonRuleArrayWithOptions,
 } from './rule-validation';
@@ -61,9 +62,7 @@ function isObject(value: unknown): value is Record<string, unknown> {
 function parseProductRulesBundleV1(
   parsed: unknown,
   filePath: string,
-  options?: {
-    declaredLayer?: MappingRule['layer'];
-  },
+  options?: RuleValidationOptions,
 ): MappingRule[] {
   if (!isObject(parsed)) {
     throw new RuleFileLoadError('product-rules/v1 file must be a JSON object', filePath);
@@ -168,12 +167,7 @@ function parseProductRulesBundleV1(
   return validateJsonRuleArray(expandedRules, filePath);
 }
 
-export function loadJsonRuleFile(
-  filePath: string,
-  options?: {
-    declaredLayer?: MappingRule['layer'];
-  },
-): MappingRule[] {
+export function loadJsonRuleFile(filePath: string, options?: RuleValidationOptions): MappingRule[] {
   let parsed: unknown;
   try {
     parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
@@ -194,11 +188,9 @@ export function loadJsonRuleFile(
   }
 
   if (options?.declaredLayer) {
-    return validateJsonRuleArrayWithOptions(parsed, filePath, {
-      declaredLayer: options.declaredLayer,
-    });
+    return validateJsonRuleArrayWithOptions(parsed, filePath, options);
   }
-  return validateJsonRuleArray(parsed, filePath);
+  return validateJsonRuleArray(parsed, filePath, options);
 }
 
 export function loadJsonRuleFiles(filePaths: string[]): LoadedRuleFile[] {
@@ -206,6 +198,13 @@ export function loadJsonRuleFiles(filePaths: string[]): LoadedRuleFile[] {
 }
 
 export function loadJsonRuleSetManifest(entries: RuleSetManifestEntry[]): LoadedRuleSetManifest {
+  return loadJsonRuleSetManifestWithOptions(entries);
+}
+
+export function loadJsonRuleSetManifestWithOptions(
+  entries: RuleSetManifestEntry[],
+  options?: RuleValidationOptions,
+): LoadedRuleSetManifest {
   if (!Array.isArray(entries) || entries.length === 0) {
     throw new RuleSetLoadError('Manifest must include at least one entry');
   }
@@ -262,6 +261,7 @@ export function loadJsonRuleSetManifest(entries: RuleSetManifestEntry[]): Loaded
         ? loadHaDerivedGeneratedRuleArtifact(entry.filePath).rules
         : loadJsonRuleFile(entry.filePath, {
             declaredLayer: entry.layer,
+            vocabulary: options?.vocabulary,
           }),
   }));
 
