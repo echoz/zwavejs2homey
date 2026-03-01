@@ -1,6 +1,7 @@
 {
   "name": "co.lazylabs.zwavejs2homey",
   "version": "1.0.0",
+  "license": "Apache-2.0",
   "scripts": {
     "build": "tsc",
     "lint": "eslint --ext .js,.ts --ignore-path .gitignore --ignore-pattern test/** .",
