@@ -522,11 +522,16 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - command-class/endpoint fields are validated/coerced as integers at edit time; property/propertyKey fields are normalized as string|number
     - panel draft editor now exposes selector/target mapping fields and capability-level inbound/outbound mapping summaries
     - added presenter regression coverage for mapping field edits and invalid numeric input rejection
+102. Completed Section 6C live validation + write gating slice:
+    - panel draft editing now surfaces validation status in update feedback (`Validation: ok|warnings|errors`)
+    - scaffold write (`W`) and manifest add (`A`) now validate active draft state before confirmation/write
+    - write actions are blocked when draft errors exist; warning-only drafts remain writable with warning context on confirmation
+    - added panel regression coverage for write-block-on-errors and warning-only write flow
 
 ## Next Tasks
 
 1. Execute Section 6C scaffold edit mode:
-   - add live validation + diff preview before write/manifest confirmations
+   - add in-panel diff preview before write/manifest confirmations
    - expand panel tests for draft edit flows
    - follow with data-driven vocabulary cutover:
      - audit hardcoded TUI/presenter type vocab (Homey classes, capability IDs, directionality)

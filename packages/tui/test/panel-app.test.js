@@ -2413,6 +2413,191 @@ test('runPanelApp requires double confirmation for write actions', async () => {
   assert.equal(rendered.includes('Confirm manifest add'), true);
 });
 
+test('runPanelApp blocks scaffold write when draft validation has errors', async () => {
+  const input = new FakeInput();
+  const output = new FakeOutput();
+  const presenter = {
+    writeCalls: 0,
+    async connect() {},
+    async disconnect() {},
+    getState() {
+      return {
+        explorer: {
+          items: [{ nodeId: 1, name: 'Kitchen', product: 'Switch' }],
+        },
+      };
+    },
+    getStatusSnapshot() {
+      return {
+        mode: 'nodes',
+        connectionState: 'ready',
+        selectedSignature: '29:66:2',
+        cachedNodeCount: 1,
+      };
+    },
+    validateDraftEditorState() {
+      return {
+        errors: ['capabilities[0].capabilityId is required'],
+        warnings: [],
+      };
+    },
+    writeScaffoldDraft() {
+      this.writeCalls += 1;
+      return '/tmp/product-29-66-2.json';
+    },
+  };
+  const { capture, deps } = createPanelDeps(presenter, input, output);
+
+  const runPromise = runPanelApp(
+    {
+      mode: 'nodes',
+      uiMode: 'panel',
+      manifestFile: 'rules/manifest.json',
+      url: 'ws://127.0.0.1:3000',
+      schemaVersion: 0,
+      includeValues: 'summary',
+      maxValues: 100,
+    },
+    { log: () => {}, error: () => {} },
+    deps,
+  );
+
+  setTimeout(() => {
+    emitInputKeys(input, ['W', 'W', 'q']);
+  }, 5);
+
+  await runPromise;
+
+  assert.equal(presenter.writeCalls, 0);
+  const rendered = capture.text();
+  assert.equal(rendered.includes('Cannot scaffold write: draft has 1 error(s).'), true);
+});
+
+test('runPanelApp blocks manifest add when draft validation has errors', async () => {
+  const input = new FakeInput();
+  const output = new FakeOutput();
+  const presenter = {
+    manifestCalls: 0,
+    async connect() {},
+    async disconnect() {},
+    getState() {
+      return {
+        explorer: {
+          items: [{ nodeId: 1, name: 'Kitchen', product: 'Switch' }],
+        },
+      };
+    },
+    getStatusSnapshot() {
+      return {
+        mode: 'nodes',
+        connectionState: 'ready',
+        selectedSignature: '29:66:2',
+        cachedNodeCount: 1,
+      };
+    },
+    validateDraftEditorState() {
+      return {
+        errors: ['fileHint is required'],
+        warnings: [],
+      };
+    },
+    addDraftToManifest() {
+      this.manifestCalls += 1;
+      return {
+        manifestFile: '/tmp/manifest.json',
+        entryFilePath: 'project/product/product-29-66-2.json',
+        updated: true,
+      };
+    },
+  };
+  const { capture, deps } = createPanelDeps(presenter, input, output);
+
+  const runPromise = runPanelApp(
+    {
+      mode: 'nodes',
+      uiMode: 'panel',
+      manifestFile: 'rules/manifest.json',
+      url: 'ws://127.0.0.1:3000',
+      schemaVersion: 0,
+      includeValues: 'summary',
+      maxValues: 100,
+    },
+    { log: () => {}, error: () => {} },
+    deps,
+  );
+
+  setTimeout(() => {
+    emitInputKeys(input, ['A', 'A', 'q']);
+  }, 5);
+
+  await runPromise;
+
+  assert.equal(presenter.manifestCalls, 0);
+  const rendered = capture.text();
+  assert.equal(rendered.includes('Cannot manifest add: draft has 1 error(s).'), true);
+});
+
+test('runPanelApp allows write confirmation when draft has warnings only', async () => {
+  const input = new FakeInput();
+  const output = new FakeOutput();
+  const presenter = {
+    writeCalls: 0,
+    async connect() {},
+    async disconnect() {},
+    getState() {
+      return {
+        explorer: {
+          items: [{ nodeId: 1, name: 'Kitchen', product: 'Switch' }],
+        },
+      };
+    },
+    getStatusSnapshot() {
+      return {
+        mode: 'nodes',
+        connectionState: 'ready',
+        selectedSignature: '29:66:2',
+        cachedNodeCount: 1,
+      };
+    },
+    validateDraftEditorState() {
+      return {
+        errors: [],
+        warnings: ['duplicate capabilityId: onoff'],
+      };
+    },
+    writeScaffoldDraft() {
+      this.writeCalls += 1;
+      return '/tmp/product-29-66-2.json';
+    },
+  };
+  const { capture, deps } = createPanelDeps(presenter, input, output);
+
+  const runPromise = runPanelApp(
+    {
+      mode: 'nodes',
+      uiMode: 'panel',
+      manifestFile: 'rules/manifest.json',
+      url: 'ws://127.0.0.1:3000',
+      schemaVersion: 0,
+      includeValues: 'summary',
+      maxValues: 100,
+    },
+    { log: () => {}, error: () => {} },
+    deps,
+  );
+
+  setTimeout(() => {
+    emitInputKeys(input, ['W', 'W', 'q']);
+  }, 5);
+
+  await runPromise;
+
+  assert.equal(presenter.writeCalls, 1);
+  const rendered = capture.text();
+  assert.equal(rendered.includes('Confirm scaffold write'), true);
+  assert.equal(rendered.includes('Draft warnings: 1.'), true);
+});
+
 test('runPanelApp supports cancelling long-running operation', async () => {
   const input = new FakeInput();
   const output = new FakeOutput();

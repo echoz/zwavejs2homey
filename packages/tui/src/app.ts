@@ -1961,13 +1961,16 @@ function renderPanelDraftEditor(
 ): string {
   const workingBundle = state.workingDraft.bundle ?? {};
   const capabilities = getDraftCapabilitiesForEditor(state);
-  const fieldLines = DRAFT_METADATA_FIELDS.map((field) => {
+  const draftFields = getDraftEditFields(state);
+  const fieldLines = draftFields.map((field) => {
     const value = getDraftEditorFieldValue(state, field.path);
     const isSelected = state.selectedFieldPath === field.path;
     const prefix = isSelected ? '> ' : '- ';
     const suffix =
       field.type === 'select' && Array.isArray(field.options)
-        ? ` [options:${field.options.join(', ')}]`
+        ? isSelected
+          ? ` [options:${field.options.join(', ')}]`
+          : ' [select]'
         : '';
     return `${prefix}${field.label}: ${value || '(unset)'}${suffix}`;
   });
@@ -2005,9 +2008,13 @@ function renderPanelDraftEditor(
       `  Outbound (${outboundKind}): ${outboundSummary}`,
     ];
   });
+  const editingField =
+    options.editingFieldPath && options.editingBuffer !== undefined
+      ? getDraftEditFieldByPath(state, options.editingFieldPath)
+      : undefined;
   const editStatus =
     options.editingFieldPath && options.editingBuffer !== undefined
-      ? `Editing ${options.editingFieldPath}: ${options.editingBuffer}`
+      ? `Editing ${editingField?.label ?? options.editingFieldPath}: ${options.editingBuffer}`
       : null;
   const sourceName = normalizeIdentityText(options.sourceNode?.name ?? null) ?? '(unnamed)';
   const sourceNodeId = options.sourceNode?.nodeId;
@@ -2332,6 +2339,25 @@ export async function runPanelApp(
   function setBottomPaneText(value: string): void {
     bottomText = value;
     bottomScroll = 0;
+  }
+
+  function formatDraftValidationHint(editor: DraftEditorState): string {
+    const errorCount = editor.errors.length;
+    const warningCount = editor.warnings.length;
+    if (errorCount > 0 && warningCount > 0) {
+      return `Validation: ${errorCount} error(s), ${warningCount} warning(s).`;
+    }
+    if (errorCount > 0) {
+      return `Validation: ${errorCount} error(s).`;
+    }
+    if (warningCount > 0) {
+      return `Validation: ${warningCount} warning(s).`;
+    }
+    return 'Validation: ok.';
+  }
+
+  function formatDraftUpdateMessage(label: string, editor: DraftEditorState): string {
+    return `Updated ${label}. ${formatDraftValidationHint(editor)}`;
   }
 
   function getListEntries(): PanelListEntry[] {
@@ -3045,7 +3071,7 @@ export async function runPanelApp(
     }
   }
 
-  function requestConfirmation(action: ConfirmAction): boolean {
+  function requestConfirmation(action: ConfirmAction, note?: string): boolean {
     clearExpiredPendingConfirm();
     if (pendingConfirm?.action === action) {
       pendingConfirm = null;
@@ -3057,10 +3083,50 @@ export async function runPanelApp(
     };
     const key = action === 'scaffold-write' ? 'W' : 'A';
     const actionLabel = action === 'scaffold-write' ? 'scaffold write' : 'manifest add';
-    setBottomPaneText(
-      `Confirm ${actionLabel}: press ${key} again within ${WRITE_CONFIRM_WINDOW_MS / 1000}s`,
-    );
+    const confirmLine = `Confirm ${actionLabel}: press ${key} again within ${
+      WRITE_CONFIRM_WINDOW_MS / 1000
+    }s`;
+    setBottomPaneText(note ? `${confirmLine} | ${note}` : confirmLine);
     return false;
+  }
+
+  function validateDraftBeforeWrite(
+    actionLabel: 'scaffold write' | 'manifest add',
+  ): { ok: true; note?: string } | { ok: false } {
+    let editor: DraftEditorState | undefined;
+    if (isNodesMode) {
+      const presenter = nodesPresenter as {
+        validateDraftEditorState?: () => DraftEditorState;
+      };
+      editor =
+        typeof presenter.validateDraftEditorState === 'function'
+          ? presenter.validateDraftEditorState()
+          : getActiveDraftEditorState();
+    } else {
+      const presenter = rulesPresenter as {
+        validateDraftEditorState?: () => DraftEditorState;
+      };
+      editor =
+        typeof presenter.validateDraftEditorState === 'function'
+          ? presenter.validateDraftEditorState()
+          : getActiveDraftEditorState();
+    }
+    if (!editor) return { ok: true };
+    if (editor.errors.length > 0) {
+      const firstError = editor.errors[0];
+      setBottomPaneText(
+        `Cannot ${actionLabel}: draft has ${editor.errors.length} error(s).\nFirst error: ${firstError}`,
+      );
+      return { ok: false };
+    }
+    if (editor.warnings.length > 0) {
+      const firstWarning = editor.warnings[0];
+      return {
+        ok: true,
+        note: `Draft warnings: ${editor.warnings.length}. First warning: ${firstWarning}`,
+      };
+    }
+    return { ok: true };
   }
 
   async function runTimedOperation<T>(label: string, run: () => Promise<T>): Promise<T> {
@@ -3383,7 +3449,8 @@ export async function runPanelApp(
           } else {
             const editor = moveDraftFieldSelection(-1);
             if (editor) {
-              setBottomPaneText(`Selected field: ${editor.selectedFieldPath}`);
+              const selectedField = getDraftEditFieldByPath(editor, editor.selectedFieldPath);
+              setBottomPaneText(`Selected field: ${selectedField?.label ?? editor.selectedFieldPath}`);
             }
           }
         } else if (isNodesMode && valuesExpanded && currentNodeDetail) {
@@ -3408,7 +3475,8 @@ export async function runPanelApp(
           } else {
             const editor = moveDraftFieldSelection(1);
             if (editor) {
-              setBottomPaneText(`Selected field: ${editor.selectedFieldPath}`);
+              const selectedField = getDraftEditFieldByPath(editor, editor.selectedFieldPath);
+              setBottomPaneText(`Selected field: ${selectedField?.label ?? editor.selectedFieldPath}`);
             }
           }
         } else if (isNodesMode && valuesExpanded && currentNodeDetail) {
@@ -3427,7 +3495,13 @@ export async function runPanelApp(
       if (panelMode === 'edit-draft' && focusedPane === 'right' && !draftFieldEdit) {
         const editor = cycleDraftSelectField(intent.type === 'move-left' ? -1 : 1);
         if (editor) {
-          setBottomPaneText(`Updated ${editor.selectedFieldPath}.`);
+          const selectedField = getDraftEditFieldByPath(editor, editor.selectedFieldPath);
+          setBottomPaneText(
+            formatDraftUpdateMessage(
+              selectedField?.label ?? editor.selectedFieldPath,
+              editor,
+            ),
+          );
           return;
         }
       }
@@ -3517,15 +3591,15 @@ export async function runPanelApp(
           return;
         }
         if (draftFieldEdit) {
-          setDraftFieldValue(draftFieldEdit.path, draftFieldEdit.value);
+          const updatedEditor = setDraftFieldValue(draftFieldEdit.path, draftFieldEdit.value);
           draftFieldEdit = null;
-          setBottomPaneText(`Updated ${selectedField.label}.`);
+          setBottomPaneText(formatDraftUpdateMessage(selectedField.label, updatedEditor));
           return;
         }
         if (selectedField.type === 'select') {
           const next = cycleDraftSelectField(1);
           if (next) {
-            setBottomPaneText(`Updated ${selectedField.label}.`);
+            setBottomPaneText(formatDraftUpdateMessage(selectedField.label, next));
           }
           return;
         }
@@ -3772,10 +3846,14 @@ export async function runPanelApp(
       return;
     }
     if (intent.type === 'scaffold-write') {
+      const draftValidation = validateDraftBeforeWrite('scaffold write');
+      if (!draftValidation.ok) {
+        return;
+      }
       if (panelMode === 'edit-draft') {
         commitDraftEdits();
       }
-      if (!requestConfirmation('scaffold-write')) {
+      if (!requestConfirmation('scaffold-write', draftValidation.note)) {
         return;
       }
       const written = isNodesMode
@@ -3785,10 +3863,14 @@ export async function runPanelApp(
       return;
     }
     if (intent.type === 'manifest-add') {
+      const draftValidation = validateDraftBeforeWrite('manifest add');
+      if (!draftValidation.ok) {
+        return;
+      }
       if (panelMode === 'edit-draft') {
         commitDraftEdits();
       }
-      if (!requestConfirmation('manifest-add')) {
+      if (!requestConfirmation('manifest-add', draftValidation.note)) {
         return;
       }
       const result = isNodesMode
@@ -3974,14 +4056,14 @@ export async function runPanelApp(
           }
           if (name === 'return' || name === 'enter') {
             try {
-              setDraftFieldValue(draftFieldEdit.path, draftFieldEdit.value);
+              const updatedEditor = setDraftFieldValue(draftFieldEdit.path, draftFieldEdit.value);
               const editor = getActiveDraftEditorState();
               const label =
                 (editor
                   ? getDraftEditFieldByPath(editor, draftFieldEdit.path)?.label
                   : undefined) ?? draftFieldEdit.path;
               draftFieldEdit = null;
-              setBottomPaneText(`Updated ${label}.`);
+              setBottomPaneText(formatDraftUpdateMessage(label, updatedEditor));
             } catch (error) {
               setBottomPaneText(`Error: ${error instanceof Error ? error.message : String(error)}`);
             }
