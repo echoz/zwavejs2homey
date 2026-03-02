@@ -15,6 +15,12 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 ## Recently Completed
 
+- Latest Phase 5 driver-harness test slice:
+  - added new Homey driver/device harness tests in `co.lazylabs.zwavejs2homey/test/driver-harness.test.js`
+  - covered bridge singleton pairing semantics in `drivers/bridge/driver.ts`
+  - covered node pairing error/filter behavior in `drivers/node/driver.ts`
+  - covered bridge-device runtime status logging contract in `drivers/bridge/device.ts`
+
 - Latest Phase 5 diagnostics-surface slice:
   - added app-facing runtime diagnostics snapshot API: `getNodeRuntimeDiagnostics(...)`
   - API now normalizes node `profileResolution` into stable sections (`sync`, `profile`, `curation`, `recommendation`, `mapping`)
