@@ -15,6 +15,12 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 ## Recently Completed
 
+- Latest Phase 5 recommendation-workflow orchestration slice:
+  - added app-level recommendation queue API (`getRecommendationActionQueue`) with deterministic action ordering (`backfill` -> `adopt` -> `none`)
+  - added batch marker backfill API (`backfillMissingCurationBaselineMarkers`) to update all missing/outdated markers in one settings write
+  - queue/batch logic now uses node runtime diagnostics as canonical non-UI input surface
+  - expanded app runtime tests for queue classification and batch-backfill behavior
+
 - Latest Phase 5 recommendation-action API slice:
   - added curation mutation helpers in `curation.js`:
     - `upsertCurationBaselineMarkerV1`

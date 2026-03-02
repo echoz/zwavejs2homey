@@ -624,3 +624,122 @@ test('app adopt recommended baseline is blocked when recommendation is unavailab
 
   await app.onUninit();
 });
+
+test('app recommendation action queue classifies backfill/adopt/no-action nodes', async () => {
+  const nodeDevices = [
+    createNodeDiagnosticsDevice({
+      id: 'main:12',
+      nodeId: 12,
+      profileResolution: {
+        profileId: 'profile-main-12',
+        recommendationBackfillNeeded: true,
+        recommendationReason: 'marker-missing-backfill',
+        recommendationProjectionVersion: '1',
+        currentBaselineHash: 'hash-12',
+        mappingDiagnostics: [],
+      },
+    }),
+    createNodeDiagnosticsDevice({
+      id: 'main:8',
+      nodeId: 8,
+      profileResolution: {
+        profileId: 'profile-main-8',
+        recommendationAvailable: true,
+        recommendationReason: 'baseline-hash-changed',
+        recommendationProjectionVersion: '1',
+        currentBaselineHash: 'hash-8',
+        storedBaselineHash: 'old-8',
+        mappingDiagnostics: [],
+      },
+    }),
+    createNodeDiagnosticsDevice({
+      id: 'main:5',
+      nodeId: 5,
+      profileResolution: {
+        profileId: 'profile-main-5',
+        recommendationAvailable: false,
+        recommendationBackfillNeeded: false,
+        recommendationReason: 'baseline-hash-unchanged',
+        mappingDiagnostics: [],
+      },
+    }),
+  ];
+
+  const { app } = loadAppClass(nodeDevices);
+  await app.onInit();
+  const actionableQueue = await app.getRecommendationActionQueue();
+  assert.equal(actionableQueue.total, 3);
+  assert.equal(actionableQueue.actionable, 2);
+  assert.equal(actionableQueue.items.length, 2);
+  assert.equal(actionableQueue.items[0].action, 'backfill-marker');
+  assert.equal(actionableQueue.items[0].homeyDeviceId, 'main:12');
+  assert.equal(actionableQueue.items[1].action, 'adopt-recommended-baseline');
+  assert.equal(actionableQueue.items[1].homeyDeviceId, 'main:8');
+
+  const fullQueue = await app.getRecommendationActionQueue({ includeNoAction: true });
+  assert.equal(fullQueue.items.length, 3);
+  assert.equal(fullQueue.items[2].action, 'none');
+  assert.equal(fullQueue.items[2].homeyDeviceId, 'main:5');
+  await app.onUninit();
+});
+
+test('app can batch-backfill missing baseline markers in one settings update', async () => {
+  const nodeDevices = [
+    createNodeDiagnosticsDevice({
+      id: 'main:12',
+      nodeId: 12,
+      profileResolution: {
+        profileId: 'profile-main-12',
+        recommendationBackfillNeeded: true,
+        recommendationReason: 'marker-missing-backfill',
+        recommendationProjectionVersion: '1',
+        currentBaselineHash: 'hash-12',
+        currentBaselinePipelineFingerprint: 'pf-12',
+        mappingDiagnostics: [],
+      },
+    }),
+    createNodeDiagnosticsDevice({
+      id: 'main:8',
+      nodeId: 8,
+      profileResolution: {
+        profileId: 'profile-main-8',
+        recommendationAvailable: true,
+        recommendationBackfillNeeded: false,
+        recommendationReason: 'baseline-hash-changed',
+        recommendationProjectionVersion: '1',
+        currentBaselineHash: 'hash-8',
+        mappingDiagnostics: [],
+      },
+    }),
+    createNodeDiagnosticsDevice({
+      id: 'main:5',
+      nodeId: 5,
+      profileResolution: {
+        profileId: 'profile-main-5',
+        recommendationAvailable: false,
+        recommendationBackfillNeeded: false,
+        recommendationReason: 'baseline-hash-unchanged',
+        mappingDiagnostics: [],
+      },
+    }),
+  ];
+
+  const { app } = loadAppClass(nodeDevices);
+  await app.onInit();
+  const result = await app.backfillMissingCurationBaselineMarkers();
+  assert.equal(result.updated, 1);
+  assert.equal(result.createdEntries, 1);
+  assert.equal(result.skipped, 2);
+  assert.equal(result.items[0].homeyDeviceId, 'main:12');
+  assert.equal(result.items[0].updated, true);
+  assert.equal(result.items[1].reason, 'action-not-backfill');
+  assert.equal(result.items[2].reason, 'action-not-backfill');
+
+  const settingsValue = app.homey.settings.get('curation.v1');
+  assert.equal(Boolean(settingsValue.entries['main:12']), true);
+  assert.equal(settingsValue.entries['main:12'].baselineMarker.baselineProfileHash, 'hash-12');
+  assert.equal(settingsValue.entries['main:12'].baselineMarker.pipelineFingerprint, 'pf-12');
+  assert.equal(settingsValue.entries['main:8'], undefined);
+  assert.equal(settingsValue.entries['main:5'], undefined);
+  await app.onUninit();
+});

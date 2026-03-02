@@ -90,6 +90,9 @@ Done so far:
 - app-facing recommendation actions:
   - baseline marker backfill (`backfillCurationBaselineMarker`)
   - recommendation adopt/full-replace (`adoptRecommendedBaseline`)
+- recommendation workflow orchestration APIs:
+  - action queue (`getRecommendationActionQueue`)
+  - batch backfill (`backfillMissingCurationBaselineMarkers`)
 
 In progress / next:
 

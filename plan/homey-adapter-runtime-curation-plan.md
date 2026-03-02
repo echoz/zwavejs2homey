@@ -29,6 +29,9 @@ Design and implement a Homey adapter-owned runtime curation system that applies 
   - app-level non-UI adopt/backfill action APIs now exist:
     - `backfillCurationBaselineMarker`
     - `adoptRecommendedBaseline`
+  - app-level non-UI recommendation workflow orchestration now exists:
+    - `getRecommendationActionQueue`
+    - `backfillMissingCurationBaselineMarkers`
   - remaining work: Homey UX wiring for diagnostics + adopt/backfill interaction flows
 
 Related ADRs:

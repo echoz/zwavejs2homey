@@ -146,6 +146,9 @@ Partially complete / next:
 - app now exposes non-UI recommendation action APIs:
   - `backfillCurationBaselineMarker(homeyDeviceId)`
   - `adoptRecommendedBaseline(homeyDeviceId)`
+- app now exposes non-UI recommendation workflow APIs:
+  - `getRecommendationActionQueue(...)`
+  - `backfillMissingCurationBaselineMarkers(...)`
 - Homey settings/diagnostics UX consumption around curation and recommendations
 - expanded runtime mapping vertical coverage
 

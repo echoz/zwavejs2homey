@@ -82,6 +82,22 @@ interface NodeRuntimeDiagnosticsEntry {
   };
 }
 
+type RecommendationActionKindV1 = 'backfill-marker' | 'adopt-recommended-baseline' | 'none';
+
+interface RecommendationActionQueueItemV1 {
+  homeyDeviceId: string | null;
+  nodeId: number | null;
+  profileId: string | null;
+  action: RecommendationActionKindV1;
+  reason: string;
+  recommendationAvailable: boolean;
+  recommendationBackfillNeeded: boolean;
+  recommendationProjectionVersion: string | null;
+  currentBaselineHash: string | null;
+  storedBaselineHash: string | null;
+  currentPipelineFingerprint: string | null;
+}
+
 module.exports = class Zwavejs2HomeyApp extends Homey.App {
   private zwjsClient?: ZwjsClient;
   private readonly bridgeId = ZWJS_DEFAULT_BRIDGE_ID;
@@ -121,6 +137,12 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
 
   private static toBooleanOrDefault(value: unknown, fallback = false): boolean {
     return typeof value === 'boolean' ? value : fallback;
+  }
+
+  private static toRecommendationActionPriority(action: RecommendationActionKindV1): number {
+    if (action === 'backfill-marker') return 0;
+    if (action === 'adopt-recommended-baseline') return 1;
+    return 2;
   }
 
   private static summarizeMappingDiagnostics(profileResolution: Record<string, unknown>): {
@@ -260,6 +282,38 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
         outboundSkipped: mappingSummary.outboundConfigured - mappingSummary.outboundEnabled,
         skipReasons: mappingSummary.skipReasons,
       },
+    };
+  }
+
+  private toRecommendationActionQueueItem(
+    node: NodeRuntimeDiagnosticsEntry,
+  ): RecommendationActionQueueItemV1 {
+    let action: RecommendationActionKindV1 = 'none';
+    if (!node.homeyDeviceId) {
+      action = 'none';
+    } else if (node.recommendation.backfillNeeded) {
+      action = 'backfill-marker';
+    } else if (node.recommendation.available) {
+      action = 'adopt-recommended-baseline';
+    }
+
+    let reason = node.recommendation.reason ?? 'none';
+    if (action === 'none' && !node.homeyDeviceId) {
+      reason = 'missing-homey-device-id';
+    }
+
+    return {
+      homeyDeviceId: node.homeyDeviceId,
+      nodeId: node.nodeId,
+      profileId: node.profile.profileId,
+      action,
+      reason,
+      recommendationAvailable: node.recommendation.available,
+      recommendationBackfillNeeded: node.recommendation.backfillNeeded,
+      recommendationProjectionVersion: node.recommendation.projectionVersion,
+      currentBaselineHash: node.recommendation.currentBaselineHash,
+      storedBaselineHash: node.recommendation.storedBaselineHash,
+      currentPipelineFingerprint: node.recommendation.currentPipelineFingerprint,
     };
   }
 
@@ -629,6 +683,144 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
       compiledProfiles: this.getCompiledProfilesStatus(),
       curation: this.getCurationStatus(),
       nodes: nodeDiagnostics,
+    };
+  }
+
+  async getRecommendationActionQueue(options?: {
+    homeyDeviceId?: string;
+    includeNoAction?: boolean;
+  }): Promise<{
+    generatedAt: string;
+    total: number;
+    actionable: number;
+    items: RecommendationActionQueueItemV1[];
+  }> {
+    const diagnostics = await this.getNodeRuntimeDiagnostics({
+      homeyDeviceId: options?.homeyDeviceId,
+    });
+    const includeNoAction = options?.includeNoAction === true;
+    const queueItems = diagnostics.nodes.map((node) => this.toRecommendationActionQueueItem(node));
+    const items = includeNoAction
+      ? queueItems
+      : queueItems.filter((item) => item.action !== 'none');
+
+    items.sort((a, b) => {
+      const priorityA = Zwavejs2HomeyApp.toRecommendationActionPriority(a.action);
+      const priorityB = Zwavejs2HomeyApp.toRecommendationActionPriority(b.action);
+      if (priorityA !== priorityB) return priorityA - priorityB;
+      const nodeA = a.nodeId ?? Number.MAX_SAFE_INTEGER;
+      const nodeB = b.nodeId ?? Number.MAX_SAFE_INTEGER;
+      if (nodeA !== nodeB) return nodeA - nodeB;
+      const idA = a.homeyDeviceId ?? '';
+      const idB = b.homeyDeviceId ?? '';
+      return idA.localeCompare(idB);
+    });
+
+    return {
+      generatedAt: new Date().toISOString(),
+      total: queueItems.length,
+      actionable: queueItems.filter((item) => item.action !== 'none').length,
+      items,
+    };
+  }
+
+  async backfillMissingCurationBaselineMarkers(options?: { homeyDeviceId?: string }): Promise<{
+    updated: number;
+    createdEntries: number;
+    skipped: number;
+    items: Array<{
+      homeyDeviceId: string | null;
+      action: RecommendationActionKindV1;
+      updated: boolean;
+      createdEntry: boolean;
+      reason: string;
+    }>;
+  }> {
+    const queue = await this.getRecommendationActionQueue({
+      homeyDeviceId: options?.homeyDeviceId,
+      includeNoAction: true,
+    });
+
+    const items = [];
+    let nextDocument = this.curationRuntime.document;
+    let updated = 0;
+    let createdEntries = 0;
+
+    for (const item of queue.items) {
+      if (item.action !== 'backfill-marker') {
+        items.push({
+          homeyDeviceId: item.homeyDeviceId,
+          action: item.action,
+          updated: false,
+          createdEntry: false,
+          reason: 'action-not-backfill',
+        });
+        continue;
+      }
+      if (!item.homeyDeviceId) {
+        items.push({
+          homeyDeviceId: null,
+          action: item.action,
+          updated: false,
+          createdEntry: false,
+          reason: 'missing-homey-device-id',
+        });
+        continue;
+      }
+      if (!item.currentBaselineHash) {
+        items.push({
+          homeyDeviceId: item.homeyDeviceId,
+          action: item.action,
+          updated: false,
+          createdEntry: false,
+          reason: 'baseline-marker-unavailable',
+        });
+        continue;
+      }
+
+      const nowIso = new Date().toISOString();
+      const baselineMarker: {
+        projectionVersion: string;
+        baselineProfileHash: string;
+        updatedAt: string;
+        pipelineFingerprint?: string;
+      } = {
+        projectionVersion:
+          item.recommendationProjectionVersion ?? BASELINE_MARKER_PROJECTION_VERSION,
+        baselineProfileHash: item.currentBaselineHash,
+        updatedAt: nowIso,
+      };
+      if (item.currentPipelineFingerprint) {
+        baselineMarker.pipelineFingerprint = item.currentPipelineFingerprint;
+      }
+      const mutation = upsertCurationBaselineMarkerV1(
+        nextDocument,
+        item.homeyDeviceId,
+        baselineMarker,
+        { now: nowIso },
+      );
+      nextDocument = mutation.document;
+      updated += 1;
+      if (mutation.createdEntry) createdEntries += 1;
+      items.push({
+        homeyDeviceId: item.homeyDeviceId,
+        action: item.action,
+        updated: true,
+        createdEntry: mutation.createdEntry,
+        reason: mutation.createdEntry ? 'created-entry-and-backfilled-marker' : 'backfilled-marker',
+      });
+    }
+
+    if (updated > 0) {
+      this.homey.settings.set(CURATION_SETTINGS_KEY, nextDocument);
+      await this.lifecycleQueue;
+    }
+
+    return {
+      updated,
+      createdEntries,
+      skipped: items.length - updated,
+      items,
     };
   }
 
