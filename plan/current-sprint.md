@@ -15,6 +15,16 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 ## Recently Completed
 
+- Latest Phase 5 Homey app API routing slice:
+  - added Homey app API routes in `co.lazylabs.zwavejs2homey/api.js` for diagnostics and recommendation orchestration
+  - registered API endpoints in `.homeycompose/app.json` + `app.json`:
+    - `GET /runtime/diagnostics`
+    - `GET /runtime/recommendations`
+    - `POST /runtime/recommendations/execute`
+    - `POST /runtime/recommendations/execute-batch`
+  - added strict input normalization/validation for query/body payloads
+  - added route-level tests for forwarding and validation behavior
+
 - Latest Phase 5 bridge runtime API surface slice:
   - extended `BridgeDevice` with non-UI runtime orchestration hooks:
     - `getRuntimeDiagnostics(...)`

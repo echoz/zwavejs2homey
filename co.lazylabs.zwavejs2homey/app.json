@@ -14,6 +14,24 @@
   "brandColor": "#2484bf",
   "category": ["tools"],
   "permissions": [],
+  "api": {
+    "getRuntimeDiagnostics": {
+      "method": "GET",
+      "path": "/runtime/diagnostics"
+    },
+    "getRecommendationActionQueue": {
+      "method": "GET",
+      "path": "/runtime/recommendations"
+    },
+    "executeRecommendationAction": {
+      "method": "POST",
+      "path": "/runtime/recommendations/execute"
+    },
+    "executeRecommendationActions": {
+      "method": "POST",
+      "path": "/runtime/recommendations/execute-batch"
+    }
+  },
   "images": {
     "small": "/assets/images/small.png",
     "large": "/assets/images/large.png",

@@ -39,6 +39,11 @@ Design and implement a Homey adapter-owned runtime curation system that applies 
     - `getRecommendationActionQueue`
     - `executeRecommendationAction`
     - `executeRecommendationActions`
+  - Homey app API route layer now exists for settings/custom views:
+    - `GET /runtime/diagnostics`
+    - `GET /runtime/recommendations`
+    - `POST /runtime/recommendations/execute`
+    - `POST /runtime/recommendations/execute-batch`
   - remaining work: Homey UX wiring for diagnostics + adopt/backfill interaction flows
 
 Related ADRs:

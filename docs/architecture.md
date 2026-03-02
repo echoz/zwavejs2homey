@@ -148,6 +148,11 @@ Partially complete / next:
   - `getRecommendationActionQueue(...)`
   - `executeRecommendationAction(...)`
   - `executeRecommendationActions(...)`
+- Homey app API route surface now exposes diagnostics/recommendation orchestration endpoints:
+  - `GET /runtime/diagnostics`
+  - `GET /runtime/recommendations`
+  - `POST /runtime/recommendations/execute`
+  - `POST /runtime/recommendations/execute-batch`
 - app now exposes non-UI recommendation action APIs:
   - `backfillCurationBaselineMarker(homeyDeviceId)`
   - `adoptRecommendedBaseline(homeyDeviceId)`
