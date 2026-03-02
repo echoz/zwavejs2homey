@@ -9,7 +9,9 @@ const {
   evaluateBaselineRecommendationState,
   lowerCurationEntryToRuntimeActions,
   loadCurationRuntimeFromSettings,
+  removeCurationEntryV1,
   resolveCurationEntryFromRuntime,
+  upsertCurationBaselineMarkerV1,
 } = require('../curation.js');
 
 function createValidCurationDocument() {
@@ -305,4 +307,79 @@ test('baseline recommendation requests marker backfill on projection version mis
   assert.equal(result.recommendationAvailable, false);
   assert.equal(result.recommendationReason, 'projection-version-mismatch-backfill');
   assert.equal(result.shouldBackfillMarker, true);
+});
+
+test('upsert baseline marker creates a curation entry when one is missing', () => {
+  const mutation = upsertCurationBaselineMarkerV1(
+    {
+      schemaVersion: CURATION_SCHEMA_VERSION,
+      updatedAt: '2026-03-01T00:00:00.000Z',
+      entries: {},
+    },
+    'homey-device-1',
+    {
+      projectionVersion: '1',
+      baselineProfileHash: 'hash-1',
+      updatedAt: '2026-03-02T00:00:00.000Z',
+      pipelineFingerprint: 'fingerprint-1',
+    },
+    { now: '2026-03-02T00:00:00.000Z' },
+  );
+
+  assert.equal(mutation.createdEntry, true);
+  assert.equal(
+    mutation.document.entries['homey-device-1'].targetDevice.homeyDeviceId,
+    'homey-device-1',
+  );
+  assert.equal(
+    mutation.document.entries['homey-device-1'].baselineMarker.baselineProfileHash,
+    'hash-1',
+  );
+  assert.equal(mutation.document.entries['homey-device-1'].overrides?.collections, undefined);
+});
+
+test('upsert baseline marker preserves existing overrides while updating marker', () => {
+  const mutation = upsertCurationBaselineMarkerV1(
+    createValidCurationDocument(),
+    'homey-device-1',
+    {
+      projectionVersion: '1',
+      baselineProfileHash: 'hash-2',
+      updatedAt: '2026-03-02T00:00:00.000Z',
+    },
+    { now: '2026-03-02T00:00:00.000Z' },
+  );
+
+  assert.equal(mutation.createdEntry, false);
+  assert.equal(
+    mutation.document.entries['homey-device-1'].baselineMarker.baselineProfileHash,
+    'hash-2',
+  );
+  assert.equal(
+    mutation.document.entries['homey-device-1'].overrides.deviceIdentity.homeyClass,
+    'socket',
+  );
+});
+
+test('remove curation entry deletes only the targeted device entry', () => {
+  const document = createValidCurationDocument();
+  document.entries['homey-device-2'] = {
+    targetDevice: {
+      homeyDeviceId: 'homey-device-2',
+    },
+    baselineMarker: {
+      projectionVersion: '1',
+      baselineProfileHash: 'hash-2',
+      updatedAt: '2026-03-01T00:00:00.000Z',
+    },
+    overrides: {},
+    updatedAt: '2026-03-01T00:00:00.000Z',
+  };
+
+  const mutation = removeCurationEntryV1(document, 'homey-device-1', {
+    now: '2026-03-02T00:00:00.000Z',
+  });
+  assert.equal(mutation.removed, true);
+  assert.equal(mutation.document.entries['homey-device-1'], undefined);
+  assert.equal(Boolean(mutation.document.entries['homey-device-2']), true);
 });

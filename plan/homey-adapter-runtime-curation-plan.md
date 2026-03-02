@@ -26,7 +26,10 @@ Design and implement a Homey adapter-owned runtime curation system that applies 
   - node runtime computes recommendation state and persists recommendation diagnostics to `profileResolution`
 - [~] Phase F is partially in place:
   - app-level normalized diagnostics snapshot API exists (`getNodeRuntimeDiagnostics`)
-  - remaining work: UX wiring + adopt/backfill interaction flows
+  - app-level non-UI adopt/backfill action APIs now exist:
+    - `backfillCurationBaselineMarker`
+    - `adoptRecommendedBaseline`
+  - remaining work: Homey UX wiring for diagnostics + adopt/backfill interaction flows
 
 Related ADRs:
 

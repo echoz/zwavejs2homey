@@ -1131,6 +1131,85 @@ function evaluateBaselineRecommendationState(profile, curationEntry, options = {
   };
 }
 
+function cloneCurationDocumentForMutation(document) {
+  const nextDocument = createEmptyCurationDocument();
+  if (isPlainObject(document)) {
+    if (isPlainObject(document.entries)) {
+      nextDocument.entries = deepClone(document.entries);
+    }
+    if (typeof document.updatedAt === 'string' && document.updatedAt.trim().length > 0) {
+      nextDocument.updatedAt = document.updatedAt.trim();
+    }
+  }
+  nextDocument.schemaVersion = CURATION_SCHEMA_VERSION;
+  return nextDocument;
+}
+
+function normalizeBaselineMarkerForStorage(marker, updatedAtFallback) {
+  const markerRecord = assertPlainObject(marker, 'baselineMarker');
+  const normalizedMarker = {
+    projectionVersion: assertNonEmptyString(
+      markerRecord.projectionVersion,
+      'baselineMarker.projectionVersion',
+    ),
+    baselineProfileHash: assertNonEmptyString(
+      markerRecord.baselineProfileHash,
+      'baselineMarker.baselineProfileHash',
+    ),
+    updatedAt:
+      markerRecord.updatedAt !== undefined
+        ? assertIsoTimestamp(markerRecord.updatedAt, 'baselineMarker.updatedAt')
+        : updatedAtFallback,
+  };
+  if (markerRecord.pipelineFingerprint !== undefined) {
+    normalizedMarker.pipelineFingerprint = assertNonEmptyString(
+      markerRecord.pipelineFingerprint,
+      'baselineMarker.pipelineFingerprint',
+    );
+  }
+  return normalizedMarker;
+}
+
+function upsertCurationBaselineMarkerV1(document, homeyDeviceId, baselineMarker, options = {}) {
+  const normalizedHomeyDeviceId = assertNonEmptyString(homeyDeviceId, 'homeyDeviceId');
+  const updatedAt = new Date(options.now ?? Date.now()).toISOString();
+  const normalizedBaselineMarker = normalizeBaselineMarkerForStorage(baselineMarker, updatedAt);
+  const nextDocument = cloneCurationDocumentForMutation(document);
+  const existingEntry = isPlainObject(nextDocument.entries[normalizedHomeyDeviceId])
+    ? nextDocument.entries[normalizedHomeyDeviceId]
+    : undefined;
+  const nextEntry = existingEntry ? deepClone(existingEntry) : {};
+  nextEntry.targetDevice = isPlainObject(nextEntry.targetDevice) ? nextEntry.targetDevice : {};
+  nextEntry.targetDevice.homeyDeviceId = normalizedHomeyDeviceId;
+  if (!isPlainObject(nextEntry.overrides)) nextEntry.overrides = {};
+  nextEntry.baselineMarker = normalizedBaselineMarker;
+  nextEntry.updatedAt = updatedAt;
+  nextDocument.entries[normalizedHomeyDeviceId] = nextEntry;
+  nextDocument.updatedAt = updatedAt;
+  return {
+    document: nextDocument,
+    createdEntry: !existingEntry,
+    updatedAt,
+  };
+}
+
+function removeCurationEntryV1(document, homeyDeviceId, options = {}) {
+  const normalizedHomeyDeviceId = assertNonEmptyString(homeyDeviceId, 'homeyDeviceId');
+  const updatedAt = new Date(options.now ?? Date.now()).toISOString();
+  const nextDocument = cloneCurationDocumentForMutation(document);
+  const removed = Object.prototype.hasOwnProperty.call(
+    nextDocument.entries,
+    normalizedHomeyDeviceId,
+  );
+  if (removed) delete nextDocument.entries[normalizedHomeyDeviceId];
+  nextDocument.updatedAt = updatedAt;
+  return {
+    document: nextDocument,
+    removed,
+    updatedAt,
+  };
+}
+
 module.exports = {
   CURATION_SETTINGS_KEY,
   CURATION_SCHEMA_VERSION,
@@ -1143,4 +1222,6 @@ module.exports = {
   computeBaselineProfileHashV1,
   createBaselineMarkerV1,
   evaluateBaselineRecommendationState,
+  upsertCurationBaselineMarkerV1,
+  removeCurationEntryV1,
 };

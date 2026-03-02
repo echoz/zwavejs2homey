@@ -136,6 +136,18 @@ export interface BaselineRecommendationStateV1 {
   shouldBackfillMarker: boolean;
 }
 
+export interface CurationBaselineMarkerMutationResultV1 {
+  document: HomeyCurationDocumentV1;
+  createdEntry: boolean;
+  updatedAt: string;
+}
+
+export interface CurationEntryRemovalResultV1 {
+  document: HomeyCurationDocumentV1;
+  removed: boolean;
+  updatedAt: string;
+}
+
 export function loadCurationRuntimeFromSettings(settingsValue: unknown): HomeyCurationRuntimeV1;
 
 export function resolveCurationEntryFromRuntime(
@@ -183,3 +195,20 @@ export function evaluateBaselineRecommendationState(
     now?: number | string | Date;
   },
 ): BaselineRecommendationStateV1;
+
+export function upsertCurationBaselineMarkerV1(
+  document: HomeyCurationDocumentV1,
+  homeyDeviceId: string,
+  baselineMarker: HomeyBaselineMarkerV1,
+  options?: {
+    now?: number | string | Date;
+  },
+): CurationBaselineMarkerMutationResultV1;
+
+export function removeCurationEntryV1(
+  document: HomeyCurationDocumentV1,
+  homeyDeviceId: string,
+  options?: {
+    now?: number | string | Date;
+  },
+): CurationEntryRemovalResultV1;

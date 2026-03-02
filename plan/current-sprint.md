@@ -15,6 +15,17 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 ## Recently Completed
 
+- Latest Phase 5 recommendation-action API slice:
+  - added curation mutation helpers in `curation.js`:
+    - `upsertCurationBaselineMarkerV1`
+    - `removeCurationEntryV1`
+  - added app-level recommendation action APIs:
+    - `backfillCurationBaselineMarker(homeyDeviceId)`
+    - `adoptRecommendedBaseline(homeyDeviceId)`
+  - backfill now creates/updates `curation.v1` baseline markers from live node diagnostics
+  - adopt now removes per-device curation entry when recommendation is available (v1 full replace)
+  - expanded tests for curation mutations and app-level backfill/adopt behavior
+
 - Latest Phase 5 bridge-diagnostics wiring slice:
   - app runtime now refreshes bridge diagnostics on startup/settings changes and targeted node lifecycle events
   - bridge device now exposes `onRuntimeDiagnosticsRefresh` and stores compact `runtimeDiagnostics` snapshots in device store

@@ -24,9 +24,12 @@ import {
 } from './compiled-profiles';
 import type { HomeyCurationEntryV1, HomeyCurationRuntimeStatusV1 } from './curation';
 import {
+  BASELINE_MARKER_PROJECTION_VERSION,
   CURATION_SETTINGS_KEY,
   loadCurationRuntimeFromSettings,
+  removeCurationEntryV1,
   resolveCurationEntryFromRuntime,
+  upsertCurationBaselineMarkerV1,
 } from './curation';
 import { ZWJS_DEFAULT_BRIDGE_ID } from './pairing';
 
@@ -626,6 +629,119 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
       compiledProfiles: this.getCompiledProfilesStatus(),
       curation: this.getCurationStatus(),
       nodes: nodeDiagnostics,
+    };
+  }
+
+  async backfillCurationBaselineMarker(homeyDeviceId: string): Promise<{
+    updated: boolean;
+    createdEntry: boolean;
+    reason: string;
+  }> {
+    const normalizedHomeyDeviceId = Zwavejs2HomeyApp.toStringOrNull(homeyDeviceId);
+    if (!normalizedHomeyDeviceId) {
+      return {
+        updated: false,
+        createdEntry: false,
+        reason: 'invalid-homey-device-id',
+      };
+    }
+
+    const diagnostics = await this.getNodeRuntimeDiagnostics({
+      homeyDeviceId: normalizedHomeyDeviceId,
+    });
+    const node = diagnostics.nodes[0];
+    if (!node) {
+      return {
+        updated: false,
+        createdEntry: false,
+        reason: 'node-not-found',
+      };
+    }
+    if (!node.recommendation.currentBaselineHash) {
+      return {
+        updated: false,
+        createdEntry: false,
+        reason: 'baseline-marker-unavailable',
+      };
+    }
+
+    const nowIso = new Date().toISOString();
+    const baselineMarker: {
+      projectionVersion: string;
+      baselineProfileHash: string;
+      updatedAt: string;
+      pipelineFingerprint?: string;
+    } = {
+      projectionVersion:
+        node.recommendation.projectionVersion ?? BASELINE_MARKER_PROJECTION_VERSION,
+      baselineProfileHash: node.recommendation.currentBaselineHash,
+      updatedAt: nowIso,
+    };
+    if (node.recommendation.currentPipelineFingerprint) {
+      baselineMarker.pipelineFingerprint = node.recommendation.currentPipelineFingerprint;
+    }
+    const mutation = upsertCurationBaselineMarkerV1(
+      this.curationRuntime.document,
+      normalizedHomeyDeviceId,
+      baselineMarker,
+      { now: nowIso },
+    );
+    this.homey.settings.set(CURATION_SETTINGS_KEY, mutation.document);
+    await this.lifecycleQueue;
+    return {
+      updated: true,
+      createdEntry: mutation.createdEntry,
+      reason: mutation.createdEntry ? 'created-entry-and-backfilled-marker' : 'backfilled-marker',
+    };
+  }
+
+  async adoptRecommendedBaseline(homeyDeviceId: string): Promise<{
+    adopted: boolean;
+    reason: string;
+  }> {
+    const normalizedHomeyDeviceId = Zwavejs2HomeyApp.toStringOrNull(homeyDeviceId);
+    if (!normalizedHomeyDeviceId) {
+      return {
+        adopted: false,
+        reason: 'invalid-homey-device-id',
+      };
+    }
+
+    const diagnostics = await this.getNodeRuntimeDiagnostics({
+      homeyDeviceId: normalizedHomeyDeviceId,
+    });
+    const node = diagnostics.nodes[0];
+    if (!node) {
+      return {
+        adopted: false,
+        reason: 'node-not-found',
+      };
+    }
+    if (node.recommendation.backfillNeeded) {
+      return {
+        adopted: false,
+        reason: 'marker-backfill-required',
+      };
+    }
+    if (!node.recommendation.available) {
+      return {
+        adopted: false,
+        reason: 'recommendation-unavailable',
+      };
+    }
+
+    const mutation = removeCurationEntryV1(this.curationRuntime.document, normalizedHomeyDeviceId);
+    if (!mutation.removed) {
+      return {
+        adopted: false,
+        reason: 'curation-entry-missing',
+      };
+    }
+    this.homey.settings.set(CURATION_SETTINGS_KEY, mutation.document);
+    await this.lifecycleQueue;
+    return {
+      adopted: true,
+      reason: 'adopted-and-removed-curation-entry',
     };
   }
 };

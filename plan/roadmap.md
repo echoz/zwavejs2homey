@@ -87,11 +87,14 @@ Done so far:
 - baseline marker hash/recommendation-state runtime detection integrated into node sync diagnostics
 - app-facing normalized diagnostics snapshot API for node runtime state (`getNodeRuntimeDiagnostics`)
 - bridge-device diagnostics refresh wiring (startup/settings/events) with compact stored summary snapshots
+- app-facing recommendation actions:
+  - baseline marker backfill (`backfillCurationBaselineMarker`)
+  - recommendation adopt/full-replace (`adoptRecommendedBaseline`)
 
 In progress / next:
 
 1. wire diagnostics snapshot into Homey-facing UX/settings paths
-2. implement recommendation backfill/adopt flows
+2. wire backfill/adopt actions into Homey-facing UX/settings flows
 3. continue broadening runtime mapping coverage with tests
 
 Exit criteria:

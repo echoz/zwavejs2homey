@@ -146,6 +146,14 @@ function createNodeDiagnosticsDevice({ id, bridgeId = 'main', nodeId, profileRes
   };
 }
 
+function createCurationDocument(entries) {
+  return {
+    schemaVersion: 'homey-curation/v1',
+    updatedAt: '2026-03-01T00:00:00.000Z',
+    entries,
+  };
+}
+
 function loadAppClass(nodeDevices, bridgeDevices = []) {
   const modulePath = path.resolve(__dirname, '../.homeybuild/app.js');
   const originalLoad = Module._load;
@@ -489,6 +497,130 @@ test('app diagnostics snapshot supports homeyDeviceId filtering', async () => {
   assert.equal(snapshot.nodes.length, 1);
   assert.equal(snapshot.nodes[0].homeyDeviceId, 'main:8');
   assert.equal(snapshot.nodes[0].recommendation.available, true);
+
+  await app.onUninit();
+});
+
+test('app can backfill curation baseline marker for a node from runtime diagnostics', async () => {
+  const nodeDevices = [
+    createNodeDiagnosticsDevice({
+      id: 'main:8',
+      nodeId: 8,
+      profileResolution: {
+        profileId: 'profile-main-8',
+        recommendationProjectionVersion: '1',
+        recommendationAvailable: false,
+        recommendationBackfillNeeded: true,
+        currentBaselineHash: 'current-hash-8',
+        currentBaselinePipelineFingerprint: 'pf-8',
+        mappingDiagnostics: [],
+      },
+    }),
+  ];
+
+  const { app } = loadAppClass(nodeDevices);
+  await app.onInit();
+  const result = await app.backfillCurationBaselineMarker('main:8');
+  assert.equal(result.updated, true);
+  assert.equal(result.createdEntry, true);
+  assert.equal(result.reason, 'created-entry-and-backfilled-marker');
+
+  const settingsValue = app.homey.settings.get('curation.v1');
+  assert.equal(settingsValue.entries['main:8'].targetDevice.homeyDeviceId, 'main:8');
+  assert.equal(
+    settingsValue.entries['main:8'].baselineMarker.baselineProfileHash,
+    'current-hash-8',
+  );
+  assert.equal(settingsValue.entries['main:8'].baselineMarker.pipelineFingerprint, 'pf-8');
+  assert.deepEqual(settingsValue.entries['main:8'].overrides, {});
+
+  await app.onUninit();
+});
+
+test('app can adopt recommended baseline by removing curation entry', async () => {
+  const nodeDevices = [
+    createNodeDiagnosticsDevice({
+      id: 'main:8',
+      nodeId: 8,
+      profileResolution: {
+        profileId: 'profile-main-8',
+        recommendationAvailable: true,
+        recommendationBackfillNeeded: false,
+        recommendationReason: 'baseline-hash-changed',
+        currentBaselineHash: 'next-hash-8',
+        mappingDiagnostics: [],
+      },
+    }),
+  ];
+  const { app } = loadAppClass(nodeDevices);
+  app.homey.settings.set(
+    'curation.v1',
+    createCurationDocument({
+      'main:8': {
+        targetDevice: { homeyDeviceId: 'main:8' },
+        baselineMarker: {
+          projectionVersion: '1',
+          baselineProfileHash: 'old-hash-8',
+          updatedAt: '2026-03-01T00:00:00.000Z',
+        },
+        overrides: {
+          deviceIdentity: {
+            homeyClass: 'socket',
+          },
+        },
+        updatedAt: '2026-03-01T00:00:00.000Z',
+      },
+    }),
+  );
+  await app.onInit();
+
+  const result = await app.adoptRecommendedBaseline('main:8');
+  assert.equal(result.adopted, true);
+  assert.equal(result.reason, 'adopted-and-removed-curation-entry');
+
+  const settingsValue = app.homey.settings.get('curation.v1');
+  assert.equal(settingsValue.entries['main:8'], undefined);
+
+  await app.onUninit();
+});
+
+test('app adopt recommended baseline is blocked when recommendation is unavailable', async () => {
+  const nodeDevices = [
+    createNodeDiagnosticsDevice({
+      id: 'main:8',
+      nodeId: 8,
+      profileResolution: {
+        profileId: 'profile-main-8',
+        recommendationAvailable: false,
+        recommendationBackfillNeeded: false,
+        mappingDiagnostics: [],
+      },
+    }),
+  ];
+  const { app } = loadAppClass(nodeDevices);
+  app.homey.settings.set(
+    'curation.v1',
+    createCurationDocument({
+      'main:8': {
+        targetDevice: { homeyDeviceId: 'main:8' },
+        baselineMarker: {
+          projectionVersion: '1',
+          baselineProfileHash: 'old-hash-8',
+          updatedAt: '2026-03-01T00:00:00.000Z',
+        },
+        overrides: {},
+        updatedAt: '2026-03-01T00:00:00.000Z',
+      },
+    }),
+  );
+  await app.onInit();
+
+  const result = await app.adoptRecommendedBaseline('main:8');
+  assert.equal(result.adopted, false);
+  assert.equal(result.reason, 'recommendation-unavailable');
+
+  const settingsValue = app.homey.settings.get('curation.v1');
+  assert.equal(Boolean(settingsValue.entries['main:8']), true);
 
   await app.onUninit();
 });
