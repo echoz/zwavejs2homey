@@ -306,6 +306,7 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
           refreshNodeId,
           `event:${event.type}:node-${refreshNodeId}`,
         );
+        await this.refreshBridgeRuntimeDiagnostics(`event:${event.type}:node-${refreshNodeId}`);
       }).catch((error: unknown) => {
         this.error('Failed to refresh node runtime mappings from event', {
           eventType: event.type,
@@ -388,6 +389,26 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
     }
   }
 
+  private async refreshBridgeRuntimeDiagnostics(reason: string): Promise<void> {
+    try {
+      const bridgeDriver = this.homey.drivers.getDriver('bridge');
+      const devices = bridgeDriver.getDevices() as Array<{
+        onRuntimeDiagnosticsRefresh?: (refreshReason: string) => Promise<void>;
+      }>;
+      this.log('Refreshing bridge runtime diagnostics', {
+        reason,
+        devices: devices.length,
+      });
+      for (const device of devices) {
+        if (typeof device.onRuntimeDiagnosticsRefresh === 'function') {
+          await device.onRuntimeDiagnosticsRefresh(reason);
+        }
+      }
+    } catch (error) {
+      this.error('Failed to refresh bridge runtime diagnostics', { reason, error });
+    }
+  }
+
   private getRuntimeRefreshNodeIdFromEvent(event: ZwjsClientEvent): number | undefined {
     if (!Zwavejs2HomeyApp.NODE_EVENT_REFRESH_TYPES.has(event.type)) {
       return undefined;
@@ -450,12 +471,15 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
       if (key === ZWJS_CONNECTION_SETTINGS_KEY) {
         await this.reloadZwjsClient('settings-updated');
         await this.refreshNodeRuntimeMappings('zwjs-connection-updated');
+        await this.refreshBridgeRuntimeDiagnostics('zwjs-connection-updated');
       } else if (key === COMPILED_PROFILES_PATH_SETTINGS_KEY) {
         await this.loadCompiledProfilesRuntime('settings-updated');
         await this.refreshNodeRuntimeMappings('compiled-profiles-updated');
+        await this.refreshBridgeRuntimeDiagnostics('compiled-profiles-updated');
       } else if (key === CURATION_SETTINGS_KEY) {
         this.loadCurationRuntime('settings-updated');
         await this.refreshNodeRuntimeMappings('curation-updated');
+        await this.refreshBridgeRuntimeDiagnostics('curation-updated');
       }
     }).catch((error: unknown) => {
       this.error('Failed to apply settings update', { key, error });
@@ -475,6 +499,7 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
       this.loadCurationRuntime('startup');
       await this.startZwjsClient('startup');
       await this.refreshNodeRuntimeMappings('startup');
+      await this.refreshBridgeRuntimeDiagnostics('startup');
     });
 
     this.log('zwavejs2homey initialized');

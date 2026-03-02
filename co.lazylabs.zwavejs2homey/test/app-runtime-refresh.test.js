@@ -26,14 +26,20 @@ class FakeSettings extends EventEmitter {
 }
 
 class FakeDriversManager {
-  constructor(nodeDevices) {
+  constructor(nodeDevices, bridgeDevices = []) {
     this.nodeDevices = nodeDevices;
+    this.bridgeDevices = bridgeDevices;
   }
 
   getDriver(driverId) {
     if (driverId === 'node') {
       return {
         getDevices: () => this.nodeDevices,
+      };
+    }
+    if (driverId === 'bridge') {
+      return {
+        getDevices: () => this.bridgeDevices,
       };
     }
     throw new Error(`Unknown driver: ${driverId}`);
@@ -140,7 +146,7 @@ function createNodeDiagnosticsDevice({ id, bridgeId = 'main', nodeId, profileRes
   };
 }
 
-function loadAppClass(nodeDevices) {
+function loadAppClass(nodeDevices, bridgeDevices = []) {
   const modulePath = path.resolve(__dirname, '../.homeybuild/app.js');
   const originalLoad = Module._load;
   const coreMock = createMockCoreModule();
@@ -168,7 +174,7 @@ function loadAppClass(nodeDevices) {
     delete require.cache[modulePath];
     const AppClass = require(modulePath);
     const app = new AppClass();
-    app.homey.drivers = new FakeDriversManager(nodeDevices);
+    app.homey.drivers = new FakeDriversManager(nodeDevices, bridgeDevices);
     return {
       app,
       coreMock,
@@ -213,6 +219,39 @@ test('app refreshes node runtime mappings on startup and settings changes', asyn
   });
   await flushEventQueue();
   assert.equal(refreshCalls.includes('curation-updated'), true);
+
+  await app.onUninit();
+});
+
+test('app refreshes bridge runtime diagnostics on startup and settings changes', async () => {
+  const bridgeRefreshCalls = [];
+  const bridgeDevices = [
+    {
+      async onRuntimeDiagnosticsRefresh(reason) {
+        bridgeRefreshCalls.push(reason);
+      },
+    },
+  ];
+
+  const { app } = loadAppClass([], bridgeDevices);
+  await app.onInit();
+  assert.deepEqual(bridgeRefreshCalls, ['startup']);
+
+  app.homey.settings.set('compiled_profiles_file', '/tmp/next-compiled.json');
+  await flushEventQueue();
+  assert.equal(bridgeRefreshCalls.includes('compiled-profiles-updated'), true);
+
+  app.homey.settings.set('zwjs_connection', { url: 'ws://127.0.0.1:3001' });
+  await flushEventQueue();
+  assert.equal(bridgeRefreshCalls.includes('zwjs-connection-updated'), true);
+
+  app.homey.settings.set('curation.v1', {
+    schemaVersion: 'homey-curation/v1',
+    updatedAt: '2026-03-01T00:00:00.000Z',
+    entries: {},
+  });
+  await flushEventQueue();
+  assert.equal(bridgeRefreshCalls.includes('curation-updated'), true);
 
   await app.onUninit();
 });
@@ -275,6 +314,39 @@ test('app performs targeted node runtime refresh from node lifecycle events', as
   await flushEventQueue();
   assert.equal(node5Calls.length, 1);
   assert.equal(node8Calls.length, 1);
+
+  await app.onUninit();
+});
+
+test('app refreshes bridge diagnostics from targeted node lifecycle events', async () => {
+  const bridgeRefreshCalls = [];
+  const bridgeDevices = [
+    {
+      async onRuntimeDiagnosticsRefresh(reason) {
+        bridgeRefreshCalls.push(reason);
+      },
+    },
+  ];
+
+  const { app, coreMock } = loadAppClass([], bridgeDevices);
+  await app.onInit();
+  bridgeRefreshCalls.length = 0;
+
+  coreMock.mockClient.emitEvent({
+    type: 'zwjs.event.node.metadata-updated',
+    event: {
+      nodeId: 5,
+    },
+  });
+  await flushEventQueue();
+  assert.deepEqual(bridgeRefreshCalls, ['event:zwjs.event.node.metadata-updated:node-5']);
+
+  coreMock.mockClient.emitEvent({
+    type: 'zwjs.event.driver.logging',
+    event: { message: 'ignore' },
+  });
+  await flushEventQueue();
+  assert.equal(bridgeRefreshCalls.length, 1);
 
   await app.onUninit();
 });

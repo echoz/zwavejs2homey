@@ -86,6 +86,7 @@ Done so far:
 - deterministic curation lowering/apply integrated into node runtime path
 - baseline marker hash/recommendation-state runtime detection integrated into node sync diagnostics
 - app-facing normalized diagnostics snapshot API for node runtime state (`getNodeRuntimeDiagnostics`)
+- bridge-device diagnostics refresh wiring (startup/settings/events) with compact stored summary snapshots
 
 In progress / next:
 

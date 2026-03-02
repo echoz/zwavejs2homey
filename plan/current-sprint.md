@@ -15,6 +15,12 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 ## Recently Completed
 
+- Latest Phase 5 bridge-diagnostics wiring slice:
+  - app runtime now refreshes bridge diagnostics on startup/settings changes and targeted node lifecycle events
+  - bridge device now exposes `onRuntimeDiagnosticsRefresh` and stores compact `runtimeDiagnostics` snapshots in device store
+  - snapshots include zwjs/compiled/curation status and aggregated node summary counters (curation/recommendation/mapping skips)
+  - expanded app + driver harness tests for refresh orchestration and bridge-device diagnostics persistence
+
 - Latest Phase 5 driver-harness test slice:
   - added new Homey driver/device harness tests in `co.lazylabs.zwavejs2homey/test/driver-harness.test.js`
   - covered bridge singleton pairing semantics in `drivers/bridge/driver.ts`

@@ -142,6 +142,7 @@ Partially complete / next:
   - per-device recommendation state computed during node profile sync
   - recommendation diagnostics persisted in `profileResolution`
 - app now exposes normalized node runtime diagnostics via `getNodeRuntimeDiagnostics(...)`
+- bridge device diagnostics snapshots are now refreshed from app lifecycle/settings/events and persisted in device store (`runtimeDiagnostics`)
 - Homey settings/diagnostics UX consumption around curation and recommendations
 - expanded runtime mapping vertical coverage
 

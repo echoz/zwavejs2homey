@@ -32,6 +32,7 @@ class FakeHomeyDevice {
   constructor() {
     this.homey = { app: {} };
     this._logs = [];
+    this._store = new Map();
   }
 
   _configureHarness({ app } = {}) {
@@ -42,8 +43,16 @@ class FakeHomeyDevice {
     return [...this._logs];
   }
 
+  _getStoreValue(key) {
+    return this._store.get(key);
+  }
+
   log(message, meta) {
     this._logs.push({ message, meta });
+  }
+
+  async setStoreValue(key, value) {
+    this._store.set(key, value);
   }
 }
 
@@ -144,7 +153,7 @@ test('node driver returns pair candidates with controller/duplicates filtered ou
   assert.equal(candidates[0]?.data?.nodeId, 8);
 });
 
-test('bridge device init logs bridge and zwjs status from app runtime access', async () => {
+test('bridge device init logs bridge status and stores runtime diagnostics snapshot', async () => {
   const device = new BridgeDevice();
   device._configureHarness({
     app: {
@@ -155,6 +164,43 @@ test('bridge device init logs bridge and zwjs status from app runtime access', a
           lifecycle: 'started',
         }),
       }),
+      async getNodeRuntimeDiagnostics() {
+        return {
+          generatedAt: '2026-03-02T12:00:00.000Z',
+          bridgeId: 'main',
+          zwjs: {
+            available: true,
+            transportConnected: true,
+            lifecycle: 'started',
+          },
+          compiledProfiles: {
+            loaded: true,
+            sourcePath: '/tmp/mock.json',
+            generatedAt: '2026-03-01T00:00:00.000Z',
+            pipelineFingerprint: 'pf-1',
+            entryCount: 3,
+            errorMessage: null,
+          },
+          curation: {
+            loaded: true,
+            source: 'settings',
+            entryCount: 2,
+            errorMessage: null,
+          },
+          nodes: [
+            {
+              curation: { entryPresent: true },
+              recommendation: { available: true, backfillNeeded: false },
+              mapping: { inboundSkipped: 1, outboundSkipped: 0 },
+            },
+            {
+              curation: { entryPresent: false },
+              recommendation: { available: false, backfillNeeded: true },
+              mapping: { inboundSkipped: 0, outboundSkipped: 2 },
+            },
+          ],
+        };
+      },
     },
   });
 
@@ -165,4 +211,14 @@ test('bridge device init logs bridge and zwjs status from app runtime access', a
   assert.equal(logs[0]?.meta?.bridgeId, 'main');
   assert.equal(logs[0]?.meta?.transportConnected, true);
   assert.equal(logs[0]?.meta?.lifecycle, 'started');
+
+  const diagnostics = device._getStoreValue('runtimeDiagnostics');
+  assert.ok(diagnostics);
+  assert.equal(diagnostics.reason, 'init');
+  assert.equal(diagnostics.nodeSummary.total, 2);
+  assert.equal(diagnostics.nodeSummary.curationEntryCount, 1);
+  assert.equal(diagnostics.nodeSummary.recommendationAvailableCount, 1);
+  assert.equal(diagnostics.nodeSummary.recommendationBackfillCount, 1);
+  assert.equal(diagnostics.nodeSummary.inboundSkipped, 1);
+  assert.equal(diagnostics.nodeSummary.outboundSkipped, 2);
 });
