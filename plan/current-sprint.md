@@ -15,6 +15,11 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 ## Recently Completed
 
+- Latest Phase 5 recommendation execution entrypoint slice:
+  - added single-device recommendation executor (`executeRecommendationAction`) with `auto` selection + explicit action mismatch protection
+  - added queue-driven executor (`executeRecommendationActions`) that runs deterministic recommendation actions and returns execution summaries
+  - expanded app runtime tests for auto-backfill execution, explicit mismatch handling, and queued execution summaries
+
 - Latest Phase 5 recommendation-workflow orchestration slice:
   - added app-level recommendation queue API (`getRecommendationActionQueue`) with deterministic action ordering (`backfill` -> `adopt` -> `none`)
   - added batch marker backfill API (`backfillMissingCurationBaselineMarkers`) to update all missing/outdated markers in one settings write

@@ -92,6 +92,8 @@ Done so far:
   - recommendation adopt/full-replace (`adoptRecommendedBaseline`)
 - recommendation workflow orchestration APIs:
   - action queue (`getRecommendationActionQueue`)
+  - single-action execution (`executeRecommendationAction`)
+  - queued execution summary (`executeRecommendationActions`)
   - batch backfill (`backfillMissingCurationBaselineMarkers`)
 
 In progress / next:

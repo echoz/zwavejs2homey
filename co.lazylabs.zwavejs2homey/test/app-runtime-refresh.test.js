@@ -743,3 +743,176 @@ test('app can batch-backfill missing baseline markers in one settings update', a
   assert.equal(settingsValue.entries['main:5'], undefined);
   await app.onUninit();
 });
+
+test('app executeRecommendationAction auto-selects backfill action and applies marker', async () => {
+  const nodeDevices = [
+    createNodeDiagnosticsDevice({
+      id: 'main:12',
+      nodeId: 12,
+      profileResolution: {
+        profileId: 'profile-main-12',
+        recommendationBackfillNeeded: true,
+        recommendationReason: 'marker-missing-backfill',
+        recommendationProjectionVersion: '1',
+        currentBaselineHash: 'hash-12',
+        currentBaselinePipelineFingerprint: 'pf-12',
+        mappingDiagnostics: [],
+      },
+    }),
+  ];
+
+  const { app } = loadAppClass(nodeDevices);
+  await app.onInit();
+
+  const result = await app.executeRecommendationAction({
+    homeyDeviceId: 'main:12',
+  });
+
+  assert.equal(result.requestedAction, 'auto');
+  assert.equal(result.selectedAction, 'backfill-marker');
+  assert.equal(result.executed, true);
+  assert.equal(result.reason, 'created-entry-and-backfilled-marker');
+  assert.equal(result.createdEntry, true);
+
+  const settingsValue = app.homey.settings.get('curation.v1');
+  assert.equal(settingsValue.entries['main:12'].baselineMarker.baselineProfileHash, 'hash-12');
+  assert.equal(settingsValue.entries['main:12'].baselineMarker.pipelineFingerprint, 'pf-12');
+
+  await app.onUninit();
+});
+
+test('app executeRecommendationAction rejects explicit action mismatch', async () => {
+  const nodeDevices = [
+    createNodeDiagnosticsDevice({
+      id: 'main:8',
+      nodeId: 8,
+      profileResolution: {
+        profileId: 'profile-main-8',
+        recommendationAvailable: true,
+        recommendationBackfillNeeded: false,
+        recommendationReason: 'baseline-hash-changed',
+        currentBaselineHash: 'hash-8',
+        mappingDiagnostics: [],
+      },
+    }),
+  ];
+
+  const { app } = loadAppClass(nodeDevices);
+  await app.onInit();
+
+  const result = await app.executeRecommendationAction({
+    homeyDeviceId: 'main:8',
+    action: 'backfill-marker',
+  });
+
+  assert.equal(result.executed, false);
+  assert.equal(result.selectedAction, 'adopt-recommended-baseline');
+  assert.equal(result.reason, 'action-mismatch');
+
+  await app.onUninit();
+});
+
+test('app executeRecommendationAction rejects invalid action selection values', async () => {
+  const nodeDevices = [
+    createNodeDiagnosticsDevice({
+      id: 'main:8',
+      nodeId: 8,
+      profileResolution: {
+        profileId: 'profile-main-8',
+        recommendationAvailable: true,
+        recommendationBackfillNeeded: false,
+        recommendationReason: 'baseline-hash-changed',
+        currentBaselineHash: 'hash-8',
+        mappingDiagnostics: [],
+      },
+    }),
+  ];
+
+  const { app } = loadAppClass(nodeDevices);
+  await app.onInit();
+
+  const result = await app.executeRecommendationAction({
+    homeyDeviceId: 'main:8',
+    action: 'bogus-action',
+  });
+
+  assert.equal(result.executed, false);
+  assert.equal(result.selectedAction, 'none');
+  assert.equal(result.reason, 'invalid-action-selection');
+
+  await app.onUninit();
+});
+
+test('app executeRecommendationActions processes queue and returns execution summary', async () => {
+  const nodeDevices = [
+    createNodeDiagnosticsDevice({
+      id: 'main:12',
+      nodeId: 12,
+      profileResolution: {
+        profileId: 'profile-main-12',
+        recommendationBackfillNeeded: true,
+        recommendationReason: 'marker-missing-backfill',
+        recommendationProjectionVersion: '1',
+        currentBaselineHash: 'hash-12',
+        mappingDiagnostics: [],
+      },
+    }),
+    createNodeDiagnosticsDevice({
+      id: 'main:8',
+      nodeId: 8,
+      profileResolution: {
+        profileId: 'profile-main-8',
+        recommendationAvailable: true,
+        recommendationBackfillNeeded: false,
+        recommendationReason: 'baseline-hash-changed',
+        currentBaselineHash: 'next-hash-8',
+        storedBaselineHash: 'old-hash-8',
+        mappingDiagnostics: [],
+      },
+    }),
+    createNodeDiagnosticsDevice({
+      id: 'main:5',
+      nodeId: 5,
+      profileResolution: {
+        profileId: 'profile-main-5',
+        recommendationAvailable: false,
+        recommendationBackfillNeeded: false,
+        recommendationReason: 'baseline-hash-unchanged',
+        mappingDiagnostics: [],
+      },
+    }),
+  ];
+
+  const { app } = loadAppClass(nodeDevices);
+  app.homey.settings.set(
+    'curation.v1',
+    createCurationDocument({
+      'main:8': {
+        targetDevice: { homeyDeviceId: 'main:8' },
+        baselineMarker: {
+          projectionVersion: '1',
+          baselineProfileHash: 'old-hash-8',
+          updatedAt: '2026-03-01T00:00:00.000Z',
+        },
+        overrides: {},
+        updatedAt: '2026-03-01T00:00:00.000Z',
+      },
+    }),
+  );
+  await app.onInit();
+
+  const summary = await app.executeRecommendationActions();
+  assert.equal(summary.total, 2);
+  assert.equal(summary.executed, 2);
+  assert.equal(summary.skipped, 0);
+  assert.equal(summary.results.length, 2);
+  assert.equal(summary.results[0].selectedAction, 'backfill-marker');
+  assert.equal(summary.results[1].selectedAction, 'adopt-recommended-baseline');
+
+  const settingsValue = app.homey.settings.get('curation.v1');
+  assert.equal(Boolean(settingsValue.entries['main:12']), true);
+  assert.equal(settingsValue.entries['main:8'], undefined);
+  assert.equal(settingsValue.entries['main:5'], undefined);
+
+  await app.onUninit();
+});

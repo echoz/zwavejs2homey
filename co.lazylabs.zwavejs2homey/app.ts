@@ -98,6 +98,17 @@ interface RecommendationActionQueueItemV1 {
   currentPipelineFingerprint: string | null;
 }
 
+type RecommendationActionSelectionV1 = RecommendationActionKindV1 | 'auto';
+
+interface RecommendationActionExecutionResultV1 {
+  homeyDeviceId: string | null;
+  requestedAction: RecommendationActionSelectionV1;
+  selectedAction: RecommendationActionKindV1;
+  executed: boolean;
+  reason: string;
+  createdEntry?: boolean;
+}
+
 module.exports = class Zwavejs2HomeyApp extends Homey.App {
   private zwjsClient?: ZwjsClient;
   private readonly bridgeId = ZWJS_DEFAULT_BRIDGE_ID;
@@ -143,6 +154,17 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
     if (action === 'backfill-marker') return 0;
     if (action === 'adopt-recommended-baseline') return 1;
     return 2;
+  }
+
+  private static toRecommendationActionSelection(
+    value: unknown,
+  ): RecommendationActionSelectionV1 | null {
+    if (typeof value === 'undefined') return 'auto';
+    if (value === 'auto') return value;
+    if (value === 'backfill-marker') return value;
+    if (value === 'adopt-recommended-baseline') return value;
+    if (value === 'none') return value;
+    return null;
   }
 
   private static summarizeMappingDiagnostics(profileResolution: Record<string, unknown>): {
@@ -721,6 +743,157 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
       total: queueItems.length,
       actionable: queueItems.filter((item) => item.action !== 'none').length,
       items,
+    };
+  }
+
+  async executeRecommendationAction(options: {
+    homeyDeviceId: string;
+    action?: RecommendationActionSelectionV1;
+  }): Promise<RecommendationActionExecutionResultV1> {
+    const requestedAction = Zwavejs2HomeyApp.toRecommendationActionSelection(options.action);
+    if (!requestedAction) {
+      return {
+        homeyDeviceId: Zwavejs2HomeyApp.toStringOrNull(options.homeyDeviceId),
+        requestedAction: 'auto',
+        selectedAction: 'none',
+        executed: false,
+        reason: 'invalid-action-selection',
+      };
+    }
+    const normalizedHomeyDeviceId = Zwavejs2HomeyApp.toStringOrNull(options.homeyDeviceId);
+    if (!normalizedHomeyDeviceId) {
+      return {
+        homeyDeviceId: null,
+        requestedAction,
+        selectedAction: 'none',
+        executed: false,
+        reason: 'invalid-homey-device-id',
+      };
+    }
+
+    const queue = await this.getRecommendationActionQueue({
+      homeyDeviceId: normalizedHomeyDeviceId,
+      includeNoAction: true,
+    });
+    const item = queue.items.find((entry) => entry.homeyDeviceId === normalizedHomeyDeviceId);
+    if (!item) {
+      return {
+        homeyDeviceId: normalizedHomeyDeviceId,
+        requestedAction,
+        selectedAction: 'none',
+        executed: false,
+        reason: 'node-not-found',
+      };
+    }
+
+    if (requestedAction !== 'auto' && requestedAction !== item.action) {
+      return {
+        homeyDeviceId: normalizedHomeyDeviceId,
+        requestedAction,
+        selectedAction: item.action,
+        executed: false,
+        reason: 'action-mismatch',
+      };
+    }
+
+    if (item.action === 'none') {
+      return {
+        homeyDeviceId: normalizedHomeyDeviceId,
+        requestedAction,
+        selectedAction: 'none',
+        executed: false,
+        reason: item.reason,
+      };
+    }
+
+    if (item.action === 'backfill-marker') {
+      const result = await this.backfillCurationBaselineMarker(normalizedHomeyDeviceId);
+      return {
+        homeyDeviceId: normalizedHomeyDeviceId,
+        requestedAction,
+        selectedAction: 'backfill-marker',
+        executed: result.updated,
+        reason: result.reason,
+        createdEntry: result.createdEntry,
+      };
+    }
+
+    const result = await this.adoptRecommendedBaseline(normalizedHomeyDeviceId);
+    return {
+      homeyDeviceId: normalizedHomeyDeviceId,
+      requestedAction,
+      selectedAction: 'adopt-recommended-baseline',
+      executed: result.adopted,
+      reason: result.reason,
+    };
+  }
+
+  async executeRecommendationActions(options?: {
+    homeyDeviceId?: string;
+    includeNoAction?: boolean;
+  }): Promise<{
+    total: number;
+    executed: number;
+    skipped: number;
+    results: RecommendationActionExecutionResultV1[];
+  }> {
+    const queue = await this.getRecommendationActionQueue({
+      homeyDeviceId: options?.homeyDeviceId,
+      includeNoAction: true,
+    });
+    const includeNoAction = options?.includeNoAction === true;
+    const results: RecommendationActionExecutionResultV1[] = [];
+
+    const backfillResults = await this.backfillMissingCurationBaselineMarkers({
+      homeyDeviceId: options?.homeyDeviceId,
+    });
+    const backfillResultByDeviceId = new Map(
+      backfillResults.items.map((entry) => [entry.homeyDeviceId, entry]),
+    );
+
+    for (const item of queue.items) {
+      if (!includeNoAction && item.action === 'none') continue;
+
+      if (item.action === 'backfill-marker') {
+        const backfillResult = backfillResultByDeviceId.get(item.homeyDeviceId);
+        results.push({
+          homeyDeviceId: item.homeyDeviceId,
+          requestedAction: 'backfill-marker',
+          selectedAction: 'backfill-marker',
+          executed: backfillResult?.updated === true,
+          reason: backfillResult?.reason ?? 'backfill-result-missing',
+          createdEntry: backfillResult?.createdEntry === true,
+        });
+        continue;
+      }
+
+      if (item.action === 'adopt-recommended-baseline' && item.homeyDeviceId) {
+        const adoptResult = await this.adoptRecommendedBaseline(item.homeyDeviceId);
+        results.push({
+          homeyDeviceId: item.homeyDeviceId,
+          requestedAction: 'adopt-recommended-baseline',
+          selectedAction: 'adopt-recommended-baseline',
+          executed: adoptResult.adopted,
+          reason: adoptResult.reason,
+        });
+        continue;
+      }
+
+      results.push({
+        homeyDeviceId: item.homeyDeviceId,
+        requestedAction: 'none',
+        selectedAction: item.action,
+        executed: false,
+        reason: item.reason,
+      });
+    }
+
+    const executed = results.filter((entry) => entry.executed).length;
+    return {
+      total: results.length,
+      executed,
+      skipped: results.length - executed,
+      results,
     };
   }
 
