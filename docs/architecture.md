@@ -154,6 +154,10 @@ Partially complete / next:
   - `POST /runtime/recommendations/execute`
   - `POST /runtime/recommendations/execute-batch`
   - all endpoints now return a stable response envelope (`schemaVersion`, `ok`, `data`, `error`)
+- API parity guard test now verifies:
+  - `.homeycompose/app.json` and `app.json` route parity
+  - route-key parity with exported route handlers
+  - canonical method/path constraints for runtime routes
 - a runtime API client helper now exists for settings/custom-view consumers:
   - `co.lazylabs.zwavejs2homey/runtime-api-client.js`
   - contract reference: `docs/homey-api-contract.md`

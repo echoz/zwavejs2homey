@@ -72,3 +72,11 @@ The helper unwraps success envelopes and throws `RuntimeApiClientError` for:
 - envelope errors (`invalid-envelope`)
 - route-declared errors (`invalid-request`, `invalid-action-selection`, ...)
 - local argument validation errors (`invalid-argument`)
+
+## Guard Rail
+
+`co.lazylabs.zwavejs2homey/test/api-manifest-parity.test.js` enforces API parity between:
+
+- `.homeycompose/app.json`
+- generated `app.json`
+- exported route handlers in `co.lazylabs.zwavejs2homey/api.js`

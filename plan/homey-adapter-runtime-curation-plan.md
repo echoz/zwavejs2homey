@@ -48,6 +48,9 @@ Design and implement a Homey adapter-owned runtime curation system that applies 
   - settings/custom-view runtime API client helper now exists:
     - `co.lazylabs.zwavejs2homey/runtime-api-client.js`
     - contract doc: `docs/homey-api-contract.md`
+  - API manifest parity guard now exists:
+    - `test/api-manifest-parity.test.js`
+    - enforces route parity + canonical runtime route definitions
   - remaining work: Homey UX wiring for diagnostics + adopt/backfill interaction flows
 
 Related ADRs:

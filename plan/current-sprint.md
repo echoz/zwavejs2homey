@@ -15,6 +15,13 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 ## Recently Completed
 
+- Latest Phase 5 API manifest parity-guard slice:
+  - added `co.lazylabs.zwavejs2homey/test/api-manifest-parity.test.js`
+  - guard now enforces:
+    - `.homeycompose/app.json` and generated `app.json` API parity
+    - route key parity between manifest entries and `api.js` exports
+    - canonical runtime route constraints (allowed methods, `/runtime/*` path prefix, no duplicate signatures)
+
 - Latest Phase 5 API client-contract slice:
   - added `co.lazylabs.zwavejs2homey/runtime-api-client.js` for settings/custom-view route consumption
   - helper now normalizes inputs, invokes Homey API routes, validates envelopes, and raises typed route/client errors
