@@ -60,15 +60,14 @@ Design and implement a Homey adapter-owned runtime curation system that applies 
   - app now exposes targeted per-device snapshot payloads for Device Tools:
     - `getNodeDeviceToolsSnapshot({ homeyDeviceId })`
     - stable read-only payload schema: `node-device-tools/v1`
-  - first Device Tools custom view is now in place as read-only:
-    - `drivers/node/repair/device_tools.html` (primary repair host)
-    - `drivers/node/pair/device_tools.html` (fallback mirror while host-path behavior is validated)
+  - first Device Tools custom view is now in place with canonical host path:
+    - `drivers/node/repair/device_tools.html`
   - Device Tools action execution wiring is now in place:
     - session handler `device_tools:execute_action` (node `onRepair`)
     - strict action validation (`auto`, `backfill-marker`, `adopt-recommended-baseline`, `none`)
     - action response returns execution result + refreshed `node-device-tools/v1` snapshot
     - custom view now drives explicit confirm-before-execute for adopt/backfill
-  - remaining work: additional Device Tools UX polish + host-path verification
+  - remaining work: additional Device Tools UX polish + action/race semantics hardening
 
 Related ADRs:
 

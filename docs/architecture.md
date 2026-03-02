@@ -177,6 +177,10 @@ Partially complete / next:
   - Device Tools actions now execute explicit recommendation updates:
     - `backfill-marker` and `adopt-recommended-baseline`
     - action handler returns `{ actionResult, snapshot }` for single-roundtrip UI refresh
+  - host-path/UX hardening:
+    - canonical host now uses only `drivers/node/repair/device_tools.html`
+    - duplicate `drivers/node/pair/device_tools.html` fallback removed
+    - no-op/mismatch outcomes now surface friendlier action status messaging
 - app now exposes non-UI recommendation action APIs:
   - `backfillCurationBaselineMarker(homeyDeviceId)`
   - `adoptRecommendedBaseline(homeyDeviceId)`
@@ -218,10 +222,8 @@ Primary gate: `npm run check`
 
 Near-term:
 
-1. finalize Device Tools host-path verification (`onRepair` custom view resolution)
-2. wire recommendation adoption/backfill actions into Device Tools UI flow
-3. harden recommendation adoption/backfill flows in app-facing paths
-4. continue capability vertical expansion with runtime + harness tests
+1. harden recommendation adoption/backfill flows in app-facing paths
+2. continue capability vertical expansion with runtime + harness tests
 
 After that:
 

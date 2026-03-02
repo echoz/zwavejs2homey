@@ -15,6 +15,18 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 ## Recently Completed
 
+- Latest Phase 5 node Device Tools host/UX hardening slice:
+  - canonical custom-view host path is now `co.lazylabs.zwavejs2homey/drivers/node/repair/device_tools.html`
+  - removed fallback duplicate view file (`drivers/node/pair/device_tools.html`) to keep one source of truth
+  - strengthened action outcome UX in Device Tools:
+    - friendly reason mapping for no-op/mismatch states
+    - status tone rendering (`ok` / `warn` / `error`)
+    - clearer inline action feedback after confirm + execute
+  - expanded repair/session harness coverage for:
+    - default `auto` action selection when payload omits action
+    - missing recommendation action API
+    - missing snapshot API during action flow
+
 - Latest Phase 5 node Device Tools action slice:
   - enabled explicit per-device recommendation actions in Device Tools custom view:
     - `Backfill Marker` (for marker-missing recommendations)
@@ -23,9 +35,8 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - `device_tools:execute_action`
     - strict action enum validation (`auto`, `backfill-marker`, `adopt-recommended-baseline`, `none`)
   - action handler now returns action result + refreshed per-device snapshot in one call
-  - upgraded Device Tools view scaffolds to interactive action UX with confirmation prompts + inline status updates:
+  - upgraded Device Tools view scaffold to interactive action UX with confirmation prompts + inline status updates:
     - `co.lazylabs.zwavejs2homey/drivers/node/repair/device_tools.html`
-    - `co.lazylabs.zwavejs2homey/drivers/node/pair/device_tools.html`
   - expanded repair/session harness coverage for action forwarding and invalid selection rejection
 
 - Latest Phase 5 node Device Tools read-only slice:
@@ -39,9 +50,8 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
   - enabled node repair manifest entry in:
     - `co.lazylabs.zwavejs2homey/drivers/node/driver.compose.json`
     - `co.lazylabs.zwavejs2homey/app.json`
-  - added first custom Device Tools view scaffolds:
+  - added first custom Device Tools view scaffold:
     - `co.lazylabs.zwavejs2homey/drivers/node/repair/device_tools.html`
-    - `co.lazylabs.zwavejs2homey/drivers/node/pair/device_tools.html` (fallback mirror)
   - expanded harness/runtime coverage:
     - `co.lazylabs.zwavejs2homey/test/driver-harness.test.js`
     - `co.lazylabs.zwavejs2homey/test/app-runtime-refresh.test.js`

@@ -164,6 +164,18 @@
         color: var(--muted);
         font-size: 12px;
       }
+
+      .status-line.ok {
+        color: var(--ok);
+      }
+
+      .status-line.warn {
+        color: var(--warn);
+      }
+
+      .status-line.error {
+        color: var(--danger);
+      }
     </style>
   </head>
   <body>
@@ -226,6 +238,7 @@
           snapshot: null,
           error: null,
           statusMessage: null,
+          statusTone: 'neutral',
         };
 
         const reasonLabels = {
@@ -238,6 +251,20 @@
           'no-curation-entry': 'No curation exists yet for this device.',
           'missing-homey-device-id': 'Device identifier is unavailable in runtime diagnostics.',
           none: 'No recommendation is available.',
+        };
+
+        const actionReasonLabels = {
+          'action-mismatch':
+            'That action is no longer applicable for this device. Refresh and retry.',
+          'invalid-action-selection': 'Invalid action selection.',
+          'invalid-homey-device-id': 'This device ID is invalid.',
+          'node-not-found': 'The device could not be found.',
+          'recommendation-unavailable': 'No recommendation is available for this device.',
+          'baseline-hash-unchanged': 'No update is needed. Device profile is already aligned.',
+          'no-curation-entry': 'No curation entry exists for this device.',
+          'profile-resolution-not-ready': 'Runtime mapping is not ready yet for this device.',
+          'missing-homey-device-id': 'Device identifier is unavailable in runtime diagnostics.',
+          none: 'No action was required.',
         };
 
         const refreshBtn = document.getElementById('refresh-btn');
@@ -287,6 +314,10 @@
           refreshBtn.disabled = state.loading || state.actionInFlight;
           errorPanel.hidden = !state.error;
           errorPanel.textContent = state.error ? state.error : '';
+          statusLine.classList.remove('ok', 'warn', 'error');
+          if (state.statusTone === 'ok') statusLine.classList.add('ok');
+          if (state.statusTone === 'warn') statusLine.classList.add('warn');
+          if (state.statusTone === 'error') statusLine.classList.add('error');
 
           if (!state.snapshot) {
             subtitle.textContent = state.loading
@@ -390,12 +421,14 @@
           state.loading = true;
           state.error = null;
           state.statusMessage = null;
+          state.statusTone = 'neutral';
           render();
           try {
             state.snapshot = await Homey.emit(eventName);
           } catch (error) {
             const message = error && error.message ? error.message : 'Failed to load snapshot.';
             state.error = message;
+            state.statusTone = 'error';
           } finally {
             state.loading = false;
             render();
@@ -406,18 +439,27 @@
           if (!actionResult || typeof actionResult !== 'object') return 'Action completed.';
           if (actionResult.executed === true) {
             if (actionResult.selectedAction === 'backfill-marker') {
-              return 'Backfill completed. Profile Reference metadata has been updated.';
+              return {
+                message: 'Backfill completed. Profile Reference metadata has been updated.',
+                tone: 'ok',
+              };
             }
             if (actionResult.selectedAction === 'adopt-recommended-baseline') {
-              return 'Profile update adopted for this device.';
+              return {
+                message: 'Profile update adopted for this device.',
+                tone: 'ok',
+              };
             }
-            return 'Action completed.';
+            return { message: 'Action completed.', tone: 'ok' };
           }
           const reason =
             actionResult.reason && typeof actionResult.reason === 'string'
               ? actionResult.reason
               : 'action-not-executed';
-          return `Action not executed: ${reason}`;
+          return {
+            message: actionReasonLabels[reason] || `Action not executed: ${reason}`,
+            tone: 'warn',
+          };
         }
 
         async function executeAction(actionSelection, confirmationText) {
@@ -427,6 +469,7 @@
           state.actionInFlight = true;
           state.error = null;
           state.statusMessage = 'Applying action...';
+          state.statusTone = 'neutral';
           render();
 
           try {
@@ -440,11 +483,14 @@
             }
             const actionResult =
               result && typeof result === 'object' ? result.actionResult : undefined;
-            state.statusMessage = describeActionResult(actionResult);
+            const summary = describeActionResult(actionResult);
+            state.statusMessage = summary.message;
+            state.statusTone = summary.tone;
           } catch (error) {
             const message = error && error.message ? error.message : 'Action failed.';
             state.error = message;
             state.statusMessage = null;
+            state.statusTone = 'error';
           } finally {
             state.actionInFlight = false;
             render();

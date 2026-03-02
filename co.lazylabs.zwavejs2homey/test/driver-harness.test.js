@@ -196,17 +196,21 @@ test('node driver repair session exposes device tools snapshot handlers', async 
   const third = await handlers.get('device_tools:execute_action')({
     action: 'adopt-recommended-baseline',
   });
+  const fourth = await handlers.get('device_tools:execute_action')();
   assert.equal(first.schemaVersion, 'node-device-tools/v1');
   assert.equal(second.device.homeyDeviceId, 'main:8');
   assert.equal(third.snapshot.device.homeyDeviceId, 'main:8');
   assert.equal(third.actionResult.selectedAction, 'adopt-recommended-baseline');
+  assert.equal(fourth.actionResult.selectedAction, 'auto');
   assert.deepEqual(snapshotCalls, [
+    { homeyDeviceId: 'main:8' },
     { homeyDeviceId: 'main:8' },
     { homeyDeviceId: 'main:8' },
     { homeyDeviceId: 'main:8' },
   ]);
   assert.deepEqual(actionCalls, [
     { homeyDeviceId: 'main:8', action: 'adopt-recommended-baseline' },
+    { homeyDeviceId: 'main:8', action: 'auto' },
   ]);
 });
 
@@ -266,6 +270,62 @@ test('node driver repair action handler rejects invalid action selection', async
   await assert.rejects(
     () => handlers.get('device_tools:execute_action')({ action: 'invalid-action' }),
     /Invalid Device Tools action selection/,
+  );
+});
+
+test('node driver repair action handler rejects when recommendation action API is unavailable', async () => {
+  const driver = new NodeDriver();
+  driver._configureHarness({
+    app: {
+      async getNodeDeviceToolsSnapshot() {
+        return { schemaVersion: 'node-device-tools/v1' };
+      },
+    },
+    devices: [],
+  });
+
+  const handlers = new Map();
+  const session = {
+    setHandler(event, handler) {
+      handlers.set(event, handler);
+    },
+  };
+
+  await driver.onRepair(session, {
+    getData: () => ({ id: 'main:9' }),
+  });
+
+  await assert.rejects(
+    () => handlers.get('device_tools:execute_action')({ action: 'auto' }),
+    /Device Tools unavailable: recommendation action API is not ready\./,
+  );
+});
+
+test('node driver repair action handler rejects when snapshot API is unavailable', async () => {
+  const driver = new NodeDriver();
+  driver._configureHarness({
+    app: {
+      async executeRecommendationAction() {
+        return { executed: true, selectedAction: 'auto' };
+      },
+    },
+    devices: [],
+  });
+
+  const handlers = new Map();
+  const session = {
+    setHandler(event, handler) {
+      handlers.set(event, handler);
+    },
+  };
+
+  await driver.onRepair(session, {
+    getData: () => ({ id: 'main:9' }),
+  });
+
+  await assert.rejects(
+    () => handlers.get('device_tools:execute_action')({ action: 'auto' }),
+    /Device Tools unavailable: app runtime snapshot API is not ready\./,
   );
 });
 

@@ -109,11 +109,15 @@ Done so far:
   - session action handler (`device_tools:execute_action`) with strict action validation
   - action flow returns refreshed per-device snapshot for immediate UI refresh
   - Device Tools custom view now supports explicit confirm + execute for backfill/adopt
+- node Device Tools host/UX hardening:
+  - canonical host path consolidated to `drivers/node/repair/device_tools.html`
+  - duplicate fallback view removed from `drivers/node/pair/device_tools.html`
+  - action outcomes now surface friendlier no-op/mismatch/error statuses
 
 In progress / next:
 
-1. complete Device Tools UX polish and verify canonical repair-view host path
-2. continue broadening runtime mapping coverage with tests
+1. continue broadening runtime mapping coverage with tests
+2. harden recommendation semantics under real-world churn (race/no-op/mismatch diagnostics)
 
 Exit criteria:
 
