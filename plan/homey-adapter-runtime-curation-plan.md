@@ -51,6 +51,9 @@ Design and implement a Homey adapter-owned runtime curation system that applies 
   - API manifest parity guard now exists:
     - `test/api-manifest-parity.test.js`
     - enforces route parity + canonical runtime route definitions
+  - live runtime API smoke tooling now exists:
+    - `tools/homey-runtime-api-smoke.mjs`
+    - validates all runtime routes + envelope shape from a running Homey app endpoint
   - remaining work: Homey UX wiring for diagnostics + adopt/backfill interaction flows
 
 Related ADRs:

@@ -158,6 +158,9 @@ Partially complete / next:
   - `.homeycompose/app.json` and `app.json` route parity
   - route-key parity with exported route handlers
   - canonical method/path constraints for runtime routes
+- runtime API smoke tool now exists for live app route reachability/envelope checks:
+  - `tools/homey-runtime-api-smoke.mjs`
+  - npm alias: `npm run homey:runtime-api:smoke -- ...`
 - a runtime API client helper now exists for settings/custom-view consumers:
   - `co.lazylabs.zwavejs2homey/runtime-api-client.js`
   - contract reference: `docs/homey-api-contract.md`

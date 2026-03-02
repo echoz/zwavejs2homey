@@ -80,3 +80,19 @@ The helper unwraps success envelopes and throws `RuntimeApiClientError` for:
 - `.homeycompose/app.json`
 - generated `app.json`
 - exported route handlers in `co.lazylabs.zwavejs2homey/api.js`
+
+## Smoke Command
+
+Use the runtime smoke command to verify route reachability and envelope shape against a live Homey app:
+
+```bash
+npm run homey:runtime-api:smoke -- \
+  --base-url http://HOMEY/api/app/co.lazylabs.zwavejs2homey \
+  --token <homey-token> \
+  --format table
+```
+
+Notes:
+
+- It checks all four runtime routes.
+- It uses `--smoke-device-id` (default `__smoke_invalid__`) for execute-route calls to avoid side effects by default.

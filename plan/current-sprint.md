@@ -15,6 +15,13 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 ## Recently Completed
 
+- Latest Phase 5 runtime API smoke-tool slice:
+  - added `tools/homey-runtime-api-smoke.mjs` + `tools/homey-runtime-api-smoke-lib.mjs`
+  - smoke now validates all runtime routes against a live Homey app endpoint and checks envelope/HTTP health
+  - added `npm run homey:runtime-api:smoke` entrypoint
+  - added tool regression coverage in `packages/core/test/homey-runtime-api-smoke-tool.test.js`
+  - documented usage in `docs/homey-api-contract.md` and `README.md`
+
 - Latest Phase 5 API manifest parity-guard slice:
   - added `co.lazylabs.zwavejs2homey/test/api-manifest-parity.test.js`
   - guard now enforces:

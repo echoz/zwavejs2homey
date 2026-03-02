@@ -148,6 +148,12 @@ npm run build:homey
 cd co.lazylabs.zwavejs2homey && homey app validate
 ```
 
+Smoke-test Homey runtime API routes:
+
+```bash
+npm run homey:runtime-api:smoke -- --base-url http://HOMEY/api/app/co.lazylabs.zwavejs2homey --token <token>
+```
+
 ## Rules and Artifacts
 
 Canonical compile-time inputs:
