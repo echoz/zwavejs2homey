@@ -15,6 +15,19 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 ## Recently Completed
 
+- Latest Phase 5 runtime-mapping vertical coverage slice:
+  - expanded generic runtime-mapping validation for numeric/boolean capability families without capability-specific adapter branches
+  - added node-runtime coercion coverage for:
+    - `target_temperature` numeric type coercion
+    - `alarm_contact` boolean type coercion
+  - added node-device harness flow coverage for mixed numeric/boolean verticals:
+    - inbound read
+    - outbound write
+    - value-updated event refresh path
+  - files:
+    - `co.lazylabs.zwavejs2homey/test/node-runtime.test.js`
+    - `co.lazylabs.zwavejs2homey/test/node-device-harness.test.js`
+
 - Latest Phase 5 node Device Tools host/UX hardening slice:
   - canonical custom-view host path is now `co.lazylabs.zwavejs2homey/drivers/node/repair/device_tools.html`
   - removed fallback duplicate view file (`drivers/node/pair/device_tools.html`) to keep one source of truth

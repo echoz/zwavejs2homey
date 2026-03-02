@@ -67,6 +67,8 @@ Design and implement a Homey adapter-owned runtime curation system that applies 
     - strict action validation (`auto`, `backfill-marker`, `adopt-recommended-baseline`, `none`)
     - action response returns execution result + refreshed `node-device-tools/v1` snapshot
     - custom view now drives explicit confirm-before-execute for adopt/backfill
+  - runtime-mapping vertical coverage has expanded with generic mixed-type validation:
+    - numeric + boolean families (`target_temperature`, `alarm_contact`) now covered in node runtime + harness tests
   - remaining work: additional Device Tools UX polish + action/race semantics hardening
 
 Related ADRs:

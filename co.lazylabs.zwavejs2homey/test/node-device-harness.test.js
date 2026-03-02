@@ -372,6 +372,81 @@ function createCoverProfileMatch() {
   };
 }
 
+function createClimateAndContactProfileMatch() {
+  return {
+    by: 'product-triple',
+    key: '999:1000:1001',
+    entry: {
+      device: {
+        deviceKey: 'main:42',
+        nodeId: 42,
+        manufacturerId: 999,
+        productType: 1000,
+        productId: 1001,
+      },
+      compiled: {
+        profile: {
+          profileId: 'profile-main-42',
+          match: {},
+          classification: {
+            homeyClass: 'sensor',
+            confidence: 'curated',
+            uncurated: false,
+          },
+          capabilities: [
+            {
+              capabilityId: 'target_temperature',
+              inboundMapping: {
+                kind: 'value',
+                selector: {
+                  commandClass: 67,
+                  endpoint: 0,
+                  property: 'value',
+                  propertyKey: '1',
+                },
+              },
+              outboundMapping: {
+                kind: 'set_value',
+                target: {
+                  commandClass: 67,
+                  endpoint: 0,
+                  property: 'targetValue',
+                  propertyKey: '1',
+                },
+              },
+            },
+            {
+              capabilityId: 'alarm_contact',
+              inboundMapping: {
+                kind: 'value',
+                selector: {
+                  commandClass: 48,
+                  endpoint: 0,
+                  property: 'state',
+                },
+              },
+              outboundMapping: {
+                kind: 'set_value',
+                target: {
+                  commandClass: 48,
+                  endpoint: 0,
+                  property: 'state',
+                },
+              },
+            },
+          ],
+          provenance: {
+            layer: 'project-product',
+            ruleId: 'example-climate-contact-profile',
+            action: 'replace',
+          },
+        },
+        report: {},
+      },
+    },
+  };
+}
+
 function createCurationEntryForMain5() {
   return {
     targetDevice: {
@@ -1029,4 +1104,155 @@ test('node device harness supports transformed outbound mappings without capabil
       value: 50,
     },
   ]);
+});
+
+test('node device harness supports generic numeric + boolean verticals without capability-specific code paths', async () => {
+  const targetTemperatureSelector = {
+    commandClass: 67,
+    endpoint: 0,
+    property: 'value',
+    propertyKey: '1',
+  };
+  const alarmContactSelector = {
+    commandClass: 48,
+    endpoint: 0,
+    property: 'state',
+  };
+
+  const nodeValueResultsBySelector = new Map();
+  nodeValueResultsBySelector.set(selectorKey(targetTemperatureSelector), {
+    success: true,
+    result: { value: '21.75' },
+  });
+  nodeValueResultsBySelector.set(selectorKey(alarmContactSelector), {
+    success: true,
+    result: { value: 0 },
+  });
+
+  const client = createMockZwjsClient({
+    nodeStateResult: {
+      success: true,
+      result: {
+        state: {
+          manufacturerId: '999',
+          productType: '1000',
+          productId: '1001',
+        },
+      },
+    },
+    nodeValueResultsBySelector,
+    definedValueIdsResult: {
+      success: true,
+      result: [
+        {
+          commandClass: 67,
+          endpoint: 0,
+          property: 'value',
+          propertyKey: '1',
+          readable: true,
+          type: 'number',
+        },
+        {
+          commandClass: 67,
+          endpoint: 0,
+          property: 'targetValue',
+          propertyKey: '1',
+          writeable: true,
+          type: 'number',
+        },
+        {
+          commandClass: 48,
+          endpoint: 0,
+          property: 'state',
+          readable: true,
+          type: 'boolean',
+        },
+        {
+          commandClass: 48,
+          endpoint: 0,
+          property: 'state',
+          writeable: true,
+          type: 'boolean',
+        },
+      ],
+    },
+  });
+
+  const app = {
+    getZwjsClient: () => client,
+    getCompiledProfilesStatus: () => createRuntimeStatus(),
+    resolveCompiledProfileEntry: () => createClimateAndContactProfileMatch(),
+  };
+
+  const device = new NodeDevice();
+  device._configureHarness({
+    app,
+    data: { bridgeId: 'main', nodeId: 42 },
+    capabilities: ['target_temperature', 'alarm_contact'],
+  });
+
+  await device.onInit();
+  assert.equal(device._getCapabilityValue('target_temperature'), 21.75);
+  assert.equal(device._getCapabilityValue('alarm_contact'), false);
+  assert.equal(client.getListenerCount(), 2);
+
+  await device._triggerCapabilityListener('target_temperature', '22.5');
+  await device._triggerCapabilityListener('alarm_contact', 1);
+  assert.deepEqual(client.callLog.setNodeValue, [
+    {
+      nodeId: 42,
+      valueId: {
+        commandClass: 67,
+        endpoint: 0,
+        property: 'targetValue',
+        propertyKey: '1',
+      },
+      value: 22.5,
+    },
+    {
+      nodeId: 42,
+      valueId: {
+        commandClass: 48,
+        endpoint: 0,
+        property: 'state',
+      },
+      value: true,
+    },
+  ]);
+
+  client.emitEvent({
+    type: 'zwjs.event.node.value-updated',
+    event: {
+      nodeId: 42,
+      args: {
+        commandClass: 67,
+        endpoint: 0,
+        propertyName: 'value',
+        propertyKey: '1',
+        newValue: '20.5',
+      },
+    },
+  });
+  client.emitEvent({
+    type: 'zwjs.event.node.value-updated',
+    event: {
+      nodeId: 42,
+      args: {
+        commandClass: 48,
+        endpoint: 0,
+        propertyName: 'state',
+        newValue: 255,
+      },
+    },
+  });
+  await Promise.resolve();
+  assert.equal(device._getCapabilityValue('target_temperature'), 20.5);
+  assert.equal(device._getCapabilityValue('alarm_contact'), true);
+
+  const profileResolution = device._getStoreValue('profileResolution');
+  assert.equal(profileResolution?.mappingDiagnostics?.length, 2);
+  assert.equal(profileResolution?.mappingDiagnostics?.[0]?.inbound?.enabled, true);
+  assert.equal(profileResolution?.mappingDiagnostics?.[0]?.outbound?.enabled, true);
+  assert.equal(profileResolution?.mappingDiagnostics?.[1]?.inbound?.enabled, true);
+  assert.equal(profileResolution?.mappingDiagnostics?.[1]?.outbound?.enabled, true);
 });

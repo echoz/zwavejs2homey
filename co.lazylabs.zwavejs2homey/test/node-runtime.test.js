@@ -271,6 +271,14 @@ test('coerceCapability inbound/outbound uses transform refs and generic pass-thr
   assert.equal(coerceCapabilityInboundValue('locked', { value: 1 }), 1);
   assert.equal(coerceCapabilityInboundValue('measure_power', { value: 44.2 }), 44.2);
   assert.equal(
+    coerceCapabilityInboundValue('target_temperature', { value: '21.75' }, undefined, 'number'),
+    21.75,
+  );
+  assert.equal(
+    coerceCapabilityInboundValue('alarm_contact', { value: 255 }, undefined, 'boolean'),
+    true,
+  );
+  assert.equal(
     coerceCapabilityInboundValue('measure_power', { value: { nested: true } }),
     undefined,
   );
@@ -284,6 +292,11 @@ test('coerceCapability inbound/outbound uses transform refs and generic pass-thr
   );
   assert.equal(coerceCapabilityOutboundValue('locked', true), true);
   assert.equal(coerceCapabilityOutboundValue('measure_power', 13.4), 13.4);
+  assert.equal(
+    coerceCapabilityOutboundValue('target_temperature', '22.5', undefined, 'number'),
+    22.5,
+  );
+  assert.equal(coerceCapabilityOutboundValue('alarm_contact', 0, undefined, 'boolean'), false);
   assert.equal(coerceCapabilityOutboundValue('measure_power', { invalid: true }), undefined);
 });
 

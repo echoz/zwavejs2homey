@@ -113,6 +113,9 @@ Done so far:
   - canonical host path consolidated to `drivers/node/repair/device_tools.html`
   - duplicate fallback view removed from `drivers/node/pair/device_tools.html`
   - action outcomes now surface friendlier no-op/mismatch/error statuses
+- runtime-mapping coverage broadening:
+  - added generic mixed numeric/boolean vertical harness coverage (`target_temperature`, `alarm_contact`)
+  - validated inbound/outbound/event update flows remain capability-agnostic
 
 In progress / next:
 

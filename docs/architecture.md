@@ -191,6 +191,7 @@ Partially complete / next:
   - `backfillMissingCurationBaselineMarkers(...)`
 - additional Homey Device Tools UX polish beyond current action flow baseline
 - expanded runtime mapping vertical coverage
+  - added explicit mixed numeric/boolean runtime mapping coverage for capability families such as `target_temperature` and `alarm_contact` in node-runtime + harness tests
 
 Deferred:
 
