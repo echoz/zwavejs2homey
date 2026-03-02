@@ -167,7 +167,7 @@ Current implemented foundation in `packages/compiler`:
   - adapter curation persistence (v1) uses Homey settings (`this.homey.settings`) with versioned payloads (`docs/decisions/0010-homey-adapter-curation-storage-v1.md`)
   - adapter curation model direction (v1) is materialized overrides, with concrete persisted schema now locked under `curation.v1` (`docs/decisions/0011-homey-curation-model-v1-materialized-overrides.md`, `docs/decisions/0016-homey-curation-v1-storage-schema.md`)
   - adapter executes curation by lowering persisted overrides into in-memory runtime rules and reusing rules-engine order semantics (`docs/decisions/0012-homey-curation-execution-via-runtime-rule-lowering.md`)
-  - adapter runtime now loads + validates `curation.v1` from Homey settings and refreshes node runtime mappings on `curation.v1` changes; rule-lowering apply path is still pending
+  - adapter runtime now loads + validates `curation.v1` from Homey settings, refreshes node runtime mappings on `curation.v1` changes, and applies per-device curation overrides before runtime capability mapping extraction
   - adapter curation precedence (v1) is per-device-instance override (`homeyDeviceId`) over compiler baseline, with explicit user adoption flow for new recommendations (`docs/decisions/0013-homey-device-instance-curation-precedence-v1.md`)
   - adapter recommendation prompts are driven by per-device baseline markers (`pipelineFingerprint` + canonical baseline profile hash) to detect meaningful baseline changes (`docs/decisions/0014-homey-baseline-recommendation-detection-v1.md`)
   - canonical baseline hash projection is versioned and explicitly defined (`docs/decisions/0015-homey-baseline-hash-canonical-projection-v1.md`)

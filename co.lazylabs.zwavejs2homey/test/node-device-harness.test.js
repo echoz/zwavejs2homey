@@ -371,6 +371,37 @@ function createCoverProfileMatch() {
   };
 }
 
+function createCurationEntryForMain5() {
+  return {
+    targetDevice: {
+      homeyDeviceId: 'main:5',
+    },
+    baselineMarker: {
+      projectionVersion: 'v1',
+      baselineProfileHash: 'abc123',
+      updatedAt: '2026-03-01T00:00:00.000Z',
+    },
+    overrides: {
+      capabilities: {
+        onoff: {
+          outboundMapping: {
+            kind: 'set_value',
+            target: {
+              commandClass: 37,
+              endpoint: 0,
+              property: 'targetValueCustom',
+            },
+          },
+        },
+      },
+      collections: {
+        capabilitiesRemove: ['dim'],
+      },
+    },
+    updatedAt: '2026-03-01T00:00:00.000Z',
+  };
+}
+
 const NodeDevice = loadNodeDeviceClass();
 
 test('node device harness wires read/write/event sync for onoff + dim verticals', async () => {
@@ -529,6 +560,101 @@ test('node device harness wires read/write/event sync for onoff + dim verticals'
 
   await device.onDeleted();
   assert.equal(client.getListenerCount(), 0);
+});
+
+test('node device harness applies curation overrides before runtime mapping extraction', async () => {
+  const onoffSelector = {
+    commandClass: 37,
+    endpoint: 0,
+    property: 'currentValue',
+  };
+
+  const nodeValueResultsBySelector = new Map();
+  nodeValueResultsBySelector.set(selectorKey(onoffSelector), {
+    success: true,
+    result: { value: true },
+  });
+
+  const client = createMockZwjsClient({
+    nodeStateResult: {
+      success: true,
+      result: {
+        state: {
+          manufacturerId: '0x001d',
+          productType: '66',
+          productId: '2',
+        },
+      },
+    },
+    nodeValueResultsBySelector,
+    definedValueIdsResult: {
+      success: true,
+      result: [
+        {
+          commandClass: 37,
+          endpoint: 0,
+          property: 'currentValue',
+          readable: true,
+          type: 'boolean',
+        },
+        {
+          commandClass: 37,
+          endpoint: 0,
+          property: 'targetValueCustom',
+          writeable: true,
+          type: 'boolean',
+        },
+      ],
+    },
+  });
+
+  const app = {
+    getZwjsClient: () => client,
+    getCompiledProfilesStatus: () => createRuntimeStatus(),
+    getCurationStatus: () => ({
+      loaded: true,
+      sourceKey: 'curation.v1',
+      source: 'settings',
+      schemaVersion: 'homey-curation/v1',
+      updatedAt: '2026-03-01T00:00:00.000Z',
+      entryCount: 1,
+      errorMessage: null,
+    }),
+    resolveCompiledProfileEntry: () => createCompiledProfileMatch(),
+    resolveCurationEntry: () => createCurationEntryForMain5(),
+  };
+
+  const device = new NodeDevice();
+  device._configureHarness({
+    app,
+    data: { id: 'main:5', bridgeId: 'main', nodeId: 5 },
+    capabilities: ['onoff', 'dim'],
+  });
+
+  await device.onInit();
+  await device._triggerCapabilityListener('onoff', false);
+  assert.deepEqual(client.callLog.setNodeValue, [
+    {
+      nodeId: 5,
+      valueId: {
+        commandClass: 37,
+        endpoint: 0,
+        property: 'targetValueCustom',
+      },
+      value: false,
+    },
+  ]);
+  await assert.rejects(
+    () => device._triggerCapabilityListener('dim', 0.5),
+    /Missing capability listener/,
+  );
+
+  const profileResolution = device._getStoreValue('profileResolution');
+  assert.equal(profileResolution?.homeyDeviceId, 'main:5');
+  assert.equal(profileResolution?.curationEntryPresent, true);
+  assert.equal(profileResolution?.curationReport?.summary?.applied, 2);
+  assert.equal(profileResolution?.mappingDiagnostics?.length, 1);
+  assert.equal(profileResolution?.mappingDiagnostics?.[0]?.capabilityId, 'onoff');
 });
 
 test('node device harness refresh replaces runtime listeners and updates sync metadata', async () => {

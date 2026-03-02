@@ -30,6 +30,8 @@ const COLLECTION_PAIR_CONSTRAINTS = [
   ['ignoredValuesAdd', 'ignoredValuesRemove'],
 ];
 
+const CURATION_RUNTIME_SOURCE_REF = 'homey-curation/v1';
+
 function toErrorMessage(error) {
   if (error instanceof Error && typeof error.message === 'string') return error.message;
   return String(error);
@@ -408,9 +410,500 @@ function resolveCurationEntryFromRuntime(runtime, homeyDeviceId) {
   return runtime.entriesByDeviceId.get(homeyDeviceId);
 }
 
+function deepClone(value) {
+  if (Array.isArray(value)) {
+    return value.map((entry) => deepClone(entry));
+  }
+  if (isPlainObject(value)) {
+    const cloned = {};
+    for (const [key, entryValue] of Object.entries(value)) {
+      cloned[key] = deepClone(entryValue);
+    }
+    return cloned;
+  }
+  return value;
+}
+
+function normalizeRuntimeRuleIdSegment(value) {
+  const raw = typeof value === 'string' ? value : String(value ?? '');
+  const trimmed = raw.trim().toLowerCase();
+  if (trimmed.length === 0) return 'unknown';
+  return trimmed.replace(/[^a-z0-9._-]+/g, '_');
+}
+
+function createCurationRuntimeRuleId(homeyDeviceId, pathLabel) {
+  return `curation.${normalizeRuntimeRuleIdSegment(homeyDeviceId)}.${normalizeRuntimeRuleIdSegment(pathLabel)}`;
+}
+
+function createCurationRuntimeAction(homeyDeviceId, kind, pathLabel, payload) {
+  return {
+    ruleId: createCurationRuntimeRuleId(homeyDeviceId, pathLabel),
+    kind,
+    path: pathLabel,
+    payload,
+  };
+}
+
+function lowerCurationEntryToRuntimeActions(curationEntry, options = {}) {
+  if (!isPlainObject(curationEntry) || !isPlainObject(curationEntry.overrides)) return [];
+  let homeyDeviceId = 'unknown-device';
+  if (typeof options.homeyDeviceId === 'string' && options.homeyDeviceId.trim().length > 0) {
+    homeyDeviceId = options.homeyDeviceId;
+  } else if (typeof curationEntry.targetDevice?.homeyDeviceId === 'string') {
+    const targetDeviceId = curationEntry.targetDevice.homeyDeviceId.trim();
+    if (targetDeviceId.length > 0) {
+      homeyDeviceId = targetDeviceId;
+    }
+  } else if (typeof curationEntry.targetDeviceId === 'string') {
+    const legacyTargetDeviceId = curationEntry.targetDeviceId.trim();
+    if (legacyTargetDeviceId.length > 0) {
+      homeyDeviceId = legacyTargetDeviceId;
+    }
+  }
+  const actions = [];
+  const { overrides } = curationEntry;
+  const collectionOverrides = isPlainObject(overrides.collections)
+    ? overrides.collections
+    : undefined;
+  const capabilitiesAdd = collectionOverrides?.capabilitiesAdd;
+  const capabilitiesRemove = collectionOverrides?.capabilitiesRemove;
+  const subscriptionsAdd = collectionOverrides?.subscriptionsAdd;
+  const subscriptionsRemove = collectionOverrides?.subscriptionsRemove;
+  const ignoredValuesAdd = collectionOverrides?.ignoredValuesAdd;
+  const ignoredValuesRemove = collectionOverrides?.ignoredValuesRemove;
+
+  if (isPlainObject(overrides.deviceIdentity)) {
+    if (typeof overrides.deviceIdentity.homeyClass === 'string') {
+      actions.push(
+        createCurationRuntimeAction(
+          homeyDeviceId,
+          'set-device-identity',
+          'deviceIdentity.homeyClass',
+          {
+            slot: 'homeyClass',
+            value: overrides.deviceIdentity.homeyClass,
+          },
+        ),
+      );
+    }
+    if (typeof overrides.deviceIdentity.driverTemplateId === 'string') {
+      actions.push(
+        createCurationRuntimeAction(
+          homeyDeviceId,
+          'set-device-identity',
+          'deviceIdentity.driverTemplateId',
+          {
+            slot: 'driverTemplateId',
+            value: overrides.deviceIdentity.driverTemplateId,
+          },
+        ),
+      );
+    }
+  }
+
+  if (Array.isArray(capabilitiesAdd)) {
+    for (let index = 0; index < capabilitiesAdd.length; index += 1) {
+      actions.push(
+        createCurationRuntimeAction(
+          homeyDeviceId,
+          'add-capability',
+          `collections.capabilitiesAdd.${index}`,
+          { capabilityId: capabilitiesAdd[index] },
+        ),
+      );
+    }
+  }
+
+  if (isPlainObject(overrides.capabilities)) {
+    const capabilityIds = Object.keys(overrides.capabilities).sort((a, b) => a.localeCompare(b));
+    for (const capabilityId of capabilityIds) {
+      const capabilityOverride = overrides.capabilities[capabilityId];
+      if (!isPlainObject(capabilityOverride)) continue;
+      if (capabilityOverride.inboundMapping !== undefined) {
+        actions.push(
+          createCurationRuntimeAction(
+            homeyDeviceId,
+            'set-capability',
+            `capabilities.${capabilityId}.inboundMapping`,
+            {
+              capabilityId,
+              slot: 'inboundMapping',
+              value: capabilityOverride.inboundMapping,
+            },
+          ),
+        );
+      }
+      if (capabilityOverride.outboundMapping !== undefined) {
+        actions.push(
+          createCurationRuntimeAction(
+            homeyDeviceId,
+            'set-capability',
+            `capabilities.${capabilityId}.outboundMapping`,
+            {
+              capabilityId,
+              slot: 'outboundMapping',
+              value: capabilityOverride.outboundMapping,
+            },
+          ),
+        );
+      }
+      if (capabilityOverride.flags !== undefined) {
+        actions.push(
+          createCurationRuntimeAction(
+            homeyDeviceId,
+            'set-capability',
+            `capabilities.${capabilityId}.flags`,
+            {
+              capabilityId,
+              slot: 'flags',
+              value: capabilityOverride.flags,
+            },
+          ),
+        );
+      }
+    }
+  }
+
+  if (Array.isArray(capabilitiesRemove)) {
+    for (let index = 0; index < capabilitiesRemove.length; index += 1) {
+      actions.push(
+        createCurationRuntimeAction(
+          homeyDeviceId,
+          'remove-capability',
+          `collections.capabilitiesRemove.${index}`,
+          { capabilityId: capabilitiesRemove[index] },
+        ),
+      );
+    }
+  }
+
+  if (Array.isArray(subscriptionsAdd)) {
+    for (let index = 0; index < subscriptionsAdd.length; index += 1) {
+      actions.push(
+        createCurationRuntimeAction(
+          homeyDeviceId,
+          'add-subscription',
+          `collections.subscriptionsAdd.${index}`,
+          { value: subscriptionsAdd[index] },
+        ),
+      );
+    }
+  }
+
+  if (Array.isArray(subscriptionsRemove)) {
+    for (let index = 0; index < subscriptionsRemove.length; index += 1) {
+      actions.push(
+        createCurationRuntimeAction(
+          homeyDeviceId,
+          'remove-subscription',
+          `collections.subscriptionsRemove.${index}`,
+          { value: subscriptionsRemove[index] },
+        ),
+      );
+    }
+  }
+
+  if (Array.isArray(ignoredValuesAdd)) {
+    for (let index = 0; index < ignoredValuesAdd.length; index += 1) {
+      actions.push(
+        createCurationRuntimeAction(
+          homeyDeviceId,
+          'add-ignored-value',
+          `collections.ignoredValuesAdd.${index}`,
+          { value: ignoredValuesAdd[index] },
+        ),
+      );
+    }
+  }
+
+  if (Array.isArray(ignoredValuesRemove)) {
+    for (let index = 0; index < ignoredValuesRemove.length; index += 1) {
+      actions.push(
+        createCurationRuntimeAction(
+          homeyDeviceId,
+          'remove-ignored-value',
+          `collections.ignoredValuesRemove.${index}`,
+          { value: ignoredValuesRemove[index] },
+        ),
+      );
+    }
+  }
+
+  return actions;
+}
+
+function normalizeCapabilityDirectionality(capability) {
+  const hasInbound = capability.inboundMapping !== undefined;
+  const hasOutbound = capability.outboundMapping !== undefined;
+  if (hasInbound && hasOutbound) return 'bidirectional';
+  if (hasInbound) return 'inbound-only';
+  if (hasOutbound) return 'outbound-only';
+  return 'inbound-only';
+}
+
+function createCurationProvenance(ruleId, action, reason) {
+  return {
+    layer: 'user-curation',
+    ruleId,
+    action,
+    sourceRef: CURATION_RUNTIME_SOURCE_REF,
+    reason,
+  };
+}
+
+function findCapabilityIndex(profile, capabilityId) {
+  if (!Array.isArray(profile.capabilities)) return -1;
+  return profile.capabilities.findIndex((capability) => capability?.capabilityId === capabilityId);
+}
+
+function canonicalCollectionItemKey(value, pathLabel) {
+  return canonicalizeCollectionValue(value, pathLabel);
+}
+
+function applyCollectionAdd(profile, slotKey, value, action, report) {
+  if (!Array.isArray(profile[slotKey])) profile[slotKey] = [];
+  const valueKey = canonicalCollectionItemKey(value, `${action.path}:value`);
+  const existingIndex = profile[slotKey].findIndex((item, index) => {
+    const existingKey = canonicalCollectionItemKey(item, `${action.path}:existing:${index}`);
+    return existingKey === valueKey;
+  });
+  if (existingIndex >= 0) {
+    report.skippedActions.push({
+      ruleId: action.ruleId,
+      kind: action.kind,
+      path: action.path,
+      reason: `${slotKey}_already_present`,
+    });
+    return;
+  }
+  profile[slotKey].push(deepClone(value));
+  report.appliedActions.push({
+    ruleId: action.ruleId,
+    kind: action.kind,
+    path: action.path,
+  });
+}
+
+function applyCollectionRemove(profile, slotKey, value, action, report) {
+  if (!Array.isArray(profile[slotKey]) || profile[slotKey].length === 0) {
+    report.skippedActions.push({
+      ruleId: action.ruleId,
+      kind: action.kind,
+      path: action.path,
+      reason: `${slotKey}_missing`,
+    });
+    return;
+  }
+  const targetKey = canonicalCollectionItemKey(value, `${action.path}:value`);
+  const index = profile[slotKey].findIndex((item, itemIndex) => {
+    return canonicalCollectionItemKey(item, `${action.path}:existing:${itemIndex}`) === targetKey;
+  });
+  if (index < 0) {
+    report.skippedActions.push({
+      ruleId: action.ruleId,
+      kind: action.kind,
+      path: action.path,
+      reason: `${slotKey}_item_not_found`,
+    });
+    return;
+  }
+  profile[slotKey].splice(index, 1);
+  report.appliedActions.push({
+    ruleId: action.ruleId,
+    kind: action.kind,
+    path: action.path,
+  });
+}
+
+function applyCurationEntryToProfile(baseProfile, curationEntry, options = {}) {
+  if (!isPlainObject(baseProfile)) {
+    throw new Error('baseProfile must be an object');
+  }
+
+  const homeyDeviceId = options.homeyDeviceId ?? curationEntry?.targetDevice?.homeyDeviceId;
+  const actions = lowerCurationEntryToRuntimeActions(curationEntry, {
+    homeyDeviceId,
+  });
+  const profile = deepClone(baseProfile);
+  const report = {
+    loweredActions: actions,
+    appliedActions: [],
+    skippedActions: [],
+    errors: [],
+  };
+
+  if (!Array.isArray(profile.capabilities)) profile.capabilities = [];
+  if (!isPlainObject(profile.classification)) {
+    profile.classification = {
+      homeyClass: 'other',
+      confidence: 'generic',
+      uncurated: true,
+    };
+  }
+
+  for (const action of actions) {
+    try {
+      if (action.kind === 'set-device-identity') {
+        const { slot, value } = action.payload ?? {};
+        if (slot !== 'homeyClass' && slot !== 'driverTemplateId') {
+          report.skippedActions.push({
+            ruleId: action.ruleId,
+            kind: action.kind,
+            path: action.path,
+            reason: 'invalid_device_identity_slot',
+          });
+          continue;
+        }
+        profile.classification[slot] = value;
+        report.appliedActions.push({
+          ruleId: action.ruleId,
+          kind: action.kind,
+          path: action.path,
+        });
+        continue;
+      }
+
+      if (action.kind === 'add-capability') {
+        const capabilityId = assertNonEmptyString(
+          action.payload?.capabilityId,
+          `${action.path}.capabilityId`,
+        );
+        const existingIndex = findCapabilityIndex(profile, capabilityId);
+        if (existingIndex >= 0) {
+          report.skippedActions.push({
+            ruleId: action.ruleId,
+            kind: action.kind,
+            path: action.path,
+            reason: 'capability_already_present',
+          });
+          continue;
+        }
+        profile.capabilities.push({
+          capabilityId,
+          directionality: 'inbound-only',
+          provenance: createCurationProvenance(action.ruleId, 'augment', action.path),
+        });
+        report.appliedActions.push({
+          ruleId: action.ruleId,
+          kind: action.kind,
+          path: action.path,
+        });
+        continue;
+      }
+
+      if (action.kind === 'remove-capability') {
+        const capabilityId = assertNonEmptyString(
+          action.payload?.capabilityId,
+          `${action.path}.capabilityId`,
+        );
+        const existingIndex = findCapabilityIndex(profile, capabilityId);
+        if (existingIndex < 0) {
+          report.skippedActions.push({
+            ruleId: action.ruleId,
+            kind: action.kind,
+            path: action.path,
+            reason: 'capability_not_found',
+          });
+          continue;
+        }
+        profile.capabilities.splice(existingIndex, 1);
+        report.appliedActions.push({
+          ruleId: action.ruleId,
+          kind: action.kind,
+          path: action.path,
+        });
+        continue;
+      }
+
+      if (action.kind === 'set-capability') {
+        const capabilityId = assertNonEmptyString(
+          action.payload?.capabilityId,
+          `${action.path}.capabilityId`,
+        );
+        const slot = action.payload?.slot;
+        if (slot !== 'inboundMapping' && slot !== 'outboundMapping' && slot !== 'flags') {
+          report.skippedActions.push({
+            ruleId: action.ruleId,
+            kind: action.kind,
+            path: action.path,
+            reason: 'invalid_capability_slot',
+          });
+          continue;
+        }
+        const existingIndex = findCapabilityIndex(profile, capabilityId);
+        if (existingIndex < 0) {
+          report.skippedActions.push({
+            ruleId: action.ruleId,
+            kind: action.kind,
+            path: action.path,
+            reason: 'capability_not_found',
+          });
+          continue;
+        }
+        const existing = profile.capabilities[existingIndex];
+        const nextValue = deepClone(action.payload?.value);
+        existing[slot] = nextValue;
+        existing.directionality = normalizeCapabilityDirectionality(existing);
+        existing.provenance = createCurationProvenance(action.ruleId, 'replace', action.path);
+        report.appliedActions.push({
+          ruleId: action.ruleId,
+          kind: action.kind,
+          path: action.path,
+        });
+        continue;
+      }
+
+      if (action.kind === 'add-subscription') {
+        applyCollectionAdd(profile, 'subscriptions', action.payload?.value, action, report);
+        continue;
+      }
+
+      if (action.kind === 'remove-subscription') {
+        applyCollectionRemove(profile, 'subscriptions', action.payload?.value, action, report);
+        continue;
+      }
+
+      if (action.kind === 'add-ignored-value') {
+        applyCollectionAdd(profile, 'ignoredValues', action.payload?.value, action, report);
+        continue;
+      }
+
+      if (action.kind === 'remove-ignored-value') {
+        applyCollectionRemove(profile, 'ignoredValues', action.payload?.value, action, report);
+        continue;
+      }
+
+      report.skippedActions.push({
+        ruleId: action.ruleId,
+        kind: action.kind,
+        path: action.path,
+        reason: 'unsupported_action',
+      });
+    } catch (error) {
+      report.errors.push({
+        ruleId: action.ruleId,
+        kind: action.kind,
+        path: action.path,
+        message: toErrorMessage(error),
+      });
+    }
+  }
+
+  report.summary = {
+    lowered: actions.length,
+    applied: report.appliedActions.length,
+    skipped: report.skippedActions.length,
+    errors: report.errors.length,
+  };
+
+  return { profile, report };
+}
+
 module.exports = {
   CURATION_SETTINGS_KEY,
   CURATION_SCHEMA_VERSION,
   loadCurationRuntimeFromSettings,
   resolveCurationEntryFromRuntime,
+  lowerCurationEntryToRuntimeActions,
+  applyCurationEntryToProfile,
 };

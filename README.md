@@ -390,7 +390,7 @@ See `CONTRIBUTING.md` for code + rule/profile contribution workflow, evidence ex
   - curation storage/application semantics
   - v1 persistence backend: `this.homey.settings` with versioned curation payloads
   - v1 curation model direction: materialized per-device-instance overrides with concrete persisted `curation.v1` schema (entries keyed by `homeyDeviceId`)
-  - current implementation baseline: app runtime loads + validates `curation.v1` on startup/settings updates and triggers node runtime refresh on curation changes
+  - current implementation baseline: app runtime loads + validates `curation.v1` on startup/settings updates, lowers per-device curation overrides to runtime actions, and applies them before node runtime mapping extraction
   - v1 execution direction: lower overrides into in-memory runtime rules and execute through shared rules-engine semantics
   - v1 precedence direction: per-device (`homeyDeviceId`) curation overrides stay authoritative; new baseline recommendations are surfaced for explicit user adoption
   - v1 recommendation detection: per-device baseline markers compare canonical baseline profile hashes (with `pipelineFingerprint` metadata) to decide when to prompt

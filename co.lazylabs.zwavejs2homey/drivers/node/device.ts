@@ -20,14 +20,22 @@ import {
   type CapabilityRuntimeVerticalSlice,
   selectorMatchesNodeValueUpdatedEvent,
 } from '../../node-runtime';
+import {
+  applyCurationEntryToProfile,
+  type HomeyCurationApplyReport,
+  type HomeyCurationEntryV1,
+  type HomeyCurationRuntimeStatusV1,
+} from '../../curation';
 
 interface AppRuntimeAccess {
   getZwjsClient?: () => ZwjsClient | undefined;
   getBridgeId?: () => string;
   getCompiledProfilesStatus?: () => CompiledProfilesRuntimeStatus;
+  getCurationStatus?: () => HomeyCurationRuntimeStatusV1;
   resolveCompiledProfileEntry?: (
     selector: ReturnType<typeof buildNodeResolverSelector>,
   ) => CompiledProfileResolverMatchV1;
+  resolveCurationEntry?: (homeyDeviceId: string) => HomeyCurationEntryV1 | undefined;
 }
 
 type MappingGateReason =
@@ -62,6 +70,12 @@ interface NodeDefinedValueFacts {
   readable?: boolean;
   writeable?: boolean;
   type?: string;
+}
+
+interface NodeContext {
+  bridgeId: string;
+  nodeId: number | undefined;
+  homeyDeviceId: string | undefined;
 }
 
 function parseNumericIdentity(value: unknown): number | undefined {
@@ -242,11 +256,26 @@ module.exports = class NodeDevice extends Homey.Device {
     return null;
   }
 
-  private getNodeContext() {
-    const data = this.getData() as { bridgeId?: string; nodeId?: number } | undefined;
+  private getNodeContext(): NodeContext {
+    const data = this.getData() as { id?: string; bridgeId?: string; nodeId?: number } | undefined;
+    const maybeGetId = (this as unknown as { getId?: () => unknown }).getId;
+    let fromHomeyApi: string | undefined;
+    if (typeof maybeGetId === 'function') {
+      const resolved = maybeGetId.call(this);
+      if (typeof resolved === 'string' && resolved.trim().length > 0) {
+        fromHomeyApi = resolved;
+      }
+    }
+    let fromData: string | undefined;
+    if (typeof data?.id === 'string') {
+      const trimmed = data.id.trim();
+      if (trimmed.length > 0) fromData = trimmed;
+    }
+    const homeyDeviceId = fromHomeyApi ?? fromData;
     return {
       bridgeId: data?.bridgeId ?? 'unknown',
       nodeId: typeof data?.nodeId === 'number' ? data.nodeId : undefined,
+      homeyDeviceId,
     };
   }
 
@@ -417,11 +446,14 @@ module.exports = class NodeDevice extends Homey.Device {
     const client = app.getZwjsClient?.();
     const clientStatus = client?.getStatus();
     const resolverStatus = app.getCompiledProfilesStatus?.();
+    const curationStatus = app.getCurationStatus?.();
     let selector: ReturnType<typeof buildNodeResolverSelector> | undefined;
     let match: CompiledProfileResolverMatchV1 = { by: 'none' };
     let classification = resolveNodeProfileClassification(match, resolverStatus);
     let verticalSliceApplied = false;
     const mappingDiagnostics: CapabilityMappingDiagnostic[] = [];
+    let curationEntry: HomeyCurationEntryV1 | undefined;
+    let curationReport: HomeyCurationApplyReport | null = null;
     this.clearZwjsEventSubscriptions();
 
     if (ctx.nodeId !== undefined && client) {
@@ -438,7 +470,57 @@ module.exports = class NodeDevice extends Homey.Device {
           match = app.resolveCompiledProfileEntry?.(selector) ?? { by: 'none' };
           classification = resolveNodeProfileClassification(match, resolverStatus);
           if (match.entry) {
-            const mappingSlices = extractCapabilityRuntimeVerticals(match.entry.compiled.profile);
+            let effectiveProfile = match.entry.compiled.profile;
+            if (ctx.homeyDeviceId) {
+              curationEntry = app.resolveCurationEntry?.(ctx.homeyDeviceId);
+            }
+            if (curationEntry) {
+              const result = applyCurationEntryToProfile(
+                match.entry.compiled.profile,
+                curationEntry,
+                {
+                  homeyDeviceId: ctx.homeyDeviceId,
+                },
+              );
+              effectiveProfile = result.profile;
+              curationReport = result.report;
+            }
+
+            let effectiveClassification: Record<string, unknown> | undefined;
+            if (effectiveProfile && typeof effectiveProfile === 'object') {
+              effectiveClassification = (
+                effectiveProfile as { classification?: Record<string, unknown> }
+              ).classification;
+            }
+            if (effectiveClassification && typeof effectiveClassification === 'object') {
+              let homeyClass: string | undefined;
+              if (typeof effectiveClassification.homeyClass === 'string') {
+                homeyClass = effectiveClassification.homeyClass;
+              }
+              if (homeyClass) {
+                const nextClassification: typeof classification.classification = {
+                  homeyClass,
+                  confidence: classification.classification.confidence,
+                  uncurated: classification.classification.uncurated,
+                };
+                const baseDriverTemplateId = classification.classification.driverTemplateId;
+                if (baseDriverTemplateId !== undefined) {
+                  nextClassification.driverTemplateId = baseDriverTemplateId;
+                }
+                if (typeof effectiveClassification.driverTemplateId === 'string') {
+                  nextClassification.driverTemplateId = effectiveClassification.driverTemplateId;
+                }
+                classification = {
+                  matchBy: classification.matchBy,
+                  matchKey: classification.matchKey,
+                  profileId: classification.profileId,
+                  fallbackReason: classification.fallbackReason,
+                  classification: nextClassification,
+                };
+              }
+            }
+
+            const mappingSlices = extractCapabilityRuntimeVerticals(effectiveProfile);
             for (const mappingSlice of mappingSlices) {
               const result = await this.applyCapabilityVerticalSlice(
                 client,
@@ -493,6 +575,7 @@ module.exports = class NodeDevice extends Homey.Device {
       resolvedAt: new Date().toISOString(),
       syncedAt: new Date().toISOString(),
       syncReason,
+      homeyDeviceId: ctx.homeyDeviceId ?? null,
       selector: selector ?? null,
       matchBy: classification.matchBy,
       matchKey: classification.matchKey,
@@ -502,6 +585,11 @@ module.exports = class NodeDevice extends Homey.Device {
       resolverLoaded: resolverStatus?.loaded === true,
       resolverSourcePath: resolverStatus?.sourcePath ?? null,
       resolverError: resolverStatus?.errorMessage ?? null,
+      curationLoaded: curationStatus?.loaded === true,
+      curationSource: curationStatus?.source ?? null,
+      curationError: curationStatus?.errorMessage ?? null,
+      curationEntryPresent: Boolean(curationEntry),
+      curationReport,
       verticalSliceApplied,
       mappingDiagnostics,
     });
@@ -515,6 +603,9 @@ module.exports = class NodeDevice extends Homey.Device {
       profileMatchBy: classification.matchBy,
       profileId: classification.profileId,
       fallbackReason: classification.fallbackReason,
+      curationLoaded: curationStatus?.loaded === true,
+      curationEntryPresent: Boolean(curationEntry),
+      curationAppliedActions: curationReport?.summary.applied ?? 0,
       verticalSliceApplied,
     });
   }

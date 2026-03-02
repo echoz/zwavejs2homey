@@ -15,6 +15,13 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 ## Recently Completed
 
+- Latest Phase 5 curation-apply slice:
+  - implemented deterministic `curation.v1` override lowering to runtime actions (`lowerCurationEntryToRuntimeActions`)
+  - implemented profile apply helper (`applyCurationEntryToProfile`) with applied/skipped/error diagnostics and stable rule IDs
+  - integrated node runtime to resolve per-device curation entries and apply curation before capability runtime slice extraction
+  - profile resolution store now includes curation diagnostics (`curationLoaded`, `curationEntryPresent`, `curationReport`)
+  - added regression tests for lowering/apply semantics and node runtime curation integration
+
 - Latest Phase 5 curation-foundation slice:
   - added adapter curation runtime module (`co.lazylabs.zwavejs2homey/curation.js`) for `curation.v1` load + strict schema validation
   - enforced entry-key identity contract (`entries[homeyDeviceId]` must match `targetDevice.homeyDeviceId`)

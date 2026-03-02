@@ -10,11 +10,17 @@ Design and implement a Homey adapter-owned runtime curation system that applies 
   - strict `curation.v1` top-level + entry schema validation
   - entry key/target identity enforcement
   - deterministic collection dedupe + add/remove overlap rejection
+- [x] Phase B (override lowering + apply helper) baseline is in place:
+  - deterministic lowerer: `lowerCurationEntryToRuntimeActions`
+  - apply helper/report: `applyCurationEntryToProfile` (applied/skipped/errors + summary)
+  - stable curation runtime rule IDs derived from device/path
+- [x] Phase C (collection overrides) baseline support is in place:
+  - `capabilitiesAdd/remove`, `subscriptionsAdd/remove`, `ignoredValuesAdd/remove` lowering + apply semantics
 - [x] Phase D (storage integration) baseline is in place:
   - app runtime loads `curation.v1` from Homey settings at startup
   - app runtime reloads curation on `curation.v1` settings updates
   - curation updates trigger node runtime refresh (`curation-updated`)
-- [ ] Phase B/C/E/F remain open (lowering/apply, recommendation markers, admin flow)
+- [ ] Phase E/F remain open (recommendation markers, admin flow)
 
 Related ADRs:
 
