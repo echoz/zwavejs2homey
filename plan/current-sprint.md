@@ -15,6 +15,12 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 ## Recently Completed
 
+- Latest Phase 5 API client-contract slice:
+  - added `co.lazylabs.zwavejs2homey/runtime-api-client.js` for settings/custom-view route consumption
+  - helper now normalizes inputs, invokes Homey API routes, validates envelopes, and raises typed route/client errors
+  - added `co.lazylabs.zwavejs2homey/test/runtime-api-client.test.js` coverage for callback/promise invocation, forwarding, and envelope/error handling
+  - added route contract reference doc: `docs/homey-api-contract.md`
+
 - Latest Phase 5 API response-contract slice:
   - upgraded Homey API routes to return a stable envelope:
     - `schemaVersion`

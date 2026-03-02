@@ -154,6 +154,9 @@ Partially complete / next:
   - `POST /runtime/recommendations/execute`
   - `POST /runtime/recommendations/execute-batch`
   - all endpoints now return a stable response envelope (`schemaVersion`, `ok`, `data`, `error`)
+- a runtime API client helper now exists for settings/custom-view consumers:
+  - `co.lazylabs.zwavejs2homey/runtime-api-client.js`
+  - contract reference: `docs/homey-api-contract.md`
 - app now exposes non-UI recommendation action APIs:
   - `backfillCurationBaselineMarker(homeyDeviceId)`
   - `adoptRecommendedBaseline(homeyDeviceId)`

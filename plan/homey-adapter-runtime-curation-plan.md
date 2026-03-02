@@ -45,6 +45,9 @@ Design and implement a Homey adapter-owned runtime curation system that applies 
     - `POST /runtime/recommendations/execute`
     - `POST /runtime/recommendations/execute-batch`
   - route responses now use a stable envelope (`schemaVersion`, `ok`, `data`, `error`) for settings/custom-view consumers
+  - settings/custom-view runtime API client helper now exists:
+    - `co.lazylabs.zwavejs2homey/runtime-api-client.js`
+    - contract doc: `docs/homey-api-contract.md`
   - remaining work: Homey UX wiring for diagnostics + adopt/backfill interaction flows
 
 Related ADRs:

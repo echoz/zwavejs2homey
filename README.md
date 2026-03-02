@@ -177,6 +177,7 @@ See `docs/decisions/` for locked ADRs.
 - compiler rules grammar: `docs/rules-grammar.md`
 - validation gates: `docs/compiler-validation-gates.md`
 - capability matrix: `docs/zwjs-capability-matrix.md`
+- homey runtime API contract: `docs/homey-api-contract.md`
 - roadmap: `plan/roadmap.md`
 - current sprint log: `plan/current-sprint.md`
 - homey curation plan: `plan/homey-adapter-runtime-curation-plan.md`
