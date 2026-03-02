@@ -2,6 +2,11 @@
 
 `zwavejs2homey` is a monorepo for bridging a `zwave-js-server` network into Homey.
 
+## Project Context
+
+- This is a personal side project used to learn Codex-assisted software development.
+- The repo favors small, test-backed slices and explicit architecture/doc updates so decisions stay understandable.
+
 It is built as four explicit layers:
 
 - `@zwavejs2homey/core`: protocol client (`ZwjsClient`)

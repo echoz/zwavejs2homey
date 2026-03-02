@@ -7,6 +7,7 @@ Deliver a Homey app that uses a live `zwave-js-server` backend, with:
 - protocol/runtime concerns isolated from Homey SDK concerns
 - compile-time profile generation separated from runtime adaptation
 - deterministic, testable behavior across tooling and app runtime
+- an explicit structure that supports the project's learning goal: practicing Codex-assisted development workflows
 
 ## Repo Map (High-Level)
 

@@ -2,6 +2,8 @@
 
 Thanks for helping improve `zwavejs2homey`.
 
+This is a personal side project used to learn Codex-assisted development, so small and well-explained contributions are preferred over large opaque changes.
+
 This repo has two major contribution paths:
 
 - code/tooling changes
@@ -38,6 +40,8 @@ For code in `packages/*`, `tools/`, or Homey app runtime:
 3. Run `npm run check`.
 4. Update docs/plan entries if behavior changed.
 5. Commit with a descriptive message.
+6. If Codex materially authored code/docs in the change, add:
+   - `Co-authored-by: Codex <codex@openai.com>`
 
 ## Rule and Profile Contributions
 

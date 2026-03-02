@@ -13,6 +13,11 @@ Phase 6  Reliability + UX            [NEXT]
 * remaining deferred items are environment-dependent follow-ups
 ```
 
+## Project Context
+
+- Personal side project focused on learning Codex-assisted engineering workflows while shipping a real Homey + ZWJS bridge.
+- Roadmap phases prioritize clear boundaries, observable diagnostics, and test-backed iteration to make learning and maintenance explicit.
+
 ## North Star
 
 Ship a Homey app that:
