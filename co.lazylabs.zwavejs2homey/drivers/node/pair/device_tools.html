@@ -199,10 +199,12 @@
         <section class="panel">
           <h2>Actions</h2>
           <div class="actions">
-            <button class="button" disabled title="Available in next slice">Backfill Marker</button>
-            <button class="button" disabled title="Available in next slice">Adopt Update</button>
+            <button id="backfill-btn" class="button">Backfill Marker</button>
+            <button id="adopt-btn" class="button">Adopt Update</button>
           </div>
-          <p class="hint">Read-only mode. Action controls are intentionally disabled in v1.</p>
+          <p id="action-hint" class="hint">
+            Actions are available when a recommendation requires explicit confirmation.
+          </p>
         </section>
       </div>
 
@@ -220,8 +222,10 @@
       (function () {
         const state = {
           loading: false,
+          actionInFlight: false,
           snapshot: null,
           error: null,
+          statusMessage: null,
         };
 
         const reasonLabels = {
@@ -244,6 +248,9 @@
         const recommendationContent = document.getElementById('recommendation-content');
         const profileRefKv = document.getElementById('profile-reference-kv');
         const whyKv = document.getElementById('why-kv');
+        const backfillBtn = document.getElementById('backfill-btn');
+        const adoptBtn = document.getElementById('adopt-btn');
+        const actionHint = document.getElementById('action-hint');
 
         function formatIso(ts) {
           if (!ts) return 'n/a';
@@ -277,7 +284,7 @@
         }
 
         function render() {
-          refreshBtn.disabled = state.loading;
+          refreshBtn.disabled = state.loading || state.actionInFlight;
           errorPanel.hidden = !state.error;
           errorPanel.textContent = state.error ? state.error : '';
 
@@ -290,11 +297,24 @@
               '<p class="hint">No recommendation data available.</p>';
             profileRefKv.innerHTML = '';
             whyKv.innerHTML = '';
-            statusLine.textContent = state.loading ? 'Loading snapshot...' : 'Idle';
+            backfillBtn.disabled = true;
+            adoptBtn.disabled = true;
+            actionHint.textContent = 'No action context available.';
+            statusLine.textContent =
+              state.statusMessage || (state.loading ? 'Loading snapshot...' : 'Idle');
             return;
           }
 
           const snapshot = state.snapshot;
+          const isBusy = state.loading || state.actionInFlight;
+          const canBackfill =
+            snapshot.recommendation.actionable &&
+            snapshot.recommendation.suggestedAction === 'backfill-marker';
+          const canAdopt =
+            snapshot.recommendation.actionable &&
+            snapshot.recommendation.suggestedAction === 'adopt-recommended-baseline';
+          backfillBtn.disabled = isBusy || !canBackfill;
+          adoptBtn.disabled = isBusy || !canAdopt;
           const deviceLabel =
             snapshot.device.nodeId !== null ? `Node ${snapshot.device.nodeId}` : 'Node';
           subtitle.textContent = `${deviceLabel} · ${snapshot.device.homeyDeviceId}`;
@@ -344,14 +364,32 @@
             ['Last Sync', formatIso(snapshot.generatedAt)],
           ]);
 
-          statusLine.textContent = state.loading
-            ? 'Refreshing device snapshot...'
-            : `Last updated ${formatIso(snapshot.generatedAt)}`;
+          if (canBackfill) {
+            actionHint.textContent =
+              'Profile reference metadata is missing. You can backfill marker metadata now.';
+          } else if (canAdopt) {
+            actionHint.textContent =
+              'A compiled profile update is available. You can adopt it for this device.';
+          } else {
+            actionHint.textContent =
+              'No action is required right now. This device is already aligned with its profile state.';
+          }
+
+          if (state.statusMessage) {
+            statusLine.textContent = state.statusMessage;
+          } else if (state.loading) {
+            statusLine.textContent = 'Refreshing device snapshot...';
+          } else if (state.actionInFlight) {
+            statusLine.textContent = 'Applying action...';
+          } else {
+            statusLine.textContent = `Last updated ${formatIso(snapshot.generatedAt)}`;
+          }
         }
 
         async function loadSnapshot(eventName) {
           state.loading = true;
           state.error = null;
+          state.statusMessage = null;
           render();
           try {
             state.snapshot = await Homey.emit(eventName);
@@ -364,8 +402,69 @@
           }
         }
 
+        function describeActionResult(actionResult) {
+          if (!actionResult || typeof actionResult !== 'object') return 'Action completed.';
+          if (actionResult.executed === true) {
+            if (actionResult.selectedAction === 'backfill-marker') {
+              return 'Backfill completed. Profile Reference metadata has been updated.';
+            }
+            if (actionResult.selectedAction === 'adopt-recommended-baseline') {
+              return 'Profile update adopted for this device.';
+            }
+            return 'Action completed.';
+          }
+          const reason =
+            actionResult.reason && typeof actionResult.reason === 'string'
+              ? actionResult.reason
+              : 'action-not-executed';
+          return `Action not executed: ${reason}`;
+        }
+
+        async function executeAction(actionSelection, confirmationText) {
+          if (!state.snapshot) return;
+          if (!window.confirm(confirmationText)) return;
+
+          state.actionInFlight = true;
+          state.error = null;
+          state.statusMessage = 'Applying action...';
+          render();
+
+          try {
+            const result = await Homey.emit('device_tools:execute_action', {
+              action: actionSelection,
+            });
+            if (result && typeof result === 'object' && result.snapshot) {
+              state.snapshot = result.snapshot;
+            } else {
+              state.snapshot = await Homey.emit('device_tools:refresh');
+            }
+            const actionResult =
+              result && typeof result === 'object' ? result.actionResult : undefined;
+            state.statusMessage = describeActionResult(actionResult);
+          } catch (error) {
+            const message = error && error.message ? error.message : 'Action failed.';
+            state.error = message;
+            state.statusMessage = null;
+          } finally {
+            state.actionInFlight = false;
+            render();
+          }
+        }
+
         refreshBtn.addEventListener('click', () => {
           loadSnapshot('device_tools:refresh');
+        });
+        backfillBtn.addEventListener('click', () => {
+          executeAction(
+            'backfill-marker',
+            'Backfill Profile Reference for this device? This writes marker metadata only.',
+          );
+        });
+        adoptBtn.addEventListener('click', () => {
+          executeAction(
+            'adopt-recommended-baseline',
+            'Adopt the compiled profile update for this device? This removes current curation for this device.',
+          );
         });
 
         Homey.ready();

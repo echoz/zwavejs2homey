@@ -6,10 +6,20 @@ import {
   ZWJS_DEFAULT_BRIDGE_ID,
 } from '../../pairing';
 
+type RecommendationActionSelection =
+  | 'auto'
+  | 'backfill-marker'
+  | 'adopt-recommended-baseline'
+  | 'none';
+
 interface AppRuntimeAccess {
   getZwjsClient?: () => ZwjsClient | undefined;
   getBridgeId?: () => string;
   getNodeDeviceToolsSnapshot?: (options: { homeyDeviceId: string }) => Promise<unknown>;
+  executeRecommendationAction?: (options: {
+    homeyDeviceId: string;
+    action?: RecommendationActionSelection;
+  }) => Promise<unknown>;
 }
 
 interface HomeyDeviceData {
@@ -67,8 +77,32 @@ module.exports = class NodeDriver extends Homey.Driver {
       return app.getNodeDeviceToolsSnapshot({ homeyDeviceId });
     };
 
+    const executeAction = async (payload?: unknown): Promise<unknown> => {
+      if (!homeyDeviceId) {
+        throw new Error('Device Tools unavailable: node device ID is missing.');
+      }
+      if (!app.executeRecommendationAction) {
+        throw new Error('Device Tools unavailable: recommendation action API is not ready.');
+      }
+      if (!app.getNodeDeviceToolsSnapshot) {
+        throw new Error('Device Tools unavailable: app runtime snapshot API is not ready.');
+      }
+
+      const actionSelection = this.parseActionSelection(payload);
+      const actionResult = await app.executeRecommendationAction({
+        homeyDeviceId,
+        action: actionSelection,
+      });
+      const snapshot = await app.getNodeDeviceToolsSnapshot({ homeyDeviceId });
+      return {
+        actionResult,
+        snapshot,
+      };
+    };
+
     session.setHandler('device_tools:get_snapshot', async () => loadSnapshot());
     session.setHandler('device_tools:refresh', async () => loadSnapshot());
+    session.setHandler('device_tools:execute_action', async (payload) => executeAction(payload));
   }
 
   private resolveHomeyDeviceId(device: Homey.Device): string | null {
@@ -76,5 +110,27 @@ module.exports = class NodeDriver extends Homey.Driver {
     if (!data || typeof data.id !== 'string') return null;
     const trimmed = data.id.trim();
     return trimmed.length > 0 ? trimmed : null;
+  }
+
+  private parseActionSelection(payload: unknown): RecommendationActionSelection {
+    if (!payload || typeof payload !== 'object') return 'auto';
+    const { action } = payload as { action?: unknown };
+    if (typeof action === 'undefined') return 'auto';
+    if (typeof action !== 'string') {
+      throw new Error('Invalid Device Tools action selection: action must be a string.');
+    }
+    const normalized = action.trim();
+    const allowedSelections: RecommendationActionSelection[] = [
+      'auto',
+      'backfill-marker',
+      'adopt-recommended-baseline',
+      'none',
+    ];
+    if (allowedSelections.includes(normalized as RecommendationActionSelection)) {
+      return normalized as RecommendationActionSelection;
+    }
+    throw new Error(
+      'Invalid Device Tools action selection. Expected one of: auto, backfill-marker, adopt-recommended-baseline, none.',
+    );
   }
 };

@@ -105,12 +105,15 @@ Done so far:
   - node `onRepair` session handlers for per-device snapshots (`device_tools:get_snapshot`, `device_tools:refresh`)
   - targeted app snapshot API (`getNodeDeviceToolsSnapshot`) with stable read-only schema (`node-device-tools/v1`)
   - first read-only custom view scaffold in driver custom view files (`drivers/node/repair/device_tools.html`)
+- node Device Tools action wiring:
+  - session action handler (`device_tools:execute_action`) with strict action validation
+  - action flow returns refreshed per-device snapshot for immediate UI refresh
+  - Device Tools custom view now supports explicit confirm + execute for backfill/adopt
 
 In progress / next:
 
 1. complete Device Tools UX polish and verify canonical repair-view host path
-2. wire backfill/adopt actions into Device Tools flows
-3. continue broadening runtime mapping coverage with tests
+2. continue broadening runtime mapping coverage with tests
 
 Exit criteria:
 

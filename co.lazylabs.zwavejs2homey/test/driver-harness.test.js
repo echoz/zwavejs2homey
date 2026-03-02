@@ -155,6 +155,7 @@ test('node driver returns pair candidates with controller/duplicates filtered ou
 
 test('node driver repair session exposes device tools snapshot handlers', async () => {
   const snapshotCalls = [];
+  const actionCalls = [];
   const driver = new NodeDriver();
   driver._configureHarness({
     app: {
@@ -163,6 +164,13 @@ test('node driver repair session exposes device tools snapshot handlers', async 
         return {
           schemaVersion: 'node-device-tools/v1',
           device: { homeyDeviceId: options.homeyDeviceId },
+        };
+      },
+      async executeRecommendationAction(options) {
+        actionCalls.push(options);
+        return {
+          executed: true,
+          selectedAction: options.action,
         };
       },
     },
@@ -182,11 +190,24 @@ test('node driver repair session exposes device tools snapshot handlers', async 
 
   assert.equal(typeof handlers.get('device_tools:get_snapshot'), 'function');
   assert.equal(typeof handlers.get('device_tools:refresh'), 'function');
+  assert.equal(typeof handlers.get('device_tools:execute_action'), 'function');
   const first = await handlers.get('device_tools:get_snapshot')();
   const second = await handlers.get('device_tools:refresh')();
+  const third = await handlers.get('device_tools:execute_action')({
+    action: 'adopt-recommended-baseline',
+  });
   assert.equal(first.schemaVersion, 'node-device-tools/v1');
   assert.equal(second.device.homeyDeviceId, 'main:8');
-  assert.deepEqual(snapshotCalls, [{ homeyDeviceId: 'main:8' }, { homeyDeviceId: 'main:8' }]);
+  assert.equal(third.snapshot.device.homeyDeviceId, 'main:8');
+  assert.equal(third.actionResult.selectedAction, 'adopt-recommended-baseline');
+  assert.deepEqual(snapshotCalls, [
+    { homeyDeviceId: 'main:8' },
+    { homeyDeviceId: 'main:8' },
+    { homeyDeviceId: 'main:8' },
+  ]);
+  assert.deepEqual(actionCalls, [
+    { homeyDeviceId: 'main:8', action: 'adopt-recommended-baseline' },
+  ]);
 });
 
 test('node driver repair handler rejects when node device ID is unavailable', async () => {
@@ -214,6 +235,37 @@ test('node driver repair handler rejects when node device ID is unavailable', as
   await assert.rejects(
     () => handlers.get('device_tools:get_snapshot')(),
     /Device Tools unavailable: node device ID is missing\./,
+  );
+});
+
+test('node driver repair action handler rejects invalid action selection', async () => {
+  const driver = new NodeDriver();
+  driver._configureHarness({
+    app: {
+      async getNodeDeviceToolsSnapshot() {
+        return { schemaVersion: 'node-device-tools/v1' };
+      },
+      async executeRecommendationAction() {
+        return { executed: true };
+      },
+    },
+    devices: [],
+  });
+
+  const handlers = new Map();
+  const session = {
+    setHandler(event, handler) {
+      handlers.set(event, handler);
+    },
+  };
+
+  await driver.onRepair(session, {
+    getData: () => ({ id: 'main:9' }),
+  });
+
+  await assert.rejects(
+    () => handlers.get('device_tools:execute_action')({ action: 'invalid-action' }),
+    /Invalid Device Tools action selection/,
   );
 });
 

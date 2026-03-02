@@ -168,11 +168,15 @@ Partially complete / next:
   - node driver `onRepair` session handlers:
     - `device_tools:get_snapshot`
     - `device_tools:refresh`
+    - `device_tools:execute_action`
   - app-level targeted snapshot API:
     - `getNodeDeviceToolsSnapshot({ homeyDeviceId })`
     - stable schema: `node-device-tools/v1`
   - read-only custom view scaffold:
     - `co.lazylabs.zwavejs2homey/drivers/node/repair/device_tools.html`
+  - Device Tools actions now execute explicit recommendation updates:
+    - `backfill-marker` and `adopt-recommended-baseline`
+    - action handler returns `{ actionResult, snapshot }` for single-roundtrip UI refresh
 - app now exposes non-UI recommendation action APIs:
   - `backfillCurationBaselineMarker(homeyDeviceId)`
   - `adoptRecommendedBaseline(homeyDeviceId)`
@@ -181,7 +185,7 @@ Partially complete / next:
   - `executeRecommendationAction(...)`
   - `executeRecommendationActions(...)`
   - `backfillMissingCurationBaselineMarkers(...)`
-- Homey Device Tools UX action flows (adopt/backfill) beyond read-only diagnostics
+- additional Homey Device Tools UX polish beyond current action flow baseline
 - expanded runtime mapping vertical coverage
 
 Deferred:

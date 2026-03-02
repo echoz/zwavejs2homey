@@ -15,6 +15,19 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 ## Recently Completed
 
+- Latest Phase 5 node Device Tools action slice:
+  - enabled explicit per-device recommendation actions in Device Tools custom view:
+    - `Backfill Marker` (for marker-missing recommendations)
+    - `Adopt Update` (for baseline-change recommendations)
+  - added node repair session action handler in `co.lazylabs.zwavejs2homey/drivers/node/driver.ts`:
+    - `device_tools:execute_action`
+    - strict action enum validation (`auto`, `backfill-marker`, `adopt-recommended-baseline`, `none`)
+  - action handler now returns action result + refreshed per-device snapshot in one call
+  - upgraded Device Tools view scaffolds to interactive action UX with confirmation prompts + inline status updates:
+    - `co.lazylabs.zwavejs2homey/drivers/node/repair/device_tools.html`
+    - `co.lazylabs.zwavejs2homey/drivers/node/pair/device_tools.html`
+  - expanded repair/session harness coverage for action forwarding and invalid selection rejection
+
 - Latest Phase 5 node Device Tools read-only slice:
   - added node-driver repair host wiring in `co.lazylabs.zwavejs2homey/drivers/node/driver.ts`:
     - `onRepair(session, device)` session handlers:

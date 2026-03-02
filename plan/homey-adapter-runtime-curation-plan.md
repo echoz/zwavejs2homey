@@ -63,7 +63,12 @@ Design and implement a Homey adapter-owned runtime curation system that applies 
   - first Device Tools custom view is now in place as read-only:
     - `drivers/node/repair/device_tools.html` (primary repair host)
     - `drivers/node/pair/device_tools.html` (fallback mirror while host-path behavior is validated)
-  - remaining work: enable adopt/backfill actions from Device Tools UI flows
+  - Device Tools action execution wiring is now in place:
+    - session handler `device_tools:execute_action` (node `onRepair`)
+    - strict action validation (`auto`, `backfill-marker`, `adopt-recommended-baseline`, `none`)
+    - action response returns execution result + refreshed `node-device-tools/v1` snapshot
+    - custom view now drives explicit confirm-before-execute for adopt/backfill
+  - remaining work: additional Device Tools UX polish + host-path verification
 
 Related ADRs:
 
