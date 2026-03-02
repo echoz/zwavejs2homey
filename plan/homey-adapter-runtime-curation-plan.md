@@ -44,6 +44,7 @@ Design and implement a Homey adapter-owned runtime curation system that applies 
     - `GET /runtime/recommendations`
     - `POST /runtime/recommendations/execute`
     - `POST /runtime/recommendations/execute-batch`
+  - route responses now use a stable envelope (`schemaVersion`, `ok`, `data`, `error`) for settings/custom-view consumers
   - remaining work: Homey UX wiring for diagnostics + adopt/backfill interaction flows
 
 Related ADRs:

@@ -153,6 +153,7 @@ Partially complete / next:
   - `GET /runtime/recommendations`
   - `POST /runtime/recommendations/execute`
   - `POST /runtime/recommendations/execute-batch`
+  - all endpoints now return a stable response envelope (`schemaVersion`, `ok`, `data`, `error`)
 - app now exposes non-UI recommendation action APIs:
   - `backfillCurationBaselineMarker(homeyDeviceId)`
   - `adoptRecommendedBaseline(homeyDeviceId)`

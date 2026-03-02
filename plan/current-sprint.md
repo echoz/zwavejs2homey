@@ -15,6 +15,15 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 ## Recently Completed
 
+- Latest Phase 5 API response-contract slice:
+  - upgraded Homey API routes to return a stable envelope:
+    - `schemaVersion`
+    - `ok`
+    - `data`
+    - `error`
+  - added structured validation/runtime error payloads for deterministic settings/custom-view handling
+  - expanded API route tests to validate success and error envelopes
+
 - Latest Phase 5 Homey app API routing slice:
   - added Homey app API routes in `co.lazylabs.zwavejs2homey/api.js` for diagnostics and recommendation orchestration
   - registered API endpoints in `.homeycompose/app.json` + `app.json`:

@@ -38,13 +38,27 @@ function createHomeyAppStub(overrides = {}) {
   };
 }
 
+function assertSuccessEnvelope(result) {
+  assert.equal(result.schemaVersion, 'zwjs2homey-api/v1');
+  assert.equal(result.ok, true);
+  assert.equal(result.error, null);
+}
+
+function assertErrorEnvelope(result, codePattern) {
+  assert.equal(result.schemaVersion, 'zwjs2homey-api/v1');
+  assert.equal(result.ok, false);
+  assert.equal(result.data, null);
+  assert.match(result.error.code, codePattern);
+}
+
 test('api getRuntimeDiagnostics forwards normalized query options', async () => {
   const { homey, calls } = createHomeyAppStub();
   const result = await api.getRuntimeDiagnostics({
     homey,
     query: { homeyDeviceId: '  main:8 ' },
   });
-  assert.equal(result.kind, 'diagnostics');
+  assertSuccessEnvelope(result);
+  assert.equal(result.data.kind, 'diagnostics');
   assert.deepEqual(calls.diagnostics, [{ homeyDeviceId: 'main:8' }]);
 });
 
@@ -54,28 +68,26 @@ test('api getRecommendationActionQueue parses includeNoAction values', async () 
     homey,
     query: { includeNoAction: 'true', homeyDeviceId: 'main:8' },
   });
-  assert.equal(result.kind, 'queue');
+  assertSuccessEnvelope(result);
+  assert.equal(result.data.kind, 'queue');
   assert.deepEqual(calls.queue, [{ homeyDeviceId: 'main:8', includeNoAction: true }]);
 });
 
-test('api executeRecommendationAction validates required homeyDeviceId', async () => {
+test('api executeRecommendationAction returns structured error when homeyDeviceId missing', async () => {
   const { homey } = createHomeyAppStub();
-  await assert.rejects(
-    () => api.executeRecommendationAction({ homey, body: {} }),
-    /homeyDeviceId is required/,
-  );
+  const result = await api.executeRecommendationAction({ homey, body: {} });
+  assertErrorEnvelope(result, /invalid-homey-device-id/);
+  assert.match(result.error.message, /homeyDeviceId is required/);
 });
 
-test('api executeRecommendationAction validates action enum', async () => {
+test('api executeRecommendationAction returns structured error on invalid action enum', async () => {
   const { homey } = createHomeyAppStub();
-  await assert.rejects(
-    () =>
-      api.executeRecommendationAction({
-        homey,
-        body: { homeyDeviceId: 'main:8', action: 'invalid' },
-      }),
-    /action must be one of/,
-  );
+  const result = await api.executeRecommendationAction({
+    homey,
+    body: { homeyDeviceId: 'main:8', action: 'invalid' },
+  });
+  assertErrorEnvelope(result, /invalid-action-selection/);
+  assert.match(result.error.message, /action must be one of/);
 });
 
 test('api executeRecommendationAction forwards normalized payload', async () => {
@@ -84,7 +96,8 @@ test('api executeRecommendationAction forwards normalized payload', async () => 
     homey,
     body: { homeyDeviceId: ' main:8 ', action: ' backfill-marker ' },
   });
-  assert.equal(result.kind, 'action');
+  assertSuccessEnvelope(result);
+  assert.equal(result.data.kind, 'action');
   assert.deepEqual(calls.action, [{ homeyDeviceId: 'main:8', action: 'backfill-marker' }]);
 });
 
@@ -94,18 +107,28 @@ test('api executeRecommendationActions forwards normalized payload', async () =>
     homey,
     body: { homeyDeviceId: 'main:8', includeNoAction: '1' },
   });
-  assert.equal(result.kind, 'actions');
+  assertSuccessEnvelope(result);
+  assert.equal(result.data.kind, 'actions');
   assert.deepEqual(calls.actions, [{ homeyDeviceId: 'main:8', includeNoAction: true }]);
 });
 
-test('api rejects invalid includeNoAction value', async () => {
+test('api returns structured errors for invalid includeNoAction values', async () => {
   const { homey } = createHomeyAppStub();
-  await assert.rejects(
-    () =>
-      api.executeRecommendationActions({
-        homey,
-        body: { includeNoAction: 'sometimes' },
-      }),
-    /includeNoAction must be a boolean/,
-  );
+  const result = await api.executeRecommendationActions({
+    homey,
+    body: { includeNoAction: 'sometimes' },
+  });
+  assertErrorEnvelope(result, /invalid-request/);
+  assert.match(result.error.message, /includeNoAction must be a boolean/);
+});
+
+test('api returns runtime-error envelope on unexpected app failures', async () => {
+  const { homey } = createHomeyAppStub({
+    async getNodeRuntimeDiagnostics() {
+      throw new Error('diagnostics exploded');
+    },
+  });
+  const result = await api.getRuntimeDiagnostics({ homey, query: {} });
+  assertErrorEnvelope(result, /runtime-error/);
+  assert.match(result.error.message, /diagnostics exploded/);
 });
