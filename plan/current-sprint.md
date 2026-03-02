@@ -15,6 +15,24 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 ## Recently Completed
 
+- Latest Phase 5 node Device Tools read-only slice:
+  - added node-driver repair host wiring in `co.lazylabs.zwavejs2homey/drivers/node/driver.ts`:
+    - `onRepair(session, device)` session handlers:
+      - `device_tools:get_snapshot`
+      - `device_tools:refresh`
+  - added targeted app snapshot API in `co.lazylabs.zwavejs2homey/app.ts`:
+    - `getNodeDeviceToolsSnapshot({ homeyDeviceId })`
+    - stable read-only payload schema: `node-device-tools/v1`
+  - enabled node repair manifest entry in:
+    - `co.lazylabs.zwavejs2homey/drivers/node/driver.compose.json`
+    - `co.lazylabs.zwavejs2homey/app.json`
+  - added first custom Device Tools view scaffolds:
+    - `co.lazylabs.zwavejs2homey/drivers/node/repair/device_tools.html`
+    - `co.lazylabs.zwavejs2homey/drivers/node/pair/device_tools.html` (fallback mirror)
+  - expanded harness/runtime coverage:
+    - `co.lazylabs.zwavejs2homey/test/driver-harness.test.js`
+    - `co.lazylabs.zwavejs2homey/test/app-runtime-refresh.test.js`
+
 - Latest Phase 5 runtime API smoke-tool slice:
   - added `tools/homey-runtime-api-smoke.mjs` + `tools/homey-runtime-api-smoke-lib.mjs`
   - smoke now validates all runtime routes against a live Homey app endpoint and checks envelope/HTTP health

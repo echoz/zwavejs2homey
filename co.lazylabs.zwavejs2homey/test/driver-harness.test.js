@@ -153,6 +153,70 @@ test('node driver returns pair candidates with controller/duplicates filtered ou
   assert.equal(candidates[0]?.data?.nodeId, 8);
 });
 
+test('node driver repair session exposes device tools snapshot handlers', async () => {
+  const snapshotCalls = [];
+  const driver = new NodeDriver();
+  driver._configureHarness({
+    app: {
+      async getNodeDeviceToolsSnapshot(options) {
+        snapshotCalls.push(options);
+        return {
+          schemaVersion: 'node-device-tools/v1',
+          device: { homeyDeviceId: options.homeyDeviceId },
+        };
+      },
+    },
+    devices: [],
+  });
+
+  const handlers = new Map();
+  const session = {
+    setHandler(event, handler) {
+      handlers.set(event, handler);
+    },
+  };
+
+  await driver.onRepair(session, {
+    getData: () => ({ id: 'main:8' }),
+  });
+
+  assert.equal(typeof handlers.get('device_tools:get_snapshot'), 'function');
+  assert.equal(typeof handlers.get('device_tools:refresh'), 'function');
+  const first = await handlers.get('device_tools:get_snapshot')();
+  const second = await handlers.get('device_tools:refresh')();
+  assert.equal(first.schemaVersion, 'node-device-tools/v1');
+  assert.equal(second.device.homeyDeviceId, 'main:8');
+  assert.deepEqual(snapshotCalls, [{ homeyDeviceId: 'main:8' }, { homeyDeviceId: 'main:8' }]);
+});
+
+test('node driver repair handler rejects when node device ID is unavailable', async () => {
+  const driver = new NodeDriver();
+  driver._configureHarness({
+    app: {
+      async getNodeDeviceToolsSnapshot() {
+        return { schemaVersion: 'node-device-tools/v1' };
+      },
+    },
+    devices: [],
+  });
+
+  const handlers = new Map();
+  const session = {
+    setHandler(event, handler) {
+      handlers.set(event, handler);
+    },
+  };
+
+  await driver.onRepair(session, {
+    getData: () => ({}),
+  });
+
+  await assert.rejects(
+    () => handlers.get('device_tools:get_snapshot')(),
+    /Device Tools unavailable: node device ID is missing\./,
+  );
+});
+
 test('bridge device init logs bridge status and stores runtime diagnostics snapshot', async () => {
   const device = new BridgeDevice();
   device._configureHarness({

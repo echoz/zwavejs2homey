@@ -164,6 +164,15 @@ Partially complete / next:
 - a runtime API client helper now exists for settings/custom-view consumers:
   - `co.lazylabs.zwavejs2homey/runtime-api-client.js`
   - contract reference: `docs/homey-api-contract.md`
+- node Device Tools host path is now wired:
+  - node driver `onRepair` session handlers:
+    - `device_tools:get_snapshot`
+    - `device_tools:refresh`
+  - app-level targeted snapshot API:
+    - `getNodeDeviceToolsSnapshot({ homeyDeviceId })`
+    - stable schema: `node-device-tools/v1`
+  - read-only custom view scaffold:
+    - `co.lazylabs.zwavejs2homey/drivers/node/repair/device_tools.html`
 - app now exposes non-UI recommendation action APIs:
   - `backfillCurationBaselineMarker(homeyDeviceId)`
   - `adoptRecommendedBaseline(homeyDeviceId)`
@@ -172,7 +181,7 @@ Partially complete / next:
   - `executeRecommendationAction(...)`
   - `executeRecommendationActions(...)`
   - `backfillMissingCurationBaselineMarkers(...)`
-- Homey settings/diagnostics UX consumption around curation and recommendations
+- Homey Device Tools UX action flows (adopt/backfill) beyond read-only diagnostics
 - expanded runtime mapping vertical coverage
 
 Deferred:
@@ -205,9 +214,10 @@ Primary gate: `npm run check`
 
 Near-term:
 
-1. wire diagnostics snapshot API into Homey-facing UX/settings surfaces
-2. harden recommendation adoption/backfill flows in app-facing paths
-3. continue capability vertical expansion with runtime + harness tests
+1. finalize Device Tools host-path verification (`onRepair` custom view resolution)
+2. wire recommendation adoption/backfill actions into Device Tools UI flow
+3. harden recommendation adoption/backfill flows in app-facing paths
+4. continue capability vertical expansion with runtime + harness tests
 
 After that:
 

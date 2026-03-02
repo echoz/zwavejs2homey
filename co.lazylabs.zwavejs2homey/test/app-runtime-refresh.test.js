@@ -501,6 +501,84 @@ test('app diagnostics snapshot supports homeyDeviceId filtering', async () => {
   await app.onUninit();
 });
 
+test('app node device tools snapshot returns targeted diagnostics payload', async () => {
+  const nodeDevices = [
+    createNodeDiagnosticsDevice({
+      id: 'main:8',
+      nodeId: 8,
+      profileResolution: {
+        syncedAt: '2026-03-02T00:00:00.000Z',
+        matchBy: 'product-triple',
+        matchKey: '29:66:2',
+        profileId: 'profile-main-8',
+        classification: {
+          homeyClass: 'socket',
+          confidence: 'curated',
+          uncurated: false,
+        },
+        recommendationAvailable: true,
+        recommendationReason: 'baseline-hash-changed',
+        recommendationBackfillNeeded: false,
+        recommendationProjectionVersion: '1',
+        currentBaselineHash: 'next-hash-8',
+        storedBaselineHash: 'old-hash-8',
+        currentBaselinePipelineFingerprint: 'pf-next',
+        storedBaselinePipelineFingerprint: 'pf-old',
+        mappingDiagnostics: [],
+      },
+    }),
+  ];
+
+  const { app } = loadAppClass(nodeDevices);
+  await app.onInit();
+
+  const snapshot = await app.getNodeDeviceToolsSnapshot({ homeyDeviceId: 'main:8' });
+  assert.equal(snapshot.schemaVersion, 'node-device-tools/v1');
+  assert.equal(snapshot.device.homeyDeviceId, 'main:8');
+  assert.equal(snapshot.profile.profileId, 'profile-main-8');
+  assert.equal(snapshot.recommendation.suggestedAction, 'adopt-recommended-baseline');
+  assert.equal(snapshot.recommendation.actionable, true);
+  assert.equal(snapshot.profileReference.currentBaselineHash, 'next-hash-8');
+  assert.equal(snapshot.profileReference.storedBaselineHash, 'old-hash-8');
+  assert.equal(snapshot.ui.readOnly, true);
+  assert.equal(snapshot.ui.actionsEnabled, false);
+
+  await app.onUninit();
+});
+
+test('app node device tools snapshot supports profile-resolution-pending devices', async () => {
+  const nodeDevices = [
+    createNodeDiagnosticsDevice({
+      id: 'main:21',
+      nodeId: 21,
+      profileResolution: undefined,
+    }),
+  ];
+
+  const { app } = loadAppClass(nodeDevices);
+  await app.onInit();
+
+  const snapshot = await app.getNodeDeviceToolsSnapshot({ homeyDeviceId: 'main:21' });
+  assert.equal(snapshot.profile.fallbackReason, 'profile-resolution-not-ready');
+  assert.equal(snapshot.recommendation.reason, 'profile-resolution-not-ready');
+  assert.equal(snapshot.recommendation.actionable, false);
+  assert.equal(snapshot.profileReference.currentBaselineHash, null);
+
+  await app.onUninit();
+});
+
+test('app node device tools snapshot rejects unknown homeyDeviceId', async () => {
+  const { app } = loadAppClass([]);
+  await app.onInit();
+
+  await assert.rejects(
+    () => app.getNodeDeviceToolsSnapshot({ homeyDeviceId: 'main:404' }),
+    /Node device not found for homeyDeviceId: main:404/,
+  );
+
+  await app.onUninit();
+});
+
 test('app can backfill curation baseline marker for a node from runtime diagnostics', async () => {
   const nodeDevices = [
     createNodeDiagnosticsDevice({

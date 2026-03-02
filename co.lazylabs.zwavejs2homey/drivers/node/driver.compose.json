@@ -12,6 +12,11 @@
       "template": "list_devices"
     }
   ],
+  "repair": [
+    {
+      "id": "device_tools"
+    }
+  ],
   "images": {
     "small": "{{driverAssetsPath}}/images/small.png",
     "large": "{{driverAssetsPath}}/images/large.png",

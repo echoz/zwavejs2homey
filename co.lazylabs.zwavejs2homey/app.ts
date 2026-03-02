@@ -109,6 +109,51 @@ interface RecommendationActionExecutionResultV1 {
   createdEntry?: boolean;
 }
 
+interface RuntimeNodeDeviceLike {
+  getData?: () => { id?: unknown; bridgeId?: unknown; nodeId?: unknown } | undefined;
+  getStoreValue?: (key: string) => Promise<unknown>;
+}
+
+interface NodeDeviceToolsSnapshotV1 {
+  schemaVersion: 'node-device-tools/v1';
+  generatedAt: string;
+  device: {
+    homeyDeviceId: string;
+    bridgeId: string | null;
+    nodeId: number | null;
+  };
+  runtime: {
+    zwjs: {
+      available: boolean;
+      transportConnected: boolean;
+      lifecycle: string;
+    };
+    compiledProfiles: CompiledProfilesRuntimeStatus;
+    curation: HomeyCurationRuntimeStatusV1;
+  };
+  profile: NodeRuntimeDiagnosticsEntry['profile'];
+  mapping: NodeRuntimeDiagnosticsEntry['mapping'];
+  curation: NodeRuntimeDiagnosticsEntry['curation'];
+  recommendation: {
+    available: boolean;
+    reason: string | null;
+    backfillNeeded: boolean;
+    suggestedAction: RecommendationActionKindV1;
+    actionable: boolean;
+  };
+  profileReference: {
+    projectionVersion: string | null;
+    currentBaselineHash: string | null;
+    storedBaselineHash: string | null;
+    currentPipelineFingerprint: string | null;
+    storedPipelineFingerprint: string | null;
+  };
+  ui: {
+    readOnly: true;
+    actionsEnabled: false;
+  };
+}
+
 module.exports = class Zwavejs2HomeyApp extends Homey.App {
   private zwjsClient?: ZwjsClient;
   private readonly bridgeId = ZWJS_DEFAULT_BRIDGE_ID;
@@ -305,6 +350,74 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
         skipReasons: mappingSummary.skipReasons,
       },
     };
+  }
+
+  private createPendingNodeDiagnosticsEntry(
+    deviceData: { id?: unknown; bridgeId?: unknown; nodeId?: unknown } | undefined,
+  ): NodeRuntimeDiagnosticsEntry {
+    return {
+      homeyDeviceId: Zwavejs2HomeyApp.toStringOrNull(deviceData?.id),
+      bridgeId: Zwavejs2HomeyApp.toStringOrNull(deviceData?.bridgeId),
+      nodeId: Zwavejs2HomeyApp.toNumberOrNull(deviceData?.nodeId),
+      sync: {
+        syncedAt: null,
+        syncReason: null,
+      },
+      profile: {
+        matchBy: null,
+        matchKey: null,
+        profileId: null,
+        fallbackReason: 'profile-resolution-not-ready',
+        homeyClass: null,
+        confidence: null,
+        uncurated: true,
+      },
+      curation: {
+        loaded: this.curationRuntime.status.loaded,
+        source: this.curationRuntime.status.source,
+        error: this.curationRuntime.status.errorMessage,
+        entryPresent: false,
+        appliedActions: 0,
+        skippedActions: 0,
+        errorCount: 0,
+      },
+      recommendation: {
+        available: false,
+        reason: 'profile-resolution-not-ready',
+        backfillNeeded: false,
+        projectionVersion: null,
+        currentBaselineHash: null,
+        storedBaselineHash: null,
+        currentPipelineFingerprint: null,
+        storedPipelineFingerprint: null,
+      },
+      mapping: {
+        verticalSliceApplied: false,
+        capabilityCount: 0,
+        inboundConfigured: 0,
+        inboundEnabled: 0,
+        inboundSkipped: 0,
+        outboundConfigured: 0,
+        outboundEnabled: 0,
+        outboundSkipped: 0,
+        skipReasons: {},
+      },
+    };
+  }
+
+  private getNodeDriverDevices(): RuntimeNodeDeviceLike[] {
+    const nodeDriver = this.homey.drivers.getDriver('node');
+    return nodeDriver.getDevices() as RuntimeNodeDeviceLike[];
+  }
+
+  private findNodeDeviceByHomeyDeviceId(
+    homeyDeviceId: string,
+    devices: RuntimeNodeDeviceLike[],
+  ): RuntimeNodeDeviceLike | undefined {
+    return devices.find((device) => {
+      const data = device.getData?.();
+      return Zwavejs2HomeyApp.toStringOrNull(data?.id) === homeyDeviceId;
+    });
   }
 
   private toRecommendationActionQueueItem(
@@ -655,11 +768,7 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
     curation: HomeyCurationRuntimeStatusV1;
     nodes: NodeRuntimeDiagnosticsEntry[];
   }> {
-    const nodeDriver = this.homey.drivers.getDriver('node');
-    const devices = nodeDriver.getDevices() as Array<{
-      getData?: () => { id?: unknown; bridgeId?: unknown; nodeId?: unknown } | undefined;
-      getStoreValue?: (key: string) => Promise<unknown>;
-    }>;
+    const devices = this.getNodeDriverDevices();
     const filterHomeyDeviceId = Zwavejs2HomeyApp.toStringOrNull(options?.homeyDeviceId);
     const nodeDiagnostics: NodeRuntimeDiagnosticsEntry[] = [];
 
@@ -705,6 +814,76 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
       compiledProfiles: this.getCompiledProfilesStatus(),
       curation: this.getCurationStatus(),
       nodes: nodeDiagnostics,
+    };
+  }
+
+  async getNodeDeviceToolsSnapshot(options: {
+    homeyDeviceId: string;
+  }): Promise<NodeDeviceToolsSnapshotV1> {
+    const homeyDeviceId = Zwavejs2HomeyApp.toStringOrNull(options?.homeyDeviceId);
+    if (!homeyDeviceId) {
+      throw new Error('Invalid homeyDeviceId for node device tools snapshot');
+    }
+
+    const devices = this.getNodeDriverDevices();
+    const device = this.findNodeDeviceByHomeyDeviceId(homeyDeviceId, devices);
+    if (!device) {
+      throw new Error(`Node device not found for homeyDeviceId: ${homeyDeviceId}`);
+    }
+
+    const deviceData = device.getData?.();
+    const profileResolution = await device.getStoreValue?.('profileResolution');
+    let diagnosticsEntry: NodeRuntimeDiagnosticsEntry;
+    if (profileResolution && typeof profileResolution === 'object') {
+      diagnosticsEntry = this.normalizeNodeDiagnosticsEntry(
+        profileResolution as Record<string, unknown>,
+        deviceData,
+      );
+    } else {
+      diagnosticsEntry = this.createPendingNodeDiagnosticsEntry(deviceData);
+    }
+
+    const recommendation = this.toRecommendationActionQueueItem(diagnosticsEntry);
+    const clientStatus = this.zwjsClient?.getStatus();
+
+    return {
+      schemaVersion: 'node-device-tools/v1',
+      generatedAt: new Date().toISOString(),
+      device: {
+        homeyDeviceId,
+        bridgeId: diagnosticsEntry.bridgeId,
+        nodeId: diagnosticsEntry.nodeId,
+      },
+      runtime: {
+        zwjs: {
+          available: Boolean(this.zwjsClient),
+          transportConnected: clientStatus?.transportConnected === true,
+          lifecycle: clientStatus?.lifecycle ?? 'stopped',
+        },
+        compiledProfiles: this.getCompiledProfilesStatus(),
+        curation: this.getCurationStatus(),
+      },
+      profile: diagnosticsEntry.profile,
+      mapping: diagnosticsEntry.mapping,
+      curation: diagnosticsEntry.curation,
+      recommendation: {
+        available: diagnosticsEntry.recommendation.available,
+        reason: diagnosticsEntry.recommendation.reason,
+        backfillNeeded: diagnosticsEntry.recommendation.backfillNeeded,
+        suggestedAction: recommendation.action,
+        actionable: recommendation.action !== 'none',
+      },
+      profileReference: {
+        projectionVersion: diagnosticsEntry.recommendation.projectionVersion,
+        currentBaselineHash: diagnosticsEntry.recommendation.currentBaselineHash,
+        storedBaselineHash: diagnosticsEntry.recommendation.storedBaselineHash,
+        currentPipelineFingerprint: diagnosticsEntry.recommendation.currentPipelineFingerprint,
+        storedPipelineFingerprint: diagnosticsEntry.recommendation.storedPipelineFingerprint,
+      },
+      ui: {
+        readOnly: true,
+        actionsEnabled: false,
+      },
     };
   }
 

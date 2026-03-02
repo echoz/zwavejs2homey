@@ -77,6 +77,11 @@
           "template": "list_devices"
         }
       ],
+      "repair": [
+        {
+          "id": "device_tools"
+        }
+      ],
       "images": {
         "small": "/drivers/node/assets/images/small.png",
         "large": "/drivers/node/assets/images/large.png",

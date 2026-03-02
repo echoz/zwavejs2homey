@@ -54,7 +54,16 @@ Design and implement a Homey adapter-owned runtime curation system that applies 
   - live runtime API smoke tooling now exists:
     - `tools/homey-runtime-api-smoke.mjs`
     - validates all runtime routes + envelope shape from a running Homey app endpoint
-  - remaining work: Homey UX wiring for diagnostics + adopt/backfill interaction flows
+  - node driver now exposes a Device Tools session host via `onRepair`:
+    - `device_tools:get_snapshot`
+    - `device_tools:refresh`
+  - app now exposes targeted per-device snapshot payloads for Device Tools:
+    - `getNodeDeviceToolsSnapshot({ homeyDeviceId })`
+    - stable read-only payload schema: `node-device-tools/v1`
+  - first Device Tools custom view is now in place as read-only:
+    - `drivers/node/repair/device_tools.html` (primary repair host)
+    - `drivers/node/pair/device_tools.html` (fallback mirror while host-path behavior is validated)
+  - remaining work: enable adopt/backfill actions from Device Tools UI flows
 
 Related ADRs:
 
@@ -95,7 +104,7 @@ Per ADR 0017, runtime curation work in this plan assumes:
   - `node` driver/devices: compiled-profile execution per imported node
 - node onboarding is explicit import/link from ZWJS into Homey (pairing flow)
 - no automatic cross-driver pairing handoff is required in v1
-- per-device curation UX lives on node-level flows (for example node repair/custom view), not bridge settings
+- per-device curation UX lives on node-level Device Tools flows hosted by node `onRepair`, not bridge settings
 
 Current implementation baseline:
 

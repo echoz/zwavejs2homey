@@ -56,7 +56,7 @@ Tradeoffs:
 
 - Keep one shared app-level ZWJS session service used by both drivers.
 - Node devices should consume the shared compiler artifact resolver API for profile selection.
-- Device-level curation UI should live in node repair flow (`onRepair`) or equivalent explicit per-device editor flow.
+- Device-level curation UI should live in node Device Tools flow hosted via `onRepair` (or equivalent explicit per-device editor flow).
 
 ## Implementation Status (2026-03-01)
 

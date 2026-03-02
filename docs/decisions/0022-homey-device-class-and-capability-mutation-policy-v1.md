@@ -17,7 +17,7 @@ In v1:
 
 - node device class and initial capability set are established during import/first initialization from resolved profile
 - automatic runtime class/capability mutation is disabled during normal telemetry/command handling
-- class/capability structure changes are only applied through explicit user-driven curation/update workflows (for example repair/custom flow)
+- class/capability structure changes are only applied through explicit user-driven curation/update workflows (for example Device Tools flow hosted via `onRepair`)
 
 Update guidance:
 

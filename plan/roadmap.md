@@ -101,11 +101,15 @@ Done so far:
   - single-action execution (`executeRecommendationAction`)
   - queued execution summary (`executeRecommendationActions`)
   - batch backfill (`backfillMissingCurationBaselineMarkers`)
+- node Device Tools host wiring:
+  - node `onRepair` session handlers for per-device snapshots (`device_tools:get_snapshot`, `device_tools:refresh`)
+  - targeted app snapshot API (`getNodeDeviceToolsSnapshot`) with stable read-only schema (`node-device-tools/v1`)
+  - first read-only custom view scaffold in driver custom view files (`drivers/node/repair/device_tools.html`)
 
 In progress / next:
 
-1. wire diagnostics snapshot into Homey-facing UX/settings paths
-2. wire backfill/adopt actions into Homey-facing UX/settings flows
+1. complete Device Tools UX polish and verify canonical repair-view host path
+2. wire backfill/adopt actions into Device Tools flows
 3. continue broadening runtime mapping coverage with tests
 
 Exit criteria:

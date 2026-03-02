@@ -20,7 +20,7 @@ When resolver returns no compiled profile match in v1:
   - `homeyClass: "other"`
   - empty capability mappings by default
   - explicit uncurated diagnostics/reason (`no_compiled_profile_match`)
-- surface a clear recommendation to run node curation workflow (repair/custom flow)
+- surface a clear recommendation to run node Device Tools curation workflow (hosted via `onRepair` custom view)
 
 Hard-fail only when baseline artifact is globally unavailable/invalid (adapter startup degradation), not on per-node match miss.
 
