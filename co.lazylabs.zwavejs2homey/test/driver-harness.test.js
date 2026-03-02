@@ -222,3 +222,166 @@ test('bridge device init logs bridge status and stores runtime diagnostics snaps
   assert.equal(diagnostics.nodeSummary.inboundSkipped, 1);
   assert.equal(diagnostics.nodeSummary.outboundSkipped, 2);
 });
+
+test('bridge device forwards runtime diagnostics and recommendation queue options', async () => {
+  const diagnosticsCalls = [];
+  const queueCalls = [];
+  const diagnosticsResult = { generatedAt: '2026-03-02T12:00:00.000Z', nodes: [] };
+  const queueResult = { generatedAt: '2026-03-02T12:01:00.000Z', items: [] };
+  const device = new BridgeDevice();
+  device._configureHarness({
+    app: {
+      async getNodeRuntimeDiagnostics(options) {
+        diagnosticsCalls.push(options);
+        return diagnosticsResult;
+      },
+      async getRecommendationActionQueue(options) {
+        queueCalls.push(options);
+        return queueResult;
+      },
+    },
+  });
+
+  const diagnostics = await device.getRuntimeDiagnostics({ homeyDeviceId: '  main:8 ' });
+  assert.equal(diagnostics, diagnosticsResult);
+  assert.deepEqual(diagnosticsCalls, [{ homeyDeviceId: 'main:8' }]);
+
+  const queue = await device.getRecommendationActionQueue({
+    homeyDeviceId: 'main:8',
+    includeNoAction: true,
+  });
+  assert.equal(queue, queueResult);
+  assert.deepEqual(queueCalls, [{ homeyDeviceId: 'main:8', includeNoAction: true }]);
+});
+
+test('bridge device executes recommendation action and refreshes diagnostics snapshot', async () => {
+  const actionCalls = [];
+  const diagnosticsCalls = [];
+  const device = new BridgeDevice();
+  device._configureHarness({
+    app: {
+      async executeRecommendationAction(options) {
+        actionCalls.push(options);
+        return {
+          executed: true,
+          reason: 'backfilled-marker',
+          selectedAction: 'backfill-marker',
+        };
+      },
+      async getNodeRuntimeDiagnostics() {
+        diagnosticsCalls.push('called');
+        return {
+          generatedAt: '2026-03-02T12:00:00.000Z',
+          bridgeId: 'main',
+          zwjs: {
+            available: true,
+            transportConnected: true,
+            lifecycle: 'started',
+          },
+          compiledProfiles: {
+            loaded: true,
+            sourcePath: '/tmp/mock.json',
+            generatedAt: '2026-03-01T00:00:00.000Z',
+            pipelineFingerprint: 'pf-1',
+            entryCount: 1,
+            errorMessage: null,
+          },
+          curation: {
+            loaded: true,
+            source: 'settings',
+            entryCount: 1,
+            errorMessage: null,
+          },
+          nodes: [
+            {
+              curation: { entryPresent: true },
+              recommendation: { available: false, backfillNeeded: false },
+              mapping: { inboundSkipped: 0, outboundSkipped: 0 },
+            },
+          ],
+        };
+      },
+    },
+  });
+
+  const result = await device.executeRecommendationAction({
+    homeyDeviceId: 'main:8',
+    action: 'backfill-marker',
+  });
+  assert.equal(result.executed, true);
+  assert.deepEqual(actionCalls, [{ homeyDeviceId: 'main:8', action: 'backfill-marker' }]);
+  assert.equal(diagnosticsCalls.length, 1);
+  const stored = device._getStoreValue('runtimeDiagnostics');
+  assert.equal(stored.reason, 'recommendation-action-executed');
+});
+
+test('bridge device validates recommendation action inputs', async () => {
+  const device = new BridgeDevice();
+  device._configureHarness({
+    app: {
+      async executeRecommendationAction() {
+        throw new Error('should-not-be-called');
+      },
+      async getNodeRuntimeDiagnostics() {
+        throw new Error('should-not-be-called');
+      },
+    },
+  });
+
+  await assert.rejects(
+    () => device.executeRecommendationAction({ homeyDeviceId: '  ', action: 'auto' }),
+    /Invalid homeyDeviceId for recommendation action/,
+  );
+  await assert.rejects(
+    () => device.executeRecommendationAction({ homeyDeviceId: 'main:8', action: 'invalid-action' }),
+    /Invalid recommendation action/,
+  );
+});
+
+test('bridge device executes recommendation action queue and refreshes diagnostics snapshot', async () => {
+  const actionsCalls = [];
+  const device = new BridgeDevice();
+  device._configureHarness({
+    app: {
+      async executeRecommendationActions(options) {
+        actionsCalls.push(options);
+        return { total: 2, executed: 1, skipped: 1, results: [] };
+      },
+      async getNodeRuntimeDiagnostics() {
+        return {
+          generatedAt: '2026-03-02T12:00:00.000Z',
+          bridgeId: 'main',
+          zwjs: {
+            available: true,
+            transportConnected: true,
+            lifecycle: 'started',
+          },
+          compiledProfiles: {
+            loaded: true,
+            sourcePath: '/tmp/mock.json',
+            generatedAt: '2026-03-01T00:00:00.000Z',
+            pipelineFingerprint: 'pf-1',
+            entryCount: 1,
+            errorMessage: null,
+          },
+          curation: {
+            loaded: true,
+            source: 'settings',
+            entryCount: 1,
+            errorMessage: null,
+          },
+          nodes: [],
+        };
+      },
+    },
+  });
+
+  const result = await device.executeRecommendationActions({
+    homeyDeviceId: ' main:8 ',
+    includeNoAction: true,
+  });
+  assert.equal(result.executed, 1);
+  assert.deepEqual(actionsCalls, [{ homeyDeviceId: 'main:8', includeNoAction: true }]);
+  const stored = device._getStoreValue('runtimeDiagnostics');
+  assert.equal(stored.reason, 'recommendation-actions-executed');
+});

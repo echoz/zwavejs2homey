@@ -4,7 +4,7 @@ import type { ZwjsClient } from '@zwavejs2homey/core';
 interface AppRuntimeAccess {
   getZwjsClient?: () => ZwjsClient | undefined;
   getBridgeId?: () => string;
-  getNodeRuntimeDiagnostics?: () => Promise<{
+  getNodeRuntimeDiagnostics?: (options?: { homeyDeviceId?: string }) => Promise<{
     generatedAt: string;
     bridgeId: string;
     zwjs: {
@@ -40,11 +40,54 @@ interface AppRuntimeAccess {
       };
     }>;
   }>;
+  getRecommendationActionQueue?: (options?: {
+    homeyDeviceId?: string;
+    includeNoAction?: boolean;
+  }) => Promise<unknown>;
+  executeRecommendationAction?: (options: {
+    homeyDeviceId: string;
+    action?: 'auto' | 'backfill-marker' | 'adopt-recommended-baseline' | 'none';
+  }) => Promise<unknown>;
+  executeRecommendationActions?: (options?: {
+    homeyDeviceId?: string;
+    includeNoAction?: boolean;
+  }) => Promise<unknown>;
 }
 
 module.exports = class BridgeDevice extends Homey.Device {
+  private static toBooleanOption(options: unknown, key: string): boolean | null {
+    if (!options || typeof options !== 'object') return null;
+    const value = (options as Record<string, unknown>)[key];
+    if (typeof value === 'undefined') return null;
+    return typeof value === 'boolean' ? value : null;
+  }
+
+  private static toStringOption(options: unknown, key: string): string | null {
+    if (!options || typeof options !== 'object') return null;
+    const value = (options as Record<string, unknown>)[key];
+    if (typeof value !== 'string') return null;
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+
+  private static toActionOption(
+    options: unknown,
+  ): 'auto' | 'backfill-marker' | 'adopt-recommended-baseline' | 'none' | null {
+    const value = BridgeDevice.toStringOption(options, 'action');
+    if (!value) return null;
+    if (value === 'auto') return value;
+    if (value === 'backfill-marker') return value;
+    if (value === 'adopt-recommended-baseline') return value;
+    if (value === 'none') return value;
+    return null;
+  }
+
+  private getRuntimeApp(): AppRuntimeAccess {
+    return this.homey.app as AppRuntimeAccess;
+  }
+
   private async refreshRuntimeDiagnostics(reason: string): Promise<void> {
-    const app = this.homey.app as AppRuntimeAccess;
+    const app = this.getRuntimeApp();
     const diagnostics = await app.getNodeRuntimeDiagnostics?.();
     if (!diagnostics) return;
 
@@ -92,8 +135,62 @@ module.exports = class BridgeDevice extends Homey.Device {
     });
   }
 
+  async getRuntimeDiagnostics(options?: { homeyDeviceId?: string }) {
+    const app = this.getRuntimeApp();
+    const homeyDeviceId = BridgeDevice.toStringOption(options, 'homeyDeviceId');
+    return app.getNodeRuntimeDiagnostics?.({
+      homeyDeviceId: homeyDeviceId ?? undefined,
+    });
+  }
+
+  async getRecommendationActionQueue(options?: {
+    homeyDeviceId?: string;
+    includeNoAction?: boolean;
+  }) {
+    const app = this.getRuntimeApp();
+    const homeyDeviceId = BridgeDevice.toStringOption(options, 'homeyDeviceId');
+    const includeNoAction = BridgeDevice.toBooleanOption(options, 'includeNoAction');
+    return app.getRecommendationActionQueue?.({
+      homeyDeviceId: homeyDeviceId ?? undefined,
+      includeNoAction: includeNoAction === true,
+    });
+  }
+
+  async executeRecommendationAction(options: { homeyDeviceId: string; action?: string }) {
+    const app = this.getRuntimeApp();
+    const homeyDeviceId = BridgeDevice.toStringOption(options, 'homeyDeviceId');
+    if (!homeyDeviceId) {
+      throw new Error('Invalid homeyDeviceId for recommendation action');
+    }
+    const action = BridgeDevice.toActionOption(options);
+    if (typeof options.action !== 'undefined' && !action) {
+      throw new Error('Invalid recommendation action');
+    }
+    const result = await app.executeRecommendationAction?.({
+      homeyDeviceId,
+      action: action ?? undefined,
+    });
+    await this.refreshRuntimeDiagnostics('recommendation-action-executed');
+    return result;
+  }
+
+  async executeRecommendationActions(options?: {
+    homeyDeviceId?: string;
+    includeNoAction?: boolean;
+  }) {
+    const app = this.getRuntimeApp();
+    const homeyDeviceId = BridgeDevice.toStringOption(options, 'homeyDeviceId');
+    const includeNoAction = BridgeDevice.toBooleanOption(options, 'includeNoAction');
+    const result = await app.executeRecommendationActions?.({
+      homeyDeviceId: homeyDeviceId ?? undefined,
+      includeNoAction: includeNoAction === true,
+    });
+    await this.refreshRuntimeDiagnostics('recommendation-actions-executed');
+    return result;
+  }
+
   async onInit() {
-    const app = this.homey.app as AppRuntimeAccess;
+    const app = this.getRuntimeApp();
     const bridgeId = app.getBridgeId?.() ?? 'unknown';
     const status = app.getZwjsClient?.()?.getStatus();
     this.log('BridgeDevice initialized', {

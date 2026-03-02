@@ -15,6 +15,16 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 ## Recently Completed
 
+- Latest Phase 5 bridge runtime API surface slice:
+  - extended `BridgeDevice` with non-UI runtime orchestration hooks:
+    - `getRuntimeDiagnostics(...)`
+    - `getRecommendationActionQueue(...)`
+    - `executeRecommendationAction(...)`
+    - `executeRecommendationActions(...)`
+  - added strict option validation on bridge-device recommendation action entrypoints
+  - recommendation action execution now refreshes persisted bridge diagnostics snapshots after mutation calls
+  - expanded bridge harness tests for option forwarding, validation failures, and post-action diagnostics refresh behavior
+
 - Latest Phase 5 recommendation execution entrypoint slice:
   - added single-device recommendation executor (`executeRecommendationAction`) with `auto` selection + explicit action mismatch protection
   - added queue-driven executor (`executeRecommendationActions`) that runs deterministic recommendation actions and returns execution summaries

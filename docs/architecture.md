@@ -143,6 +143,11 @@ Partially complete / next:
   - recommendation diagnostics persisted in `profileResolution`
 - app now exposes normalized node runtime diagnostics via `getNodeRuntimeDiagnostics(...)`
 - bridge device diagnostics snapshots are now refreshed from app lifecycle/settings/events and persisted in device store (`runtimeDiagnostics`)
+- bridge device now exposes app-facing non-UI runtime hooks for settings/custom views:
+  - `getRuntimeDiagnostics(...)`
+  - `getRecommendationActionQueue(...)`
+  - `executeRecommendationAction(...)`
+  - `executeRecommendationActions(...)`
 - app now exposes non-UI recommendation action APIs:
   - `backfillCurationBaselineMarker(homeyDeviceId)`
   - `adoptRecommendedBaseline(homeyDeviceId)`

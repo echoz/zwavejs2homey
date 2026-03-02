@@ -34,6 +34,11 @@ Design and implement a Homey adapter-owned runtime curation system that applies 
     - `executeRecommendationAction`
     - `executeRecommendationActions`
     - `backfillMissingCurationBaselineMarkers`
+  - bridge-device non-UI forwarding hooks now exist for runtime UX wiring:
+    - `getRuntimeDiagnostics`
+    - `getRecommendationActionQueue`
+    - `executeRecommendationAction`
+    - `executeRecommendationActions`
   - remaining work: Homey UX wiring for diagnostics + adopt/backfill interaction flows
 
 Related ADRs:

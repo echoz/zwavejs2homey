@@ -87,6 +87,7 @@ Done so far:
 - baseline marker hash/recommendation-state runtime detection integrated into node sync diagnostics
 - app-facing normalized diagnostics snapshot API for node runtime state (`getNodeRuntimeDiagnostics`)
 - bridge-device diagnostics refresh wiring (startup/settings/events) with compact stored summary snapshots
+- bridge-device non-UI runtime API forwarding for diagnostics/recommendation queue/action execution
 - app-facing recommendation actions:
   - baseline marker backfill (`backfillCurationBaselineMarker`)
   - recommendation adopt/full-replace (`adoptRecommendedBaseline`)
