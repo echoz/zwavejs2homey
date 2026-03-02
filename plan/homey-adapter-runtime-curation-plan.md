@@ -24,7 +24,9 @@ Design and implement a Homey adapter-owned runtime curation system that applies 
   - canonical baseline projection/hash helpers implemented in `curation.js`
   - marker create/evaluate helpers implemented (`createBaselineMarkerV1`, `evaluateBaselineRecommendationState`)
   - node runtime computes recommendation state and persists recommendation diagnostics to `profileResolution`
-- [ ] Phase F remains open (admin/adopt UX flows)
+- [~] Phase F is partially in place:
+  - app-level normalized diagnostics snapshot API exists (`getNodeRuntimeDiagnostics`)
+  - remaining work: UX wiring + adopt/backfill interaction flows
 
 Related ADRs:
 

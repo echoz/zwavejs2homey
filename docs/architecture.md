@@ -141,7 +141,8 @@ Partially complete / next:
   - canonical projection/hash helpers in adapter curation runtime
   - per-device recommendation state computed during node profile sync
   - recommendation diagnostics persisted in `profileResolution`
-- Homey settings/diagnostics UX around curation and recommendations
+- app now exposes normalized node runtime diagnostics via `getNodeRuntimeDiagnostics(...)`
+- Homey settings/diagnostics UX consumption around curation and recommendations
 - expanded runtime mapping vertical coverage
 
 Deferred:
@@ -174,7 +175,7 @@ Primary gate: `npm run check`
 
 Near-term:
 
-1. expose curation/recommendation diagnostics in Homey-facing UX surfaces
+1. wire diagnostics snapshot API into Homey-facing UX/settings surfaces
 2. harden recommendation adoption/backfill flows in app-facing paths
 3. continue capability vertical expansion with runtime + harness tests
 

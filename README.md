@@ -20,7 +20,7 @@ It is built as four explicit layers:
 - Phase 2 protocol core: complete for current scope (non-prod firmware/zniffer validation deferred)
 - Phase 3 compiler: complete for MVP goals (second catalog source adapter deferred)
 - Phase 4 TUI: complete
-- Phase 5 Homey adapter: in progress (runtime mapping + curation baseline + recommendation-state detection delivered)
+- Phase 5 Homey adapter: in progress (runtime mapping + curation baseline + recommendation-state detection + diagnostics snapshot API delivered)
 
 ## Architecture At A Glance
 

@@ -15,6 +15,13 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 ## Recently Completed
 
+- Latest Phase 5 diagnostics-surface slice:
+  - added app-facing runtime diagnostics snapshot API: `getNodeRuntimeDiagnostics(...)`
+  - API now normalizes node `profileResolution` into stable sections (`sync`, `profile`, `curation`, `recommendation`, `mapping`)
+  - added mapping summary aggregation (configured/enabled/skipped counts + skip reason histogram)
+  - added optional `homeyDeviceId` filter and deterministic node sorting
+  - expanded app tests for diagnostics payload shape and filtering behavior
+
 - Latest Phase 5 recommendation-marker slice:
   - added canonical baseline projection/hash helpers in `co.lazylabs.zwavejs2homey/curation.js`
   - added marker/recommendation helpers (`createBaselineMarkerV1`, `evaluateBaselineRecommendationState`)

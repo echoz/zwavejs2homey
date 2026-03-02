@@ -116,6 +116,7 @@ function createMockCompiledProfilesModule() {
         sourcePath,
         loaded: true,
         generatedAt: '2026-03-01T00:00:00.000Z',
+        pipelineFingerprint: 'pipeline-fingerprint-1',
         entryCount: 0,
         duplicateKeys: {
           productTriple: 0,
@@ -126,6 +127,16 @@ function createMockCompiledProfilesModule() {
       },
     }),
     resolveCompiledProfileEntryFromRuntime: () => ({ by: 'none' }),
+  };
+}
+
+function createNodeDiagnosticsDevice({ id, bridgeId = 'main', nodeId, profileResolution }) {
+  return {
+    getData: () => ({ id, bridgeId, nodeId }),
+    async getStoreValue(key) {
+      if (key !== 'profileResolution') return undefined;
+      return profileResolution;
+    },
   };
 }
 
@@ -264,6 +275,148 @@ test('app performs targeted node runtime refresh from node lifecycle events', as
   await flushEventQueue();
   assert.equal(node5Calls.length, 1);
   assert.equal(node8Calls.length, 1);
+
+  await app.onUninit();
+});
+
+test('app diagnostics snapshot normalizes recommendation and mapping summary fields', async () => {
+  const nodeDevices = [
+    createNodeDiagnosticsDevice({
+      id: 'main:8',
+      nodeId: 8,
+      profileResolution: {
+        syncedAt: '2026-03-02T00:00:00.000Z',
+        syncReason: 'startup',
+        matchBy: 'product-triple',
+        matchKey: '29:66:2',
+        profileId: 'profile-main-8',
+        fallbackReason: null,
+        classification: {
+          homeyClass: 'socket',
+          confidence: 'curated',
+          uncurated: false,
+        },
+        curationLoaded: true,
+        curationSource: 'settings',
+        curationError: null,
+        curationEntryPresent: true,
+        curationReport: {
+          summary: {
+            applied: 3,
+            skipped: 1,
+            errors: 0,
+          },
+        },
+        recommendationAvailable: true,
+        recommendationReason: 'baseline-hash-changed',
+        recommendationBackfillNeeded: false,
+        recommendationProjectionVersion: '1',
+        currentBaselineHash: 'new-hash',
+        storedBaselineHash: 'old-hash',
+        currentBaselinePipelineFingerprint: 'pf-new',
+        storedBaselinePipelineFingerprint: 'pf-old',
+        verticalSliceApplied: true,
+        mappingDiagnostics: [
+          {
+            capabilityId: 'onoff',
+            inbound: { configured: true, enabled: true, reason: null },
+            outbound: { configured: true, enabled: false, reason: 'outbound_target_not_writeable' },
+          },
+          {
+            capabilityId: 'measure_power',
+            inbound: { configured: true, enabled: false, reason: 'inbound_selector_not_defined' },
+            outbound: { configured: false, enabled: false, reason: null },
+          },
+        ],
+      },
+    }),
+    createNodeDiagnosticsDevice({
+      id: 'main:5',
+      nodeId: 5,
+      profileResolution: {
+        syncedAt: '2026-03-02T00:00:00.000Z',
+        syncReason: 'startup',
+        matchBy: 'product-triple',
+        profileId: 'profile-main-5',
+        classification: {
+          homeyClass: 'light',
+          confidence: 'curated',
+          uncurated: false,
+        },
+        curationLoaded: true,
+        curationSource: 'settings',
+        curationEntryPresent: false,
+        recommendationAvailable: false,
+        recommendationReason: 'no-curation-entry',
+        recommendationBackfillNeeded: false,
+        verticalSliceApplied: true,
+        mappingDiagnostics: [],
+      },
+    }),
+  ];
+
+  const { app } = loadAppClass(nodeDevices);
+  await app.onInit();
+  const snapshot = await app.getNodeRuntimeDiagnostics();
+
+  assert.equal(snapshot.bridgeId, 'main');
+  assert.equal(snapshot.zwjs.available, true);
+  assert.equal(snapshot.compiledProfiles.loaded, true);
+  assert.equal(snapshot.curation.loaded, true);
+  assert.equal(snapshot.nodes.length, 2);
+  assert.equal(snapshot.nodes[0].nodeId, 5);
+  assert.equal(snapshot.nodes[1].nodeId, 8);
+
+  const node8 = snapshot.nodes.find((entry) => entry.homeyDeviceId === 'main:8');
+  assert.ok(node8);
+  assert.equal(node8.recommendation.available, true);
+  assert.equal(node8.recommendation.reason, 'baseline-hash-changed');
+  assert.equal(node8.recommendation.currentPipelineFingerprint, 'pf-new');
+  assert.equal(node8.curation.appliedActions, 3);
+  assert.equal(node8.curation.skippedActions, 1);
+  assert.equal(node8.mapping.capabilityCount, 2);
+  assert.equal(node8.mapping.inboundConfigured, 2);
+  assert.equal(node8.mapping.inboundEnabled, 1);
+  assert.equal(node8.mapping.inboundSkipped, 1);
+  assert.equal(node8.mapping.outboundConfigured, 1);
+  assert.equal(node8.mapping.outboundEnabled, 0);
+  assert.equal(node8.mapping.outboundSkipped, 1);
+  assert.equal(node8.mapping.skipReasons.inbound_selector_not_defined, 1);
+  assert.equal(node8.mapping.skipReasons.outbound_target_not_writeable, 1);
+
+  await app.onUninit();
+});
+
+test('app diagnostics snapshot supports homeyDeviceId filtering', async () => {
+  const nodeDevices = [
+    createNodeDiagnosticsDevice({
+      id: 'main:5',
+      nodeId: 5,
+      profileResolution: {
+        profileId: 'profile-main-5',
+        recommendationAvailable: false,
+        mappingDiagnostics: [],
+      },
+    }),
+    createNodeDiagnosticsDevice({
+      id: 'main:8',
+      nodeId: 8,
+      profileResolution: {
+        profileId: 'profile-main-8',
+        recommendationAvailable: true,
+        recommendationReason: 'baseline-hash-changed',
+        mappingDiagnostics: [],
+      },
+    }),
+  ];
+
+  const { app } = loadAppClass(nodeDevices);
+  await app.onInit();
+  const snapshot = await app.getNodeRuntimeDiagnostics({ homeyDeviceId: 'main:8' });
+
+  assert.equal(snapshot.nodes.length, 1);
+  assert.equal(snapshot.nodes[0].homeyDeviceId, 'main:8');
+  assert.equal(snapshot.nodes[0].recommendation.available, true);
 
   await app.onUninit();
 });

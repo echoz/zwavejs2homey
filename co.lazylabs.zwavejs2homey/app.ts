@@ -30,6 +30,55 @@ import {
 } from './curation';
 import { ZWJS_DEFAULT_BRIDGE_ID } from './pairing';
 
+interface NodeRuntimeDiagnosticsEntry {
+  homeyDeviceId: string | null;
+  bridgeId: string | null;
+  nodeId: number | null;
+  sync: {
+    syncedAt: string | null;
+    syncReason: string | null;
+  };
+  profile: {
+    matchBy: string | null;
+    matchKey: string | null;
+    profileId: string | null;
+    fallbackReason: string | null;
+    homeyClass: string | null;
+    confidence: string | null;
+    uncurated: boolean;
+  };
+  curation: {
+    loaded: boolean;
+    source: string | null;
+    error: string | null;
+    entryPresent: boolean;
+    appliedActions: number;
+    skippedActions: number;
+    errorCount: number;
+  };
+  recommendation: {
+    available: boolean;
+    reason: string | null;
+    backfillNeeded: boolean;
+    projectionVersion: string | null;
+    currentBaselineHash: string | null;
+    storedBaselineHash: string | null;
+    currentPipelineFingerprint: string | null;
+    storedPipelineFingerprint: string | null;
+  };
+  mapping: {
+    verticalSliceApplied: boolean;
+    capabilityCount: number;
+    inboundConfigured: number;
+    inboundEnabled: number;
+    inboundSkipped: number;
+    outboundConfigured: number;
+    outboundEnabled: number;
+    outboundSkipped: number;
+    skipReasons: Record<string, number>;
+  };
+}
+
 module.exports = class Zwavejs2HomeyApp extends Homey.App {
   private zwjsClient?: ZwjsClient;
   private readonly bridgeId = ZWJS_DEFAULT_BRIDGE_ID;
@@ -55,6 +104,161 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
     'zwjs.event.node.value-added',
     'zwjs.event.node.metadata-updated',
   ]);
+
+  private static toStringOrNull(value: unknown): string | null {
+    if (typeof value !== 'string') return null;
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+
+  private static toNumberOrNull(value: unknown): number | null {
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    return null;
+  }
+
+  private static toBooleanOrDefault(value: unknown, fallback = false): boolean {
+    return typeof value === 'boolean' ? value : fallback;
+  }
+
+  private static summarizeMappingDiagnostics(profileResolution: Record<string, unknown>): {
+    capabilityCount: number;
+    inboundConfigured: number;
+    inboundEnabled: number;
+    outboundConfigured: number;
+    outboundEnabled: number;
+    skipReasons: Record<string, number>;
+  } {
+    const diagnostics = Array.isArray(profileResolution.mappingDiagnostics)
+      ? profileResolution.mappingDiagnostics
+      : [];
+    let inboundConfigured = 0;
+    let inboundEnabled = 0;
+    let outboundConfigured = 0;
+    let outboundEnabled = 0;
+    const skipReasons: Record<string, number> = {};
+
+    for (const item of diagnostics) {
+      if (!item || typeof item !== 'object') continue;
+      const diagnostic = item as {
+        inbound?: { configured?: boolean; enabled?: boolean; reason?: unknown };
+        outbound?: { configured?: boolean; enabled?: boolean; reason?: unknown };
+      };
+
+      if (diagnostic.inbound?.configured === true) inboundConfigured += 1;
+      if (diagnostic.inbound?.enabled === true) inboundEnabled += 1;
+      if (diagnostic.outbound?.configured === true) outboundConfigured += 1;
+      if (diagnostic.outbound?.enabled === true) outboundEnabled += 1;
+
+      const inboundReason = Zwavejs2HomeyApp.toStringOrNull(diagnostic.inbound?.reason);
+      if (inboundReason) {
+        skipReasons[inboundReason] = (skipReasons[inboundReason] ?? 0) + 1;
+      }
+      const outboundReason = Zwavejs2HomeyApp.toStringOrNull(diagnostic.outbound?.reason);
+      if (outboundReason) {
+        skipReasons[outboundReason] = (skipReasons[outboundReason] ?? 0) + 1;
+      }
+    }
+
+    return {
+      capabilityCount: diagnostics.length,
+      inboundConfigured,
+      inboundEnabled,
+      outboundConfigured,
+      outboundEnabled,
+      skipReasons,
+    };
+  }
+
+  private normalizeNodeDiagnosticsEntry(
+    profileResolution: Record<string, unknown>,
+    deviceData: { id?: unknown; bridgeId?: unknown; nodeId?: unknown } | undefined,
+  ): NodeRuntimeDiagnosticsEntry {
+    const mappingSummary = Zwavejs2HomeyApp.summarizeMappingDiagnostics(profileResolution);
+    let classification: Record<string, unknown> | undefined;
+    if (profileResolution.classification && typeof profileResolution.classification === 'object') {
+      classification = profileResolution.classification as Record<string, unknown>;
+    }
+    let curationReport: Record<string, unknown> | undefined;
+    if (profileResolution.curationReport && typeof profileResolution.curationReport === 'object') {
+      curationReport = profileResolution.curationReport as Record<string, unknown>;
+    }
+    let curationSummary: Record<string, unknown> | undefined;
+    if (curationReport?.summary && typeof curationReport.summary === 'object') {
+      curationSummary = curationReport.summary as Record<string, unknown>;
+    }
+
+    let homeyDeviceId = Zwavejs2HomeyApp.toStringOrNull(profileResolution.homeyDeviceId);
+    if (homeyDeviceId === null) {
+      homeyDeviceId = Zwavejs2HomeyApp.toStringOrNull(deviceData?.id);
+    }
+    const bridgeId = Zwavejs2HomeyApp.toStringOrNull(deviceData?.bridgeId);
+    let nodeId = Zwavejs2HomeyApp.toNumberOrNull(deviceData?.nodeId);
+    if (nodeId === null) {
+      let selectorNodeId: unknown;
+      if (profileResolution.selector && typeof profileResolution.selector === 'object') {
+        selectorNodeId = (profileResolution.selector as Record<string, unknown>).nodeId;
+      }
+      nodeId = Zwavejs2HomeyApp.toNumberOrNull(selectorNodeId);
+    }
+    return {
+      homeyDeviceId,
+      bridgeId,
+      nodeId,
+      sync: {
+        syncedAt: Zwavejs2HomeyApp.toStringOrNull(profileResolution.syncedAt),
+        syncReason: Zwavejs2HomeyApp.toStringOrNull(profileResolution.syncReason),
+      },
+      profile: {
+        matchBy: Zwavejs2HomeyApp.toStringOrNull(profileResolution.matchBy),
+        matchKey: Zwavejs2HomeyApp.toStringOrNull(profileResolution.matchKey),
+        profileId: Zwavejs2HomeyApp.toStringOrNull(profileResolution.profileId),
+        fallbackReason: Zwavejs2HomeyApp.toStringOrNull(profileResolution.fallbackReason),
+        homeyClass: Zwavejs2HomeyApp.toStringOrNull(classification?.homeyClass),
+        confidence: Zwavejs2HomeyApp.toStringOrNull(classification?.confidence),
+        uncurated: Zwavejs2HomeyApp.toBooleanOrDefault(classification?.uncurated, true),
+      },
+      curation: {
+        loaded: Zwavejs2HomeyApp.toBooleanOrDefault(profileResolution.curationLoaded),
+        source: Zwavejs2HomeyApp.toStringOrNull(profileResolution.curationSource),
+        error: Zwavejs2HomeyApp.toStringOrNull(profileResolution.curationError),
+        entryPresent: Zwavejs2HomeyApp.toBooleanOrDefault(profileResolution.curationEntryPresent),
+        appliedActions: Zwavejs2HomeyApp.toNumberOrNull(curationSummary?.applied) ?? 0,
+        skippedActions: Zwavejs2HomeyApp.toNumberOrNull(curationSummary?.skipped) ?? 0,
+        errorCount: Zwavejs2HomeyApp.toNumberOrNull(curationSummary?.errors) ?? 0,
+      },
+      recommendation: {
+        available: Zwavejs2HomeyApp.toBooleanOrDefault(profileResolution.recommendationAvailable),
+        reason: Zwavejs2HomeyApp.toStringOrNull(profileResolution.recommendationReason),
+        backfillNeeded: Zwavejs2HomeyApp.toBooleanOrDefault(
+          profileResolution.recommendationBackfillNeeded,
+        ),
+        projectionVersion: Zwavejs2HomeyApp.toStringOrNull(
+          profileResolution.recommendationProjectionVersion,
+        ),
+        currentBaselineHash: Zwavejs2HomeyApp.toStringOrNull(profileResolution.currentBaselineHash),
+        storedBaselineHash: Zwavejs2HomeyApp.toStringOrNull(profileResolution.storedBaselineHash),
+        currentPipelineFingerprint: Zwavejs2HomeyApp.toStringOrNull(
+          profileResolution.currentBaselinePipelineFingerprint,
+        ),
+        storedPipelineFingerprint: Zwavejs2HomeyApp.toStringOrNull(
+          profileResolution.storedBaselinePipelineFingerprint,
+        ),
+      },
+      mapping: {
+        verticalSliceApplied: Zwavejs2HomeyApp.toBooleanOrDefault(
+          profileResolution.verticalSliceApplied,
+        ),
+        capabilityCount: mappingSummary.capabilityCount,
+        inboundConfigured: mappingSummary.inboundConfigured,
+        inboundEnabled: mappingSummary.inboundEnabled,
+        inboundSkipped: mappingSummary.inboundConfigured - mappingSummary.inboundEnabled,
+        outboundConfigured: mappingSummary.outboundConfigured,
+        outboundEnabled: mappingSummary.outboundEnabled,
+        outboundSkipped: mappingSummary.outboundConfigured - mappingSummary.outboundEnabled,
+        skipReasons: mappingSummary.skipReasons,
+      },
+    };
+  }
 
   private enqueueLifecycle(work: () => Promise<void>): Promise<void> {
     this.lifecycleQueue = this.lifecycleQueue.then(work).catch((error: unknown) => {
@@ -333,5 +537,70 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
 
   resolveCurationEntry(homeyDeviceId: string): HomeyCurationEntryV1 | undefined {
     return resolveCurationEntryFromRuntime(this.curationRuntime, homeyDeviceId);
+  }
+
+  async getNodeRuntimeDiagnostics(options?: { homeyDeviceId?: string }): Promise<{
+    generatedAt: string;
+    bridgeId: string;
+    zwjs: {
+      available: boolean;
+      transportConnected: boolean;
+      lifecycle: string;
+    };
+    compiledProfiles: CompiledProfilesRuntimeStatus;
+    curation: HomeyCurationRuntimeStatusV1;
+    nodes: NodeRuntimeDiagnosticsEntry[];
+  }> {
+    const nodeDriver = this.homey.drivers.getDriver('node');
+    const devices = nodeDriver.getDevices() as Array<{
+      getData?: () => { id?: unknown; bridgeId?: unknown; nodeId?: unknown } | undefined;
+      getStoreValue?: (key: string) => Promise<unknown>;
+    }>;
+    const filterHomeyDeviceId = Zwavejs2HomeyApp.toStringOrNull(options?.homeyDeviceId);
+    const nodeDiagnostics: NodeRuntimeDiagnosticsEntry[] = [];
+
+    for (const device of devices) {
+      try {
+        const profileResolution = await device.getStoreValue?.('profileResolution');
+        if (!profileResolution || typeof profileResolution !== 'object') continue;
+        const diagnosticsEntry = this.normalizeNodeDiagnosticsEntry(
+          profileResolution as Record<string, unknown>,
+          device.getData?.(),
+        );
+        if (filterHomeyDeviceId && diagnosticsEntry.homeyDeviceId !== filterHomeyDeviceId) {
+          continue;
+        }
+        nodeDiagnostics.push(diagnosticsEntry);
+      } catch (error) {
+        this.error('Failed to read node diagnostics', { error });
+      }
+    }
+
+    nodeDiagnostics.sort((a, b) => {
+      const nodeA = Zwavejs2HomeyApp.toNumberOrNull(a.nodeId);
+      const nodeB = Zwavejs2HomeyApp.toNumberOrNull(b.nodeId);
+      if (nodeA !== null && nodeB !== null && nodeA !== nodeB) {
+        return nodeA - nodeB;
+      }
+      if (nodeA !== null && nodeB === null) return -1;
+      if (nodeA === null && nodeB !== null) return 1;
+      const idA = Zwavejs2HomeyApp.toStringOrNull(a.homeyDeviceId) ?? '';
+      const idB = Zwavejs2HomeyApp.toStringOrNull(b.homeyDeviceId) ?? '';
+      return idA.localeCompare(idB);
+    });
+
+    const clientStatus = this.zwjsClient?.getStatus();
+    return {
+      generatedAt: new Date().toISOString(),
+      bridgeId: this.bridgeId,
+      zwjs: {
+        available: Boolean(this.zwjsClient),
+        transportConnected: clientStatus?.transportConnected === true,
+        lifecycle: clientStatus?.lifecycle ?? 'stopped',
+      },
+      compiledProfiles: this.getCompiledProfilesStatus(),
+      curation: this.getCurationStatus(),
+      nodes: nodeDiagnostics,
+    };
   }
 };

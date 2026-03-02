@@ -85,10 +85,11 @@ Done so far:
 - `curation.v1` load/validate baseline
 - deterministic curation lowering/apply integrated into node runtime path
 - baseline marker hash/recommendation-state runtime detection integrated into node sync diagnostics
+- app-facing normalized diagnostics snapshot API for node runtime state (`getNodeRuntimeDiagnostics`)
 
 In progress / next:
 
-1. surface recommendation/curation diagnostics in app-facing UX paths
+1. wire diagnostics snapshot into Homey-facing UX/settings paths
 2. implement recommendation backfill/adopt flows
 3. continue broadening runtime mapping coverage with tests
 
