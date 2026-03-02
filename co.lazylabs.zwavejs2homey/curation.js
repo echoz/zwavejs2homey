@@ -1,7 +1,10 @@
 'use strict';
 
+const crypto = require('node:crypto');
+
 const CURATION_SETTINGS_KEY = 'curation.v1';
 const CURATION_SCHEMA_VERSION = 'homey-curation/v1';
+const BASELINE_MARKER_PROJECTION_VERSION = '1';
 
 const TOP_LEVEL_KEYS = new Set(['schemaVersion', 'updatedAt', 'entries']);
 const ENTRY_KEYS = new Set(['targetDevice', 'baselineMarker', 'overrides', 'note', 'updatedAt']);
@@ -899,11 +902,245 @@ function applyCurationEntryToProfile(baseProfile, curationEntry, options = {}) {
   return { profile, report };
 }
 
+function normalizeBaselineComparableString(value) {
+  if (typeof value !== 'string') return value;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : value;
+}
+
+function normalizeBaselineComparableNumber(value) {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value !== 'string') return value;
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return value;
+  if (/^0x[0-9a-f]+$/i.test(trimmed)) {
+    const parsedHex = Number.parseInt(trimmed.slice(2), 16);
+    if (Number.isFinite(parsedHex)) return parsedHex;
+  }
+  if (/^-?\d+$/.test(trimmed)) {
+    const parsedDec = Number.parseInt(trimmed, 10);
+    if (Number.isFinite(parsedDec)) return parsedDec;
+  }
+  return value;
+}
+
+function isValueIdLike(value) {
+  if (!isPlainObject(value)) return false;
+  if (!Object.prototype.hasOwnProperty.call(value, 'commandClass')) return false;
+  if (!Object.prototype.hasOwnProperty.call(value, 'property')) return false;
+  return true;
+}
+
+function normalizeValueIdForBaselineHashV1(valueId) {
+  const normalized = {
+    commandClass: normalizeBaselineComparableNumber(valueId.commandClass),
+    endpoint:
+      valueId.endpoint === undefined ? 0 : normalizeBaselineComparableNumber(valueId.endpoint),
+    property: normalizeBaselineComparableString(valueId.property),
+  };
+  if (valueId.propertyKey !== undefined) {
+    normalized.propertyKey = normalizeBaselineComparableString(valueId.propertyKey);
+  }
+  return normalized;
+}
+
+function normalizeForBaselineHashV1(value) {
+  if (value === undefined) return undefined;
+  if (Array.isArray(value)) {
+    const normalizedItems = [];
+    for (const item of value) {
+      const normalizedItem = normalizeForBaselineHashV1(item);
+      if (normalizedItem !== undefined) normalizedItems.push(normalizedItem);
+    }
+    return normalizedItems;
+  }
+  if (isPlainObject(value)) {
+    const source = isValueIdLike(value) ? normalizeValueIdForBaselineHashV1(value) : value;
+    const normalizedRecord = {};
+    const sortedKeys = Object.keys(source).sort((a, b) => a.localeCompare(b));
+    for (const key of sortedKeys) {
+      const normalizedValue = normalizeForBaselineHashV1(source[key]);
+      if (normalizedValue !== undefined) normalizedRecord[key] = normalizedValue;
+    }
+    return normalizedRecord;
+  }
+  if (typeof value === 'number' && !Number.isFinite(value)) return String(value);
+  return value;
+}
+
+function canonicalJsonForBaselineHashV1(value) {
+  const normalized = normalizeForBaselineHashV1(value);
+  return JSON.stringify(normalized);
+}
+
+function sortByCanonicalJson(items) {
+  const pairs = [];
+  for (const item of items) {
+    const key = canonicalJsonForBaselineHashV1(item);
+    if (key === undefined) continue;
+    pairs.push({ item, key });
+  }
+  pairs.sort((a, b) => a.key.localeCompare(b.key));
+  return pairs.map((entry) => entry.item);
+}
+
+function buildBaselineProfileProjectionV1(profile) {
+  const sourceProfile = isPlainObject(profile) ? profile : {};
+  const sourceClassification = isPlainObject(sourceProfile.classification)
+    ? sourceProfile.classification
+    : {};
+  const projection = {
+    classification: {
+      homeyClass: normalizeBaselineComparableString(sourceClassification.homeyClass),
+      driverTemplateId: normalizeBaselineComparableString(sourceClassification.driverTemplateId),
+    },
+    capabilities: [],
+  };
+
+  const rawCapabilities = Array.isArray(sourceProfile.capabilities)
+    ? sourceProfile.capabilities
+    : [];
+  const normalizedCapabilities = [];
+  for (const rawCapability of rawCapabilities) {
+    if (!isPlainObject(rawCapability) || typeof rawCapability.capabilityId !== 'string') continue;
+    normalizedCapabilities.push({
+      capabilityId: rawCapability.capabilityId,
+      inboundMapping: normalizeForBaselineHashV1(rawCapability.inboundMapping),
+      outboundMapping: normalizeForBaselineHashV1(rawCapability.outboundMapping),
+      flags: normalizeForBaselineHashV1(rawCapability.flags),
+    });
+  }
+  normalizedCapabilities.sort((a, b) => a.capabilityId.localeCompare(b.capabilityId));
+  projection.capabilities = normalizedCapabilities;
+
+  if (Array.isArray(sourceProfile.subscriptions)) {
+    const subscriptions = [];
+    for (const item of sourceProfile.subscriptions) {
+      const normalized = normalizeForBaselineHashV1(item);
+      if (normalized !== undefined) subscriptions.push(normalized);
+    }
+    projection.subscriptions = sortByCanonicalJson(subscriptions);
+  }
+
+  if (Array.isArray(sourceProfile.ignoredValues)) {
+    const ignoredValues = [];
+    for (const item of sourceProfile.ignoredValues) {
+      const normalized = normalizeForBaselineHashV1(item);
+      if (normalized !== undefined) ignoredValues.push(normalized);
+    }
+    projection.ignoredValues = sortByCanonicalJson(ignoredValues);
+  }
+
+  return normalizeForBaselineHashV1(projection);
+}
+
+function computeBaselineProfileHashV1(profile) {
+  const canonicalJson = canonicalJsonForBaselineHashV1(buildBaselineProfileProjectionV1(profile));
+  return crypto.createHash('sha256').update(canonicalJson, 'utf8').digest('hex');
+}
+
+function toTrimmedStringOrEmpty(value) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function createBaselineMarkerV1(profile, options = {}) {
+  const marker = {
+    projectionVersion: BASELINE_MARKER_PROJECTION_VERSION,
+    baselineProfileHash: computeBaselineProfileHashV1(profile),
+    updatedAt: new Date(options.now ?? Date.now()).toISOString(),
+  };
+  const pipelineFingerprint = toTrimmedStringOrEmpty(options.pipelineFingerprint);
+  if (pipelineFingerprint.length > 0) marker.pipelineFingerprint = pipelineFingerprint;
+  return marker;
+}
+
+function normalizeStoredBaselineMarker(marker) {
+  if (!isPlainObject(marker)) return null;
+  const projectionVersion = toTrimmedStringOrEmpty(marker.projectionVersion);
+  const baselineProfileHash = toTrimmedStringOrEmpty(marker.baselineProfileHash);
+  const updatedAt = toTrimmedStringOrEmpty(marker.updatedAt);
+  const pipelineFingerprint = toTrimmedStringOrEmpty(marker.pipelineFingerprint);
+  if (projectionVersion.length === 0) return null;
+  if (baselineProfileHash.length === 0) return null;
+  if (updatedAt.length === 0) return null;
+  const normalizedMarker = {
+    projectionVersion,
+    baselineProfileHash,
+    updatedAt,
+  };
+  if (pipelineFingerprint.length > 0) {
+    normalizedMarker.pipelineFingerprint = pipelineFingerprint;
+  }
+  return normalizedMarker;
+}
+
+function evaluateBaselineRecommendationState(profile, curationEntry, options = {}) {
+  const currentMarker = createBaselineMarkerV1(profile, options);
+  if (!isPlainObject(curationEntry)) {
+    return {
+      recommendationAvailable: false,
+      recommendationReason: 'no-curation-entry',
+      projectionVersion: BASELINE_MARKER_PROJECTION_VERSION,
+      currentMarker,
+      storedMarker: null,
+      shouldBackfillMarker: false,
+    };
+  }
+
+  const storedMarker = normalizeStoredBaselineMarker(curationEntry.baselineMarker);
+  if (!storedMarker) {
+    return {
+      recommendationAvailable: false,
+      recommendationReason: 'marker-missing-backfill',
+      projectionVersion: BASELINE_MARKER_PROJECTION_VERSION,
+      currentMarker,
+      storedMarker: null,
+      shouldBackfillMarker: true,
+    };
+  }
+
+  if (storedMarker.projectionVersion !== BASELINE_MARKER_PROJECTION_VERSION) {
+    return {
+      recommendationAvailable: false,
+      recommendationReason: 'projection-version-mismatch-backfill',
+      projectionVersion: BASELINE_MARKER_PROJECTION_VERSION,
+      currentMarker,
+      storedMarker,
+      shouldBackfillMarker: true,
+    };
+  }
+
+  if (storedMarker.baselineProfileHash !== currentMarker.baselineProfileHash) {
+    return {
+      recommendationAvailable: true,
+      recommendationReason: 'baseline-hash-changed',
+      projectionVersion: BASELINE_MARKER_PROJECTION_VERSION,
+      currentMarker,
+      storedMarker,
+      shouldBackfillMarker: false,
+    };
+  }
+
+  return {
+    recommendationAvailable: false,
+    recommendationReason: 'baseline-hash-unchanged',
+    projectionVersion: BASELINE_MARKER_PROJECTION_VERSION,
+    currentMarker,
+    storedMarker,
+    shouldBackfillMarker: false,
+  };
+}
+
 module.exports = {
   CURATION_SETTINGS_KEY,
   CURATION_SCHEMA_VERSION,
+  BASELINE_MARKER_PROJECTION_VERSION,
   loadCurationRuntimeFromSettings,
   resolveCurationEntryFromRuntime,
   lowerCurationEntryToRuntimeActions,
   applyCurationEntryToProfile,
+  buildBaselineProfileProjectionV1,
+  computeBaselineProfileHashV1,
+  createBaselineMarkerV1,
+  evaluateBaselineRecommendationState,
 };

@@ -2,6 +2,7 @@ import type { CompiledHomeyProfilePlan } from '@zwavejs2homey/compiler';
 
 export const CURATION_SETTINGS_KEY: 'curation.v1';
 export const CURATION_SCHEMA_VERSION: 'homey-curation/v1';
+export const BASELINE_MARKER_PROJECTION_VERSION: '1';
 
 export interface HomeyCurationTargetDeviceV1 {
   homeyDeviceId: string;
@@ -112,6 +113,29 @@ export interface HomeyCurationApplyReport {
   };
 }
 
+export type BaselineRecommendationReasonV1 =
+  | 'no-curation-entry'
+  | 'marker-missing-backfill'
+  | 'projection-version-mismatch-backfill'
+  | 'baseline-hash-changed'
+  | 'baseline-hash-unchanged';
+
+export interface HomeyBaselineMarkerV1 {
+  projectionVersion: '1' | string;
+  baselineProfileHash: string;
+  updatedAt: string;
+  pipelineFingerprint?: string;
+}
+
+export interface BaselineRecommendationStateV1 {
+  recommendationAvailable: boolean;
+  recommendationReason: BaselineRecommendationReasonV1;
+  projectionVersion: '1' | string;
+  currentMarker: HomeyBaselineMarkerV1;
+  storedMarker: HomeyBaselineMarkerV1 | null;
+  shouldBackfillMarker: boolean;
+}
+
 export function loadCurationRuntimeFromSettings(settingsValue: unknown): HomeyCurationRuntimeV1;
 
 export function resolveCurationEntryFromRuntime(
@@ -136,3 +160,26 @@ export function applyCurationEntryToProfile(
   profile: CompiledHomeyProfilePlan;
   report: HomeyCurationApplyReport;
 };
+
+export function buildBaselineProfileProjectionV1(
+  profile: CompiledHomeyProfilePlan,
+): Record<string, unknown>;
+
+export function computeBaselineProfileHashV1(profile: CompiledHomeyProfilePlan): string;
+
+export function createBaselineMarkerV1(
+  profile: CompiledHomeyProfilePlan,
+  options?: {
+    pipelineFingerprint?: string;
+    now?: number | string | Date;
+  },
+): HomeyBaselineMarkerV1;
+
+export function evaluateBaselineRecommendationState(
+  profile: CompiledHomeyProfilePlan,
+  curationEntry: HomeyCurationEntryV1 | undefined,
+  options?: {
+    pipelineFingerprint?: string;
+    now?: number | string | Date;
+  },
+): BaselineRecommendationStateV1;

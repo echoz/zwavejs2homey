@@ -175,6 +175,7 @@ function createRuntimeStatus(overrides = {}) {
     sourcePath: '/tmp/compiled-homey-profiles.json',
     loaded: true,
     generatedAt: '2026-03-01T00:00:00.000Z',
+    pipelineFingerprint: 'pipeline-fingerprint-1',
     entryCount: 1,
     duplicateKeys: {
       productTriple: 0,
@@ -377,7 +378,7 @@ function createCurationEntryForMain5() {
       homeyDeviceId: 'main:5',
     },
     baselineMarker: {
-      projectionVersion: 'v1',
+      projectionVersion: '1',
       baselineProfileHash: 'abc123',
       updatedAt: '2026-03-01T00:00:00.000Z',
     },
@@ -557,6 +558,11 @@ test('node device harness wires read/write/event sync for onoff + dim verticals'
   assert.equal(profileResolution?.mappingDiagnostics?.length, 2);
   assert.equal(profileResolution?.mappingDiagnostics?.[0]?.inbound?.enabled, true);
   assert.equal(profileResolution?.mappingDiagnostics?.[0]?.outbound?.enabled, true);
+  assert.equal(profileResolution?.recommendationAvailable, false);
+  assert.equal(profileResolution?.recommendationReason, 'no-curation-entry');
+  assert.equal(profileResolution?.recommendationBackfillNeeded, false);
+  assert.equal(profileResolution?.currentBaselinePipelineFingerprint, 'pipeline-fingerprint-1');
+  assert.equal(profileResolution?.storedBaselineHash, null);
 
   await device.onDeleted();
   assert.equal(client.getListenerCount(), 0);
@@ -655,6 +661,11 @@ test('node device harness applies curation overrides before runtime mapping extr
   assert.equal(profileResolution?.curationReport?.summary?.applied, 2);
   assert.equal(profileResolution?.mappingDiagnostics?.length, 1);
   assert.equal(profileResolution?.mappingDiagnostics?.[0]?.capabilityId, 'onoff');
+  assert.equal(profileResolution?.recommendationAvailable, true);
+  assert.equal(profileResolution?.recommendationReason, 'baseline-hash-changed');
+  assert.equal(profileResolution?.recommendationBackfillNeeded, false);
+  assert.equal(typeof profileResolution?.currentBaselineHash, 'string');
+  assert.equal(profileResolution?.storedBaselineHash, 'abc123');
 });
 
 test('node device harness refresh replaces runtime listeners and updates sync metadata', async () => {

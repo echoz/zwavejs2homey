@@ -1,9 +1,12 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
+  BASELINE_MARKER_PROJECTION_VERSION,
   applyCurationEntryToProfile,
   CURATION_SCHEMA_VERSION,
   CURATION_SETTINGS_KEY,
+  createBaselineMarkerV1,
+  evaluateBaselineRecommendationState,
   lowerCurationEntryToRuntimeActions,
   loadCurationRuntimeFromSettings,
   resolveCurationEntryFromRuntime,
@@ -20,7 +23,7 @@ function createValidCurationDocument() {
           catalogId: '29:66:2',
         },
         baselineMarker: {
-          projectionVersion: 'v1',
+          projectionVersion: '1',
           baselineProfileHash: 'abc123',
           updatedAt: '2026-03-01T00:00:00.000Z',
         },
@@ -214,4 +217,92 @@ test('curation apply can override capability mappings and remove existing capabi
   assert.equal(result.profile.capabilities[0].outboundMapping.target.property, 'targetValueCustom');
   assert.equal(result.profile.capabilities[0].provenance.layer, 'user-curation');
   assert.equal(result.report.summary.errors, 0);
+});
+
+test('baseline recommendation remains unavailable when stored and current hashes match', () => {
+  const baseProfile = createBaseProfile();
+  const marker = createBaselineMarkerV1(baseProfile, {
+    pipelineFingerprint: 'fingerprint-a',
+    now: '2026-03-02T00:00:00.000Z',
+  });
+  const curationEntry = {
+    targetDevice: { homeyDeviceId: 'homey-device-1' },
+    baselineMarker: marker,
+    overrides: {},
+    updatedAt: '2026-03-02T00:00:00.000Z',
+  };
+
+  const result = evaluateBaselineRecommendationState(baseProfile, curationEntry, {
+    pipelineFingerprint: 'fingerprint-a',
+    now: '2026-03-02T00:05:00.000Z',
+  });
+  assert.equal(result.recommendationAvailable, false);
+  assert.equal(result.recommendationReason, 'baseline-hash-unchanged');
+  assert.equal(result.shouldBackfillMarker, false);
+  assert.equal(result.currentMarker.projectionVersion, BASELINE_MARKER_PROJECTION_VERSION);
+});
+
+test('baseline recommendation becomes available when stored and current hashes differ', () => {
+  const baseProfile = createBaseProfile();
+  const marker = createBaselineMarkerV1(baseProfile, {
+    pipelineFingerprint: 'fingerprint-a',
+    now: '2026-03-02T00:00:00.000Z',
+  });
+  const curationEntry = {
+    targetDevice: { homeyDeviceId: 'homey-device-1' },
+    baselineMarker: marker,
+    overrides: {},
+    updatedAt: '2026-03-02T00:00:00.000Z',
+  };
+
+  const changedProfile = createBaseProfile();
+  changedProfile.capabilities = [...changedProfile.capabilities, { capabilityId: 'measure_power' }];
+  const result = evaluateBaselineRecommendationState(changedProfile, curationEntry, {
+    pipelineFingerprint: 'fingerprint-b',
+    now: '2026-03-02T00:05:00.000Z',
+  });
+  assert.equal(result.recommendationAvailable, true);
+  assert.equal(result.recommendationReason, 'baseline-hash-changed');
+  assert.equal(result.shouldBackfillMarker, false);
+});
+
+test('baseline recommendation requests marker backfill when marker is missing', () => {
+  const baseProfile = createBaseProfile();
+  const curationEntry = {
+    targetDevice: { homeyDeviceId: 'homey-device-1' },
+    overrides: {},
+    updatedAt: '2026-03-02T00:00:00.000Z',
+  };
+
+  const result = evaluateBaselineRecommendationState(baseProfile, curationEntry, {
+    now: '2026-03-02T00:05:00.000Z',
+  });
+  assert.equal(result.recommendationAvailable, false);
+  assert.equal(result.recommendationReason, 'marker-missing-backfill');
+  assert.equal(result.shouldBackfillMarker, true);
+  assert.equal(result.storedMarker, null);
+});
+
+test('baseline recommendation requests marker backfill on projection version mismatch', () => {
+  const baseProfile = createBaseProfile();
+  const marker = createBaselineMarkerV1(baseProfile, {
+    pipelineFingerprint: 'fingerprint-a',
+    now: '2026-03-02T00:00:00.000Z',
+  });
+  const curationEntry = {
+    targetDevice: { homeyDeviceId: 'homey-device-1' },
+    baselineMarker: {
+      ...marker,
+      projectionVersion: '0',
+    },
+    overrides: {},
+    updatedAt: '2026-03-02T00:00:00.000Z',
+  };
+
+  const result = evaluateBaselineRecommendationState(baseProfile, curationEntry, {
+    now: '2026-03-02T00:05:00.000Z',
+  });
+  assert.equal(result.recommendationAvailable, false);
+  assert.equal(result.recommendationReason, 'projection-version-mismatch-backfill');
+  assert.equal(result.shouldBackfillMarker, true);
 });

@@ -25,6 +25,7 @@ export interface CompiledProfilesRuntimeStatus {
   sourcePath: string;
   loaded: boolean;
   generatedAt: string | null;
+  pipelineFingerprint: string | null;
   entryCount: number;
   duplicateKeys: CompiledProfilesDuplicateSummary;
   errorMessage: string | null;

@@ -136,7 +136,10 @@ Delivered:
 
 Partially complete / next:
 
-- recommendation detection execution (baseline marker/hash flow)
+- baseline recommendation detection is now wired:
+  - canonical projection/hash helpers in adapter curation runtime
+  - per-device recommendation state computed during node profile sync
+  - recommendation diagnostics persisted in `profileResolution`
 - Homey settings/diagnostics UX around curation and recommendations
 - expanded runtime mapping vertical coverage
 
@@ -170,8 +173,8 @@ Primary gate: `npm run check`
 
 Near-term:
 
-1. complete recommendation state computation from baseline markers/hashes
-2. expose curation/recommendation diagnostics in Homey-facing UX surfaces
+1. expose curation/recommendation diagnostics in Homey-facing UX surfaces
+2. harden recommendation adoption/backfill flows in app-facing paths
 3. continue capability vertical expansion with runtime + harness tests
 
 After that:

@@ -18,7 +18,10 @@ function createArtifact(entries) {
   return {
     schemaVersion: 'compiled-homey-profiles/v1',
     generatedAt: '2026-03-01T00:00:00.000Z',
-    source: { buildProfile: 'default-manifest' },
+    source: {
+      buildProfile: 'default-manifest',
+      pipelineFingerprint: 'pipeline-fingerprint-1',
+    },
     entries,
   };
 }
@@ -90,6 +93,7 @@ test('runtime loader validates compiled artifact and builds resolver index', asy
   const runtime = await tryLoadCompiledProfilesRuntimeFromFile(filePath);
   assert.equal(runtime.status.loaded, true);
   assert.equal(runtime.status.entryCount, 2);
+  assert.equal(runtime.status.pipelineFingerprint, 'pipeline-fingerprint-1');
   assert.equal(runtime.status.errorMessage, null);
 
   const selector = {
@@ -152,6 +156,7 @@ test('node profile classification resolves match or no-match fallback consistent
       sourcePath: '/tmp/compiled.json',
       loaded: true,
       generatedAt: '2026-03-01T00:00:00.000Z',
+      pipelineFingerprint: 'pipeline-fingerprint-1',
       entryCount: 1,
       duplicateKeys: { productTriple: 0, nodeId: 0, deviceKey: 0 },
       errorMessage: null,
@@ -167,6 +172,7 @@ test('node profile classification resolves match or no-match fallback consistent
       sourcePath: '/tmp/compiled.json',
       loaded: true,
       generatedAt: '2026-03-01T00:00:00.000Z',
+      pipelineFingerprint: 'pipeline-fingerprint-1',
       entryCount: 1,
       duplicateKeys: { productTriple: 0, nodeId: 0, deviceKey: 0 },
       errorMessage: null,
@@ -182,6 +188,7 @@ test('node profile classification resolves match or no-match fallback consistent
       sourcePath: '/tmp/compiled.json',
       loaded: false,
       generatedAt: null,
+      pipelineFingerprint: null,
       entryCount: 0,
       duplicateKeys: { productTriple: 0, nodeId: 0, deviceKey: 0 },
       errorMessage: 'missing',

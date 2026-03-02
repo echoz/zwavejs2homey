@@ -20,7 +20,11 @@ Design and implement a Homey adapter-owned runtime curation system that applies 
   - app runtime loads `curation.v1` from Homey settings at startup
   - app runtime reloads curation on `curation.v1` settings updates
   - curation updates trigger node runtime refresh (`curation-updated`)
-- [ ] Phase E/F remain open (recommendation markers, admin flow)
+- [x] Phase E (baseline marker + recommendation detection) baseline is in place:
+  - canonical baseline projection/hash helpers implemented in `curation.js`
+  - marker create/evaluate helpers implemented (`createBaselineMarkerV1`, `evaluateBaselineRecommendationState`)
+  - node runtime computes recommendation state and persists recommendation diagnostics to `profileResolution`
+- [ ] Phase F remains open (admin/adopt UX flows)
 
 Related ADRs:
 

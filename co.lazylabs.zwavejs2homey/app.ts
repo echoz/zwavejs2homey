@@ -127,6 +127,7 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
         reason,
         sourcePath,
         entryCount: runtime.status.entryCount,
+        pipelineFingerprint: runtime.status.pipelineFingerprint,
         duplicateKeys: runtime.status.duplicateKeys,
       });
       return;
@@ -308,6 +309,7 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
       sourcePath,
       loaded: false,
       generatedAt: null,
+      pipelineFingerprint: null,
       entryCount: 0,
       duplicateKeys: {
         productTriple: 0,

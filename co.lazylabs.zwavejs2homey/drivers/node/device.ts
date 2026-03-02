@@ -22,6 +22,7 @@ import {
 } from '../../node-runtime';
 import {
   applyCurationEntryToProfile,
+  evaluateBaselineRecommendationState,
   type HomeyCurationApplyReport,
   type HomeyCurationEntryV1,
   type HomeyCurationRuntimeStatusV1,
@@ -454,6 +455,7 @@ module.exports = class NodeDevice extends Homey.Device {
     const mappingDiagnostics: CapabilityMappingDiagnostic[] = [];
     let curationEntry: HomeyCurationEntryV1 | undefined;
     let curationReport: HomeyCurationApplyReport | null = null;
+    let recommendationState: ReturnType<typeof evaluateBaselineRecommendationState> | null = null;
     this.clearZwjsEventSubscriptions();
 
     if (ctx.nodeId !== undefined && client) {
@@ -470,18 +472,22 @@ module.exports = class NodeDevice extends Homey.Device {
           match = app.resolveCompiledProfileEntry?.(selector) ?? { by: 'none' };
           classification = resolveNodeProfileClassification(match, resolverStatus);
           if (match.entry) {
-            let effectiveProfile = match.entry.compiled.profile;
+            const baselineProfile = match.entry.compiled.profile;
+            let effectiveProfile = baselineProfile;
             if (ctx.homeyDeviceId) {
               curationEntry = app.resolveCurationEntry?.(ctx.homeyDeviceId);
             }
+            recommendationState = evaluateBaselineRecommendationState(
+              baselineProfile,
+              curationEntry,
+              {
+                pipelineFingerprint: resolverStatus?.pipelineFingerprint ?? undefined,
+              },
+            );
             if (curationEntry) {
-              const result = applyCurationEntryToProfile(
-                match.entry.compiled.profile,
-                curationEntry,
-                {
-                  homeyDeviceId: ctx.homeyDeviceId,
-                },
-              );
+              const result = applyCurationEntryToProfile(baselineProfile, curationEntry, {
+                homeyDeviceId: ctx.homeyDeviceId,
+              });
               effectiveProfile = result.profile;
               curationReport = result.report;
             }
@@ -590,6 +596,16 @@ module.exports = class NodeDevice extends Homey.Device {
       curationError: curationStatus?.errorMessage ?? null,
       curationEntryPresent: Boolean(curationEntry),
       curationReport,
+      recommendationAvailable: recommendationState?.recommendationAvailable ?? false,
+      recommendationReason: recommendationState?.recommendationReason ?? null,
+      recommendationProjectionVersion: recommendationState?.projectionVersion ?? null,
+      recommendationBackfillNeeded: recommendationState?.shouldBackfillMarker ?? false,
+      currentBaselineHash: recommendationState?.currentMarker?.baselineProfileHash ?? null,
+      currentBaselinePipelineFingerprint:
+        recommendationState?.currentMarker?.pipelineFingerprint ?? null,
+      storedBaselineHash: recommendationState?.storedMarker?.baselineProfileHash ?? null,
+      storedBaselinePipelineFingerprint:
+        recommendationState?.storedMarker?.pipelineFingerprint ?? null,
       verticalSliceApplied,
       mappingDiagnostics,
     });
@@ -606,6 +622,8 @@ module.exports = class NodeDevice extends Homey.Device {
       curationLoaded: curationStatus?.loaded === true,
       curationEntryPresent: Boolean(curationEntry),
       curationAppliedActions: curationReport?.summary.applied ?? 0,
+      recommendationAvailable: recommendationState?.recommendationAvailable ?? false,
+      recommendationReason: recommendationState?.recommendationReason ?? null,
       verticalSliceApplied,
     });
   }

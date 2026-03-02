@@ -15,6 +15,13 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 ## Recently Completed
 
+- Latest Phase 5 recommendation-marker slice:
+  - added canonical baseline projection/hash helpers in `co.lazylabs.zwavejs2homey/curation.js`
+  - added marker/recommendation helpers (`createBaselineMarkerV1`, `evaluateBaselineRecommendationState`)
+  - threaded compiled artifact `pipelineFingerprint` into app/runtime status (`compiled-profiles` + app logging)
+  - node runtime now computes recommendation state per sync and stores recommendation diagnostics in `profileResolution`
+  - added regression coverage for unchanged/changed hash and marker backfill/version-mismatch paths
+
 - Latest Phase 5 curation-apply slice:
   - implemented deterministic `curation.v1` override lowering to runtime actions (`lowerCurationEntryToRuntimeActions`)
   - implemented profile apply helper (`applyCurationEntryToProfile`) with applied/skipped/error diagnostics and stable rule IDs

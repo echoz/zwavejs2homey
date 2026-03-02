@@ -79,11 +79,12 @@ Done so far:
 - runtime rebind on startup/settings/events
 - `curation.v1` load/validate baseline
 - deterministic curation lowering/apply integrated into node runtime path
+- baseline marker hash/recommendation-state runtime detection integrated into node sync diagnostics
 
 In progress / next:
 
-1. execute baseline marker hashing + recommendation detection flow
-2. surface recommendation/curation diagnostics in app-facing UX paths
+1. surface recommendation/curation diagnostics in app-facing UX paths
+2. implement recommendation backfill/adopt flows
 3. continue broadening runtime mapping coverage with tests
 
 Exit criteria:

@@ -40,6 +40,7 @@ function createCompiledProfilesRuntimeStatus(sourcePath) {
     sourcePath,
     loaded: false,
     generatedAt: null,
+    pipelineFingerprint: null,
     entryCount: 0,
     duplicateKeys: {
       productTriple: 0,
@@ -64,6 +65,10 @@ async function tryLoadCompiledProfilesRuntimeFromFile(sourcePath) {
         sourcePath: baseStatus.sourcePath,
         loaded: true,
         generatedAt: parsed.generatedAt,
+        pipelineFingerprint:
+          typeof parsed.source?.pipelineFingerprint === 'string'
+            ? parsed.source.pipelineFingerprint
+            : null,
         entryCount: parsed.entries.length,
         duplicateKeys: toDuplicateSummary(index),
         errorMessage: null,
@@ -77,6 +82,7 @@ async function tryLoadCompiledProfilesRuntimeFromFile(sourcePath) {
         sourcePath: baseStatus.sourcePath,
         loaded: false,
         generatedAt: null,
+        pipelineFingerprint: null,
         entryCount: 0,
         duplicateKeys: {
           productTriple: 0,
