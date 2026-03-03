@@ -63,6 +63,14 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - no connection attempt when setting is missing
     - deferred connect after runtime settings update
 
+- Latest Homey pairing UX flow slice:
+  - fixed pairing flow to include explicit add action step in both drivers
+  - updated pair templates:
+    - `list_devices -> add_devices` navigation
+    - explicit `add_devices` template view
+  - added guard test to keep flow shape stable:
+    - `co.lazylabs.zwavejs2homey/test/pairing-flow.test.js`
+
 - Latest Phase 5 runtime-mapping diagnostics edge-case slice:
   - added enum-like mapping diagnostics harness coverage for `thermostat_mode`
   - validated unreadable inbound selectors are blocked with explicit diagnostics (`inbound_selector_not_readable`)
