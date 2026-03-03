@@ -67,6 +67,7 @@ Design and implement a Homey adapter-owned runtime curation system that applies 
     - strict action validation (`auto`, `backfill-marker`, `adopt-recommended-baseline`, `none`)
     - action response returns execution result + refreshed `node-device-tools/v1` snapshot
     - custom view now drives explicit confirm-before-execute for adopt/backfill
+    - custom view now includes reason-code visibility + latest-action diagnostics for troubleshooting
   - recommendation action semantics are now hardened for churn/no-op cases:
     - no-op/failure action execution revalidates latest queue state per device
     - stale execution returns explicit `action-state-changed` with `latestReason` context

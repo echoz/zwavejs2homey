@@ -15,6 +15,16 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 ## Recently Completed
 
+- Latest Phase 5 Device Tools diagnostics-clarity slice:
+  - recommendation panel now shows both human label and raw reason code for runtime state
+  - added a new `Latest Action` panel in node Device Tools:
+    - executed/requested/selected action
+    - action reason detail
+    - latest-state reason detail
+    - state-changed indicator
+  - action execution now persists per-session latest action result in the custom view model for post-action troubleshooting
+  - added app runtime test coverage that locks batch executor delegation through the single-action executor and preserves churn metadata (`latestReason`, `stateChanged`)
+
 - Latest Phase 5 recommendation-churn hardening slice:
   - app recommendation execution now revalidates per-device queue state when an adopt/backfill mutation reports no-op/failure
   - action execution result now carries churn context fields:

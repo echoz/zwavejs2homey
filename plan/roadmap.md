@@ -113,6 +113,8 @@ Done so far:
   - canonical host path consolidated to `drivers/node/repair/device_tools.html`
   - duplicate fallback view removed from `drivers/node/pair/device_tools.html`
   - action outcomes now surface friendlier no-op/mismatch/error statuses
+  - recommendation panel now includes explicit reason-code visibility
+  - added `Latest Action` diagnostics panel for requested/selected/executed/reason/latest-state troubleshooting
 - recommendation churn hardening:
   - single-action execution now revalidates latest recommendation state on mutation no-op/failure
   - stale execution now returns explicit `action-state-changed` diagnostics with latest reason context

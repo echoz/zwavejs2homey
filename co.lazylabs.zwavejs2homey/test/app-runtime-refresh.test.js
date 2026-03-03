@@ -996,6 +996,98 @@ test('app executeRecommendationActions processes queue and returns execution sum
   await app.onUninit();
 });
 
+test('app executeRecommendationActions delegates each actionable device through executeRecommendationAction', async () => {
+  const { app } = loadAppClass([]);
+  await app.onInit();
+
+  app.getRecommendationActionQueue = async () => ({
+    generatedAt: '2026-03-03T00:00:00.000Z',
+    total: 3,
+    actionable: 2,
+    items: [
+      {
+        homeyDeviceId: 'main:12',
+        nodeId: 12,
+        profileId: 'profile-main-12',
+        action: 'backfill-marker',
+        reason: 'marker-missing-backfill',
+        recommendationAvailable: false,
+        recommendationBackfillNeeded: true,
+        recommendationProjectionVersion: '1',
+        currentBaselineHash: 'hash-12',
+        storedBaselineHash: null,
+        currentPipelineFingerprint: 'pf-12',
+      },
+      {
+        homeyDeviceId: 'main:8',
+        nodeId: 8,
+        profileId: 'profile-main-8',
+        action: 'adopt-recommended-baseline',
+        reason: 'baseline-hash-changed',
+        recommendationAvailable: true,
+        recommendationBackfillNeeded: false,
+        recommendationProjectionVersion: '1',
+        currentBaselineHash: 'hash-8-next',
+        storedBaselineHash: 'hash-8-old',
+        currentPipelineFingerprint: 'pf-8-next',
+      },
+      {
+        homeyDeviceId: null,
+        nodeId: null,
+        profileId: null,
+        action: 'none',
+        reason: 'missing-homey-device-id',
+        recommendationAvailable: false,
+        recommendationBackfillNeeded: false,
+        recommendationProjectionVersion: null,
+        currentBaselineHash: null,
+        storedBaselineHash: null,
+        currentPipelineFingerprint: null,
+      },
+    ],
+  });
+
+  const actionCalls = [];
+  app.executeRecommendationAction = async (options) => {
+    actionCalls.push(options);
+    if (options.homeyDeviceId === 'main:12') {
+      return {
+        homeyDeviceId: 'main:12',
+        requestedAction: 'backfill-marker',
+        selectedAction: 'backfill-marker',
+        executed: true,
+        reason: 'backfilled-marker',
+        createdEntry: false,
+      };
+    }
+    return {
+      homeyDeviceId: 'main:8',
+      requestedAction: 'adopt-recommended-baseline',
+      selectedAction: 'none',
+      executed: false,
+      reason: 'action-state-changed',
+      latestReason: 'baseline-hash-unchanged',
+      stateChanged: true,
+    };
+  };
+
+  const summary = await app.executeRecommendationActions({ includeNoAction: true });
+
+  assert.deepEqual(actionCalls, [
+    { homeyDeviceId: 'main:12', action: 'backfill-marker' },
+    { homeyDeviceId: 'main:8', action: 'adopt-recommended-baseline' },
+  ]);
+  assert.equal(summary.total, 3);
+  assert.equal(summary.executed, 1);
+  assert.equal(summary.skipped, 2);
+  assert.equal(summary.results[0].reason, 'backfilled-marker');
+  assert.equal(summary.results[1].reason, 'action-state-changed');
+  assert.equal(summary.results[1].latestReason, 'baseline-hash-unchanged');
+  assert.equal(summary.results[2].reason, 'missing-homey-device-id');
+
+  await app.onUninit();
+});
+
 test('app executeRecommendationAction reports state-changed when action flips during execution', async () => {
   const { app } = loadAppClass([]);
   await app.onInit();

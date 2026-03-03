@@ -181,6 +181,8 @@ Partially complete / next:
     - canonical host now uses only `drivers/node/repair/device_tools.html`
     - duplicate `drivers/node/pair/device_tools.html` fallback removed
     - no-op/mismatch outcomes now surface friendlier action status messaging
+    - recommendation UI now shows raw reason codes alongside human labels
+    - `Latest Action` diagnostics panel shows requested/selected/executed/reason/latest-state fields
 - app now exposes non-UI recommendation action APIs:
   - `backfillCurationBaselineMarker(homeyDeviceId)`
   - `adoptRecommendedBaseline(homeyDeviceId)`

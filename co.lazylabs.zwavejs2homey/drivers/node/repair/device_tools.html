@@ -225,6 +225,10 @@
           <h2>Why</h2>
           <div id="why-kv" class="kv"></div>
         </section>
+        <section class="panel">
+          <h2>Latest Action</h2>
+          <div id="latest-action-kv" class="kv"></div>
+        </section>
       </aside>
     </div>
 
@@ -236,6 +240,7 @@
           loading: false,
           actionInFlight: false,
           snapshot: null,
+          latestActionResult: null,
           error: null,
           statusMessage: null,
           statusTone: 'neutral',
@@ -283,6 +288,7 @@
         const recommendationContent = document.getElementById('recommendation-content');
         const profileRefKv = document.getElementById('profile-reference-kv');
         const whyKv = document.getElementById('why-kv');
+        const latestActionKv = document.getElementById('latest-action-kv');
         const backfillBtn = document.getElementById('backfill-btn');
         const adoptBtn = document.getElementById('adopt-btn');
         const actionHint = document.getElementById('action-hint');
@@ -297,6 +303,14 @@
         function toSafeText(value) {
           if (value === null || typeof value === 'undefined' || value === '') return 'n/a';
           return String(value);
+        }
+
+        function toReasonDetail(code, labels) {
+          if (!code) return 'n/a';
+          const normalized = String(code);
+          const label = labels[normalized];
+          if (!label || label === normalized) return normalized;
+          return `${label} (${normalized})`;
         }
 
         function setKvRows(container, rows) {
@@ -336,6 +350,7 @@
               '<p class="hint">No recommendation data available.</p>';
             profileRefKv.innerHTML = '';
             whyKv.innerHTML = '';
+            latestActionKv.innerHTML = '';
             backfillBtn.disabled = true;
             adoptBtn.disabled = true;
             actionHint.textContent = 'No action context available.';
@@ -382,6 +397,9 @@
             <p class="hint" style="margin:8px 0 0;">${toSafeText(
               reasonLabels[snapshot.recommendation.reason] || snapshot.recommendation.reason,
             )}</p>
+            <p class="hint mono" style="margin:6px 0 0;">Reason Code: ${toSafeText(
+              snapshot.recommendation.reason,
+            )}</p>
           `;
 
           setKvRows(profileRefKv, [
@@ -393,15 +411,28 @@
           ]);
 
           setKvRows(whyKv, [
-            [
-              'Reason',
-              reasonLabels[snapshot.recommendation.reason] || snapshot.recommendation.reason,
-            ],
+            ['Reason', toReasonDetail(snapshot.recommendation.reason, reasonLabels)],
             ['Suggested Action', snapshot.recommendation.suggestedAction],
             ['Actionable', snapshot.recommendation.actionable ? 'Yes' : 'No'],
             ['Fallback Reason', snapshot.profile.fallbackReason],
             ['Last Sync', formatIso(snapshot.generatedAt)],
           ]);
+
+          if (state.latestActionResult && typeof state.latestActionResult === 'object') {
+            const result = state.latestActionResult;
+            setKvRows(latestActionKv, [
+              ['Executed', result.executed === true ? 'Yes' : 'No'],
+              ['Requested Action', result.requestedAction],
+              ['Selected Action', result.selectedAction],
+              ['Reason', toReasonDetail(result.reason, actionReasonLabels)],
+              ['Latest State', toReasonDetail(result.latestReason, reasonLabels)],
+              ['State Changed', result.stateChanged === true ? 'Yes' : 'No'],
+            ]);
+          } else {
+            setKvRows(latestActionKv, [
+              ['Latest Action', 'No action executed in this session yet.'],
+            ]);
+          }
 
           if (canBackfill) {
             actionHint.textContent =
@@ -509,6 +540,8 @@
             }
             const actionResult =
               result && typeof result === 'object' ? result.actionResult : undefined;
+            state.latestActionResult =
+              actionResult && typeof actionResult === 'object' ? actionResult : null;
             const summary = describeActionResult(actionResult);
             state.statusMessage = summary.message;
             state.statusTone = summary.tone;
