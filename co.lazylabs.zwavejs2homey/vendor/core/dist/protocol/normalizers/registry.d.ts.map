@@ -1,0 +1,1 @@
+{"version":3,"file":"registry.d.ts","sourceRoot":"","sources":["../../../src/protocol/normalizers/registry.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,mBAAmB,EAAE,MAAM,SAAS,CAAC;AAInD,MAAM,WAAW,gBAAgB;IAC/B,OAAO,EAAE,mBAAmB,CAAC;IAC7B,KAAK,EAAE,OAAO,GAAG,QAAQ,GAAG,UAAU,CAAC;CACxC;AAKD,wBAAgB,aAAa,CAAC,OAAO,CAAC,EAAE,MAAM,GAAG,gBAAgB,CAOhE"}

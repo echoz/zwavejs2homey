@@ -1,0 +1,366 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.HaMockTranslationError = void 0;
+exports.translateHaMockDiscoveryToGeneratedArtifact = translateHaMockDiscoveryToGeneratedArtifact;
+const platform_output_policy_1 = require("./platform-output-policy");
+class HaMockTranslationError extends Error {
+    constructor(message) {
+        super(message);
+        this.name = 'HaMockTranslationError';
+    }
+}
+exports.HaMockTranslationError = HaMockTranslationError;
+const ALLOWED_MATCH_KEYS = new Set([
+    'commandClass',
+    'endpoint',
+    'property',
+    'propertyKey',
+    'metadataType',
+    'readable',
+    'writeable',
+]);
+const ALLOWED_OUTPUT_KEYS = new Set([
+    'homeyClass',
+    'driverTemplateId',
+    'capabilityId',
+    'assumedState',
+    'allowMulti',
+    'entityRegistryEnabledDefault',
+]);
+const ALLOWED_CONSTRAINT_KEYS = new Set(['requiredValues', 'absentValues']);
+const ALLOWED_CONSTRAINT_MATCHER_KEYS = new Set([
+    'commandClass',
+    'endpoint',
+    'property',
+    'propertyKey',
+]);
+function isObject(value) {
+    return typeof value === 'object' && value !== null;
+}
+function isNonEmptyString(value) {
+    return typeof value === 'string' && value.length > 0;
+}
+function isPropertyKeyToken(value) {
+    return value === null || typeof value === 'string' || typeof value === 'number';
+}
+function isPropertyKeySelector(value) {
+    return (isPropertyKeyToken(value) ||
+        (Array.isArray(value) && value.length > 0 && value.every((item) => isPropertyKeyToken(item))));
+}
+function toPropertyKeyArray(propertyKey) {
+    if (propertyKey === undefined)
+        return undefined;
+    const list = Array.isArray(propertyKey) ? propertyKey : [propertyKey];
+    if (list.length === 0)
+        return undefined;
+    return [...new Set(list)];
+}
+function toSelectorPropertyKey(propertyKey) {
+    if (propertyKey === undefined || propertyKey === null)
+        return undefined;
+    if (Array.isArray(propertyKey)) {
+        if (propertyKey.length !== 1)
+            return undefined;
+        const single = propertyKey[0];
+        return single === null ? undefined : single;
+    }
+    return propertyKey;
+}
+function validateInputShape(input) {
+    if (!isObject(input)) {
+        throw new HaMockTranslationError('HA mock discovery input must be an object');
+    }
+    if (input.schemaVersion !== 'ha-mock-discovery/v1') {
+        throw new HaMockTranslationError(`Unsupported HA mock discovery schemaVersion: ${String(input.schemaVersion)}`);
+    }
+    if (!isObject(input.source)) {
+        throw new HaMockTranslationError('HA mock discovery input is missing source metadata');
+    }
+    if (!isNonEmptyString(input.source.generatedAt) || !isNonEmptyString(input.source.sourceRef)) {
+        throw new HaMockTranslationError('HA mock discovery input source.generatedAt and source.sourceRef must be non-empty strings');
+    }
+    if (!Array.isArray(input.definitions)) {
+        throw new HaMockTranslationError('HA mock discovery input definitions must be an array');
+    }
+    for (const [index, definition] of input.definitions.entries()) {
+        if (!isObject(definition)) {
+            throw new HaMockTranslationError(`HA mock discovery definition ${index} must be an object`);
+        }
+        if (!isNonEmptyString(definition.id) || !isNonEmptyString(definition.sourceRef)) {
+            throw new HaMockTranslationError(`HA mock discovery definition ${index} requires non-empty id and sourceRef`);
+        }
+        if (definition.device !== undefined) {
+            if (!isObject(definition.device)) {
+                throw new HaMockTranslationError(`HA mock discovery definition ${definition.id} device must be an object`);
+            }
+            for (const key of ['manufacturerId', 'productType', 'productId']) {
+                const value = definition.device[key];
+                if (value !== undefined && typeof value !== 'number') {
+                    throw new HaMockTranslationError(`HA mock discovery definition ${definition.id} device.${key} must be a number`);
+                }
+            }
+            if (definition.device.firmwareVersionRange !== undefined) {
+                if (!isObject(definition.device.firmwareVersionRange)) {
+                    throw new HaMockTranslationError(`HA mock discovery definition ${definition.id} device.firmwareVersionRange must be an object`);
+                }
+                if (definition.device.firmwareVersionRange.min !== undefined &&
+                    typeof definition.device.firmwareVersionRange.min !== 'string') {
+                    throw new HaMockTranslationError(`HA mock discovery definition ${definition.id} device.firmwareVersionRange.min must be a string`);
+                }
+                if (definition.device.firmwareVersionRange.max !== undefined &&
+                    typeof definition.device.firmwareVersionRange.max !== 'string') {
+                    throw new HaMockTranslationError(`HA mock discovery definition ${definition.id} device.firmwareVersionRange.max must be a string`);
+                }
+            }
+            for (const key of ['deviceClassGeneric', 'deviceClassSpecific']) {
+                const value = definition.device[key];
+                if (value === undefined)
+                    continue;
+                if (!Array.isArray(value) ||
+                    value.some((item) => typeof item !== 'string' || item.length === 0)) {
+                    throw new HaMockTranslationError(`HA mock discovery definition ${definition.id} device.${key} must be a string array`);
+                }
+            }
+        }
+        if (!isObject(definition.match)) {
+            throw new HaMockTranslationError(`HA mock discovery definition ${definition.id} missing match`);
+        }
+        if (typeof definition.match.commandClass !== 'number') {
+            throw new HaMockTranslationError(`HA mock discovery definition ${definition.id} match.commandClass must be a number`);
+        }
+        if (definition.match.endpoint !== undefined && typeof definition.match.endpoint !== 'number') {
+            throw new HaMockTranslationError(`HA mock discovery definition ${definition.id} match.endpoint must be a number`);
+        }
+        if (!['string', 'number'].includes(typeof definition.match.property) ||
+            (definition.match.property !== 0 && !definition.match.property)) {
+            throw new HaMockTranslationError(`HA mock discovery definition ${definition.id} match.property must be string or number`);
+        }
+        if (definition.match.propertyKey !== undefined &&
+            !isPropertyKeySelector(definition.match.propertyKey)) {
+            throw new HaMockTranslationError(`HA mock discovery definition ${definition.id} match.propertyKey must be string/number/null or array`);
+        }
+        if (definition.match.metadataType !== undefined &&
+            typeof definition.match.metadataType !== 'string') {
+            throw new HaMockTranslationError(`HA mock discovery definition ${definition.id} match.metadataType must be a string`);
+        }
+        if (definition.match.readable !== undefined && typeof definition.match.readable !== 'boolean') {
+            throw new HaMockTranslationError(`HA mock discovery definition ${definition.id} match.readable must be a boolean`);
+        }
+        if (definition.match.writeable !== undefined &&
+            typeof definition.match.writeable !== 'boolean') {
+            throw new HaMockTranslationError(`HA mock discovery definition ${definition.id} match.writeable must be a boolean`);
+        }
+        if (definition.constraints !== undefined) {
+            if (!isObject(definition.constraints)) {
+                throw new HaMockTranslationError(`HA mock discovery definition ${definition.id} constraints must be an object`);
+            }
+            for (const key of ['requiredValues', 'absentValues']) {
+                const list = definition.constraints[key];
+                if (list === undefined)
+                    continue;
+                if (!Array.isArray(list)) {
+                    throw new HaMockTranslationError(`HA mock discovery definition ${definition.id} constraints.${key} must be an array`);
+                }
+                for (const [matcherIndex, matcher] of list.entries()) {
+                    if (!isObject(matcher)) {
+                        throw new HaMockTranslationError(`HA mock discovery definition ${definition.id} constraints.${key}[${matcherIndex}] must be an object`);
+                    }
+                    if (typeof matcher.commandClass !== 'number') {
+                        throw new HaMockTranslationError(`HA mock discovery definition ${definition.id} constraints.${key}[${matcherIndex}].commandClass must be a number`);
+                    }
+                    if (matcher.endpoint !== undefined && typeof matcher.endpoint !== 'number') {
+                        throw new HaMockTranslationError(`HA mock discovery definition ${definition.id} constraints.${key}[${matcherIndex}].endpoint must be a number`);
+                    }
+                    if (!['string', 'number'].includes(typeof matcher.property) ||
+                        (matcher.property !== 0 && !matcher.property)) {
+                        throw new HaMockTranslationError(`HA mock discovery definition ${definition.id} constraints.${key}[${matcherIndex}].property must be string or number`);
+                    }
+                    if (matcher.propertyKey !== undefined && !isPropertyKeySelector(matcher.propertyKey)) {
+                        throw new HaMockTranslationError(`HA mock discovery definition ${definition.id} constraints.${key}[${matcherIndex}].propertyKey must be string/number/null or array`);
+                    }
+                }
+            }
+        }
+        if (!isObject(definition.output)) {
+            throw new HaMockTranslationError(`HA mock discovery definition ${definition.id} missing output object`);
+        }
+        for (const key of ['assumedState', 'allowMulti', 'entityRegistryEnabledDefault']) {
+            const value = definition.output[key];
+            if (value !== undefined && typeof value !== 'boolean') {
+                throw new HaMockTranslationError(`HA mock discovery definition ${definition.id} output.${key} must be a boolean`);
+            }
+        }
+    }
+}
+function toValueMatcher(match) {
+    const propertyKeys = toPropertyKeyArray(match.propertyKey);
+    return {
+        commandClass: [match.commandClass],
+        endpoint: [match.endpoint ?? 0],
+        property: [match.property],
+        ...(propertyKeys !== undefined ? { propertyKey: propertyKeys } : {}),
+        ...(match.metadataType !== undefined ? { metadataType: [match.metadataType] } : {}),
+        ...(match.readable !== undefined ? { readable: match.readable } : {}),
+        ...(match.writeable !== undefined ? { writeable: match.writeable } : {}),
+    };
+}
+function toRule(definition) {
+    const actions = [];
+    if (definition.output.homeyClass || definition.output.driverTemplateId) {
+        actions.push({
+            type: 'device-identity',
+            homeyClass: definition.output.homeyClass,
+            driverTemplateId: definition.output.driverTemplateId,
+        });
+    }
+    if (definition.output.capabilityId) {
+        const conflict = (0, platform_output_policy_1.resolveHaCapabilityConflict)({
+            commandClass: definition.match.commandClass,
+            property: definition.match.property,
+        }, definition.output.capabilityId);
+        const flags = {
+            ...(definition.output.assumedState !== undefined
+                ? { assumedState: definition.output.assumedState }
+                : {}),
+            ...(definition.output.allowMulti !== undefined
+                ? { allowMulti: definition.output.allowMulti }
+                : {}),
+            ...(definition.output.entityRegistryEnabledDefault !== undefined
+                ? {
+                    entityRegistryEnabledDefault: definition.output.entityRegistryEnabledDefault,
+                }
+                : {}),
+        };
+        actions.push({
+            type: 'capability',
+            capabilityId: definition.output.capabilityId,
+            ...(conflict ? { conflict } : {}),
+            inboundMapping: {
+                kind: 'value',
+                selector: {
+                    commandClass: definition.match.commandClass,
+                    endpoint: definition.match.endpoint ?? 0,
+                    property: definition.match.property,
+                    ...(toSelectorPropertyKey(definition.match.propertyKey) !== undefined
+                        ? { propertyKey: toSelectorPropertyKey(definition.match.propertyKey) }
+                        : {}),
+                },
+            },
+            ...(Object.keys(flags).length > 0 ? { flags } : {}),
+        });
+    }
+    if (actions.length === 0)
+        return null;
+    return {
+        ruleId: `ha:${definition.id}`,
+        layer: 'ha-derived',
+        ...(definition.device
+            ? {
+                device: {
+                    ...(definition.device.manufacturerId !== undefined
+                        ? { manufacturerId: [definition.device.manufacturerId] }
+                        : {}),
+                    ...(definition.device.productType !== undefined
+                        ? { productType: [definition.device.productType] }
+                        : {}),
+                    ...(definition.device.productId !== undefined
+                        ? { productId: [definition.device.productId] }
+                        : {}),
+                    ...(definition.device.firmwareVersionRange !== undefined
+                        ? { firmwareVersionRange: definition.device.firmwareVersionRange }
+                        : {}),
+                    ...(definition.device.deviceClassGeneric !== undefined
+                        ? { deviceClassGeneric: definition.device.deviceClassGeneric }
+                        : {}),
+                    ...(definition.device.deviceClassSpecific !== undefined
+                        ? { deviceClassSpecific: definition.device.deviceClassSpecific }
+                        : {}),
+                },
+            }
+            : {}),
+        value: toValueMatcher(definition.match),
+        ...(definition.constraints
+            ? {
+                constraints: {
+                    ...(definition.constraints.requiredValues
+                        ? {
+                            requiredValues: definition.constraints.requiredValues.map((matcher) => toValueMatcher(matcher)),
+                        }
+                        : {}),
+                    ...(definition.constraints.absentValues
+                        ? {
+                            absentValues: definition.constraints.absentValues.map((matcher) => toValueMatcher(matcher)),
+                        }
+                        : {}),
+                },
+            }
+            : {}),
+        actions,
+    };
+}
+function detectUnsupportedReason(definition) {
+    for (const key of Object.keys(definition.match)) {
+        if (!ALLOWED_MATCH_KEYS.has(key))
+            return 'unsupported-match-field';
+    }
+    if (definition.constraints) {
+        for (const key of Object.keys(definition.constraints)) {
+            if (!ALLOWED_CONSTRAINT_KEYS.has(key))
+                return 'unsupported-match-field';
+        }
+        for (const list of [
+            definition.constraints.requiredValues,
+            definition.constraints.absentValues,
+        ]) {
+            if (!list)
+                continue;
+            for (const matcher of list) {
+                for (const key of Object.keys(matcher)) {
+                    if (!ALLOWED_CONSTRAINT_MATCHER_KEYS.has(key))
+                        return 'unsupported-match-field';
+                }
+            }
+        }
+    }
+    for (const key of Object.keys(definition.output)) {
+        if (!ALLOWED_OUTPUT_KEYS.has(key))
+            return 'unsupported-output-shape';
+    }
+    return null;
+}
+function translateHaMockDiscoveryToGeneratedArtifact(input) {
+    validateInputShape(input);
+    const unsupported = [];
+    const rules = [];
+    for (const definition of input.definitions) {
+        const unsupportedReason = detectUnsupportedReason(definition);
+        if (unsupportedReason) {
+            unsupported.push({ id: definition.id, reason: unsupportedReason });
+            continue;
+        }
+        const rule = toRule(definition);
+        if (!rule) {
+            unsupported.push({ id: definition.id, reason: 'no-supported-output' });
+            continue;
+        }
+        rules.push(rule);
+    }
+    return {
+        artifact: {
+            schemaVersion: 'ha-derived-rules/v1',
+            source: {
+                upstream: 'home-assistant',
+                component: 'zwave_js',
+                generatedAt: input.source.generatedAt,
+                sourceRef: input.source.sourceRef,
+            },
+            rules,
+        },
+        report: {
+            translated: rules.length,
+            skipped: unsupported.length,
+            unsupported,
+            sourceRefs: [...new Set(input.definitions.map((d) => d.sourceRef))].sort(),
+        },
+    };
+}

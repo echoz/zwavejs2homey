@@ -7,11 +7,12 @@
     "packages/*"
   ],
   "scripts": {
-    "postinstall": "npm --prefix co.lazylabs.zwavejs2homey install",
-    "build": "npm run build -w @zwavejs2homey/compiler && npm run build -w @zwavejs2homey/core && npm run build -w @zwavejs2homey/tui && npm --prefix co.lazylabs.zwavejs2homey run build",
+    "postinstall": "npm run homey:vendor:sync && npm --prefix co.lazylabs.zwavejs2homey install",
+    "build": "npm run build -w @zwavejs2homey/compiler && npm run build -w @zwavejs2homey/core && npm run build -w @zwavejs2homey/tui && npm run homey:vendor:sync && npm --prefix co.lazylabs.zwavejs2homey run build",
     "build:core": "npm run build -w @zwavejs2homey/core",
-    "build:homey": "npm --prefix co.lazylabs.zwavejs2homey run build",
+    "build:homey": "npm run homey:vendor:sync && npm --prefix co.lazylabs.zwavejs2homey run build",
     "homey:runtime-api:smoke": "node tools/homey-runtime-api-smoke.mjs",
+    "homey:vendor:sync": "node tools/sync-homey-vendor-packages.mjs",
     "check": "npm run format:check && npm run lint && npm run policy:guard && npm run test -w @zwavejs2homey/compiler && npm run test -w @zwavejs2homey/core && npm run test -w @zwavejs2homey/tui && npm --prefix co.lazylabs.zwavejs2homey run test",
     "lint": "npm --prefix co.lazylabs.zwavejs2homey run lint",
     "zwjs:inspect": "node tools/zwjs-inspect.mjs",

@@ -1,0 +1,1 @@
+{"version":3,"file":"reconnect.d.ts","sourceRoot":"","sources":["../../src/client/reconnect.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,eAAe,EAAE,MAAM,SAAS,CAAC;AAE/C,eAAO,MAAM,wBAAwB,EAAE,eAMtC,CAAC;AAEF,wBAAgB,oBAAoB,CAAC,MAAM,CAAC,EAAE,OAAO,CAAC,eAAe,CAAC,GAAG,eAAe,CAEvF;AAED,wBAAgB,uBAAuB,CAAC,OAAO,EAAE,MAAM,EAAE,MAAM,EAAE,eAAe,GAAG,MAAM,CASxF"}

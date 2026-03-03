@@ -8,18 +8,15 @@
     "test": "npm run build && node --test test/*.test.js"
   },
   "dependencies": {
-    "@zwavejs2homey/compiler": "file:../packages/compiler",
-    "@zwavejs2homey/core": "file:../packages/core",
-    "@types/ws": "^8.18.1",
-    "typescript": "^5.9.3",
-    "ws": "^8.18.3"
+    "@zwavejs2homey/compiler": "file:vendor/compiler",
+    "@zwavejs2homey/core": "file:vendor/core",
+    "typescript": "^5.9.3"
   },
   "devDependencies": {
     "@tsconfig/node16": "^16.1.8",
     "@types/homey": "npm:homey-apps-sdk-v3-types@^0.3.12",
     "@types/node": "^25.3.0",
     "eslint": "^7.32.0",
-    "eslint-config-athom": "^3.1.5",
-    "typescript": "^5.9.3"
+    "eslint-config-athom": "^3.1.5"
   }
 }

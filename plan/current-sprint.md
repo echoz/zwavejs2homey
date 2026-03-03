@@ -21,7 +21,17 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - `npm --prefix co.lazylabs.zwavejs2homey run build`
     - `npm --prefix co.lazylabs.zwavejs2homey run lint`
     - `npm --prefix co.lazylabs.zwavejs2homey run test`
-  - hardened Homey app local `npm ls --only=prod` compatibility for file-linked `@zwavejs2homey/*` packages by pinning required linked-package runtime/toolchain dependencies in app dependencies (`ws`, `typescript`, `@types/ws`)
+  - replaced workspace-external file links for Homey runtime packages:
+    - Homey app now depends on local vendored packages:
+      - `@zwavejs2homey/core -> file:vendor/core`
+      - `@zwavejs2homey/compiler -> file:vendor/compiler`
+    - added sync tool: `tools/sync-homey-vendor-packages.mjs`
+    - root scripts now refresh vendor packages before Homey app install/build:
+      - `postinstall`
+      - `build`
+      - `build:homey`
+    - fixes runtime module resolution crash in Homey runner container:
+      - `Cannot find module '@zwavejs2homey/core'`
   - added root `postinstall` hook to ensure nested Homey app dependencies are installed automatically after root install
   - updated plan command references to the new invocation style
 

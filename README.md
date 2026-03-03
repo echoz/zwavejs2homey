@@ -153,6 +153,9 @@ npm run build:homey
 cd co.lazylabs.zwavejs2homey && homey app validate
 ```
 
+`build:homey` also refreshes vendored runtime packages in `co.lazylabs.zwavejs2homey/vendor/`
+so `homey app run` does not depend on workspace-external package links.
+
 Smoke-test Homey runtime API routes:
 
 ```bash
