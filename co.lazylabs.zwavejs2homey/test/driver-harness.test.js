@@ -151,6 +151,56 @@ test('node driver returns pair candidates with controller/duplicates filtered ou
   assert.equal(candidates[0]?.data?.id, 'main:8');
   assert.equal(candidates[0]?.data?.bridgeId, 'main');
   assert.equal(candidates[0]?.data?.nodeId, 8);
+  assert.equal(candidates[0]?.icon, '/assets/pair-icons/other.svg');
+  assert.equal(candidates[0]?.store?.inferredHomeyClass, 'other');
+});
+
+test('node driver applies class icon inference when compiled profile resolver matches', async () => {
+  const client = {
+    async getNodeList() {
+      return {
+        nodes: [{ nodeId: 18, name: 'Dining Light' }],
+      };
+    },
+    async getNodeState(nodeId) {
+      assert.equal(nodeId, 18);
+      return {
+        success: true,
+        result: {
+          state: {
+            manufacturerId: '0x0086',
+            productType: '0x0102',
+            productId: '0x0064',
+          },
+        },
+      };
+    },
+  };
+  const driver = new NodeDriver();
+  driver._configureHarness({
+    app: {
+      getZwjsClient: () => client,
+      getBridgeId: () => 'main',
+      resolveCompiledProfileEntry: () => ({
+        by: 'productTriple',
+        entry: {
+          compiled: {
+            profile: {
+              classification: {
+                homeyClass: 'light',
+              },
+            },
+          },
+        },
+      }),
+    },
+    devices: [],
+  });
+
+  const candidates = await driver.onPairListDevices();
+  assert.equal(candidates.length, 1);
+  assert.equal(candidates[0]?.icon, '/assets/pair-icons/light.svg');
+  assert.equal(candidates[0]?.store?.inferredHomeyClass, 'light');
 });
 
 test('node driver repair session exposes device tools snapshot handlers', async () => {

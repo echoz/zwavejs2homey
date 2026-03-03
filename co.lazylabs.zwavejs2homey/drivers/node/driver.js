@@ -4,7 +4,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const homey_1 = __importDefault(require("homey"));
+const compiled_profiles_1 = require("../../compiled-profiles");
 const pairing_1 = require("../../pairing");
+const pairing_icons_1 = require("../../pairing-icons");
 module.exports = class NodeDriver extends homey_1.default.Driver {
     async onInit() {
         this.log('NodeDriver initialized');
@@ -22,6 +24,29 @@ module.exports = class NodeDriver extends homey_1.default.Driver {
         const existingNodeIds = (0, pairing_1.collectExistingNodeIdsFromData)(existingData, bridgeId);
         const { nodes } = await client.getNodeList();
         const candidates = (0, pairing_1.buildNodePairCandidates)(nodes, bridgeId, existingNodeIds);
+        for (const candidate of candidates) {
+            if (!app.resolveCompiledProfileEntry)
+                continue;
+            try {
+                const nodeStateResult = await client.getNodeState(candidate.data.nodeId);
+                if (!nodeStateResult.success)
+                    continue;
+                const selector = (0, compiled_profiles_1.buildNodeResolverSelector)({ bridgeId, nodeId: candidate.data.nodeId }, nodeStateResult.result?.state);
+                const match = app.resolveCompiledProfileEntry(selector);
+                if (match?.by === 'none')
+                    continue;
+                const homeyClass = (0, pairing_icons_1.normalizeHomeyClassForPairIcon)(match?.entry?.compiled?.profile?.classification?.homeyClass);
+                candidate.icon = (0, pairing_icons_1.resolvePairIconForHomeyClass)(homeyClass);
+                candidate.store.inferredHomeyClass = homeyClass;
+            }
+            catch (error) {
+                this.error('Failed to infer node pairing icon', {
+                    bridgeId,
+                    nodeId: candidate.data.nodeId,
+                    error,
+                });
+            }
+        }
         this.log('Node pair list generated', {
             bridgeId,
             discovered: nodes.length,

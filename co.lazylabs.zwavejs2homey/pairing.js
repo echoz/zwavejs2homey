@@ -1,5 +1,7 @@
 'use strict';
 
+const { resolvePairIconForHomeyClass } = require('./pairing-icons');
+
 const ZWJS_DEFAULT_BRIDGE_ID = 'main';
 const ZWJS_BRIDGE_DEVICE_KIND = 'zwjs-bridge';
 const ZWJS_BRIDGE_DEVICE_UNIQUE_ID = `${ZWJS_BRIDGE_DEVICE_KIND}-${ZWJS_DEFAULT_BRIDGE_ID}`;
@@ -15,6 +17,7 @@ function hasBridgePairDeviceFromData(
 function createBridgePairCandidate(bridgeId = ZWJS_DEFAULT_BRIDGE_ID, name = 'ZWJS Bridge') {
   return {
     name,
+    icon: resolvePairIconForHomeyClass('bridge'),
     data: {
       id: `${ZWJS_BRIDGE_DEVICE_KIND}-${bridgeId}`,
       kind: ZWJS_BRIDGE_DEVICE_KIND,
@@ -63,6 +66,7 @@ function buildNodePairCandidates(
     .sort((a, b) => a.nodeId - b.nodeId)
     .map((node) => ({
       name: formatNodePairName(node),
+      icon: resolvePairIconForHomeyClass('other'),
       data: {
         id: `${bridgeId}:${node.nodeId}`,
         kind: nodeKind,
@@ -74,6 +78,7 @@ function buildNodePairCandidates(
         manufacturer: node.manufacturer ?? null,
         product: node.product ?? null,
         interviewStage: toInterviewStage(node.interviewStage),
+        inferredHomeyClass: 'other',
       },
     }));
 }

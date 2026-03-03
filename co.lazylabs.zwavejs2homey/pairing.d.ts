@@ -7,6 +7,7 @@ export const ZWJS_NODE_DEVICE_KIND: 'zwjs-node';
 
 export interface BridgePairCandidate {
   name: string;
+  icon: string;
   data: {
     id: string;
     kind: string;
@@ -22,6 +23,7 @@ export interface ExistingNodeDeviceData {
 
 export interface NodePairCandidate {
   name: string;
+  icon: string;
   data: {
     id: string;
     kind: string;
@@ -33,6 +35,7 @@ export interface NodePairCandidate {
     manufacturer: string | null;
     product: string | null;
     interviewStage: string | null;
+    inferredHomeyClass: string;
   };
 }
 

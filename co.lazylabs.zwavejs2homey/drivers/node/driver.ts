@@ -1,10 +1,12 @@
 import Homey from 'homey';
 import type { ZwjsClient } from '@zwavejs2homey/core';
+import { buildNodeResolverSelector } from '../../compiled-profiles';
 import {
   buildNodePairCandidates,
   collectExistingNodeIdsFromData,
   ZWJS_DEFAULT_BRIDGE_ID,
 } from '../../pairing';
+import { normalizeHomeyClassForPairIcon, resolvePairIconForHomeyClass } from '../../pairing-icons';
 
 type RecommendationActionSelection =
   | 'auto'
@@ -15,6 +17,20 @@ type RecommendationActionSelection =
 interface AppRuntimeAccess {
   getZwjsClient?: () => ZwjsClient | undefined;
   getBridgeId?: () => string;
+  resolveCompiledProfileEntry?: (
+    selector: ReturnType<typeof buildNodeResolverSelector>,
+  ) => {
+    by: string;
+    entry?: {
+      compiled?: {
+        profile?: {
+          classification?: {
+            homeyClass?: unknown;
+          };
+        };
+      };
+    };
+  };
   getNodeDeviceToolsSnapshot?: (options: { homeyDeviceId: string }) => Promise<unknown>;
   executeRecommendationAction?: (options: {
     homeyDeviceId: string;
@@ -53,6 +69,30 @@ module.exports = class NodeDriver extends Homey.Driver {
     const { nodes } = await client.getNodeList();
 
     const candidates = buildNodePairCandidates(nodes, bridgeId, existingNodeIds);
+    for (const candidate of candidates) {
+      if (!app.resolveCompiledProfileEntry) continue;
+      try {
+        const nodeStateResult = await client.getNodeState(candidate.data.nodeId);
+        if (!nodeStateResult.success) continue;
+        const selector = buildNodeResolverSelector(
+          { bridgeId, nodeId: candidate.data.nodeId },
+          nodeStateResult.result?.state,
+        );
+        const match = app.resolveCompiledProfileEntry(selector);
+        if (match?.by === 'none') continue;
+        const homeyClass = normalizeHomeyClassForPairIcon(
+          match?.entry?.compiled?.profile?.classification?.homeyClass,
+        );
+        candidate.icon = resolvePairIconForHomeyClass(homeyClass);
+        candidate.store.inferredHomeyClass = homeyClass;
+      } catch (error) {
+        this.error('Failed to infer node pairing icon', {
+          bridgeId,
+          nodeId: candidate.data.nodeId,
+          error,
+        });
+      }
+    }
 
     this.log('Node pair list generated', {
       bridgeId,
