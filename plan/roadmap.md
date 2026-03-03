@@ -125,6 +125,11 @@ Done so far:
   - added generic mixed numeric/string vertical harness coverage (`measure_humidity`, `thermostat_mode`)
   - added enum-like mapping diagnostics edge-case coverage (`thermostat_mode` unreadable inbound + unknown outbound writeability)
   - validated inbound/outbound/event update flows remain capability-agnostic
+- Homey CLI workspace/prod-dependency compatibility hardening:
+  - removed Homey app package from root npm workspace membership
+  - switched root Homey-targeted scripts to `npm --prefix` invocation
+  - pinned linked-package runtime/toolchain deps in app package (`ws`, `typescript`, `@types/ws`) so `homey app run` preprocess `npm ls --only=prod` succeeds with local `file:` links
+  - added root `postinstall` to install nested Homey app dependencies automatically
 
 In progress / next:
 

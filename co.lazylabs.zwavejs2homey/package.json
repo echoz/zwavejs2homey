@@ -9,7 +9,10 @@
   },
   "dependencies": {
     "@zwavejs2homey/compiler": "file:../packages/compiler",
-    "@zwavejs2homey/core": "file:../packages/core"
+    "@zwavejs2homey/core": "file:../packages/core",
+    "@types/ws": "^8.18.1",
+    "typescript": "^5.9.3",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "@tsconfig/node16": "^16.1.8",

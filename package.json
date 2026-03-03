@@ -7,6 +7,7 @@
     "packages/*"
   ],
   "scripts": {
+    "postinstall": "npm --prefix co.lazylabs.zwavejs2homey install",
     "build": "npm run build -w @zwavejs2homey/compiler && npm run build -w @zwavejs2homey/core && npm run build -w @zwavejs2homey/tui && npm --prefix co.lazylabs.zwavejs2homey run build",
     "build:core": "npm run build -w @zwavejs2homey/core",
     "build:homey": "npm --prefix co.lazylabs.zwavejs2homey run build",

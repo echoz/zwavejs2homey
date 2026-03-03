@@ -21,6 +21,8 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - `npm --prefix co.lazylabs.zwavejs2homey run build`
     - `npm --prefix co.lazylabs.zwavejs2homey run lint`
     - `npm --prefix co.lazylabs.zwavejs2homey run test`
+  - hardened Homey app local `npm ls --only=prod` compatibility for file-linked `@zwavejs2homey/*` packages by pinning required linked-package runtime/toolchain dependencies in app dependencies (`ws`, `typescript`, `@types/ws`)
+  - added root `postinstall` hook to ensure nested Homey app dependencies are installed automatically after root install
   - updated plan command references to the new invocation style
 
 - Latest Phase 5 runtime-mapping diagnostics edge-case slice:

@@ -105,6 +105,11 @@ npm install
 npm run check
 ```
 
+Notes:
+
+- Root `npm install` now also installs Homey app dependencies via `postinstall`.
+- If you install with scripts disabled, run `npm --prefix co.lazylabs.zwavejs2homey install` manually.
+
 ## High-Value Commands
 
 ZWJS read-only inspect:
