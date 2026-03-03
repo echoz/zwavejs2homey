@@ -6,13 +6,11 @@
     <title>ZWJS Connection</title>
     <script type="text/javascript" src="/homey.js" data-origin="settings"></script>
     <style>
-      :root {
-        color-scheme: light dark;
-      }
-
       body {
         font-family: sans-serif;
         margin: 16px;
+        color: var(--homey-text-color, #1f2937);
+        background: var(--homey-background-color, #ffffff);
       }
 
       h1 {
@@ -37,6 +35,10 @@
         width: 100%;
         padding: 8px;
         font-size: 14px;
+        color: var(--homey-text-color, #1f2937);
+        background: var(--homey-background-color, #ffffff);
+        border: 1px solid var(--homey-line-color, #d1d5db);
+        border-radius: 8px;
       }
 
       .row {
@@ -99,7 +101,9 @@
 
       function setStatus(message, isError = false) {
         status.textContent = message;
-        status.style.color = isError ? '#b00020' : '';
+        status.style.color = isError
+          ? 'var(--homey-color-red, #b00020)'
+          : 'var(--homey-text-color-light, #6b7280)';
       }
 
       function updateTokenVisibility() {
