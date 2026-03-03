@@ -15,6 +15,18 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 ## Recently Completed
 
+- Latest Phase 5 runtime-mapping coverage broadening slice:
+  - added generic mixed numeric/string runtime-mapping validation (`measure_humidity`, `thermostat_mode`) without capability-specific adapter branches
+  - expanded node-runtime coercion coverage for string-typed mappings and keyed event selector matching (`propertyKeyName`)
+  - expanded node-device harness coverage for:
+    - inbound numeric/string coercion
+    - outbound string write path
+    - value-updated event refresh path
+    - outbound-gating behavior for inbound-only numeric capabilities
+  - files:
+    - `co.lazylabs.zwavejs2homey/test/node-runtime.test.js`
+    - `co.lazylabs.zwavejs2homey/test/node-device-harness.test.js`
+
 - Latest Phase 5 Device Tools diagnostics-clarity slice:
   - recommendation panel now shows both human label and raw reason code for runtime state
   - added a new `Latest Action` panel in node Device Tools:

@@ -447,6 +447,71 @@ function createClimateAndContactProfileMatch() {
   };
 }
 
+function createHumidityAndModeProfileMatch() {
+  return {
+    by: 'product-triple',
+    key: '1001:2001:3001',
+    entry: {
+      device: {
+        deviceKey: 'main:43',
+        nodeId: 43,
+        manufacturerId: 1001,
+        productType: 2001,
+        productId: 3001,
+      },
+      compiled: {
+        profile: {
+          profileId: 'profile-main-43',
+          match: {},
+          classification: {
+            homeyClass: 'thermostat',
+            confidence: 'curated',
+            uncurated: false,
+          },
+          capabilities: [
+            {
+              capabilityId: 'measure_humidity',
+              inboundMapping: {
+                kind: 'value',
+                selector: {
+                  commandClass: 49,
+                  endpoint: 0,
+                  property: 'Air humidity',
+                },
+              },
+            },
+            {
+              capabilityId: 'thermostat_mode',
+              inboundMapping: {
+                kind: 'value',
+                selector: {
+                  commandClass: 64,
+                  endpoint: 0,
+                  property: 'mode',
+                },
+              },
+              outboundMapping: {
+                kind: 'set_value',
+                target: {
+                  commandClass: 64,
+                  endpoint: 0,
+                  property: 'mode',
+                },
+              },
+            },
+          ],
+          provenance: {
+            layer: 'project-product',
+            ruleId: 'example-humidity-mode-profile',
+            action: 'replace',
+          },
+        },
+        report: {},
+      },
+    },
+  };
+}
+
 function createCurationEntryForMain5() {
   return {
     targetDevice: {
@@ -1253,6 +1318,140 @@ test('node device harness supports generic numeric + boolean verticals without c
   assert.equal(profileResolution?.mappingDiagnostics?.length, 2);
   assert.equal(profileResolution?.mappingDiagnostics?.[0]?.inbound?.enabled, true);
   assert.equal(profileResolution?.mappingDiagnostics?.[0]?.outbound?.enabled, true);
+  assert.equal(profileResolution?.mappingDiagnostics?.[1]?.inbound?.enabled, true);
+  assert.equal(profileResolution?.mappingDiagnostics?.[1]?.outbound?.enabled, true);
+});
+
+test('node device harness supports generic numeric + string verticals without capability-specific code paths', async () => {
+  const humiditySelector = {
+    commandClass: 49,
+    endpoint: 0,
+    property: 'Air humidity',
+  };
+  const thermostatModeSelector = {
+    commandClass: 64,
+    endpoint: 0,
+    property: 'mode',
+  };
+
+  const nodeValueResultsBySelector = new Map();
+  nodeValueResultsBySelector.set(selectorKey(humiditySelector), {
+    success: true,
+    result: { value: '55.2' },
+  });
+  nodeValueResultsBySelector.set(selectorKey(thermostatModeSelector), {
+    success: true,
+    result: { value: 'heat' },
+  });
+
+  const client = createMockZwjsClient({
+    nodeStateResult: {
+      success: true,
+      result: {
+        state: {
+          manufacturerId: '1001',
+          productType: '2001',
+          productId: '3001',
+        },
+      },
+    },
+    nodeValueResultsBySelector,
+    definedValueIdsResult: {
+      success: true,
+      result: [
+        {
+          commandClass: 49,
+          endpoint: 0,
+          property: 'Air humidity',
+          readable: true,
+          type: 'number',
+        },
+        {
+          commandClass: 64,
+          endpoint: 0,
+          property: 'mode',
+          readable: true,
+          type: 'string',
+        },
+        {
+          commandClass: 64,
+          endpoint: 0,
+          property: 'mode',
+          writeable: true,
+          type: 'string',
+        },
+      ],
+    },
+  });
+
+  const app = {
+    getZwjsClient: () => client,
+    getCompiledProfilesStatus: () => createRuntimeStatus(),
+    resolveCompiledProfileEntry: () => createHumidityAndModeProfileMatch(),
+  };
+
+  const device = new NodeDevice();
+  device._configureHarness({
+    app,
+    data: { bridgeId: 'main', nodeId: 43 },
+    capabilities: ['measure_humidity', 'thermostat_mode'],
+  });
+
+  await device.onInit();
+  assert.equal(device._getCapabilityValue('measure_humidity'), 55.2);
+  assert.equal(device._getCapabilityValue('thermostat_mode'), 'heat');
+  assert.equal(client.getListenerCount(), 2);
+
+  await device._triggerCapabilityListener('thermostat_mode', 'cool');
+  assert.deepEqual(client.callLog.setNodeValue, [
+    {
+      nodeId: 43,
+      valueId: {
+        commandClass: 64,
+        endpoint: 0,
+        property: 'mode',
+      },
+      value: 'cool',
+    },
+  ]);
+  await assert.rejects(
+    () => device._triggerCapabilityListener('measure_humidity', 44.2),
+    /Missing capability listener/,
+  );
+
+  client.emitEvent({
+    type: 'zwjs.event.node.value-updated',
+    event: {
+      nodeId: 43,
+      args: {
+        commandClass: 49,
+        endpoint: 0,
+        propertyName: 'Air humidity',
+        newValue: '47.5',
+      },
+    },
+  });
+  client.emitEvent({
+    type: 'zwjs.event.node.value-updated',
+    event: {
+      nodeId: 43,
+      args: {
+        commandClass: 64,
+        endpoint: 0,
+        propertyName: 'mode',
+        newValue: 'auto',
+      },
+    },
+  });
+  await Promise.resolve();
+  assert.equal(device._getCapabilityValue('measure_humidity'), 47.5);
+  assert.equal(device._getCapabilityValue('thermostat_mode'), 'auto');
+
+  const profileResolution = device._getStoreValue('profileResolution');
+  assert.equal(profileResolution?.mappingDiagnostics?.length, 2);
+  assert.equal(profileResolution?.mappingDiagnostics?.[0]?.inbound?.enabled, true);
+  assert.equal(profileResolution?.mappingDiagnostics?.[0]?.outbound?.configured, false);
+  assert.equal(profileResolution?.mappingDiagnostics?.[0]?.outbound?.enabled, false);
   assert.equal(profileResolution?.mappingDiagnostics?.[1]?.inbound?.enabled, true);
   assert.equal(profileResolution?.mappingDiagnostics?.[1]?.outbound?.enabled, true);
 });

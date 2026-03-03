@@ -122,6 +122,7 @@ Done so far:
   - Device Tools action summaries now cover churn/no-op reasons with explicit labels
 - runtime-mapping coverage broadening:
   - added generic mixed numeric/boolean vertical harness coverage (`target_temperature`, `alarm_contact`)
+  - added generic mixed numeric/string vertical harness coverage (`measure_humidity`, `thermostat_mode`)
   - validated inbound/outbound/event update flows remain capability-agnostic
 
 In progress / next:

@@ -199,6 +199,7 @@ Partially complete / next:
 - additional Homey Device Tools UX polish beyond current action flow baseline
 - expanded runtime mapping vertical coverage
   - added explicit mixed numeric/boolean runtime mapping coverage for capability families such as `target_temperature` and `alarm_contact` in node-runtime + harness tests
+  - added explicit mixed numeric/string runtime mapping coverage for capability families such as `measure_humidity` and `thermostat_mode` in node-runtime + harness tests
 
 Deferred:
 
