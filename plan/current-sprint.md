@@ -46,6 +46,15 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
     - wired into app build script (`tsc && node scripts/sync-runtime-js.mjs`)
   - validated with app test suite + `homey app validate`
 
+- Latest Homey app-settings connection UX slice:
+  - added app settings UI page:
+    - `co.lazylabs.zwavejs2homey/settings/index.html`
+  - supports editing `zwjs_connection` with validation:
+    - ws/wss URL
+    - auth type (`none` or bearer token)
+  - save/reset actions persist via `Homey.set(...)` and leverage existing runtime settings listeners for hot reload
+  - documented run + configuration flow in `README.md`
+
 - Latest Phase 5 runtime-mapping diagnostics edge-case slice:
   - added enum-like mapping diagnostics harness coverage for `thermostat_mode`
   - validated unreadable inbound selectors are blocked with explicit diagnostics (`inbound_selector_not_readable`)

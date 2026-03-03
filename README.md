@@ -158,6 +158,20 @@ so `homey app run` does not depend on workspace-external package links.
 It also compiles and syncs Homey runtime JS entrypoints (`app.js`, `drivers/*/*.js`) used by
 Homey preprocess.
 
+Run the Homey app in development:
+
+```bash
+cd co.lazylabs.zwavejs2homey
+homey app run --path .
+```
+
+Then open the app settings in Homey and configure `ZWJS Connection`:
+
+- WebSocket URL: `ws://192.168.1.15:3000` (or your ZWJS URL)
+- Authentication: `None` or `Bearer token`
+
+This writes the app setting key `zwjs_connection` and triggers automatic client reload in runtime.
+
 Smoke-test Homey runtime API routes:
 
 ```bash
