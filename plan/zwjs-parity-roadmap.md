@@ -23,7 +23,7 @@ This roadmap is implementation-focused and derived from `docs/zwjs-capability-ma
 - Mutations remain policy-gated and disabled by default
 - Every completed slice adds tests and passes:
   - `npm run test -w @zwavejs2homey/core`
-  - `npm run build -w co.lazylabs.zwavejs2homey`
+  - `npm --prefix co.lazylabs.zwavejs2homey run build`
 - Live validation against production instance stays read-only unless explicitly approved
 
 ## Phase P0 — Bridge-Critical Parity (Next)

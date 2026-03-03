@@ -4,16 +4,15 @@
   "version": "0.1.0",
   "license": "Apache-2.0",
   "workspaces": [
-    "packages/*",
-    "co.lazylabs.zwavejs2homey"
+    "packages/*"
   ],
   "scripts": {
-    "build": "npm run build -w @zwavejs2homey/compiler && npm run build -w @zwavejs2homey/core && npm run build -w @zwavejs2homey/tui && npm run build -w co.lazylabs.zwavejs2homey",
+    "build": "npm run build -w @zwavejs2homey/compiler && npm run build -w @zwavejs2homey/core && npm run build -w @zwavejs2homey/tui && npm --prefix co.lazylabs.zwavejs2homey run build",
     "build:core": "npm run build -w @zwavejs2homey/core",
-    "build:homey": "npm run build -w co.lazylabs.zwavejs2homey",
+    "build:homey": "npm --prefix co.lazylabs.zwavejs2homey run build",
     "homey:runtime-api:smoke": "node tools/homey-runtime-api-smoke.mjs",
-    "check": "npm run format:check && npm run lint && npm run policy:guard && npm run test -w @zwavejs2homey/compiler && npm run test -w @zwavejs2homey/core && npm run test -w @zwavejs2homey/tui && npm run test -w co.lazylabs.zwavejs2homey",
-    "lint": "npm run lint -w co.lazylabs.zwavejs2homey",
+    "check": "npm run format:check && npm run lint && npm run policy:guard && npm run test -w @zwavejs2homey/compiler && npm run test -w @zwavejs2homey/core && npm run test -w @zwavejs2homey/tui && npm --prefix co.lazylabs.zwavejs2homey run test",
+    "lint": "npm --prefix co.lazylabs.zwavejs2homey run lint",
     "zwjs:inspect": "node tools/zwjs-inspect.mjs",
     "compiler:tui": "npm run build -w @zwavejs2homey/tui && node packages/tui/dist/cli.js",
     "compiler:inspect": "node tools/homey-compile-inspect.mjs",

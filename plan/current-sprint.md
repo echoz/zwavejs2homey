@@ -15,6 +15,14 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 ## Recently Completed
 
+- Latest tooling/workspace compatibility slice:
+  - removed Homey app package from root npm workspace membership to avoid `homey app run` preprocess copy failures under npm workspaces (`Cannot copy ... to a subdirectory of itself`)
+  - switched root scripts that target the Homey app from workspace flags to explicit prefix invocation:
+    - `npm --prefix co.lazylabs.zwavejs2homey run build`
+    - `npm --prefix co.lazylabs.zwavejs2homey run lint`
+    - `npm --prefix co.lazylabs.zwavejs2homey run test`
+  - updated plan command references to the new invocation style
+
 - Latest Phase 5 runtime-mapping diagnostics edge-case slice:
   - added enum-like mapping diagnostics harness coverage for `thermostat_mode`
   - validated unreadable inbound selectors are blocked with explicit diagnostics (`inbound_selector_not_readable`)
