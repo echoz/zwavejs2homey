@@ -886,6 +886,7 @@ test('app executeRecommendationAction rejects explicit action mismatch', async (
   assert.equal(result.executed, false);
   assert.equal(result.selectedAction, 'adopt-recommended-baseline');
   assert.equal(result.reason, 'action-mismatch');
+  assert.equal(result.latestReason, 'baseline-hash-changed');
 
   await app.onUninit();
 });
@@ -991,6 +992,124 @@ test('app executeRecommendationActions processes queue and returns execution sum
   assert.equal(Boolean(settingsValue.entries['main:12']), true);
   assert.equal(settingsValue.entries['main:8'], undefined);
   assert.equal(settingsValue.entries['main:5'], undefined);
+
+  await app.onUninit();
+});
+
+test('app executeRecommendationAction reports state-changed when action flips during execution', async () => {
+  const { app } = loadAppClass([]);
+  await app.onInit();
+
+  let queueCallCount = 0;
+  app.getRecommendationActionQueue = async () => {
+    queueCallCount += 1;
+    if (queueCallCount === 1) {
+      return {
+        generatedAt: '2026-03-03T00:00:00.000Z',
+        total: 1,
+        actionable: 1,
+        items: [
+          {
+            homeyDeviceId: 'main:8',
+            nodeId: 8,
+            profileId: 'profile-main-8',
+            action: 'adopt-recommended-baseline',
+            reason: 'baseline-hash-changed',
+            recommendationAvailable: true,
+            recommendationBackfillNeeded: false,
+            recommendationProjectionVersion: '1',
+            currentBaselineHash: 'hash-8-next',
+            storedBaselineHash: 'hash-8-old',
+            currentPipelineFingerprint: 'pf-next',
+          },
+        ],
+      };
+    }
+    return {
+      generatedAt: '2026-03-03T00:00:01.000Z',
+      total: 1,
+      actionable: 0,
+      items: [
+        {
+          homeyDeviceId: 'main:8',
+          nodeId: 8,
+          profileId: 'profile-main-8',
+          action: 'none',
+          reason: 'baseline-hash-unchanged',
+          recommendationAvailable: false,
+          recommendationBackfillNeeded: false,
+          recommendationProjectionVersion: '1',
+          currentBaselineHash: 'hash-8-next',
+          storedBaselineHash: 'hash-8-next',
+          currentPipelineFingerprint: 'pf-next',
+        },
+      ],
+    };
+  };
+  app.adoptRecommendedBaseline = async () => ({
+    adopted: false,
+    reason: 'recommendation-unavailable',
+  });
+
+  const result = await app.executeRecommendationAction({
+    homeyDeviceId: 'main:8',
+    action: 'adopt-recommended-baseline',
+  });
+
+  assert.equal(result.executed, false);
+  assert.equal(result.selectedAction, 'none');
+  assert.equal(result.reason, 'action-state-changed');
+  assert.equal(result.latestReason, 'baseline-hash-unchanged');
+  assert.equal(result.stateChanged, true);
+  assert.equal(queueCallCount, 2);
+
+  await app.onUninit();
+});
+
+test('app executeRecommendationAction keeps execution reason when action remains unchanged', async () => {
+  const { app } = loadAppClass([]);
+  await app.onInit();
+
+  let queueCallCount = 0;
+  app.getRecommendationActionQueue = async () => {
+    queueCallCount += 1;
+    return {
+      generatedAt: '2026-03-03T00:00:00.000Z',
+      total: 1,
+      actionable: 1,
+      items: [
+        {
+          homeyDeviceId: 'main:12',
+          nodeId: 12,
+          profileId: 'profile-main-12',
+          action: 'backfill-marker',
+          reason: 'marker-missing-backfill',
+          recommendationAvailable: false,
+          recommendationBackfillNeeded: true,
+          recommendationProjectionVersion: '1',
+          currentBaselineHash: 'hash-12',
+          storedBaselineHash: null,
+          currentPipelineFingerprint: 'pf-12',
+        },
+      ],
+    };
+  };
+  app.backfillCurationBaselineMarker = async () => ({
+    updated: false,
+    createdEntry: false,
+    reason: 'baseline-marker-unavailable',
+  });
+
+  const result = await app.executeRecommendationAction({
+    homeyDeviceId: 'main:12',
+  });
+
+  assert.equal(result.executed, false);
+  assert.equal(result.selectedAction, 'backfill-marker');
+  assert.equal(result.reason, 'baseline-marker-unavailable');
+  assert.equal(result.latestReason, 'marker-missing-backfill');
+  assert.equal(result.stateChanged, false);
+  assert.equal(queueCallCount, 2);
 
   await app.onUninit();
 });

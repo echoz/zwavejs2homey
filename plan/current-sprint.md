@@ -15,6 +15,22 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 ## Recently Completed
 
+- Latest Phase 5 recommendation-churn hardening slice:
+  - app recommendation execution now revalidates per-device queue state when an adopt/backfill mutation reports no-op/failure
+  - action execution result now carries churn context fields:
+    - `latestReason`
+    - `stateChanged`
+  - stale-action scenarios now return explicit `action-state-changed` with latest recommendation reason for deterministic UI handling
+  - queue/batch execution now routes through the single-action executor to keep mismatch/churn semantics consistent
+  - expanded app runtime tests for:
+    - state-changed execution races
+    - unchanged-action no-op failures preserving underlying failure reason
+    - mismatch responses including latest queue reason context
+  - Device Tools action UX hardening:
+    - fixed action-result summary shape bug (always returns `{ message, tone }`)
+    - added user-facing labels for churn/no-op action reasons (`action-state-changed`, `marker-backfill-required`, `curation-entry-missing`, `baseline-marker-unavailable`)
+    - stale-action UI now surfaces latest recommendation reason context
+
 - Latest Phase 5 runtime-mapping vertical coverage slice:
   - expanded generic runtime-mapping validation for numeric/boolean capability families without capability-specific adapter branches
   - added node-runtime coercion coverage for:

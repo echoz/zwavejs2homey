@@ -113,6 +113,11 @@ Done so far:
   - canonical host path consolidated to `drivers/node/repair/device_tools.html`
   - duplicate fallback view removed from `drivers/node/pair/device_tools.html`
   - action outcomes now surface friendlier no-op/mismatch/error statuses
+- recommendation churn hardening:
+  - single-action execution now revalidates latest recommendation state on mutation no-op/failure
+  - stale execution now returns explicit `action-state-changed` diagnostics with latest reason context
+  - batch execution now reuses single-action semantics for consistent mismatch/churn behavior
+  - Device Tools action summaries now cover churn/no-op reasons with explicit labels
 - runtime-mapping coverage broadening:
   - added generic mixed numeric/boolean vertical harness coverage (`target_temperature`, `alarm_contact`)
   - validated inbound/outbound/event update flows remain capability-agnostic
@@ -120,7 +125,7 @@ Done so far:
 In progress / next:
 
 1. continue broadening runtime mapping coverage with tests
-2. harden recommendation semantics under real-world churn (race/no-op/mismatch diagnostics)
+2. continue Device Tools UX polish over recommendation state and diagnostics
 
 Exit criteria:
 

@@ -256,10 +256,18 @@
         const actionReasonLabels = {
           'action-mismatch':
             'That action is no longer applicable for this device. Refresh and retry.',
+          'action-state-changed':
+            'Recommendation state changed while this action was running. Review latest state and retry if needed.',
           'invalid-action-selection': 'Invalid action selection.',
           'invalid-homey-device-id': 'This device ID is invalid.',
           'node-not-found': 'The device could not be found.',
           'recommendation-unavailable': 'No recommendation is available for this device.',
+          'marker-backfill-required':
+            'Profile reference metadata must be backfilled before adopting this update.',
+          'baseline-marker-unavailable':
+            'Unable to resolve current profile reference metadata for this device.',
+          'curation-entry-missing':
+            'No curation entry exists for this device, so there is nothing to adopt.',
           'baseline-hash-unchanged': 'No update is needed. Device profile is already aligned.',
           'no-curation-entry': 'No curation entry exists for this device.',
           'profile-resolution-not-ready': 'Runtime mapping is not ready yet for this device.',
@@ -436,7 +444,9 @@
         }
 
         function describeActionResult(actionResult) {
-          if (!actionResult || typeof actionResult !== 'object') return 'Action completed.';
+          if (!actionResult || typeof actionResult !== 'object') {
+            return { message: 'Action completed.', tone: 'ok' };
+          }
           if (actionResult.executed === true) {
             if (actionResult.selectedAction === 'backfill-marker') {
               return {
@@ -456,6 +466,22 @@
             actionResult.reason && typeof actionResult.reason === 'string'
               ? actionResult.reason
               : 'action-not-executed';
+          if (reason === 'action-state-changed') {
+            const latestReasonCode =
+              actionResult.latestReason && typeof actionResult.latestReason === 'string'
+                ? actionResult.latestReason
+                : null;
+            if (latestReasonCode) {
+              const latestReasonLabel =
+                actionReasonLabels[latestReasonCode] ||
+                reasonLabels[latestReasonCode] ||
+                latestReasonCode;
+              return {
+                message: `Action state changed while applying update. Latest state: ${latestReasonLabel}`,
+                tone: 'warn',
+              };
+            }
+          }
           return {
             message: actionReasonLabels[reason] || `Action not executed: ${reason}`,
             tone: 'warn',

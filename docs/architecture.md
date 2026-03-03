@@ -189,6 +189,11 @@ Partially complete / next:
   - `executeRecommendationAction(...)`
   - `executeRecommendationActions(...)`
   - `backfillMissingCurationBaselineMarkers(...)`
+- recommendation execution semantics now handle churn/no-op explicitly:
+  - single-action execution revalidates latest queue state when adopt/backfill does not execute
+  - stale requests now return `action-state-changed` with `latestReason` context
+  - batch execution reuses single-action executor for semantic parity
+  - Device Tools action messaging now includes churn/no-op reason labels
 - additional Homey Device Tools UX polish beyond current action flow baseline
 - expanded runtime mapping vertical coverage
   - added explicit mixed numeric/boolean runtime mapping coverage for capability families such as `target_temperature` and `alarm_contact` in node-runtime + harness tests
@@ -223,7 +228,7 @@ Primary gate: `npm run check`
 
 Near-term:
 
-1. harden recommendation adoption/backfill flows in app-facing paths
+1. continue Device Tools UX polish and diagnostics clarity
 2. continue capability vertical expansion with runtime + harness tests
 
 After that:

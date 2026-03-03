@@ -107,6 +107,8 @@ interface RecommendationActionExecutionResultV1 {
   executed: boolean;
   reason: string;
   createdEntry?: boolean;
+  latestReason?: string;
+  stateChanged?: boolean;
 }
 
 interface RuntimeNodeDeviceLike {
@@ -972,6 +974,7 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
         selectedAction: item.action,
         executed: false,
         reason: 'action-mismatch',
+        latestReason: item.reason,
       };
     }
 
@@ -982,27 +985,70 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
         selectedAction: 'none',
         executed: false,
         reason: item.reason,
+        latestReason: item.reason,
       };
     }
 
+    const resolveFailedExecution = async (
+      attemptedAction: RecommendationActionKindV1,
+      executionReason: string,
+      createdEntry?: boolean,
+    ): Promise<RecommendationActionExecutionResultV1> => {
+      const latestQueue = await this.getRecommendationActionQueue({
+        homeyDeviceId: normalizedHomeyDeviceId,
+        includeNoAction: true,
+      });
+      const latestItem = latestQueue.items.find(
+        (entry) => entry.homeyDeviceId === normalizedHomeyDeviceId,
+      );
+      if (!latestItem) {
+        return {
+          homeyDeviceId: normalizedHomeyDeviceId,
+          requestedAction,
+          selectedAction: attemptedAction,
+          executed: false,
+          reason: executionReason,
+          createdEntry,
+        };
+      }
+
+      const stateChanged = latestItem.action !== attemptedAction;
+      return {
+        homeyDeviceId: normalizedHomeyDeviceId,
+        requestedAction,
+        selectedAction: stateChanged ? latestItem.action : attemptedAction,
+        executed: false,
+        reason: stateChanged ? 'action-state-changed' : executionReason,
+        createdEntry,
+        latestReason: latestItem.reason,
+        stateChanged,
+      };
+    };
+
     if (item.action === 'backfill-marker') {
       const result = await this.backfillCurationBaselineMarker(normalizedHomeyDeviceId);
+      if (!result.updated) {
+        return resolveFailedExecution('backfill-marker', result.reason, result.createdEntry);
+      }
       return {
         homeyDeviceId: normalizedHomeyDeviceId,
         requestedAction,
         selectedAction: 'backfill-marker',
-        executed: result.updated,
+        executed: true,
         reason: result.reason,
         createdEntry: result.createdEntry,
       };
     }
 
     const result = await this.adoptRecommendedBaseline(normalizedHomeyDeviceId);
+    if (!result.adopted) {
+      return resolveFailedExecution('adopt-recommended-baseline', result.reason);
+    }
     return {
       homeyDeviceId: normalizedHomeyDeviceId,
       requestedAction,
       selectedAction: 'adopt-recommended-baseline',
-      executed: result.adopted,
+      executed: true,
       reason: result.reason,
     };
   }
@@ -1023,38 +1069,15 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
     const includeNoAction = options?.includeNoAction === true;
     const results: RecommendationActionExecutionResultV1[] = [];
 
-    const backfillResults = await this.backfillMissingCurationBaselineMarkers({
-      homeyDeviceId: options?.homeyDeviceId,
-    });
-    const backfillResultByDeviceId = new Map(
-      backfillResults.items.map((entry) => [entry.homeyDeviceId, entry]),
-    );
-
     for (const item of queue.items) {
       if (!includeNoAction && item.action === 'none') continue;
 
-      if (item.action === 'backfill-marker') {
-        const backfillResult = backfillResultByDeviceId.get(item.homeyDeviceId);
-        results.push({
+      if (item.homeyDeviceId) {
+        const executionResult = await this.executeRecommendationAction({
           homeyDeviceId: item.homeyDeviceId,
-          requestedAction: 'backfill-marker',
-          selectedAction: 'backfill-marker',
-          executed: backfillResult?.updated === true,
-          reason: backfillResult?.reason ?? 'backfill-result-missing',
-          createdEntry: backfillResult?.createdEntry === true,
+          action: item.action,
         });
-        continue;
-      }
-
-      if (item.action === 'adopt-recommended-baseline' && item.homeyDeviceId) {
-        const adoptResult = await this.adoptRecommendedBaseline(item.homeyDeviceId);
-        results.push({
-          homeyDeviceId: item.homeyDeviceId,
-          requestedAction: 'adopt-recommended-baseline',
-          selectedAction: 'adopt-recommended-baseline',
-          executed: adoptResult.adopted,
-          reason: adoptResult.reason,
-        });
+        results.push(executionResult);
         continue;
       }
 
