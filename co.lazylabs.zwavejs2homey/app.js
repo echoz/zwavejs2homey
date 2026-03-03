@@ -303,8 +303,43 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
             await this.zwjsClient.stop();
             this.zwjsClient = undefined;
         }
+        static hasConfiguredZwjsUrl(rawSettings) {
+            if (typeof rawSettings === 'string') {
+                const candidate = rawSettings.trim();
+                if (!candidate)
+                    return false;
+                try {
+                    const parsed = new URL(candidate);
+                    return parsed.protocol === 'ws:' || parsed.protocol === 'wss:';
+                }
+                catch {
+                    return false;
+                }
+            }
+            if (!rawSettings || typeof rawSettings !== 'object' || Array.isArray(rawSettings)) {
+                return false;
+            }
+            const urlValue = rawSettings.url;
+            if (typeof urlValue !== 'string')
+                return false;
+            const candidate = urlValue.trim();
+            if (!candidate)
+                return false;
+            try {
+                const parsed = new URL(candidate);
+                return parsed.protocol === 'ws:' || parsed.protocol === 'wss:';
+            }
+            catch {
+                return false;
+            }
+        }
         async startZwjsClient(reason) {
-            const resolved = (0, core_1.resolveZwjsConnectionConfig)(this.homey.settings.get(core_1.ZWJS_CONNECTION_SETTINGS_KEY));
+            const rawConnectionSettings = this.homey.settings.get(core_1.ZWJS_CONNECTION_SETTINGS_KEY);
+            if (!_a.hasConfiguredZwjsUrl(rawConnectionSettings)) {
+                this.log(`Skipping ZWJS client start (${reason}): no explicit ${core_1.ZWJS_CONNECTION_SETTINGS_KEY}.url configured`);
+                return;
+            }
+            const resolved = (0, core_1.resolveZwjsConnectionConfig)(rawConnectionSettings);
             for (const warning of resolved.warnings) {
                 this.error('ZWJS config warning', warning);
             }

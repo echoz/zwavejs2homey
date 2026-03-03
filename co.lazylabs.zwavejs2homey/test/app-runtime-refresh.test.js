@@ -264,6 +264,32 @@ test('app refreshes bridge runtime diagnostics on startup and settings changes',
   await app.onUninit();
 });
 
+test('app does not attempt zwjs connection when zwjs_connection.url is not configured', async () => {
+  const { app, coreMock } = loadAppClass([]);
+  await app.onInit();
+
+  assert.equal(coreMock.mockClient.startCalls, 0);
+  assert.equal(app.getZwjsClient(), undefined);
+
+  await app.onUninit();
+  assert.equal(coreMock.mockClient.stopCalls, 0);
+});
+
+test('app starts zwjs client after zwjs_connection.url is configured at runtime', async () => {
+  const { app, coreMock } = loadAppClass([]);
+  await app.onInit();
+  assert.equal(coreMock.mockClient.startCalls, 0);
+
+  app.homey.settings.set('zwjs_connection', { url: 'ws://127.0.0.1:3001' });
+  await flushEventQueue();
+
+  assert.equal(coreMock.mockClient.startCalls, 1);
+  assert.ok(app.getZwjsClient());
+
+  await app.onUninit();
+  assert.equal(coreMock.mockClient.stopCalls, 1);
+});
+
 test('app performs targeted node runtime refresh from node lifecycle events', async () => {
   const node5Calls = [];
   const node8Calls = [];
@@ -290,6 +316,7 @@ test('app performs targeted node runtime refresh from node lifecycle events', as
   ];
 
   const { app, coreMock } = loadAppClass(nodeDevices);
+  app.homey.settings.set('zwjs_connection', { url: 'ws://127.0.0.1:3001' });
   await app.onInit();
   node5Calls.length = 0;
   node8Calls.length = 0;
@@ -337,6 +364,7 @@ test('app refreshes bridge diagnostics from targeted node lifecycle events', asy
   ];
 
   const { app, coreMock } = loadAppClass([], bridgeDevices);
+  app.homey.settings.set('zwjs_connection', { url: 'ws://127.0.0.1:3001' });
   await app.onInit();
   bridgeRefreshCalls.length = 0;
 
@@ -436,6 +464,7 @@ test('app diagnostics snapshot normalizes recommendation and mapping summary fie
   ];
 
   const { app } = loadAppClass(nodeDevices);
+  app.homey.settings.set('zwjs_connection', { url: 'ws://127.0.0.1:3001' });
   await app.onInit();
   const snapshot = await app.getNodeRuntimeDiagnostics();
 

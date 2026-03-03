@@ -55,6 +55,14 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
   - save/reset actions persist via `Homey.set(...)` and leverage existing runtime settings listeners for hot reload
   - documented run + configuration flow in `README.md`
 
+- Latest Homey connection-start policy slice:
+  - app now requires explicit `zwjs_connection.url` before starting ZWJS client
+  - removed implicit startup attempt against default URL when setting is absent
+  - connection can still be started dynamically after startup by saving settings
+  - expanded app-runtime tests:
+    - no connection attempt when setting is missing
+    - deferred connect after runtime settings update
+
 - Latest Phase 5 runtime-mapping diagnostics edge-case slice:
   - added enum-like mapping diagnostics harness coverage for `thermostat_mode`
   - validated unreadable inbound selectors are blocked with explicit diagnostics (`inbound_selector_not_readable`)

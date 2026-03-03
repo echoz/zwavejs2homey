@@ -171,6 +171,7 @@ Then open the app settings in Homey and configure `ZWJS Connection`:
 - Authentication: `None` or `Bearer token`
 
 This writes the app setting key `zwjs_connection` and triggers automatic client reload in runtime.
+If no `zwjs_connection.url` is configured, the app will not attempt a ZWJS connection.
 
 Smoke-test Homey runtime API routes:
 

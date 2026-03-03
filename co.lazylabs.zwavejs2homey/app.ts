@@ -468,10 +468,44 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
     this.zwjsClient = undefined;
   }
 
+  private static hasConfiguredZwjsUrl(rawSettings: unknown): boolean {
+    if (typeof rawSettings === 'string') {
+      const candidate = rawSettings.trim();
+      if (!candidate) return false;
+      try {
+        const parsed = new URL(candidate);
+        return parsed.protocol === 'ws:' || parsed.protocol === 'wss:';
+      } catch {
+        return false;
+      }
+    }
+
+    if (!rawSettings || typeof rawSettings !== 'object' || Array.isArray(rawSettings)) {
+      return false;
+    }
+
+    const urlValue = (rawSettings as Record<string, unknown>).url;
+    if (typeof urlValue !== 'string') return false;
+    const candidate = urlValue.trim();
+    if (!candidate) return false;
+    try {
+      const parsed = new URL(candidate);
+      return parsed.protocol === 'ws:' || parsed.protocol === 'wss:';
+    } catch {
+      return false;
+    }
+  }
+
   private async startZwjsClient(reason: string): Promise<void> {
-    const resolved = resolveZwjsConnectionConfig(
-      this.homey.settings.get(ZWJS_CONNECTION_SETTINGS_KEY),
-    );
+    const rawConnectionSettings = this.homey.settings.get(ZWJS_CONNECTION_SETTINGS_KEY);
+    if (!Zwavejs2HomeyApp.hasConfiguredZwjsUrl(rawConnectionSettings)) {
+      this.log(
+        `Skipping ZWJS client start (${reason}): no explicit ${ZWJS_CONNECTION_SETTINGS_KEY}.url configured`,
+      );
+      return;
+    }
+
+    const resolved = resolveZwjsConnectionConfig(rawConnectionSettings);
     for (const warning of resolved.warnings) {
       this.error('ZWJS config warning', warning);
     }
