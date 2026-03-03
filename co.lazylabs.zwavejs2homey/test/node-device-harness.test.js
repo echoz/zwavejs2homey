@@ -1582,3 +1582,174 @@ test('node device harness records enum-like mapping diagnostics for unreadable i
     'outbound_target_writeability_unknown',
   );
 });
+
+test('node device harness treats undefined readability/writeability as metadata-driven fallbacks', async () => {
+  const modeSelector = {
+    commandClass: 64,
+    endpoint: 0,
+    property: 'mode',
+  };
+
+  const nodeValueResultsBySelector = new Map();
+  nodeValueResultsBySelector.set(selectorKey(modeSelector), {
+    success: true,
+    result: { value: 'heat' },
+  });
+
+  const client = createMockZwjsClient({
+    nodeStateResult: {
+      success: true,
+      result: {
+        state: {
+          manufacturerId: '1001',
+          productType: '2001',
+          productId: '3002',
+        },
+      },
+    },
+    nodeValueResultsBySelector,
+    definedValueIdsResult: {
+      success: true,
+      result: [
+        {
+          commandClass: 64,
+          endpoint: 0,
+          property: 'mode',
+          type: 'string',
+        },
+      ],
+    },
+    nodeValueMetadataResultsBySelector: new Map([
+      [selectorKey(modeSelector), { success: true, result: { writeable: true } }],
+    ]),
+  });
+
+  const app = {
+    getZwjsClient: () => client,
+    getCompiledProfilesStatus: () => createRuntimeStatus(),
+    resolveCompiledProfileEntry: () => createEnumModeProfileMatch(),
+  };
+
+  const device = new NodeDevice();
+  device._configureHarness({
+    app,
+    data: { bridgeId: 'main', nodeId: 44 },
+    capabilities: ['thermostat_mode'],
+  });
+
+  await device.onInit();
+
+  assert.equal(device._getCapabilityValue('thermostat_mode'), 'heat');
+  assert.equal(client.callLog.getNodeValue.length, 1);
+  assert.equal(client.callLog.getNodeValueMetadata.length, 1);
+  assert.equal(client.getListenerCount(), 1);
+
+  await device._triggerCapabilityListener('thermostat_mode', 'cool');
+  assert.deepEqual(client.callLog.setNodeValue, [
+    {
+      nodeId: 44,
+      valueId: {
+        commandClass: 64,
+        endpoint: 0,
+        property: 'mode',
+      },
+      value: 'cool',
+    },
+  ]);
+
+  const profileResolution = device._getStoreValue('profileResolution');
+  assert.equal(profileResolution?.mappingDiagnostics?.length, 1);
+  assert.equal(profileResolution?.mappingDiagnostics?.[0]?.inbound?.enabled, true);
+  assert.equal(profileResolution?.mappingDiagnostics?.[0]?.inbound?.reason, null);
+  assert.equal(profileResolution?.mappingDiagnostics?.[0]?.outbound?.enabled, true);
+  assert.equal(profileResolution?.mappingDiagnostics?.[0]?.outbound?.reason, null);
+});
+
+test('node device harness reports metadata read failures as outbound writeability unknown', async () => {
+  const modeSelector = {
+    commandClass: 64,
+    endpoint: 0,
+    property: 'mode',
+  };
+
+  const nodeValueResultsBySelector = new Map();
+  nodeValueResultsBySelector.set(selectorKey(modeSelector), {
+    success: true,
+    result: { value: 'heat' },
+  });
+
+  const client = createMockZwjsClient({
+    nodeStateResult: {
+      success: true,
+      result: {
+        state: {
+          manufacturerId: '1001',
+          productType: '2001',
+          productId: '3002',
+        },
+      },
+    },
+    nodeValueResultsBySelector,
+    definedValueIdsResult: {
+      success: true,
+      result: [
+        {
+          commandClass: 64,
+          endpoint: 0,
+          property: 'mode',
+          readable: true,
+          type: 'string',
+        },
+      ],
+    },
+    nodeValueMetadataResultsBySelector: new Map([
+      [
+        selectorKey(modeSelector),
+        {
+          success: false,
+          error: { errorCode: 'metadata_read_failed' },
+        },
+      ],
+    ]),
+  });
+
+  const app = {
+    getZwjsClient: () => client,
+    getCompiledProfilesStatus: () => createRuntimeStatus(),
+    resolveCompiledProfileEntry: () => createEnumModeProfileMatch(),
+  };
+
+  const device = new NodeDevice();
+  device._configureHarness({
+    app,
+    data: { bridgeId: 'main', nodeId: 44 },
+    capabilities: ['thermostat_mode'],
+  });
+
+  await device.onInit();
+
+  assert.equal(device._getCapabilityValue('thermostat_mode'), 'heat');
+  assert.equal(client.callLog.getNodeValue.length, 1);
+  assert.equal(client.callLog.getNodeValueMetadata.length, 1);
+  assert.equal(client.getListenerCount(), 1);
+
+  await assert.rejects(
+    () => device._triggerCapabilityListener('thermostat_mode', 'cool'),
+    /Missing capability listener/,
+  );
+  assert.equal(client.callLog.setNodeValue.length, 0);
+
+  const profileResolution = device._getStoreValue('profileResolution');
+  assert.equal(profileResolution?.mappingDiagnostics?.length, 1);
+  assert.equal(profileResolution?.mappingDiagnostics?.[0]?.inbound?.enabled, true);
+  assert.equal(
+    profileResolution?.mappingDiagnostics?.[0]?.outbound?.reason,
+    'outbound_target_writeability_unknown',
+  );
+  assert.equal(
+    device
+      ._getErrors()
+      .some((entry) => entry.message === 'NodeDevice failed to read value metadata'),
+    true,
+  );
+});
