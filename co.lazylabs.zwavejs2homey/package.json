@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "license": "Apache-2.0",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node scripts/sync-runtime-js.mjs",
     "lint": "eslint --ext .js,.ts --ignore-path .gitignore --ignore-pattern '**/test/**' .",
     "test": "npm run build && node --test test/*.test.js"
   },

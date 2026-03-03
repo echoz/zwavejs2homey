@@ -155,6 +155,8 @@ cd co.lazylabs.zwavejs2homey && homey app validate
 
 `build:homey` also refreshes vendored runtime packages in `co.lazylabs.zwavejs2homey/vendor/`
 so `homey app run` does not depend on workspace-external package links.
+It also compiles and syncs Homey runtime JS entrypoints (`app.js`, `drivers/*/*.js`) used by
+Homey preprocess.
 
 Smoke-test Homey runtime API routes:
 

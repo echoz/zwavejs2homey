@@ -35,6 +35,17 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
   - added root `postinstall` hook to ensure nested Homey app dependencies are installed automatically after root install
   - updated plan command references to the new invocation style
 
+- Latest Homey pairing-runtime entrypoint slice:
+  - fixed empty pairing results (`bridge` and `node`) when Homey skips TS preprocess compilation
+  - source runtime JS entrypoints are now present in app package:
+    - `co.lazylabs.zwavejs2homey/app.js`
+    - `co.lazylabs.zwavejs2homey/drivers/bridge/{driver,device}.js`
+    - `co.lazylabs.zwavejs2homey/drivers/node/{driver,device}.js`
+  - added app build sync helper:
+    - `co.lazylabs.zwavejs2homey/scripts/sync-runtime-js.mjs`
+    - wired into app build script (`tsc && node scripts/sync-runtime-js.mjs`)
+  - validated with app test suite + `homey app validate`
+
 - Latest Phase 5 runtime-mapping diagnostics edge-case slice:
   - added enum-like mapping diagnostics harness coverage for `thermostat_mode`
   - validated unreadable inbound selectors are blocked with explicit diagnostics (`inbound_selector_not_readable`)
