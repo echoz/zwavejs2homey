@@ -512,6 +512,60 @@ function createHumidityAndModeProfileMatch() {
   };
 }
 
+function createEnumModeProfileMatch() {
+  return {
+    by: 'product-triple',
+    key: '1001:2001:3002',
+    entry: {
+      device: {
+        deviceKey: 'main:44',
+        nodeId: 44,
+        manufacturerId: 1001,
+        productType: 2001,
+        productId: 3002,
+      },
+      compiled: {
+        profile: {
+          profileId: 'profile-main-44',
+          match: {},
+          classification: {
+            homeyClass: 'thermostat',
+            confidence: 'curated',
+            uncurated: false,
+          },
+          capabilities: [
+            {
+              capabilityId: 'thermostat_mode',
+              inboundMapping: {
+                kind: 'value',
+                selector: {
+                  commandClass: 64,
+                  endpoint: 0,
+                  property: 'mode',
+                },
+              },
+              outboundMapping: {
+                kind: 'set_value',
+                target: {
+                  commandClass: 64,
+                  endpoint: 0,
+                  property: 'mode',
+                },
+              },
+            },
+          ],
+          provenance: {
+            layer: 'project-product',
+            ruleId: 'example-enum-mode-profile',
+            action: 'replace',
+          },
+        },
+        report: {},
+      },
+    },
+  };
+}
+
 function createCurationEntryForMain5() {
   return {
     targetDevice: {
@@ -1454,4 +1508,77 @@ test('node device harness supports generic numeric + string verticals without ca
   assert.equal(profileResolution?.mappingDiagnostics?.[0]?.outbound?.enabled, false);
   assert.equal(profileResolution?.mappingDiagnostics?.[1]?.inbound?.enabled, true);
   assert.equal(profileResolution?.mappingDiagnostics?.[1]?.outbound?.enabled, true);
+});
+
+test('node device harness records enum-like mapping diagnostics for unreadable inbound and unknown outbound writeability', async () => {
+  const modeSelector = {
+    commandClass: 64,
+    endpoint: 0,
+    property: 'mode',
+  };
+
+  const client = createMockZwjsClient({
+    nodeStateResult: {
+      success: true,
+      result: {
+        state: {
+          manufacturerId: '1001',
+          productType: '2001',
+          productId: '3002',
+        },
+      },
+    },
+    definedValueIdsResult: {
+      success: true,
+      result: [
+        {
+          commandClass: 64,
+          endpoint: 0,
+          property: 'mode',
+          readable: false,
+          type: 'string',
+        },
+      ],
+    },
+    nodeValueMetadataResultsBySelector: new Map([
+      [selectorKey(modeSelector), { success: true, result: { label: 'Thermostat mode' } }],
+    ]),
+  });
+
+  const app = {
+    getZwjsClient: () => client,
+    getCompiledProfilesStatus: () => createRuntimeStatus(),
+    resolveCompiledProfileEntry: () => createEnumModeProfileMatch(),
+  };
+
+  const device = new NodeDevice();
+  device._configureHarness({
+    app,
+    data: { bridgeId: 'main', nodeId: 44 },
+    capabilities: ['thermostat_mode'],
+  });
+
+  await device.onInit();
+
+  assert.equal(device._getCapabilityValue('thermostat_mode'), undefined);
+  assert.equal(client.callLog.getNodeValue.length, 0);
+  assert.equal(client.callLog.setNodeValue.length, 0);
+  assert.equal(client.getListenerCount(), 0);
+  assert.equal(client.callLog.getNodeValueMetadata.length, 1);
+
+  await assert.rejects(
+    () => device._triggerCapabilityListener('thermostat_mode', 'cool'),
+    /Missing capability listener/,
+  );
+
+  const profileResolution = device._getStoreValue('profileResolution');
+  assert.equal(profileResolution?.mappingDiagnostics?.length, 1);
+  assert.equal(
+    profileResolution?.mappingDiagnostics?.[0]?.inbound?.reason,
+    'inbound_selector_not_readable',
+  );
+  assert.equal(
+    profileResolution?.mappingDiagnostics?.[0]?.outbound?.reason,
+    'outbound_target_writeability_unknown',
+  );
 });

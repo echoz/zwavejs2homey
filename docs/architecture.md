@@ -200,6 +200,7 @@ Partially complete / next:
 - expanded runtime mapping vertical coverage
   - added explicit mixed numeric/boolean runtime mapping coverage for capability families such as `target_temperature` and `alarm_contact` in node-runtime + harness tests
   - added explicit mixed numeric/string runtime mapping coverage for capability families such as `measure_humidity` and `thermostat_mode` in node-runtime + harness tests
+  - added edge-case diagnostics coverage for enum-like mappings with unreadable inbound selectors and unknown outbound writeability
 
 Deferred:
 

@@ -15,6 +15,14 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 ## Recently Completed
 
+- Latest Phase 5 runtime-mapping diagnostics edge-case slice:
+  - added enum-like mapping diagnostics harness coverage for `thermostat_mode`
+  - validated unreadable inbound selectors are blocked with explicit diagnostics (`inbound_selector_not_readable`)
+  - validated unknown outbound writeability falls back to metadata check and reports deterministic diagnostics (`outbound_target_writeability_unknown`)
+  - validated no inbound read / no outbound listener behavior under those gates
+  - file:
+    - `co.lazylabs.zwavejs2homey/test/node-device-harness.test.js`
+
 - Latest Phase 5 runtime-mapping coverage broadening slice:
   - added generic mixed numeric/string runtime-mapping validation (`measure_humidity`, `thermostat_mode`) without capability-specific adapter branches
   - expanded node-runtime coercion coverage for string-typed mappings and keyed event selector matching (`propertyKeyName`)

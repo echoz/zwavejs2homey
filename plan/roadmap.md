@@ -123,6 +123,7 @@ Done so far:
 - runtime-mapping coverage broadening:
   - added generic mixed numeric/boolean vertical harness coverage (`target_temperature`, `alarm_contact`)
   - added generic mixed numeric/string vertical harness coverage (`measure_humidity`, `thermostat_mode`)
+  - added enum-like mapping diagnostics edge-case coverage (`thermostat_mode` unreadable inbound + unknown outbound writeability)
   - validated inbound/outbound/event update flows remain capability-agnostic
 
 In progress / next:
