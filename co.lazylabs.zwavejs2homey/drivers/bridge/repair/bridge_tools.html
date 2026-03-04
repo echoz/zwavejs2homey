@@ -1,0 +1,346 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Bridge Tools</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f6f8fb;
+        --panel: #ffffff;
+        --panel-border: #d8dfec;
+        --text: #1f2937;
+        --muted: #64748b;
+        --ok: #0f766e;
+        --warn: #b45309;
+        --danger: #b91c1c;
+        --accent: #1d4ed8;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 16px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      .toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+
+      .title {
+        font-size: 18px;
+        font-weight: 700;
+      }
+
+      .subtitle {
+        margin-top: 2px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .button {
+        border: 1px solid var(--accent);
+        background: var(--panel);
+        color: var(--accent);
+        border-radius: 10px;
+        padding: 8px 12px;
+        font-size: 13px;
+        cursor: pointer;
+      }
+
+      .button:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+      }
+
+      .grid {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: 1fr;
+      }
+
+      @media (min-width: 980px) {
+        .grid {
+          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        }
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        border-radius: 12px;
+        padding: 12px;
+      }
+
+      .panel h2 {
+        margin: 0 0 8px;
+        font-size: 14px;
+      }
+
+      .kv {
+        display: grid;
+        grid-template-columns: 150px minmax(0, 1fr);
+        row-gap: 6px;
+        column-gap: 10px;
+        font-size: 13px;
+      }
+
+      .kv .k {
+        color: var(--muted);
+      }
+
+      .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        word-break: break-all;
+      }
+
+      .nodes-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+      }
+
+      .nodes-table th,
+      .nodes-table td {
+        text-align: left;
+        border-bottom: 1px solid var(--panel-border);
+        padding: 6px 4px;
+        vertical-align: top;
+      }
+
+      .nodes-table th {
+        color: var(--muted);
+        font-weight: 600;
+      }
+
+      .hint {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .status {
+        margin-top: 12px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .status.ok {
+        color: var(--ok);
+      }
+
+      .status.warn {
+        color: var(--warn);
+      }
+
+      .status.error {
+        color: var(--danger);
+      }
+
+      .error {
+        border: 1px solid rgba(185, 28, 28, 0.35);
+        background: rgba(185, 28, 28, 0.08);
+        color: var(--danger);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="toolbar">
+      <div>
+        <div class="title">Bridge Tools</div>
+        <div id="subtitle" class="subtitle">Loading bridge diagnostics...</div>
+      </div>
+      <button id="refresh-btn" class="button">Refresh</button>
+    </div>
+
+    <div id="error-panel" class="panel error" hidden></div>
+
+    <div class="grid">
+      <section class="panel">
+        <h2>Runtime</h2>
+        <div id="runtime-kv" class="kv"></div>
+      </section>
+      <section class="panel">
+        <h2>Node Summary</h2>
+        <div id="summary-kv" class="kv"></div>
+      </section>
+    </div>
+
+    <section class="panel" style="margin-top: 12px">
+      <h2>Nodes</h2>
+      <div id="nodes-empty" class="hint" hidden>No imported node devices found.</div>
+      <table id="nodes-table" class="nodes-table" hidden>
+        <thead>
+          <tr>
+            <th>Node</th>
+            <th>Class</th>
+            <th>Profile</th>
+            <th>Recommendation</th>
+            <th>Mapping</th>
+          </tr>
+        </thead>
+        <tbody id="nodes-tbody"></tbody>
+      </table>
+    </section>
+
+    <div id="status" class="status">Initializing...</div>
+
+    <script>
+      (function () {
+        const state = {
+          loading: false,
+          snapshot: null,
+          error: null,
+          status: 'Initializing...',
+          tone: 'neutral',
+        };
+
+        const subtitleEl = document.getElementById('subtitle');
+        const refreshBtn = document.getElementById('refresh-btn');
+        const runtimeKv = document.getElementById('runtime-kv');
+        const summaryKv = document.getElementById('summary-kv');
+        const nodesTable = document.getElementById('nodes-table');
+        const nodesEmpty = document.getElementById('nodes-empty');
+        const nodesTbody = document.getElementById('nodes-tbody');
+        const statusEl = document.getElementById('status');
+        const errorPanel = document.getElementById('error-panel');
+
+        function asText(value) {
+          if (value === null || typeof value === 'undefined' || value === '') return 'n/a';
+          return String(value);
+        }
+
+        function asTime(value) {
+          if (!value) return 'n/a';
+          const parsed = new Date(value);
+          if (Number.isNaN(parsed.getTime())) return String(value);
+          return parsed.toLocaleString();
+        }
+
+        function setKv(container, rows) {
+          container.innerHTML = rows
+            .map(([key, value, className]) => {
+              const nextClass = className ? ` ${className}` : '';
+              return `<div class=\"k\">${key}</div><div class=\"v${nextClass}\">${asText(value)}</div>`;
+            })
+            .join('');
+        }
+
+        function recommendationLabel(node) {
+          if (node.recommendation.backfillNeeded) return 'Backfill marker';
+          if (node.recommendation.available) return 'Adopt update';
+          return 'None';
+        }
+
+        function render() {
+          refreshBtn.disabled = state.loading;
+          statusEl.classList.remove('ok', 'warn', 'error');
+          if (state.tone === 'ok') statusEl.classList.add('ok');
+          if (state.tone === 'warn') statusEl.classList.add('warn');
+          if (state.tone === 'error') statusEl.classList.add('error');
+          statusEl.textContent = state.status;
+          errorPanel.hidden = !state.error;
+          errorPanel.textContent = state.error ? state.error : '';
+
+          if (!state.snapshot) {
+            subtitleEl.textContent = state.loading
+              ? 'Loading bridge diagnostics...'
+              : 'No diagnostics available.';
+            runtimeKv.innerHTML = '';
+            summaryKv.innerHTML = '';
+            nodesEmpty.hidden = false;
+            nodesTable.hidden = true;
+            nodesTbody.innerHTML = '';
+            return;
+          }
+
+          const snapshot = state.snapshot;
+          subtitleEl.textContent = `Bridge ${asText(snapshot.device.bridgeId)} · ${asText(
+            snapshot.device.homeyDeviceId,
+          )}`;
+
+          setKv(runtimeKv, [
+            ['Lifecycle', snapshot.runtime.zwjs.lifecycle],
+            ['Connected', snapshot.runtime.zwjs.transportConnected ? 'Yes' : 'No'],
+            ['Server Version', snapshot.runtime.zwjs.serverVersion],
+            ['Adapter Family', snapshot.runtime.zwjs.adapterFamily],
+            ['Last Message', asTime(snapshot.runtime.zwjs.lastMessageAt)],
+            ['Connected At', asTime(snapshot.runtime.zwjs.connectedAt)],
+            ['Compiled Loaded', snapshot.runtime.compiledProfiles.loaded ? 'Yes' : 'No'],
+            ['Compiled Entries', snapshot.runtime.compiledProfiles.entryCount],
+            ['Curation Loaded', snapshot.runtime.curation.loaded ? 'Yes' : 'No'],
+            ['Curation Entries', snapshot.runtime.curation.entryCount],
+          ]);
+
+          setKv(summaryKv, [
+            ['Imported Nodes', snapshot.nodeSummary.total],
+            ['Curation Entries', snapshot.nodeSummary.curationEntryCount],
+            ['Recommendations', snapshot.nodeSummary.recommendationAvailableCount],
+            ['Backfill Needed', snapshot.nodeSummary.recommendationBackfillCount],
+            ['Inbound Skipped', snapshot.nodeSummary.inboundSkipped],
+            ['Outbound Skipped', snapshot.nodeSummary.outboundSkipped],
+          ]);
+
+          const nodes = Array.isArray(snapshot.nodes) ? snapshot.nodes : [];
+          if (nodes.length === 0) {
+            nodesEmpty.hidden = false;
+            nodesTable.hidden = true;
+            nodesTbody.innerHTML = '';
+          } else {
+            nodesEmpty.hidden = true;
+            nodesTable.hidden = false;
+            nodesTbody.innerHTML = nodes
+              .map((node) => {
+                const nodeLabel = node.nodeId !== null ? `Node ${node.nodeId}` : 'Node n/a';
+                const mapping = `${node.mapping.inboundEnabled}/${node.mapping.inboundConfigured} in, ${node.mapping.outboundEnabled}/${node.mapping.outboundConfigured} out`;
+                return `<tr>
+                  <td>${nodeLabel}<br/><span class=\"mono\">${asText(node.homeyDeviceId)}</span></td>
+                  <td>${asText(node.profile.homeyClass)}</td>
+                  <td><span class=\"mono\">${asText(node.profile.profileId)}</span></td>
+                  <td>${recommendationLabel(node)}<br/><span class=\"mono\">${asText(
+                    node.recommendation.reason,
+                  )}</span></td>
+                  <td>${mapping}</td>
+                </tr>`;
+              })
+              .join('');
+          }
+        }
+
+        async function loadSnapshot(eventName) {
+          state.loading = true;
+          state.error = null;
+          state.status = 'Refreshing diagnostics...';
+          state.tone = 'neutral';
+          render();
+          try {
+            state.snapshot = await Homey.emit(eventName);
+            state.status = `Last updated ${asTime(state.snapshot.generatedAt)}`;
+            state.tone = 'ok';
+          } catch (error) {
+            state.error =
+              error && error.message ? error.message : 'Failed to load bridge diagnostics.';
+            state.status = 'Bridge diagnostics unavailable.';
+            state.tone = 'error';
+          } finally {
+            state.loading = false;
+            render();
+          }
+        }
+
+        refreshBtn.addEventListener('click', () => loadSnapshot('bridge_tools:refresh'));
+
+        Homey.ready();
+        loadSnapshot('bridge_tools:get_snapshot');
+      })();
+    </script>
+  </body>
+</html>

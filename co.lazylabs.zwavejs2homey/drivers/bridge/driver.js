@@ -20,4 +20,67 @@ module.exports = class BridgeDriver extends homey_1.default.Driver {
         }
         return [(0, pairing_1.createBridgePairCandidate)()];
     }
+    async onRepair(session, device) {
+        const app = this.homey.app;
+        const loadSnapshot = async () => {
+            if (!app.getNodeRuntimeDiagnostics) {
+                throw new Error('Bridge Tools unavailable: app runtime diagnostics API is not ready.');
+            }
+            const diagnostics = await app.getNodeRuntimeDiagnostics();
+            const nodeSummary = {
+                total: diagnostics.nodes.length,
+                curationEntryCount: 0,
+                recommendationAvailableCount: 0,
+                recommendationBackfillCount: 0,
+                inboundSkipped: 0,
+                outboundSkipped: 0,
+            };
+            const nodes = diagnostics.nodes.map((node) => {
+                if (node.recommendation.available)
+                    nodeSummary.recommendationAvailableCount += 1;
+                if (node.recommendation.backfillNeeded)
+                    nodeSummary.recommendationBackfillCount += 1;
+                const inboundSkipped = Math.max(node.mapping.inboundConfigured - node.mapping.inboundEnabled, 0);
+                const outboundSkipped = Math.max(node.mapping.outboundConfigured - node.mapping.outboundEnabled, 0);
+                nodeSummary.inboundSkipped += inboundSkipped;
+                nodeSummary.outboundSkipped += outboundSkipped;
+                return {
+                    homeyDeviceId: node.homeyDeviceId,
+                    nodeId: node.nodeId,
+                    profile: node.profile,
+                    recommendation: node.recommendation,
+                    mapping: {
+                        inboundConfigured: node.mapping.inboundConfigured,
+                        inboundEnabled: node.mapping.inboundEnabled,
+                        outboundConfigured: node.mapping.outboundConfigured,
+                        outboundEnabled: node.mapping.outboundEnabled,
+                        inboundSkipped,
+                        outboundSkipped,
+                    },
+                };
+            });
+            const data = device.getData();
+            const homeyDeviceId = typeof data?.id === 'string' && data.id.trim().length > 0 ? data.id.trim() : null;
+            const bridgeId = typeof data?.bridgeId === 'string' && data.bridgeId.trim().length > 0
+                ? data.bridgeId.trim()
+                : diagnostics.bridgeId;
+            return {
+                schemaVersion: 'bridge-device-tools/v1',
+                generatedAt: new Date().toISOString(),
+                device: {
+                    homeyDeviceId,
+                    bridgeId,
+                },
+                runtime: {
+                    zwjs: diagnostics.zwjs,
+                    compiledProfiles: diagnostics.compiledProfiles,
+                    curation: diagnostics.curation,
+                },
+                nodeSummary,
+                nodes,
+            };
+        };
+        session.setHandler('bridge_tools:get_snapshot', async () => loadSnapshot());
+        session.setHandler('bridge_tools:refresh', async () => loadSnapshot());
+    }
 };

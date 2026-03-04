@@ -19,6 +19,14 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## Recently Completed
 
+- Latest bridge read-only tools slice:
+  - added bridge repair custom view host (`bridge_tools`) with read-only diagnostics and per-node summary rendering
+  - wired bridge driver repair session handlers:
+    - `bridge_tools:get_snapshot`
+    - `bridge_tools:refresh`
+  - snapshot payload now exposes a stable `bridge-device-tools/v1` shape with runtime status, compiled/curation status, node summary, and node-level recommendation/mapping overview
+  - added bridge-driver harness coverage for snapshot handlers and API-unavailable failure path
+
 - Latest node read-only metadata fallback slice:
   - node runtime state snapshot now falls back to `state.deviceConfig.*` when friendly manufacturer/product strings are missing
   - product label formatting now supports `description (label)` fallback for clearer diagnostics display (for example Leviton DZ6HD style metadata)

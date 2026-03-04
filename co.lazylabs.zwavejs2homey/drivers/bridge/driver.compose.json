@@ -22,6 +22,11 @@
       "template": "add_devices"
     }
   ],
+  "repair": [
+    {
+      "id": "bridge_tools"
+    }
+  ],
   "images": {
     "small": "{{driverAssetsPath}}/images/small.png",
     "large": "{{driverAssetsPath}}/images/large.png",

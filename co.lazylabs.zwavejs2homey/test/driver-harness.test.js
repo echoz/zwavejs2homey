@@ -106,6 +106,121 @@ test('bridge driver returns no candidates when singleton bridge already exists',
   assert.deepEqual(candidates, []);
 });
 
+test('bridge driver repair session exposes bridge tools snapshot handlers', async () => {
+  const diagnosticsCalls = [];
+  const driver = new BridgeDriver();
+  driver._configureHarness({
+    app: {
+      async getNodeRuntimeDiagnostics() {
+        diagnosticsCalls.push('called');
+        return {
+          generatedAt: '2026-03-04T10:00:00.000Z',
+          bridgeId: 'main',
+          zwjs: {
+            available: true,
+            transportConnected: true,
+            lifecycle: 'connected',
+            versionReceived: true,
+            initialized: true,
+            listening: true,
+            authenticated: null,
+            serverVersion: '3.4.0',
+            adapterFamily: 'zwjs-default',
+            reconnectAttempt: null,
+            connectedAt: '2026-03-04T09:59:00.000Z',
+            lastMessageAt: '2026-03-04T10:00:00.000Z',
+          },
+          compiledProfiles: {
+            loaded: true,
+            sourcePath: '/tmp/compiled.json',
+            generatedAt: '2026-03-04T09:50:00.000Z',
+            pipelineFingerprint: 'pf-1',
+            entryCount: 12,
+            errorMessage: null,
+          },
+          curation: {
+            loaded: true,
+            source: 'settings',
+            entryCount: 2,
+            errorMessage: null,
+          },
+          nodes: [
+            {
+              homeyDeviceId: 'main:8',
+              nodeId: 8,
+              profile: {
+                profileId: 'product-triple:29:66:2',
+                homeyClass: 'socket',
+                confidence: 'curated',
+                fallbackReason: null,
+              },
+              recommendation: {
+                available: true,
+                reason: 'baseline-hash-changed',
+                backfillNeeded: false,
+              },
+              mapping: {
+                inboundConfigured: 2,
+                inboundEnabled: 1,
+                outboundConfigured: 2,
+                outboundEnabled: 2,
+              },
+            },
+          ],
+        };
+      },
+    },
+    devices: [],
+  });
+
+  const handlers = new Map();
+  const session = {
+    setHandler(event, handler) {
+      handlers.set(event, handler);
+    },
+  };
+
+  await driver.onRepair(session, {
+    getData: () => ({ id: 'zwjs-bridge-main', bridgeId: 'main' }),
+  });
+
+  assert.equal(typeof handlers.get('bridge_tools:get_snapshot'), 'function');
+  assert.equal(typeof handlers.get('bridge_tools:refresh'), 'function');
+  const first = await handlers.get('bridge_tools:get_snapshot')();
+  const second = await handlers.get('bridge_tools:refresh')();
+  assert.equal(first.schemaVersion, 'bridge-device-tools/v1');
+  assert.equal(first.device.homeyDeviceId, 'zwjs-bridge-main');
+  assert.equal(first.nodeSummary.total, 1);
+  assert.equal(first.nodeSummary.recommendationAvailableCount, 1);
+  assert.equal(first.nodeSummary.inboundSkipped, 1);
+  assert.equal(second.runtime.zwjs.serverVersion, '3.4.0');
+  assert.equal(diagnosticsCalls.length, 2);
+});
+
+test('bridge driver repair handler rejects when diagnostics API is unavailable', async () => {
+  const driver = new BridgeDriver();
+  driver._configureHarness({
+    app: {},
+    devices: [],
+  });
+
+  const handlers = new Map();
+  const session = {
+    setHandler(event, handler) {
+      handlers.set(event, handler);
+    },
+  };
+
+  await driver.onRepair(session, {
+    getData: () => ({ id: 'zwjs-bridge-main', bridgeId: 'main' }),
+  });
+
+  await assert.rejects(
+    () => handlers.get('bridge_tools:get_snapshot')(),
+    /Bridge Tools unavailable: app runtime diagnostics API is not ready\./,
+  );
+});
+
 test('node driver throws a clear error when zwjs client is unavailable', async () => {
   const driver = new NodeDriver();
   driver._configureHarness({
