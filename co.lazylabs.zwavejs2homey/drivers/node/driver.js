@@ -38,45 +38,6 @@ module.exports = class NodeDriver extends homey_1.default.Driver {
         }
         return [...uniqueNames];
     }
-    async loadHomeyZoneNamesFromApi() {
-        const api = this.homey.api;
-        const get = typeof api?.get === 'function' ? api.get.bind(api) : undefined;
-        if (typeof get !== 'function')
-            return [];
-        const requestPaths = ['manager/zones/zone', '/manager/zones/zone'];
-        let lastError;
-        for (const requestPath of requestPaths) {
-            try {
-                const response = await new Promise((resolve, reject) => {
-                    if (get.length >= 2) {
-                        get(requestPath, (error, result) => {
-                            if (error) {
-                                reject(error);
-                                return;
-                            }
-                            resolve(result);
-                        });
-                        return;
-                    }
-                    Promise.resolve(get(requestPath))
-                        .then((result) => resolve(result))
-                        .catch((error) => reject(error));
-                });
-                const names = this.extractZoneNames(response);
-                if (names.length > 0)
-                    return names;
-            }
-            catch (error) {
-                lastError = error;
-            }
-        }
-        if (lastError) {
-            this.error('Failed to load Homey zones via Manager API during node pairing', {
-                error: lastError,
-            });
-        }
-        return [];
-    }
     async loadHomeyZoneNames() {
         const zonesManager = this.homey.zones;
         const getZones = typeof zonesManager?.getZones === 'function' ? zonesManager.getZones.bind(zonesManager) : undefined;
@@ -105,7 +66,7 @@ module.exports = class NodeDriver extends homey_1.default.Driver {
                 this.error('Failed to load Homey zones via manager during node pairing', { error });
             }
         }
-        return this.loadHomeyZoneNamesFromApi();
+        return [];
     }
     async onPairListDevices() {
         const app = this.homey.app;

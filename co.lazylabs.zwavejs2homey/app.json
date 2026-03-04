@@ -17,9 +17,7 @@
   "category": [
     "tools"
   ],
-  "permissions": [
-    "homey:manager:api"
-  ],
+  "permissions": [],
   "api": {
     "getRuntimeDiagnostics": {
       "method": "GET",

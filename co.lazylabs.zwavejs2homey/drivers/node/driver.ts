@@ -58,11 +58,6 @@ interface HomeyZonesManagerLike {
     (() => Promise<Record<string, HomeyZoneLike>>);
 }
 
-interface HomeyApiLike {
-  get?: ((path: string, callback: (error: unknown, result?: unknown) => void) => void) &
-    ((path: string) => Promise<unknown>);
-}
-
 module.exports = class NodeDriver extends Homey.Driver {
   async onInit() {
     this.log('NodeDriver initialized');
@@ -90,46 +85,6 @@ module.exports = class NodeDriver extends Homey.Driver {
       if (trimmed.length > 0) uniqueNames.add(trimmed);
     }
     return [...uniqueNames];
-  }
-
-  private async loadHomeyZoneNamesFromApi(): Promise<string[]> {
-    const api = (this.homey as unknown as { api?: HomeyApiLike }).api;
-    const get = typeof api?.get === 'function' ? api.get.bind(api) : undefined;
-    if (typeof get !== 'function') return [];
-
-    const requestPaths = ['manager/zones/zone', '/manager/zones/zone'];
-    let lastError: unknown;
-    for (const requestPath of requestPaths) {
-      try {
-        const response = await new Promise<unknown>((resolve, reject) => {
-          if (get.length >= 2) {
-            get(requestPath, (error: unknown, result?: unknown) => {
-              if (error) {
-                reject(error);
-                return;
-              }
-              resolve(result);
-            });
-            return;
-          }
-
-          Promise.resolve(get(requestPath))
-            .then((result) => resolve(result))
-            .catch((error) => reject(error));
-        });
-        const names = this.extractZoneNames(response);
-        if (names.length > 0) return names;
-      } catch (error) {
-        lastError = error;
-      }
-    }
-
-    if (lastError) {
-      this.error('Failed to load Homey zones via Manager API during node pairing', {
-        error: lastError,
-      });
-    }
-    return [];
   }
 
   private async loadHomeyZoneNames(): Promise<string[]> {
@@ -161,7 +116,7 @@ module.exports = class NodeDriver extends Homey.Driver {
       }
     }
 
-    return this.loadHomeyZoneNamesFromApi();
+    return [];
   }
 
   async onPairListDevices() {
