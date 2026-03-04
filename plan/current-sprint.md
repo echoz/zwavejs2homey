@@ -2,16 +2,20 @@
 
 ## Goal
 
-Reach compiler runtime-validation readiness before Homey adapter implementation:
-build the real layered rules pipeline (HA-derived + project generic/product rules), export compiled profiles, and validate them against live ZWJS data without on-the-fly compilation.
+Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
+
+- keep runtime mapping/capability behavior deterministic and test-backed
+- improve bridge/node read-only operational visibility from live ZWJS data
+- keep pairing flow understandable within Homey system-template constraints
+- keep compiler/TUI artifacts and adapter runtime behavior aligned
 
 ## In Progress
 
-- Phase 5 Homey adapter early implementation:
-  - keep compiler + TUI quality gates green while adapter work starts
-  - carry forward dual-root TUI curation workflow as contributor tooling baseline
-  - build first adapter vertical slice on compiled profile artifacts
-  - implement locked MVP topology and pairing model (`bridge` + `node`, explicit node import)
+- Phase 5 Homey adapter stabilization and UX pass:
+  - bridge/node pairing and runtime flows are working; focus is now quality, diagnostics, and usability
+  - continue expanding read-only bridge/node details surfaced from ZWJS runtime
+  - keep docs/ADRs/roadmap synchronized as MVP pairing constraints and UX direction evolve
+  - preserve strict package boundaries (`core`/`compiler`/`tui`/Homey app)
 
 ## Recently Completed
 
@@ -1053,10 +1057,16 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 ## Next Tasks
 
-1. Scaffold Homey `bridge` and `node` drivers aligned with ADR 0017 (singleton bridge + per-node devices).
-2. Implement node pairing import flow (ZWJS node selection + explicit Homey device add).
-3. Wire node device runtime to compiled artifact resolver + first mapping vertical set (`onoff` + `dim`).
-4. Keep compiler/TUI maintenance pass active for any regressions discovered during adapter integration.
+1. Bridge/read-only enrichment:
+   - surface more actionable bridge diagnostics and runtime facts from ZWJS session state in Homey-facing surfaces.
+2. Node/read-only enrichment:
+   - flesh out node detail metadata (resolved profile, classification/mapping diagnostics, key identity fields) without broadening write paths.
+3. Pairing UX polish within template limits:
+   - keep `list_devices -> add_devices` flow clear and add stronger post-bridge guidance for node import.
+4. Generic inference policy checkpoint:
+   - keep compile-time generic layer (`project-generic`) active;
+   - explicitly decide whether/when adapter runtime generic inference (beyond compiled artifact resolution + safe no-match fallback) should be introduced.
+5. Keep compiler/TUI maintenance pass active for regressions found during adapter integration.
 
 Note:
 

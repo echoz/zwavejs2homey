@@ -136,6 +136,9 @@ In progress / next:
 1. continue broadening runtime mapping coverage with tests
 2. continue Device Tools UX polish over recommendation state and diagnostics
 3. keep MVP pairing on Homey system templates (`list_devices` -> `add_devices`) and defer richer pairing UX to custom views
+4. lock/confirm generic inference policy for adapter runtime:
+   - compile-time generic layer remains active in compiler artifacts
+   - adapter runtime currently uses compiled resolution + safe no-match fallback; broader runtime generic inference remains a deliberate follow-up decision
 
 Exit criteria:
 

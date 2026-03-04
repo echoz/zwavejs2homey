@@ -367,6 +367,33 @@
           const canAdopt =
             snapshot.recommendation.actionable &&
             snapshot.recommendation.suggestedAction === 'adopt-recommended-baseline';
+          const runtimeZwjs =
+            snapshot.runtime && snapshot.runtime.zwjs ? snapshot.runtime.zwjs : {};
+          const nodeState = snapshot.node || {};
+          const productTriple = [
+            nodeState.manufacturerId,
+            nodeState.productType,
+            nodeState.productId,
+          ]
+            .map((value) =>
+              value === null || typeof value === 'undefined' ? 'n/a' : String(value),
+            )
+            .join(':');
+          const zwjsConnection = `${toSafeText(runtimeZwjs.lifecycle)} / ${
+            runtimeZwjs.transportConnected === true ? 'connected' : 'disconnected'
+          }`;
+          const nodeReady =
+            typeof nodeState.ready === 'boolean'
+              ? nodeState.ready
+                ? 'Ready'
+                : 'Not Ready'
+              : 'n/a';
+          const nodeFailed =
+            typeof nodeState.isFailed === 'boolean'
+              ? nodeState.isFailed
+                ? 'Failed'
+                : 'Healthy'
+              : 'n/a';
           backfillBtn.disabled = isBusy || !canBackfill;
           adoptBtn.disabled = isBusy || !canAdopt;
           const deviceLabel =
@@ -381,6 +408,16 @@
               'Match',
               `${toSafeText(snapshot.profile.matchBy)} / ${toSafeText(snapshot.profile.matchKey)}`,
             ],
+            ['Manufacturer', nodeState.manufacturer],
+            ['Product', nodeState.product],
+            ['Product Triple', productTriple, ' mono'],
+            ['Location', nodeState.location],
+            ['Interview Stage', nodeState.interviewStage],
+            ['Node Status', nodeState.status],
+            ['Node Ready', nodeReady],
+            ['Node Failed', nodeFailed],
+            ['ZWJS', zwjsConnection],
+            ['ZWJS Server', runtimeZwjs.serverVersion],
             [
               'Inbound Mapping',
               `${snapshot.mapping.inboundEnabled}/${snapshot.mapping.inboundConfigured} enabled`,
@@ -415,6 +452,8 @@
             ['Suggested Action', snapshot.recommendation.suggestedAction],
             ['Actionable', snapshot.recommendation.actionable ? 'Yes' : 'No'],
             ['Fallback Reason', snapshot.profile.fallbackReason],
+            ['ZWJS Last Message', formatIso(runtimeZwjs.lastMessageAt)],
+            ['ZWJS Connected At', formatIso(runtimeZwjs.connectedAt)],
             ['Last Sync', formatIso(snapshot.generatedAt)],
           ]);
 

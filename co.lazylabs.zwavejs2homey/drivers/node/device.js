@@ -42,6 +42,28 @@ function normalizeValueTypeHint(value) {
     const normalizedType = value.trim();
     return normalizedType.length > 0 ? normalizedType : undefined;
 }
+function normalizeNodeText(value) {
+    if (typeof value !== 'string')
+        return null;
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+}
+function extractNodeStateSnapshot(nodeState) {
+    const state = nodeState && typeof nodeState === 'object' ? nodeState : {};
+    return {
+        manufacturerId: parseNumericIdentity(state.manufacturerId) ?? null,
+        productType: parseNumericIdentity(state.productType) ?? null,
+        productId: parseNumericIdentity(state.productId) ?? null,
+        manufacturer: normalizeNodeText(state.manufacturer),
+        product: normalizeNodeText(state.product),
+        location: normalizeNodeText(state.location),
+        interviewStage: normalizeNodeText(state.interviewStage),
+        status: normalizeNodeText(state.status),
+        firmwareVersion: normalizeNodeText(state.firmwareVersion),
+        ready: typeof state.ready === 'boolean' ? state.ready : null,
+        isFailed: typeof state.isFailed === 'boolean' ? state.isFailed : null,
+    };
+}
 function toValueIdLookupKey(valueId) {
     const commandClass = parseNumericIdentity(valueId.commandClass);
     const property = normalizeComparableValue(valueId.property);
@@ -342,11 +364,13 @@ module.exports = class NodeDevice extends homey_1.default.Device {
         let curationEntry;
         let curationReport = null;
         let recommendationState = null;
+        let nodeStateSnapshot = extractNodeStateSnapshot(undefined);
         this.clearZwjsEventSubscriptions();
         if (ctx.nodeId !== undefined && client) {
             try {
                 const nodeStateResult = await client.getNodeState(ctx.nodeId);
                 if (nodeStateResult.success) {
+                    nodeStateSnapshot = extractNodeStateSnapshot(nodeStateResult.result?.state);
                     const valueIndex = await this.loadNodeDefinedValueIndex(client, ctx.nodeId);
                     const metadataWriteableCache = new Map();
                     const nodeContext = {
@@ -456,6 +480,7 @@ module.exports = class NodeDevice extends homey_1.default.Device {
             syncedAt: new Date().toISOString(),
             syncReason,
             homeyDeviceId: ctx.homeyDeviceId ?? null,
+            nodeState: nodeStateSnapshot,
             selector: selector ?? null,
             matchBy: classification.matchBy,
             matchKey: classification.matchKey,
@@ -479,6 +504,13 @@ module.exports = class NodeDevice extends homey_1.default.Device {
             storedBaselineHash: recommendationState?.storedMarker?.baselineProfileHash ?? null,
             storedBaselinePipelineFingerprint: recommendationState?.storedMarker?.pipelineFingerprint ?? null,
             verticalSliceApplied,
+            manufacturerId: nodeStateSnapshot.manufacturerId,
+            productType: nodeStateSnapshot.productType,
+            productId: nodeStateSnapshot.productId,
+            manufacturer: nodeStateSnapshot.manufacturer,
+            product: nodeStateSnapshot.product,
+            location: nodeStateSnapshot.location,
+            interviewStage: nodeStateSnapshot.interviewStage,
             mappingDiagnostics,
         });
         this.log('NodeDevice initialized', {
@@ -496,6 +528,13 @@ module.exports = class NodeDevice extends homey_1.default.Device {
             recommendationAvailable: recommendationState?.recommendationAvailable ?? false,
             recommendationReason: recommendationState?.recommendationReason ?? null,
             verticalSliceApplied,
+            manufacturerId: nodeStateSnapshot.manufacturerId,
+            productType: nodeStateSnapshot.productType,
+            productId: nodeStateSnapshot.productId,
+            manufacturer: nodeStateSnapshot.manufacturer,
+            product: nodeStateSnapshot.product,
+            location: nodeStateSnapshot.location,
+            interviewStage: nodeStateSnapshot.interviewStage,
         });
     }
     async onInit() {

@@ -11,6 +11,15 @@ interface AppRuntimeAccess {
       available: boolean;
       transportConnected: boolean;
       lifecycle: string;
+      versionReceived: boolean | null;
+      initialized: boolean | null;
+      listening: boolean | null;
+      authenticated: boolean | null;
+      serverVersion: string | null;
+      adapterFamily: string | null;
+      reconnectAttempt: number | null;
+      connectedAt: string | null;
+      lastMessageAt: string | null;
     };
     compiledProfiles: {
       loaded: boolean;

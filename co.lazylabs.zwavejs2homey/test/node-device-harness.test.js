@@ -757,6 +757,12 @@ test('node device harness wires read/write/event sync for onoff + dim verticals'
   assert.equal(profileResolution?.recommendationBackfillNeeded, false);
   assert.equal(profileResolution?.currentBaselinePipelineFingerprint, 'pipeline-fingerprint-1');
   assert.equal(profileResolution?.storedBaselineHash, null);
+  assert.equal(profileResolution?.manufacturerId, 29);
+  assert.equal(profileResolution?.productType, 66);
+  assert.equal(profileResolution?.productId, 2);
+  assert.equal(profileResolution?.nodeState?.manufacturerId, 29);
+  assert.equal(profileResolution?.nodeState?.productType, 66);
+  assert.equal(profileResolution?.nodeState?.productId, 2);
 
   await device.onDeleted();
   assert.equal(client.getListenerCount(), 0);

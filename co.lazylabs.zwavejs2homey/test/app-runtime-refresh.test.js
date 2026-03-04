@@ -101,6 +101,15 @@ function createMockCoreModule() {
       return {
         transportConnected: true,
         lifecycle: 'started',
+        versionReceived: true,
+        initialized: true,
+        listening: true,
+        authenticated: true,
+        serverVersion: '3.4.0',
+        adapterFamily: 'zwjs-default',
+        reconnectAttempt: 0,
+        connectedAt: '2026-03-02T12:00:00.000Z',
+        lastMessageAt: '2026-03-02T12:00:05.000Z',
       };
     },
     onEvent(listener) {
@@ -279,11 +288,10 @@ test('app waits for node and bridge drivers before startup refresh', async () =>
 
   assert.deepEqual(refreshCalls, ['startup']);
   assert.deepEqual(bridgeRefreshCalls, ['startup']);
-  const startupRaceErrors = app.errors.filter(
-    (entry) =>
-      /Failed to refresh node runtime mappings|Failed to refresh bridge runtime diagnostics|Driver Not Initialized/.test(
-        String(entry.message),
-      ),
+  const startupRaceErrors = app.errors.filter((entry) =>
+    /Failed to refresh node runtime mappings|Failed to refresh bridge runtime diagnostics|Driver Not Initialized/.test(
+      String(entry.message),
+    ),
   );
   assert.equal(startupRaceErrors.length, 0);
 
@@ -529,6 +537,12 @@ test('app diagnostics snapshot normalizes recommendation and mapping summary fie
 
   assert.equal(snapshot.bridgeId, 'main');
   assert.equal(snapshot.zwjs.available, true);
+  assert.equal(snapshot.zwjs.serverVersion, '3.4.0');
+  assert.equal(snapshot.zwjs.adapterFamily, 'zwjs-default');
+  assert.equal(snapshot.zwjs.versionReceived, true);
+  assert.equal(snapshot.zwjs.initialized, true);
+  assert.equal(snapshot.zwjs.listening, true);
+  assert.equal(snapshot.zwjs.authenticated, true);
   assert.equal(snapshot.compiledProfiles.loaded, true);
   assert.equal(snapshot.curation.loaded, true);
   assert.equal(snapshot.nodes.length, 2);
@@ -604,6 +618,19 @@ test('app node device tools snapshot returns targeted diagnostics payload', asyn
           confidence: 'curated',
           uncurated: false,
         },
+        nodeState: {
+          manufacturerId: 29,
+          productType: 66,
+          productId: 2,
+          manufacturer: 'Leviton',
+          product: 'DZ6HD',
+          location: 'Study',
+          interviewStage: 'Complete',
+          status: 'Alive',
+          firmwareVersion: '1.2',
+          ready: true,
+          isFailed: false,
+        },
         recommendationAvailable: true,
         recommendationReason: 'baseline-hash-changed',
         recommendationBackfillNeeded: false,
@@ -618,6 +645,7 @@ test('app node device tools snapshot returns targeted diagnostics payload', asyn
   ];
 
   const { app } = loadAppClass(nodeDevices);
+  app.homey.settings.set('zwjs_connection', { url: 'ws://127.0.0.1:3001' });
   await app.onInit();
 
   const snapshot = await app.getNodeDeviceToolsSnapshot({ homeyDeviceId: 'main:8' });
@@ -626,6 +654,13 @@ test('app node device tools snapshot returns targeted diagnostics payload', asyn
   assert.equal(snapshot.profile.profileId, 'profile-main-8');
   assert.equal(snapshot.recommendation.suggestedAction, 'adopt-recommended-baseline');
   assert.equal(snapshot.recommendation.actionable, true);
+  assert.equal(snapshot.node.manufacturerId, 29);
+  assert.equal(snapshot.node.productType, 66);
+  assert.equal(snapshot.node.productId, 2);
+  assert.equal(snapshot.node.manufacturer, 'Leviton');
+  assert.equal(snapshot.node.product, 'DZ6HD');
+  assert.equal(snapshot.node.location, 'Study');
+  assert.equal(snapshot.runtime.zwjs.serverVersion, '3.4.0');
   assert.equal(snapshot.profileReference.currentBaselineHash, 'next-hash-8');
   assert.equal(snapshot.profileReference.storedBaselineHash, 'old-hash-8');
   assert.equal(snapshot.ui.readOnly, true);

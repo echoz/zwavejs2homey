@@ -112,6 +112,42 @@ function normalizeValueTypeHint(value: unknown): string | undefined {
   return normalizedType.length > 0 ? normalizedType : undefined;
 }
 
+function normalizeNodeText(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function extractNodeStateSnapshot(nodeState: unknown): {
+  manufacturerId: number | null;
+  productType: number | null;
+  productId: number | null;
+  manufacturer: string | null;
+  product: string | null;
+  location: string | null;
+  interviewStage: string | null;
+  status: string | null;
+  firmwareVersion: string | null;
+  ready: boolean | null;
+  isFailed: boolean | null;
+} {
+  const state =
+    nodeState && typeof nodeState === 'object' ? (nodeState as Record<string, unknown>) : {};
+  return {
+    manufacturerId: parseNumericIdentity(state.manufacturerId) ?? null,
+    productType: parseNumericIdentity(state.productType) ?? null,
+    productId: parseNumericIdentity(state.productId) ?? null,
+    manufacturer: normalizeNodeText(state.manufacturer),
+    product: normalizeNodeText(state.product),
+    location: normalizeNodeText(state.location),
+    interviewStage: normalizeNodeText(state.interviewStage),
+    status: normalizeNodeText(state.status),
+    firmwareVersion: normalizeNodeText(state.firmwareVersion),
+    ready: typeof state.ready === 'boolean' ? state.ready : null,
+    isFailed: typeof state.isFailed === 'boolean' ? state.isFailed : null,
+  };
+}
+
 function toValueIdLookupKey(valueId: ValueIdLike): string | undefined {
   const commandClass = parseNumericIdentity(valueId.commandClass);
   const property = normalizeComparableValue(valueId.property);
@@ -456,12 +492,14 @@ module.exports = class NodeDevice extends Homey.Device {
     let curationEntry: HomeyCurationEntryV1 | undefined;
     let curationReport: HomeyCurationApplyReport | null = null;
     let recommendationState: ReturnType<typeof evaluateBaselineRecommendationState> | null = null;
+    let nodeStateSnapshot = extractNodeStateSnapshot(undefined);
     this.clearZwjsEventSubscriptions();
 
     if (ctx.nodeId !== undefined && client) {
       try {
         const nodeStateResult = await client.getNodeState(ctx.nodeId);
         if (nodeStateResult.success) {
+          nodeStateSnapshot = extractNodeStateSnapshot(nodeStateResult.result?.state);
           const valueIndex = await this.loadNodeDefinedValueIndex(client, ctx.nodeId);
           const metadataWriteableCache = new Map<string, boolean | null>();
           const nodeContext = {
@@ -582,6 +620,7 @@ module.exports = class NodeDevice extends Homey.Device {
       syncedAt: new Date().toISOString(),
       syncReason,
       homeyDeviceId: ctx.homeyDeviceId ?? null,
+      nodeState: nodeStateSnapshot,
       selector: selector ?? null,
       matchBy: classification.matchBy,
       matchKey: classification.matchKey,
@@ -607,6 +646,13 @@ module.exports = class NodeDevice extends Homey.Device {
       storedBaselinePipelineFingerprint:
         recommendationState?.storedMarker?.pipelineFingerprint ?? null,
       verticalSliceApplied,
+      manufacturerId: nodeStateSnapshot.manufacturerId,
+      productType: nodeStateSnapshot.productType,
+      productId: nodeStateSnapshot.productId,
+      manufacturer: nodeStateSnapshot.manufacturer,
+      product: nodeStateSnapshot.product,
+      location: nodeStateSnapshot.location,
+      interviewStage: nodeStateSnapshot.interviewStage,
       mappingDiagnostics,
     });
 
@@ -625,6 +671,13 @@ module.exports = class NodeDevice extends Homey.Device {
       recommendationAvailable: recommendationState?.recommendationAvailable ?? false,
       recommendationReason: recommendationState?.recommendationReason ?? null,
       verticalSliceApplied,
+      manufacturerId: nodeStateSnapshot.manufacturerId,
+      productType: nodeStateSnapshot.productType,
+      productId: nodeStateSnapshot.productId,
+      manufacturer: nodeStateSnapshot.manufacturer,
+      product: nodeStateSnapshot.product,
+      location: nodeStateSnapshot.location,
+      interviewStage: nodeStateSnapshot.interviewStage,
     });
   }
 

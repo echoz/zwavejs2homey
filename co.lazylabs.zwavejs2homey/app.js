@@ -76,6 +76,61 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
         static toBooleanOrDefault(value, fallback = false) {
             return typeof value === 'boolean' ? value : fallback;
         }
+        static parseNumericIdentityOrNull(value) {
+            if (typeof value === 'number' && Number.isInteger(value) && Number.isFinite(value)) {
+                return value;
+            }
+            if (typeof value !== 'string')
+                return null;
+            const trimmed = value.trim();
+            if (trimmed.length === 0)
+                return null;
+            if (/^0x[0-9a-f]+$/i.test(trimmed)) {
+                const parsedHex = Number.parseInt(trimmed.slice(2), 16);
+                return Number.isInteger(parsedHex) && Number.isFinite(parsedHex) ? parsedHex : null;
+            }
+            if (/^\d+$/.test(trimmed)) {
+                const parsedDec = Number.parseInt(trimmed, 10);
+                return Number.isInteger(parsedDec) && Number.isFinite(parsedDec) ? parsedDec : null;
+            }
+            return null;
+        }
+        static normalizeNodeStateSnapshot(profileResolution) {
+            let nodeState;
+            if (profileResolution.nodeState && typeof profileResolution.nodeState === 'object') {
+                nodeState = profileResolution.nodeState;
+            }
+            return {
+                manufacturerId: _a.parseNumericIdentityOrNull(nodeState?.manufacturerId),
+                productType: _a.parseNumericIdentityOrNull(nodeState?.productType),
+                productId: _a.parseNumericIdentityOrNull(nodeState?.productId),
+                manufacturer: _a.toStringOrNull(nodeState?.manufacturer),
+                product: _a.toStringOrNull(nodeState?.product),
+                location: _a.toStringOrNull(nodeState?.location),
+                interviewStage: _a.toStringOrNull(nodeState?.interviewStage),
+                status: _a.toStringOrNull(nodeState?.status),
+                firmwareVersion: _a.toStringOrNull(nodeState?.firmwareVersion),
+                ready: typeof nodeState?.ready === 'boolean' ? nodeState.ready : null,
+                isFailed: typeof nodeState?.isFailed === 'boolean' ? nodeState.isFailed : null,
+            };
+        }
+        normalizeZwjsDiagnosticsStatus() {
+            const status = this.zwjsClient?.getStatus();
+            return {
+                available: Boolean(this.zwjsClient),
+                transportConnected: status?.transportConnected === true,
+                lifecycle: status?.lifecycle ?? 'stopped',
+                versionReceived: typeof status?.versionReceived === 'boolean' ? status.versionReceived : null,
+                initialized: typeof status?.initialized === 'boolean' ? status.initialized : null,
+                listening: typeof status?.listening === 'boolean' ? status.listening : null,
+                authenticated: typeof status?.authenticated === 'boolean' ? status.authenticated : null,
+                serverVersion: _a.toStringOrNull(status?.serverVersion),
+                adapterFamily: _a.toStringOrNull(status?.adapterFamily),
+                reconnectAttempt: _a.toNumberOrNull(status?.reconnectAttempt),
+                connectedAt: _a.toStringOrNull(status?.connectedAt),
+                lastMessageAt: _a.toStringOrNull(status?.lastMessageAt),
+            };
+        }
         static toRecommendationActionPriority(action) {
             if (action === 'backfill-marker')
                 return 0;
@@ -137,6 +192,7 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
         }
         normalizeNodeDiagnosticsEntry(profileResolution, deviceData) {
             const mappingSummary = _a.summarizeMappingDiagnostics(profileResolution);
+            const node = _a.normalizeNodeStateSnapshot(profileResolution);
             let classification;
             if (profileResolution.classification && typeof profileResolution.classification === 'object') {
                 classification = profileResolution.classification;
@@ -166,6 +222,7 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
                 homeyDeviceId,
                 bridgeId,
                 nodeId,
+                node,
                 sync: {
                     syncedAt: _a.toStringOrNull(profileResolution.syncedAt),
                     syncReason: _a.toStringOrNull(profileResolution.syncReason),
@@ -216,6 +273,19 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
                 homeyDeviceId: _a.toStringOrNull(deviceData?.id),
                 bridgeId: _a.toStringOrNull(deviceData?.bridgeId),
                 nodeId: _a.toNumberOrNull(deviceData?.nodeId),
+                node: {
+                    manufacturerId: null,
+                    productType: null,
+                    productId: null,
+                    manufacturer: null,
+                    product: null,
+                    location: null,
+                    interviewStage: null,
+                    status: null,
+                    firmwareVersion: null,
+                    ready: null,
+                    isFailed: null,
+                },
                 sync: {
                     syncedAt: null,
                     syncReason: null,
@@ -634,15 +704,10 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
                 const idB = _a.toStringOrNull(b.homeyDeviceId) ?? '';
                 return idA.localeCompare(idB);
             });
-            const clientStatus = this.zwjsClient?.getStatus();
             return {
                 generatedAt: new Date().toISOString(),
                 bridgeId: this.bridgeId,
-                zwjs: {
-                    available: Boolean(this.zwjsClient),
-                    transportConnected: clientStatus?.transportConnected === true,
-                    lifecycle: clientStatus?.lifecycle ?? 'stopped',
-                },
+                zwjs: this.normalizeZwjsDiagnosticsStatus(),
                 compiledProfiles: this.getCompiledProfilesStatus(),
                 curation: this.getCurationStatus(),
                 nodes: nodeDiagnostics,
@@ -668,7 +733,6 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
                 diagnosticsEntry = this.createPendingNodeDiagnosticsEntry(deviceData);
             }
             const recommendation = this.toRecommendationActionQueueItem(diagnosticsEntry);
-            const clientStatus = this.zwjsClient?.getStatus();
             return {
                 schemaVersion: 'node-device-tools/v1',
                 generatedAt: new Date().toISOString(),
@@ -678,14 +742,11 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
                     nodeId: diagnosticsEntry.nodeId,
                 },
                 runtime: {
-                    zwjs: {
-                        available: Boolean(this.zwjsClient),
-                        transportConnected: clientStatus?.transportConnected === true,
-                        lifecycle: clientStatus?.lifecycle ?? 'stopped',
-                    },
+                    zwjs: this.normalizeZwjsDiagnosticsStatus(),
                     compiledProfiles: this.getCompiledProfilesStatus(),
                     curation: this.getCurationStatus(),
                 },
+                node: diagnosticsEntry.node,
                 profile: diagnosticsEntry.profile,
                 mapping: diagnosticsEntry.mapping,
                 curation: diagnosticsEntry.curation,
