@@ -90,6 +90,11 @@ Node runtime sync:
   7) persist diagnostics (profileResolution)
 ```
 
+Pairing UI note:
+
+- Homey system pairing templates (`list_devices`, `add_devices`) are intentionally constrained and not deeply styleable.
+- Rich onboarding UX (multi-step guidance, richer status panes, custom control flow) requires custom pairing views and is tracked as post-MVP work.
+
 ## Quickstart
 
 Prerequisites:

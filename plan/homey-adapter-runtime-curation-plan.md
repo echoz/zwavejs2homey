@@ -115,6 +115,8 @@ Per ADR 0017, runtime curation work in this plan assumes:
   - `bridge` driver/device: control-plane endpoint actions/status
   - `node` driver/devices: compiled-profile execution per imported node
 - node onboarding is explicit import/link from ZWJS into Homey (pairing flow)
+- MVP pairing uses Homey system templates (`list_devices` -> `add_devices`), so onboarding UX is intentionally constrained in v1
+- richer pairing UX is deferred to future custom pairing views
 - no automatic cross-driver pairing handoff is required in v1
 - per-device curation UX lives on node-level Device Tools flows hosted by node `onRepair`, not bridge settings
 

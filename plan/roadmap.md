@@ -135,6 +135,7 @@ In progress / next:
 
 1. continue broadening runtime mapping coverage with tests
 2. continue Device Tools UX polish over recommendation state and diagnostics
+3. keep MVP pairing on Homey system templates (`list_devices` -> `add_devices`) and defer richer pairing UX to custom views
 
 Exit criteria:
 
@@ -149,6 +150,7 @@ Planned:
 1. Homey settings/diagnostics UX for profile + curation state
 2. support/log bundle workflows
 3. non-production protocol validation runs (deferred Phase 2 items)
+4. custom Homey pairing views for richer add/import UX where system templates are too constrained
 
 ## Active Risks
 

@@ -115,6 +115,9 @@ Owns:
 - pairing/import model (`bridge` + `node`)
 - runtime compiled profile resolution + mapping execution
 - `curation.v1` load/validate/lower/apply integration
+- pairing UX policy:
+  - current MVP uses Homey system pairing templates (`list_devices` -> `add_devices`)
+  - richer flow/presentation requires custom pairing views (planned post-MVP)
 
 ## Current State
 
@@ -239,6 +242,7 @@ After that:
 
 1. support/log bundle workflows
 2. non-production parity validation for deferred protocol domains
+3. custom pairing views for richer bridge/node onboarding UX beyond system template constraints
 
 ## Key ADRs
 

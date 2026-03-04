@@ -32,6 +32,8 @@ Pairing/onboarding model:
 - If inclusion is initiated from `bridge`, the app does not auto-open `node` pairing or auto-create Homey node devices.
 - User explicitly completes import through `node` pairing (or equivalent explicit add action).
 - No cross-driver automatic pairing handoff is assumed in v1.
+- MVP pairing uses Homey system templates (`list_devices`, `add_devices`); deep layout/styling customization is out of scope for v1.
+- Richer onboarding UX will move to custom pairing views in a later phase.
 
 Bridge singleton policy:
 
@@ -51,6 +53,7 @@ Tradeoffs:
 
 - bridge-initiated inclusion requires an explicit follow-up import step in v1
 - app needs clear user messaging for "inclusion completed, now import node"
+- system template constraints limit how much guidance can be presented inline during pairing
 
 ## Follow-up Implementation Notes
 

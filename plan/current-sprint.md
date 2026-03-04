@@ -15,6 +15,14 @@ build the real layered rules pipeline (HA-derived + project generic/product rule
 
 ## Recently Completed
 
+- Latest docs/alignment slice:
+  - documented Homey pairing-template constraints and future custom-view direction:
+    - `README.md`
+    - `docs/architecture.md`
+    - `plan/roadmap.md`
+    - `docs/decisions/0017-homey-mvp-driver-topology-and-pairing-model.md`
+  - clarified that MVP keeps system pairing templates (`list_devices -> add_devices`) while richer onboarding UX is tracked post-MVP
+
 - Latest tooling/workspace compatibility slice:
   - removed Homey app package from root npm workspace membership to avoid `homey app run` preprocess copy failures under npm workspaces (`Cannot copy ... to a subdirectory of itself`)
   - switched root scripts that target the Homey app from workspace flags to explicit prefix invocation:
