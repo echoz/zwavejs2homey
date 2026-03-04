@@ -19,6 +19,11 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## Recently Completed
 
+- Latest node read-only metadata fallback slice:
+  - node runtime state snapshot now falls back to `state.deviceConfig.*` when friendly manufacturer/product strings are missing
+  - product label formatting now supports `description (label)` fallback for clearer diagnostics display (for example Leviton DZ6HD style metadata)
+  - added harness coverage to lock fallback behavior
+
 - Latest docs/alignment slice:
   - documented Homey pairing-template constraints and future custom-view direction:
     - `README.md`

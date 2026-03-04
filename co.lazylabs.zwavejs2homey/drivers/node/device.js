@@ -48,14 +48,28 @@ function normalizeNodeText(value) {
     const trimmed = value.trim();
     return trimmed.length > 0 ? trimmed : null;
 }
+function formatProductLabel(description, label) {
+    if (description && label) {
+        if (description.includes(label))
+            return description;
+        return `${description} (${label})`;
+    }
+    return description ?? label;
+}
 function extractNodeStateSnapshot(nodeState) {
     const state = nodeState && typeof nodeState === 'object' ? nodeState : {};
+    const deviceConfig = state.deviceConfig && typeof state.deviceConfig === 'object'
+        ? state.deviceConfig
+        : undefined;
+    const manufacturer = normalizeNodeText(state.manufacturer) ?? normalizeNodeText(deviceConfig?.manufacturer);
+    const product = normalizeNodeText(state.product) ??
+        formatProductLabel(normalizeNodeText(deviceConfig?.description) ?? normalizeNodeText(state.productDescription), normalizeNodeText(deviceConfig?.label) ?? normalizeNodeText(state.productLabel));
     return {
         manufacturerId: parseNumericIdentity(state.manufacturerId) ?? null,
         productType: parseNumericIdentity(state.productType) ?? null,
         productId: parseNumericIdentity(state.productId) ?? null,
-        manufacturer: normalizeNodeText(state.manufacturer),
-        product: normalizeNodeText(state.product),
+        manufacturer,
+        product,
         location: normalizeNodeText(state.location),
         interviewStage: normalizeNodeText(state.interviewStage),
         status: normalizeNodeText(state.status),

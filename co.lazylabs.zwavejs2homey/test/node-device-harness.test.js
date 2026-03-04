@@ -629,6 +629,11 @@ test('node device harness wires read/write/event sync for onoff + dim verticals'
           manufacturerId: '0x001d',
           productType: '66',
           productId: '2',
+          deviceConfig: {
+            manufacturer: 'Leviton',
+            description: 'In-Wall 600W Dimmer',
+            label: 'DZ6HD',
+          },
         },
       },
     },
@@ -763,6 +768,8 @@ test('node device harness wires read/write/event sync for onoff + dim verticals'
   assert.equal(profileResolution?.nodeState?.manufacturerId, 29);
   assert.equal(profileResolution?.nodeState?.productType, 66);
   assert.equal(profileResolution?.nodeState?.productId, 2);
+  assert.equal(profileResolution?.nodeState?.manufacturer, 'Leviton');
+  assert.equal(profileResolution?.nodeState?.product, 'In-Wall 600W Dimmer (DZ6HD)');
 
   await device.onDeleted();
   assert.equal(client.getListenerCount(), 0);
