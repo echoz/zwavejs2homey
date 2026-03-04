@@ -151,7 +151,7 @@ test('node driver returns pair candidates with controller/duplicates filtered ou
   assert.equal(candidates[0]?.data?.id, 'main:8');
   assert.equal(candidates[0]?.data?.bridgeId, 'main');
   assert.equal(candidates[0]?.data?.nodeId, 8);
-  assert.equal(candidates[0]?.icon, '/assets/pair-icons/other.svg');
+  assert.equal(candidates[0]?.icon, '/pair-icons/other.svg');
   assert.equal(candidates[0]?.store?.inferredHomeyClass, 'other');
 });
 
@@ -199,7 +199,7 @@ test('node driver applies class icon inference when compiled profile resolver ma
 
   const candidates = await driver.onPairListDevices();
   assert.equal(candidates.length, 1);
-  assert.equal(candidates[0]?.icon, '/assets/pair-icons/light.svg');
+  assert.equal(candidates[0]?.icon, '/pair-icons/light.svg');
   assert.equal(candidates[0]?.store?.inferredHomeyClass, 'light');
 });
 
