@@ -2,8 +2,1814 @@
   "schemaVersion": "compiled-homey-profiles/v1",
   "generatedAt": "1970-01-01T00:00:00.000Z",
   "source": {
-    "buildProfile": "default-manifest",
-    "pipelineFingerprint": "homey-default-empty-v1"
+    "manifestFile": "rules/manifest.json",
+    "buildProfile": "manifest-file",
+    "ruleSources": [
+      {
+        "filePath": "rules/ha-derived/home-assistant.zwave_js.generated.json",
+        "ruleCount": 71,
+        "declaredLayer": "ha-derived",
+        "resolvedLayer": "ha-derived"
+      },
+      {
+        "filePath": "rules/project/product/product-1120-2-136.json",
+        "ruleCount": 6,
+        "declaredLayer": "project-product",
+        "resolvedLayer": "project-product"
+      },
+      {
+        "filePath": "rules/project/product/product-622-17235-23089.json",
+        "ruleCount": 2,
+        "declaredLayer": "project-product",
+        "resolvedLayer": "project-product"
+      },
+      {
+        "filePath": "rules/project/product/product-29-12801-1.json",
+        "ruleCount": 1,
+        "declaredLayer": "project-product",
+        "resolvedLayer": "project-product"
+      },
+      {
+        "filePath": "rules/project/product/product-29-65-2.json",
+        "ruleCount": 1,
+        "declaredLayer": "project-product",
+        "resolvedLayer": "project-product"
+      },
+      {
+        "filePath": "rules/project/product/product-29-13313-1.json",
+        "ruleCount": 1,
+        "declaredLayer": "project-product",
+        "resolvedLayer": "project-product"
+      },
+      {
+        "filePath": "rules/project/product/product-29-66-2.json",
+        "ruleCount": 1,
+        "declaredLayer": "project-product",
+        "resolvedLayer": "project-product"
+      },
+      {
+        "filePath": "rules/project/product/product-297-32770-1536.json",
+        "ruleCount": 1,
+        "declaredLayer": "project-product",
+        "resolvedLayer": "project-product"
+      },
+      {
+        "filePath": "rules/project/generic/base-generic.json",
+        "ruleCount": 3,
+        "declaredLayer": "project-generic",
+        "resolvedLayer": "project-generic"
+      }
+    ],
+    "pipelineFingerprint": "60410d7c0899e0f125bc3a8a0dd50532c718fbf3b8ed418b044198dec9862e4c"
   },
-  "entries": []
+  "entries": [
+    {
+      "device": {
+        "deviceKey": "product-triple:1120:2:136",
+        "manufacturerId": 1120,
+        "productType": 2,
+        "productId": 136
+      },
+      "compiled": {
+        "profile": {
+          "profileId": "product-triple:1120:2:136",
+          "match": {
+            "manufacturerId": 1120,
+            "productType": 2,
+            "productId": 136
+          },
+          "classification": {
+            "homeyClass": "socket",
+            "driverTemplateId": "product-shelly-wave-plug-us",
+            "confidence": "curated",
+            "uncurated": false
+          },
+          "capabilities": [
+            {
+              "capabilityId": "measure_power",
+              "inboundMapping": {
+                "kind": "value",
+                "selector": {
+                  "commandClass": 50,
+                  "endpoint": 0,
+                  "property": "value",
+                  "propertyKey": 66049
+                }
+              },
+              "directionality": "inbound-only",
+              "flags": {
+                "readable": true,
+                "writeable": false
+              },
+              "provenance": {
+                "layer": "project-product",
+                "ruleId": "product-shelly-wave-plug-us-meter-power",
+                "action": "fill",
+                "sourceRef": "product-shelly-wave-plug-us-meter-power",
+                "reason": "cc=50,ep=0,prop=value"
+              }
+            },
+            {
+              "capabilityId": "meter_power",
+              "inboundMapping": {
+                "kind": "value",
+                "selector": {
+                  "commandClass": 50,
+                  "endpoint": 0,
+                  "property": "value",
+                  "propertyKey": 65537
+                }
+              },
+              "directionality": "inbound-only",
+              "flags": {
+                "readable": true,
+                "writeable": false
+              },
+              "provenance": {
+                "layer": "project-product",
+                "ruleId": "product-shelly-wave-plug-us-meter-energy",
+                "action": "fill",
+                "sourceRef": "product-shelly-wave-plug-us-meter-energy",
+                "reason": "cc=50,ep=0,prop=value"
+              }
+            },
+            {
+              "capabilityId": "onoff",
+              "inboundMapping": {
+                "kind": "value",
+                "selector": {
+                  "commandClass": 37,
+                  "endpoint": 0,
+                  "property": "currentValue"
+                }
+              },
+              "outboundMapping": {
+                "kind": "set_value",
+                "target": {
+                  "commandClass": 37,
+                  "endpoint": 0,
+                  "property": "targetValue"
+                }
+              },
+              "directionality": "bidirectional",
+              "flags": {
+                "readable": true,
+                "writeable": true
+              },
+              "provenance": {
+                "layer": "project-product",
+                "ruleId": "product-shelly-wave-plug-us-class-onoff",
+                "action": "replace",
+                "sourceRef": "product-shelly-wave-plug-us-class-onoff",
+                "reason": "cc=37,ep=0,prop=currentValue"
+              }
+            }
+          ],
+          "provenance": {
+            "layer": "project-generic",
+            "ruleId": "compiler:compile-profile-plan",
+            "action": "fill",
+            "sourceRef": "compiler",
+            "reason": "deviceKey=product-triple:1120:2:136"
+          }
+        },
+        "report": {
+          "actions": [],
+          "suppressedActions": [],
+          "summary": {
+            "appliedActions": 14,
+            "unmatchedActions": 993,
+            "totalActions": 1014,
+            "appliedProjectProductActions": 9,
+            "suppressedFillActions": 15,
+            "ignoredValues": 0
+          },
+          "profileOutcome": "curated",
+          "byRule": [],
+          "bySuppressedSlot": [],
+          "curationCandidates": {
+            "likelyNeedsReview": false,
+            "reasons": [
+              "suppressed-fill-actions:15",
+              "high-unmatched-ratio:0.98"
+            ]
+          },
+          "diagnosticDeviceKey": "product-triple:1120-2-136"
+        },
+        "ruleSources": [
+          {
+            "filePath": "rules/ha-derived/home-assistant.zwave_js.generated.json",
+            "ruleCount": 71,
+            "ruleIds": [
+              "ha:ha_extracted_fan_has_fan_value_mapping_184",
+              "ha:ha_extracted_fan_has_fan_value_mapping_197",
+              "ha:ha_extracted_fan_has_fan_value_mapping_209",
+              "ha:ha_extracted_fan_has_fan_value_mapping_226",
+              "ha:ha_extracted_fan_has_fan_value_mapping_239",
+              "ha:ha_extracted_fan_has_fan_value_mapping_258",
+              "ha:ha_extracted_cover_shutter_tilt_276",
+              "ha:ha_extracted_cover_shutter_tilt_308",
+              "ha:ha_extracted_cover_shutter_346",
+              "ha:ha_extracted_cover_gate_361",
+              "ha:ha_extracted_cover_shutter_tilt_373",
+              "ha:ha_extracted_cover_shutter_411",
+              "ha:ha_extracted_cover_shutter_426",
+              "ha:ha_extracted_cover_blind_435",
+              "ha:ha_extracted_cover_blind_444",
+              "ha:ha_extracted_cover_shutter_453",
+              "ha:ha_extracted_cover_shutter_469",
+              "ha:ha_extracted_select_486_486",
+              "ha:ha_extracted_cover_shade_500",
+              "ha:ha_extracted_switch_509_509",
+              "ha:ha_extracted_climate_dynamic_current_temp_518",
+              "ha:ha_extracted_climate_dynamic_current_temp_580",
+              "ha:ha_extracted_climate_dynamic_current_temp_628",
+              "ha:ha_extracted_select_multilevel_switch_666",
+              "ha:ha_extracted_light_zwa2_led_color_684",
+              "ha:ha_extracted_light_zwa2_led_onoff_698",
+              "ha:ha_extracted_lock_714_714",
+              "ha:ha_extracted_select_door_lock_719",
+              "ha:ha_extracted_lock_725_725",
+              "ha:ha_extracted_binary_sensor_property_735",
+              "ha:ha_extracted_fan_thermostat_fan_748",
+              "ha:ha_extracted_humidifier_760_760",
+              "ha:ha_extracted_climate_770_770",
+              "ha:ha_extracted_climate_779_779",
+              "ha:ha_extracted_binary_sensor_boolean_797",
+              "ha:ha_extracted_binary_sensor_boolean_808",
+              "ha:ha_extracted_binary_sensor_boolean_817",
+              "ha:ha_extracted_binary_sensor_boolean_829",
+              "ha:ha_extracted_sensor_string_sensor_842",
+              "ha:ha_extracted_sensor_numeric_sensor_851",
+              "ha:ha_extracted_sensor_numeric_sensor_864",
+              "ha:ha_extracted_sensor_numeric_sensor_874",
+              "ha:ha_extracted_sensor_list_884",
+              "ha:ha_extracted_sensor_numeric_sensor_894",
+              "ha:ha_extracted_sensor_meter_908",
+              "ha:ha_extracted_number_921_921",
+              "ha:ha_extracted_button_934_934",
+              "ha:ha_extracted_switch_indicator_945",
+              "ha:ha_extracted_switch_barrier_event_signaling_state_959",
+              "ha:ha_extracted_cover_window_covering_970",
+              "ha:ha_extracted_cover_window_covering_975",
+              "ha:ha_extracted_cover_multilevel_switch_981",
+              "ha:ha_extracted_cover_motorized_barrier_999",
+              "ha:ha_extracted_fan_fan_1016",
+              "ha:ha_extracted_number_valve_control_1026",
+              "ha:ha_extracted_light_1039_1039",
+              "ha:ha_extracted_switch_1045_1045",
+              "ha:ha_extracted_light_color_onoff_1055",
+              "ha:ha_extracted_switch_1062_1062",
+              "ha:ha_extracted_light_color_onoff_1068",
+              "ha:ha_extracted_light_1078_1078",
+              "ha:ha_extracted_sensor_numeric_sensor_1094",
+              "ha:ha_extracted_siren_1111_1111",
+              "ha:ha_extracted_select_default_tone_1117",
+              "ha:ha_extracted_number_volume_1129",
+              "ha:ha_extracted_select_1141_1141",
+              "ha:ha_extracted_button_notification_idle_1151",
+              "ha:ha_extracted_button_meter_reset_1164",
+              "ha:ha_extracted_binary_sensor_notification_1174",
+              "ha:ha_extracted_sensor_notification_alarm_1188",
+              "ha:ha_extracted_sensor_notification_1201"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-1120-2-136.json",
+            "ruleCount": 6,
+            "ruleIds": [
+              "product-shelly-wave-plug-us-class-onoff",
+              "product-shelly-wave-plug-us-meter-power",
+              "product-shelly-wave-plug-us-meter-energy",
+              "product-shelly-wave-plug-us-remove-meter-reset-button",
+              "product-shelly-wave-plug-us-remove-notification-generic",
+              "product-shelly-wave-plug-us-remove-meter-generic"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-622-17235-23089.json",
+            "ruleCount": 2,
+            "ruleIds": [
+              "product-swf-csz1-cover-class-and-position",
+              "product-swf-csz1-battery-prefer-measure-battery"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-29-12801-1.json",
+            "ruleCount": 1,
+            "ruleIds": [
+              "product-leviton-dz6hd-class-and-dim"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-29-65-2.json",
+            "ruleCount": 1,
+            "ruleIds": [
+              "product-leviton-zw6hd-class-and-dim"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-29-13313-1.json",
+            "ruleCount": 1,
+            "ruleIds": [
+              "product-leviton-dz15s-class-and-onoff"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-29-66-2.json",
+            "ruleCount": 1,
+            "ruleIds": [
+              "product-leviton-zw15s-class-and-onoff"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-297-32770-1536.json",
+            "ruleCount": 1,
+            "ruleIds": [
+              "product-yale-yrd226-class-and-lock"
+            ]
+          },
+          {
+            "filePath": "rules/project/generic/base-generic.json",
+            "ruleCount": 3,
+            "ruleIds": [
+              "generic-switch-binary-onoff",
+              "generic-switch-multilevel-dim",
+              "generic-battery-level"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "device": {
+        "deviceKey": "product-triple:622:17235:23089",
+        "manufacturerId": 622,
+        "productType": 17235,
+        "productId": 23089
+      },
+      "compiled": {
+        "profile": {
+          "profileId": "product-triple:622:17235:23089",
+          "match": {
+            "manufacturerId": 622,
+            "productType": 17235,
+            "productId": 23089
+          },
+          "classification": {
+            "homeyClass": "curtain",
+            "driverTemplateId": "product-swf-csz1-cover",
+            "confidence": "curated",
+            "uncurated": false
+          },
+          "capabilities": [
+            {
+              "capabilityId": "measure_battery",
+              "inboundMapping": {
+                "kind": "value",
+                "selector": {
+                  "commandClass": 128,
+                  "endpoint": 0,
+                  "property": "level"
+                }
+              },
+              "directionality": "inbound-only",
+              "flags": {
+                "readable": true,
+                "writeable": false
+              },
+              "provenance": {
+                "layer": "project-product",
+                "ruleId": "product-swf-csz1-battery-prefer-measure-battery",
+                "action": "fill",
+                "sourceRef": "product-swf-csz1-battery-prefer-measure-battery",
+                "reason": "cc=128,ep=0,prop=level"
+              }
+            },
+            {
+              "capabilityId": "windowcoverings_set",
+              "inboundMapping": {
+                "kind": "value",
+                "selector": {
+                  "commandClass": 38,
+                  "endpoint": 0,
+                  "property": "currentValue"
+                },
+                "transformRef": "zwave_level_0_99_to_homey_dim"
+              },
+              "outboundMapping": {
+                "kind": "set_value",
+                "target": {
+                  "commandClass": 38,
+                  "endpoint": 0,
+                  "property": "targetValue"
+                },
+                "transformRef": "homey_dim_to_zwave_level_0_99",
+                "validation": {
+                  "min": 0,
+                  "max": 1
+                }
+              },
+              "directionality": "bidirectional",
+              "flags": {
+                "readable": true,
+                "writeable": true
+              },
+              "provenance": {
+                "layer": "project-product",
+                "ruleId": "product-swf-csz1-cover-class-and-position",
+                "action": "replace",
+                "sourceRef": "product-swf-csz1-cover-class-and-position",
+                "reason": "cc=38,ep=0,prop=currentValue",
+                "supersedes": [
+                  "ha-derived:ha:ha_extracted_cover_blind_435"
+                ]
+              }
+            }
+          ],
+          "provenance": {
+            "layer": "project-generic",
+            "ruleId": "compiler:compile-profile-plan",
+            "action": "fill",
+            "sourceRef": "compiler",
+            "reason": "deviceKey=product-triple:622:17235:23089"
+          }
+        },
+        "report": {
+          "actions": [],
+          "suppressedActions": [],
+          "summary": {
+            "appliedActions": 9,
+            "unmatchedActions": 325,
+            "totalActions": 338,
+            "appliedProjectProductActions": 4,
+            "suppressedFillActions": 10,
+            "ignoredValues": 0
+          },
+          "overlapPolicy": {
+            "suppressedCapabilities": [
+              {
+                "capabilityId": "dim",
+                "winnerCapabilityId": "windowcoverings_set",
+                "selectorKey": "value:38:0:currentValue",
+                "conflictKey": "cover.position_control",
+                "reason": "conflict-exclusive:cover.position_control"
+              },
+              {
+                "capabilityId": "measure_generic",
+                "winnerCapabilityId": "measure_battery",
+                "selectorKey": "value:128:0:level",
+                "conflictKey": "sensor.battery_level",
+                "reason": "conflict-exclusive:sensor.battery_level"
+              }
+            ]
+          },
+          "profileOutcome": "curated",
+          "byRule": [],
+          "bySuppressedSlot": [],
+          "curationCandidates": {
+            "likelyNeedsReview": false,
+            "reasons": [
+              "suppressed-fill-actions:10",
+              "high-unmatched-ratio:0.96"
+            ]
+          },
+          "diagnosticDeviceKey": "product-triple:622-17235-23089"
+        },
+        "ruleSources": [
+          {
+            "filePath": "rules/ha-derived/home-assistant.zwave_js.generated.json",
+            "ruleCount": 71,
+            "ruleIds": [
+              "ha:ha_extracted_fan_has_fan_value_mapping_184",
+              "ha:ha_extracted_fan_has_fan_value_mapping_197",
+              "ha:ha_extracted_fan_has_fan_value_mapping_209",
+              "ha:ha_extracted_fan_has_fan_value_mapping_226",
+              "ha:ha_extracted_fan_has_fan_value_mapping_239",
+              "ha:ha_extracted_fan_has_fan_value_mapping_258",
+              "ha:ha_extracted_cover_shutter_tilt_276",
+              "ha:ha_extracted_cover_shutter_tilt_308",
+              "ha:ha_extracted_cover_shutter_346",
+              "ha:ha_extracted_cover_gate_361",
+              "ha:ha_extracted_cover_shutter_tilt_373",
+              "ha:ha_extracted_cover_shutter_411",
+              "ha:ha_extracted_cover_shutter_426",
+              "ha:ha_extracted_cover_blind_435",
+              "ha:ha_extracted_cover_blind_444",
+              "ha:ha_extracted_cover_shutter_453",
+              "ha:ha_extracted_cover_shutter_469",
+              "ha:ha_extracted_select_486_486",
+              "ha:ha_extracted_cover_shade_500",
+              "ha:ha_extracted_switch_509_509",
+              "ha:ha_extracted_climate_dynamic_current_temp_518",
+              "ha:ha_extracted_climate_dynamic_current_temp_580",
+              "ha:ha_extracted_climate_dynamic_current_temp_628",
+              "ha:ha_extracted_select_multilevel_switch_666",
+              "ha:ha_extracted_light_zwa2_led_color_684",
+              "ha:ha_extracted_light_zwa2_led_onoff_698",
+              "ha:ha_extracted_lock_714_714",
+              "ha:ha_extracted_select_door_lock_719",
+              "ha:ha_extracted_lock_725_725",
+              "ha:ha_extracted_binary_sensor_property_735",
+              "ha:ha_extracted_fan_thermostat_fan_748",
+              "ha:ha_extracted_humidifier_760_760",
+              "ha:ha_extracted_climate_770_770",
+              "ha:ha_extracted_climate_779_779",
+              "ha:ha_extracted_binary_sensor_boolean_797",
+              "ha:ha_extracted_binary_sensor_boolean_808",
+              "ha:ha_extracted_binary_sensor_boolean_817",
+              "ha:ha_extracted_binary_sensor_boolean_829",
+              "ha:ha_extracted_sensor_string_sensor_842",
+              "ha:ha_extracted_sensor_numeric_sensor_851",
+              "ha:ha_extracted_sensor_numeric_sensor_864",
+              "ha:ha_extracted_sensor_numeric_sensor_874",
+              "ha:ha_extracted_sensor_list_884",
+              "ha:ha_extracted_sensor_numeric_sensor_894",
+              "ha:ha_extracted_sensor_meter_908",
+              "ha:ha_extracted_number_921_921",
+              "ha:ha_extracted_button_934_934",
+              "ha:ha_extracted_switch_indicator_945",
+              "ha:ha_extracted_switch_barrier_event_signaling_state_959",
+              "ha:ha_extracted_cover_window_covering_970",
+              "ha:ha_extracted_cover_window_covering_975",
+              "ha:ha_extracted_cover_multilevel_switch_981",
+              "ha:ha_extracted_cover_motorized_barrier_999",
+              "ha:ha_extracted_fan_fan_1016",
+              "ha:ha_extracted_number_valve_control_1026",
+              "ha:ha_extracted_light_1039_1039",
+              "ha:ha_extracted_switch_1045_1045",
+              "ha:ha_extracted_light_color_onoff_1055",
+              "ha:ha_extracted_switch_1062_1062",
+              "ha:ha_extracted_light_color_onoff_1068",
+              "ha:ha_extracted_light_1078_1078",
+              "ha:ha_extracted_sensor_numeric_sensor_1094",
+              "ha:ha_extracted_siren_1111_1111",
+              "ha:ha_extracted_select_default_tone_1117",
+              "ha:ha_extracted_number_volume_1129",
+              "ha:ha_extracted_select_1141_1141",
+              "ha:ha_extracted_button_notification_idle_1151",
+              "ha:ha_extracted_button_meter_reset_1164",
+              "ha:ha_extracted_binary_sensor_notification_1174",
+              "ha:ha_extracted_sensor_notification_alarm_1188",
+              "ha:ha_extracted_sensor_notification_1201"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-1120-2-136.json",
+            "ruleCount": 6,
+            "ruleIds": [
+              "product-shelly-wave-plug-us-class-onoff",
+              "product-shelly-wave-plug-us-meter-power",
+              "product-shelly-wave-plug-us-meter-energy",
+              "product-shelly-wave-plug-us-remove-meter-reset-button",
+              "product-shelly-wave-plug-us-remove-notification-generic",
+              "product-shelly-wave-plug-us-remove-meter-generic"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-622-17235-23089.json",
+            "ruleCount": 2,
+            "ruleIds": [
+              "product-swf-csz1-cover-class-and-position",
+              "product-swf-csz1-battery-prefer-measure-battery"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-29-12801-1.json",
+            "ruleCount": 1,
+            "ruleIds": [
+              "product-leviton-dz6hd-class-and-dim"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-29-65-2.json",
+            "ruleCount": 1,
+            "ruleIds": [
+              "product-leviton-zw6hd-class-and-dim"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-29-13313-1.json",
+            "ruleCount": 1,
+            "ruleIds": [
+              "product-leviton-dz15s-class-and-onoff"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-29-66-2.json",
+            "ruleCount": 1,
+            "ruleIds": [
+              "product-leviton-zw15s-class-and-onoff"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-297-32770-1536.json",
+            "ruleCount": 1,
+            "ruleIds": [
+              "product-yale-yrd226-class-and-lock"
+            ]
+          },
+          {
+            "filePath": "rules/project/generic/base-generic.json",
+            "ruleCount": 3,
+            "ruleIds": [
+              "generic-switch-binary-onoff",
+              "generic-switch-multilevel-dim",
+              "generic-battery-level"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "device": {
+        "deviceKey": "product-triple:29:12801:1",
+        "manufacturerId": 29,
+        "productType": 12801,
+        "productId": 1
+      },
+      "compiled": {
+        "profile": {
+          "profileId": "product-triple:29:12801:1",
+          "match": {
+            "manufacturerId": 29,
+            "productType": 12801,
+            "productId": 1
+          },
+          "classification": {
+            "homeyClass": "light",
+            "driverTemplateId": "product-leviton-dimmer",
+            "confidence": "curated",
+            "uncurated": false
+          },
+          "capabilities": [
+            {
+              "capabilityId": "dim",
+              "inboundMapping": {
+                "kind": "value",
+                "selector": {
+                  "commandClass": 38,
+                  "endpoint": 0,
+                  "property": "currentValue"
+                },
+                "transformRef": "zwave_level_0_99_to_homey_dim"
+              },
+              "outboundMapping": {
+                "kind": "set_value",
+                "target": {
+                  "commandClass": 38,
+                  "endpoint": 0,
+                  "property": "targetValue"
+                },
+                "transformRef": "homey_dim_to_zwave_level_0_99",
+                "validation": {
+                  "min": 0,
+                  "max": 1
+                }
+              },
+              "directionality": "bidirectional",
+              "flags": {
+                "readable": true,
+                "writeable": true
+              },
+              "provenance": {
+                "layer": "project-product",
+                "ruleId": "product-leviton-dz6hd-class-and-dim",
+                "action": "replace",
+                "sourceRef": "product-leviton-dz6hd-class-and-dim",
+                "reason": "cc=38,ep=0,prop=currentValue",
+                "supersedes": [
+                  "ha-derived:ha:ha_extracted_light_1039_1039"
+                ]
+              }
+            }
+          ],
+          "provenance": {
+            "layer": "project-generic",
+            "ruleId": "compiler:compile-profile-plan",
+            "action": "fill",
+            "sourceRef": "compiler",
+            "reason": "deviceKey=product-triple:29:12801:1"
+          }
+        },
+        "report": {
+          "actions": [],
+          "suppressedActions": [],
+          "summary": {
+            "appliedActions": 4,
+            "unmatchedActions": 163,
+            "totalActions": 169,
+            "appliedProjectProductActions": 2,
+            "suppressedFillActions": 5,
+            "ignoredValues": 0
+          },
+          "profileOutcome": "curated",
+          "byRule": [],
+          "bySuppressedSlot": [],
+          "curationCandidates": {
+            "likelyNeedsReview": false,
+            "reasons": [
+              "suppressed-fill-actions:5",
+              "high-unmatched-ratio:0.96"
+            ]
+          },
+          "diagnosticDeviceKey": "product-triple:29-12801-1"
+        },
+        "ruleSources": [
+          {
+            "filePath": "rules/ha-derived/home-assistant.zwave_js.generated.json",
+            "ruleCount": 71,
+            "ruleIds": [
+              "ha:ha_extracted_fan_has_fan_value_mapping_184",
+              "ha:ha_extracted_fan_has_fan_value_mapping_197",
+              "ha:ha_extracted_fan_has_fan_value_mapping_209",
+              "ha:ha_extracted_fan_has_fan_value_mapping_226",
+              "ha:ha_extracted_fan_has_fan_value_mapping_239",
+              "ha:ha_extracted_fan_has_fan_value_mapping_258",
+              "ha:ha_extracted_cover_shutter_tilt_276",
+              "ha:ha_extracted_cover_shutter_tilt_308",
+              "ha:ha_extracted_cover_shutter_346",
+              "ha:ha_extracted_cover_gate_361",
+              "ha:ha_extracted_cover_shutter_tilt_373",
+              "ha:ha_extracted_cover_shutter_411",
+              "ha:ha_extracted_cover_shutter_426",
+              "ha:ha_extracted_cover_blind_435",
+              "ha:ha_extracted_cover_blind_444",
+              "ha:ha_extracted_cover_shutter_453",
+              "ha:ha_extracted_cover_shutter_469",
+              "ha:ha_extracted_select_486_486",
+              "ha:ha_extracted_cover_shade_500",
+              "ha:ha_extracted_switch_509_509",
+              "ha:ha_extracted_climate_dynamic_current_temp_518",
+              "ha:ha_extracted_climate_dynamic_current_temp_580",
+              "ha:ha_extracted_climate_dynamic_current_temp_628",
+              "ha:ha_extracted_select_multilevel_switch_666",
+              "ha:ha_extracted_light_zwa2_led_color_684",
+              "ha:ha_extracted_light_zwa2_led_onoff_698",
+              "ha:ha_extracted_lock_714_714",
+              "ha:ha_extracted_select_door_lock_719",
+              "ha:ha_extracted_lock_725_725",
+              "ha:ha_extracted_binary_sensor_property_735",
+              "ha:ha_extracted_fan_thermostat_fan_748",
+              "ha:ha_extracted_humidifier_760_760",
+              "ha:ha_extracted_climate_770_770",
+              "ha:ha_extracted_climate_779_779",
+              "ha:ha_extracted_binary_sensor_boolean_797",
+              "ha:ha_extracted_binary_sensor_boolean_808",
+              "ha:ha_extracted_binary_sensor_boolean_817",
+              "ha:ha_extracted_binary_sensor_boolean_829",
+              "ha:ha_extracted_sensor_string_sensor_842",
+              "ha:ha_extracted_sensor_numeric_sensor_851",
+              "ha:ha_extracted_sensor_numeric_sensor_864",
+              "ha:ha_extracted_sensor_numeric_sensor_874",
+              "ha:ha_extracted_sensor_list_884",
+              "ha:ha_extracted_sensor_numeric_sensor_894",
+              "ha:ha_extracted_sensor_meter_908",
+              "ha:ha_extracted_number_921_921",
+              "ha:ha_extracted_button_934_934",
+              "ha:ha_extracted_switch_indicator_945",
+              "ha:ha_extracted_switch_barrier_event_signaling_state_959",
+              "ha:ha_extracted_cover_window_covering_970",
+              "ha:ha_extracted_cover_window_covering_975",
+              "ha:ha_extracted_cover_multilevel_switch_981",
+              "ha:ha_extracted_cover_motorized_barrier_999",
+              "ha:ha_extracted_fan_fan_1016",
+              "ha:ha_extracted_number_valve_control_1026",
+              "ha:ha_extracted_light_1039_1039",
+              "ha:ha_extracted_switch_1045_1045",
+              "ha:ha_extracted_light_color_onoff_1055",
+              "ha:ha_extracted_switch_1062_1062",
+              "ha:ha_extracted_light_color_onoff_1068",
+              "ha:ha_extracted_light_1078_1078",
+              "ha:ha_extracted_sensor_numeric_sensor_1094",
+              "ha:ha_extracted_siren_1111_1111",
+              "ha:ha_extracted_select_default_tone_1117",
+              "ha:ha_extracted_number_volume_1129",
+              "ha:ha_extracted_select_1141_1141",
+              "ha:ha_extracted_button_notification_idle_1151",
+              "ha:ha_extracted_button_meter_reset_1164",
+              "ha:ha_extracted_binary_sensor_notification_1174",
+              "ha:ha_extracted_sensor_notification_alarm_1188",
+              "ha:ha_extracted_sensor_notification_1201"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-1120-2-136.json",
+            "ruleCount": 6,
+            "ruleIds": [
+              "product-shelly-wave-plug-us-class-onoff",
+              "product-shelly-wave-plug-us-meter-power",
+              "product-shelly-wave-plug-us-meter-energy",
+              "product-shelly-wave-plug-us-remove-meter-reset-button",
+              "product-shelly-wave-plug-us-remove-notification-generic",
+              "product-shelly-wave-plug-us-remove-meter-generic"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-622-17235-23089.json",
+            "ruleCount": 2,
+            "ruleIds": [
+              "product-swf-csz1-cover-class-and-position",
+              "product-swf-csz1-battery-prefer-measure-battery"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-29-12801-1.json",
+            "ruleCount": 1,
+            "ruleIds": [
+              "product-leviton-dz6hd-class-and-dim"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-29-65-2.json",
+            "ruleCount": 1,
+            "ruleIds": [
+              "product-leviton-zw6hd-class-and-dim"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-29-13313-1.json",
+            "ruleCount": 1,
+            "ruleIds": [
+              "product-leviton-dz15s-class-and-onoff"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-29-66-2.json",
+            "ruleCount": 1,
+            "ruleIds": [
+              "product-leviton-zw15s-class-and-onoff"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-297-32770-1536.json",
+            "ruleCount": 1,
+            "ruleIds": [
+              "product-yale-yrd226-class-and-lock"
+            ]
+          },
+          {
+            "filePath": "rules/project/generic/base-generic.json",
+            "ruleCount": 3,
+            "ruleIds": [
+              "generic-switch-binary-onoff",
+              "generic-switch-multilevel-dim",
+              "generic-battery-level"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "device": {
+        "deviceKey": "product-triple:29:65:2",
+        "manufacturerId": 29,
+        "productType": 65,
+        "productId": 2
+      },
+      "compiled": {
+        "profile": {
+          "profileId": "product-triple:29:65:2",
+          "match": {
+            "manufacturerId": 29,
+            "productType": 65,
+            "productId": 2
+          },
+          "classification": {
+            "homeyClass": "light",
+            "driverTemplateId": "product-leviton-dimmer",
+            "confidence": "curated",
+            "uncurated": false
+          },
+          "capabilities": [
+            {
+              "capabilityId": "dim",
+              "inboundMapping": {
+                "kind": "value",
+                "selector": {
+                  "commandClass": 38,
+                  "endpoint": 0,
+                  "property": "currentValue"
+                },
+                "transformRef": "zwave_level_0_99_to_homey_dim"
+              },
+              "outboundMapping": {
+                "kind": "set_value",
+                "target": {
+                  "commandClass": 38,
+                  "endpoint": 0,
+                  "property": "targetValue"
+                },
+                "transformRef": "homey_dim_to_zwave_level_0_99",
+                "validation": {
+                  "min": 0,
+                  "max": 1
+                }
+              },
+              "directionality": "bidirectional",
+              "flags": {
+                "readable": true,
+                "writeable": true
+              },
+              "provenance": {
+                "layer": "project-product",
+                "ruleId": "product-leviton-zw6hd-class-and-dim",
+                "action": "replace",
+                "sourceRef": "product-leviton-zw6hd-class-and-dim",
+                "reason": "cc=38,ep=0,prop=currentValue",
+                "supersedes": [
+                  "ha-derived:ha:ha_extracted_light_1039_1039"
+                ]
+              }
+            }
+          ],
+          "provenance": {
+            "layer": "project-generic",
+            "ruleId": "compiler:compile-profile-plan",
+            "action": "fill",
+            "sourceRef": "compiler",
+            "reason": "deviceKey=product-triple:29:65:2"
+          }
+        },
+        "report": {
+          "actions": [],
+          "suppressedActions": [],
+          "summary": {
+            "appliedActions": 4,
+            "unmatchedActions": 163,
+            "totalActions": 169,
+            "appliedProjectProductActions": 2,
+            "suppressedFillActions": 5,
+            "ignoredValues": 0
+          },
+          "profileOutcome": "curated",
+          "byRule": [],
+          "bySuppressedSlot": [],
+          "curationCandidates": {
+            "likelyNeedsReview": false,
+            "reasons": [
+              "suppressed-fill-actions:5",
+              "high-unmatched-ratio:0.96"
+            ]
+          },
+          "diagnosticDeviceKey": "product-triple:29-65-2"
+        },
+        "ruleSources": [
+          {
+            "filePath": "rules/ha-derived/home-assistant.zwave_js.generated.json",
+            "ruleCount": 71,
+            "ruleIds": [
+              "ha:ha_extracted_fan_has_fan_value_mapping_184",
+              "ha:ha_extracted_fan_has_fan_value_mapping_197",
+              "ha:ha_extracted_fan_has_fan_value_mapping_209",
+              "ha:ha_extracted_fan_has_fan_value_mapping_226",
+              "ha:ha_extracted_fan_has_fan_value_mapping_239",
+              "ha:ha_extracted_fan_has_fan_value_mapping_258",
+              "ha:ha_extracted_cover_shutter_tilt_276",
+              "ha:ha_extracted_cover_shutter_tilt_308",
+              "ha:ha_extracted_cover_shutter_346",
+              "ha:ha_extracted_cover_gate_361",
+              "ha:ha_extracted_cover_shutter_tilt_373",
+              "ha:ha_extracted_cover_shutter_411",
+              "ha:ha_extracted_cover_shutter_426",
+              "ha:ha_extracted_cover_blind_435",
+              "ha:ha_extracted_cover_blind_444",
+              "ha:ha_extracted_cover_shutter_453",
+              "ha:ha_extracted_cover_shutter_469",
+              "ha:ha_extracted_select_486_486",
+              "ha:ha_extracted_cover_shade_500",
+              "ha:ha_extracted_switch_509_509",
+              "ha:ha_extracted_climate_dynamic_current_temp_518",
+              "ha:ha_extracted_climate_dynamic_current_temp_580",
+              "ha:ha_extracted_climate_dynamic_current_temp_628",
+              "ha:ha_extracted_select_multilevel_switch_666",
+              "ha:ha_extracted_light_zwa2_led_color_684",
+              "ha:ha_extracted_light_zwa2_led_onoff_698",
+              "ha:ha_extracted_lock_714_714",
+              "ha:ha_extracted_select_door_lock_719",
+              "ha:ha_extracted_lock_725_725",
+              "ha:ha_extracted_binary_sensor_property_735",
+              "ha:ha_extracted_fan_thermostat_fan_748",
+              "ha:ha_extracted_humidifier_760_760",
+              "ha:ha_extracted_climate_770_770",
+              "ha:ha_extracted_climate_779_779",
+              "ha:ha_extracted_binary_sensor_boolean_797",
+              "ha:ha_extracted_binary_sensor_boolean_808",
+              "ha:ha_extracted_binary_sensor_boolean_817",
+              "ha:ha_extracted_binary_sensor_boolean_829",
+              "ha:ha_extracted_sensor_string_sensor_842",
+              "ha:ha_extracted_sensor_numeric_sensor_851",
+              "ha:ha_extracted_sensor_numeric_sensor_864",
+              "ha:ha_extracted_sensor_numeric_sensor_874",
+              "ha:ha_extracted_sensor_list_884",
+              "ha:ha_extracted_sensor_numeric_sensor_894",
+              "ha:ha_extracted_sensor_meter_908",
+              "ha:ha_extracted_number_921_921",
+              "ha:ha_extracted_button_934_934",
+              "ha:ha_extracted_switch_indicator_945",
+              "ha:ha_extracted_switch_barrier_event_signaling_state_959",
+              "ha:ha_extracted_cover_window_covering_970",
+              "ha:ha_extracted_cover_window_covering_975",
+              "ha:ha_extracted_cover_multilevel_switch_981",
+              "ha:ha_extracted_cover_motorized_barrier_999",
+              "ha:ha_extracted_fan_fan_1016",
+              "ha:ha_extracted_number_valve_control_1026",
+              "ha:ha_extracted_light_1039_1039",
+              "ha:ha_extracted_switch_1045_1045",
+              "ha:ha_extracted_light_color_onoff_1055",
+              "ha:ha_extracted_switch_1062_1062",
+              "ha:ha_extracted_light_color_onoff_1068",
+              "ha:ha_extracted_light_1078_1078",
+              "ha:ha_extracted_sensor_numeric_sensor_1094",
+              "ha:ha_extracted_siren_1111_1111",
+              "ha:ha_extracted_select_default_tone_1117",
+              "ha:ha_extracted_number_volume_1129",
+              "ha:ha_extracted_select_1141_1141",
+              "ha:ha_extracted_button_notification_idle_1151",
+              "ha:ha_extracted_button_meter_reset_1164",
+              "ha:ha_extracted_binary_sensor_notification_1174",
+              "ha:ha_extracted_sensor_notification_alarm_1188",
+              "ha:ha_extracted_sensor_notification_1201"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-1120-2-136.json",
+            "ruleCount": 6,
+            "ruleIds": [
+              "product-shelly-wave-plug-us-class-onoff",
+              "product-shelly-wave-plug-us-meter-power",
+              "product-shelly-wave-plug-us-meter-energy",
+              "product-shelly-wave-plug-us-remove-meter-reset-button",
+              "product-shelly-wave-plug-us-remove-notification-generic",
+              "product-shelly-wave-plug-us-remove-meter-generic"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-622-17235-23089.json",
+            "ruleCount": 2,
+            "ruleIds": [
+              "product-swf-csz1-cover-class-and-position",
+              "product-swf-csz1-battery-prefer-measure-battery"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-29-12801-1.json",
+            "ruleCount": 1,
+            "ruleIds": [
+              "product-leviton-dz6hd-class-and-dim"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-29-65-2.json",
+            "ruleCount": 1,
+            "ruleIds": [
+              "product-leviton-zw6hd-class-and-dim"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-29-13313-1.json",
+            "ruleCount": 1,
+            "ruleIds": [
+              "product-leviton-dz15s-class-and-onoff"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-29-66-2.json",
+            "ruleCount": 1,
+            "ruleIds": [
+              "product-leviton-zw15s-class-and-onoff"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-297-32770-1536.json",
+            "ruleCount": 1,
+            "ruleIds": [
+              "product-yale-yrd226-class-and-lock"
+            ]
+          },
+          {
+            "filePath": "rules/project/generic/base-generic.json",
+            "ruleCount": 3,
+            "ruleIds": [
+              "generic-switch-binary-onoff",
+              "generic-switch-multilevel-dim",
+              "generic-battery-level"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "device": {
+        "deviceKey": "product-triple:29:13313:1",
+        "manufacturerId": 29,
+        "productType": 13313,
+        "productId": 1
+      },
+      "compiled": {
+        "profile": {
+          "profileId": "product-triple:29:13313:1",
+          "match": {
+            "manufacturerId": 29,
+            "productType": 13313,
+            "productId": 1
+          },
+          "classification": {
+            "homeyClass": "socket",
+            "driverTemplateId": "product-leviton-switch",
+            "confidence": "curated",
+            "uncurated": false
+          },
+          "capabilities": [
+            {
+              "capabilityId": "onoff",
+              "inboundMapping": {
+                "kind": "value",
+                "selector": {
+                  "commandClass": 37,
+                  "endpoint": 0,
+                  "property": "currentValue"
+                }
+              },
+              "outboundMapping": {
+                "kind": "set_value",
+                "target": {
+                  "commandClass": 37,
+                  "endpoint": 0,
+                  "property": "targetValue"
+                }
+              },
+              "directionality": "bidirectional",
+              "flags": {
+                "readable": true,
+                "writeable": true
+              },
+              "provenance": {
+                "layer": "project-product",
+                "ruleId": "product-leviton-dz15s-class-and-onoff",
+                "action": "replace",
+                "sourceRef": "product-leviton-dz15s-class-and-onoff",
+                "reason": "cc=37,ep=0,prop=currentValue",
+                "supersedes": [
+                  "ha-derived:ha:ha_extracted_switch_1062_1062"
+                ]
+              }
+            }
+          ],
+          "provenance": {
+            "layer": "project-generic",
+            "ruleId": "compiler:compile-profile-plan",
+            "action": "fill",
+            "sourceRef": "compiler",
+            "reason": "deviceKey=product-triple:29:13313:1"
+          }
+        },
+        "report": {
+          "actions": [],
+          "suppressedActions": [],
+          "summary": {
+            "appliedActions": 4,
+            "unmatchedActions": 163,
+            "totalActions": 169,
+            "appliedProjectProductActions": 2,
+            "suppressedFillActions": 5,
+            "ignoredValues": 0
+          },
+          "profileOutcome": "curated",
+          "byRule": [],
+          "bySuppressedSlot": [],
+          "curationCandidates": {
+            "likelyNeedsReview": false,
+            "reasons": [
+              "suppressed-fill-actions:5",
+              "high-unmatched-ratio:0.96"
+            ]
+          },
+          "diagnosticDeviceKey": "product-triple:29-13313-1"
+        },
+        "ruleSources": [
+          {
+            "filePath": "rules/ha-derived/home-assistant.zwave_js.generated.json",
+            "ruleCount": 71,
+            "ruleIds": [
+              "ha:ha_extracted_fan_has_fan_value_mapping_184",
+              "ha:ha_extracted_fan_has_fan_value_mapping_197",
+              "ha:ha_extracted_fan_has_fan_value_mapping_209",
+              "ha:ha_extracted_fan_has_fan_value_mapping_226",
+              "ha:ha_extracted_fan_has_fan_value_mapping_239",
+              "ha:ha_extracted_fan_has_fan_value_mapping_258",
+              "ha:ha_extracted_cover_shutter_tilt_276",
+              "ha:ha_extracted_cover_shutter_tilt_308",
+              "ha:ha_extracted_cover_shutter_346",
+              "ha:ha_extracted_cover_gate_361",
+              "ha:ha_extracted_cover_shutter_tilt_373",
+              "ha:ha_extracted_cover_shutter_411",
+              "ha:ha_extracted_cover_shutter_426",
+              "ha:ha_extracted_cover_blind_435",
+              "ha:ha_extracted_cover_blind_444",
+              "ha:ha_extracted_cover_shutter_453",
+              "ha:ha_extracted_cover_shutter_469",
+              "ha:ha_extracted_select_486_486",
+              "ha:ha_extracted_cover_shade_500",
+              "ha:ha_extracted_switch_509_509",
+              "ha:ha_extracted_climate_dynamic_current_temp_518",
+              "ha:ha_extracted_climate_dynamic_current_temp_580",
+              "ha:ha_extracted_climate_dynamic_current_temp_628",
+              "ha:ha_extracted_select_multilevel_switch_666",
+              "ha:ha_extracted_light_zwa2_led_color_684",
+              "ha:ha_extracted_light_zwa2_led_onoff_698",
+              "ha:ha_extracted_lock_714_714",
+              "ha:ha_extracted_select_door_lock_719",
+              "ha:ha_extracted_lock_725_725",
+              "ha:ha_extracted_binary_sensor_property_735",
+              "ha:ha_extracted_fan_thermostat_fan_748",
+              "ha:ha_extracted_humidifier_760_760",
+              "ha:ha_extracted_climate_770_770",
+              "ha:ha_extracted_climate_779_779",
+              "ha:ha_extracted_binary_sensor_boolean_797",
+              "ha:ha_extracted_binary_sensor_boolean_808",
+              "ha:ha_extracted_binary_sensor_boolean_817",
+              "ha:ha_extracted_binary_sensor_boolean_829",
+              "ha:ha_extracted_sensor_string_sensor_842",
+              "ha:ha_extracted_sensor_numeric_sensor_851",
+              "ha:ha_extracted_sensor_numeric_sensor_864",
+              "ha:ha_extracted_sensor_numeric_sensor_874",
+              "ha:ha_extracted_sensor_list_884",
+              "ha:ha_extracted_sensor_numeric_sensor_894",
+              "ha:ha_extracted_sensor_meter_908",
+              "ha:ha_extracted_number_921_921",
+              "ha:ha_extracted_button_934_934",
+              "ha:ha_extracted_switch_indicator_945",
+              "ha:ha_extracted_switch_barrier_event_signaling_state_959",
+              "ha:ha_extracted_cover_window_covering_970",
+              "ha:ha_extracted_cover_window_covering_975",
+              "ha:ha_extracted_cover_multilevel_switch_981",
+              "ha:ha_extracted_cover_motorized_barrier_999",
+              "ha:ha_extracted_fan_fan_1016",
+              "ha:ha_extracted_number_valve_control_1026",
+              "ha:ha_extracted_light_1039_1039",
+              "ha:ha_extracted_switch_1045_1045",
+              "ha:ha_extracted_light_color_onoff_1055",
+              "ha:ha_extracted_switch_1062_1062",
+              "ha:ha_extracted_light_color_onoff_1068",
+              "ha:ha_extracted_light_1078_1078",
+              "ha:ha_extracted_sensor_numeric_sensor_1094",
+              "ha:ha_extracted_siren_1111_1111",
+              "ha:ha_extracted_select_default_tone_1117",
+              "ha:ha_extracted_number_volume_1129",
+              "ha:ha_extracted_select_1141_1141",
+              "ha:ha_extracted_button_notification_idle_1151",
+              "ha:ha_extracted_button_meter_reset_1164",
+              "ha:ha_extracted_binary_sensor_notification_1174",
+              "ha:ha_extracted_sensor_notification_alarm_1188",
+              "ha:ha_extracted_sensor_notification_1201"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-1120-2-136.json",
+            "ruleCount": 6,
+            "ruleIds": [
+              "product-shelly-wave-plug-us-class-onoff",
+              "product-shelly-wave-plug-us-meter-power",
+              "product-shelly-wave-plug-us-meter-energy",
+              "product-shelly-wave-plug-us-remove-meter-reset-button",
+              "product-shelly-wave-plug-us-remove-notification-generic",
+              "product-shelly-wave-plug-us-remove-meter-generic"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-622-17235-23089.json",
+            "ruleCount": 2,
+            "ruleIds": [
+              "product-swf-csz1-cover-class-and-position",
+              "product-swf-csz1-battery-prefer-measure-battery"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-29-12801-1.json",
+            "ruleCount": 1,
+            "ruleIds": [
+              "product-leviton-dz6hd-class-and-dim"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-29-65-2.json",
+            "ruleCount": 1,
+            "ruleIds": [
+              "product-leviton-zw6hd-class-and-dim"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-29-13313-1.json",
+            "ruleCount": 1,
+            "ruleIds": [
+              "product-leviton-dz15s-class-and-onoff"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-29-66-2.json",
+            "ruleCount": 1,
+            "ruleIds": [
+              "product-leviton-zw15s-class-and-onoff"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-297-32770-1536.json",
+            "ruleCount": 1,
+            "ruleIds": [
+              "product-yale-yrd226-class-and-lock"
+            ]
+          },
+          {
+            "filePath": "rules/project/generic/base-generic.json",
+            "ruleCount": 3,
+            "ruleIds": [
+              "generic-switch-binary-onoff",
+              "generic-switch-multilevel-dim",
+              "generic-battery-level"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "device": {
+        "deviceKey": "product-triple:29:66:2",
+        "manufacturerId": 29,
+        "productType": 66,
+        "productId": 2
+      },
+      "compiled": {
+        "profile": {
+          "profileId": "product-triple:29:66:2",
+          "match": {
+            "manufacturerId": 29,
+            "productType": 66,
+            "productId": 2
+          },
+          "classification": {
+            "homeyClass": "socket",
+            "driverTemplateId": "product-leviton-switch",
+            "confidence": "curated",
+            "uncurated": false
+          },
+          "capabilities": [
+            {
+              "capabilityId": "onoff",
+              "inboundMapping": {
+                "kind": "value",
+                "selector": {
+                  "commandClass": 37,
+                  "endpoint": 0,
+                  "property": "currentValue"
+                }
+              },
+              "outboundMapping": {
+                "kind": "set_value",
+                "target": {
+                  "commandClass": 37,
+                  "endpoint": 0,
+                  "property": "targetValue"
+                }
+              },
+              "directionality": "bidirectional",
+              "flags": {
+                "readable": true,
+                "writeable": true
+              },
+              "provenance": {
+                "layer": "project-product",
+                "ruleId": "product-leviton-zw15s-class-and-onoff",
+                "action": "replace",
+                "sourceRef": "product-leviton-zw15s-class-and-onoff",
+                "reason": "cc=37,ep=0,prop=currentValue",
+                "supersedes": [
+                  "ha-derived:ha:ha_extracted_switch_1062_1062"
+                ]
+              }
+            }
+          ],
+          "provenance": {
+            "layer": "project-generic",
+            "ruleId": "compiler:compile-profile-plan",
+            "action": "fill",
+            "sourceRef": "compiler",
+            "reason": "deviceKey=product-triple:29:66:2"
+          }
+        },
+        "report": {
+          "actions": [],
+          "suppressedActions": [],
+          "summary": {
+            "appliedActions": 4,
+            "unmatchedActions": 163,
+            "totalActions": 169,
+            "appliedProjectProductActions": 2,
+            "suppressedFillActions": 5,
+            "ignoredValues": 0
+          },
+          "profileOutcome": "curated",
+          "byRule": [],
+          "bySuppressedSlot": [],
+          "curationCandidates": {
+            "likelyNeedsReview": false,
+            "reasons": [
+              "suppressed-fill-actions:5",
+              "high-unmatched-ratio:0.96"
+            ]
+          },
+          "diagnosticDeviceKey": "product-triple:29-66-2"
+        },
+        "ruleSources": [
+          {
+            "filePath": "rules/ha-derived/home-assistant.zwave_js.generated.json",
+            "ruleCount": 71,
+            "ruleIds": [
+              "ha:ha_extracted_fan_has_fan_value_mapping_184",
+              "ha:ha_extracted_fan_has_fan_value_mapping_197",
+              "ha:ha_extracted_fan_has_fan_value_mapping_209",
+              "ha:ha_extracted_fan_has_fan_value_mapping_226",
+              "ha:ha_extracted_fan_has_fan_value_mapping_239",
+              "ha:ha_extracted_fan_has_fan_value_mapping_258",
+              "ha:ha_extracted_cover_shutter_tilt_276",
+              "ha:ha_extracted_cover_shutter_tilt_308",
+              "ha:ha_extracted_cover_shutter_346",
+              "ha:ha_extracted_cover_gate_361",
+              "ha:ha_extracted_cover_shutter_tilt_373",
+              "ha:ha_extracted_cover_shutter_411",
+              "ha:ha_extracted_cover_shutter_426",
+              "ha:ha_extracted_cover_blind_435",
+              "ha:ha_extracted_cover_blind_444",
+              "ha:ha_extracted_cover_shutter_453",
+              "ha:ha_extracted_cover_shutter_469",
+              "ha:ha_extracted_select_486_486",
+              "ha:ha_extracted_cover_shade_500",
+              "ha:ha_extracted_switch_509_509",
+              "ha:ha_extracted_climate_dynamic_current_temp_518",
+              "ha:ha_extracted_climate_dynamic_current_temp_580",
+              "ha:ha_extracted_climate_dynamic_current_temp_628",
+              "ha:ha_extracted_select_multilevel_switch_666",
+              "ha:ha_extracted_light_zwa2_led_color_684",
+              "ha:ha_extracted_light_zwa2_led_onoff_698",
+              "ha:ha_extracted_lock_714_714",
+              "ha:ha_extracted_select_door_lock_719",
+              "ha:ha_extracted_lock_725_725",
+              "ha:ha_extracted_binary_sensor_property_735",
+              "ha:ha_extracted_fan_thermostat_fan_748",
+              "ha:ha_extracted_humidifier_760_760",
+              "ha:ha_extracted_climate_770_770",
+              "ha:ha_extracted_climate_779_779",
+              "ha:ha_extracted_binary_sensor_boolean_797",
+              "ha:ha_extracted_binary_sensor_boolean_808",
+              "ha:ha_extracted_binary_sensor_boolean_817",
+              "ha:ha_extracted_binary_sensor_boolean_829",
+              "ha:ha_extracted_sensor_string_sensor_842",
+              "ha:ha_extracted_sensor_numeric_sensor_851",
+              "ha:ha_extracted_sensor_numeric_sensor_864",
+              "ha:ha_extracted_sensor_numeric_sensor_874",
+              "ha:ha_extracted_sensor_list_884",
+              "ha:ha_extracted_sensor_numeric_sensor_894",
+              "ha:ha_extracted_sensor_meter_908",
+              "ha:ha_extracted_number_921_921",
+              "ha:ha_extracted_button_934_934",
+              "ha:ha_extracted_switch_indicator_945",
+              "ha:ha_extracted_switch_barrier_event_signaling_state_959",
+              "ha:ha_extracted_cover_window_covering_970",
+              "ha:ha_extracted_cover_window_covering_975",
+              "ha:ha_extracted_cover_multilevel_switch_981",
+              "ha:ha_extracted_cover_motorized_barrier_999",
+              "ha:ha_extracted_fan_fan_1016",
+              "ha:ha_extracted_number_valve_control_1026",
+              "ha:ha_extracted_light_1039_1039",
+              "ha:ha_extracted_switch_1045_1045",
+              "ha:ha_extracted_light_color_onoff_1055",
+              "ha:ha_extracted_switch_1062_1062",
+              "ha:ha_extracted_light_color_onoff_1068",
+              "ha:ha_extracted_light_1078_1078",
+              "ha:ha_extracted_sensor_numeric_sensor_1094",
+              "ha:ha_extracted_siren_1111_1111",
+              "ha:ha_extracted_select_default_tone_1117",
+              "ha:ha_extracted_number_volume_1129",
+              "ha:ha_extracted_select_1141_1141",
+              "ha:ha_extracted_button_notification_idle_1151",
+              "ha:ha_extracted_button_meter_reset_1164",
+              "ha:ha_extracted_binary_sensor_notification_1174",
+              "ha:ha_extracted_sensor_notification_alarm_1188",
+              "ha:ha_extracted_sensor_notification_1201"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-1120-2-136.json",
+            "ruleCount": 6,
+            "ruleIds": [
+              "product-shelly-wave-plug-us-class-onoff",
+              "product-shelly-wave-plug-us-meter-power",
+              "product-shelly-wave-plug-us-meter-energy",
+              "product-shelly-wave-plug-us-remove-meter-reset-button",
+              "product-shelly-wave-plug-us-remove-notification-generic",
+              "product-shelly-wave-plug-us-remove-meter-generic"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-622-17235-23089.json",
+            "ruleCount": 2,
+            "ruleIds": [
+              "product-swf-csz1-cover-class-and-position",
+              "product-swf-csz1-battery-prefer-measure-battery"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-29-12801-1.json",
+            "ruleCount": 1,
+            "ruleIds": [
+              "product-leviton-dz6hd-class-and-dim"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-29-65-2.json",
+            "ruleCount": 1,
+            "ruleIds": [
+              "product-leviton-zw6hd-class-and-dim"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-29-13313-1.json",
+            "ruleCount": 1,
+            "ruleIds": [
+              "product-leviton-dz15s-class-and-onoff"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-29-66-2.json",
+            "ruleCount": 1,
+            "ruleIds": [
+              "product-leviton-zw15s-class-and-onoff"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-297-32770-1536.json",
+            "ruleCount": 1,
+            "ruleIds": [
+              "product-yale-yrd226-class-and-lock"
+            ]
+          },
+          {
+            "filePath": "rules/project/generic/base-generic.json",
+            "ruleCount": 3,
+            "ruleIds": [
+              "generic-switch-binary-onoff",
+              "generic-switch-multilevel-dim",
+              "generic-battery-level"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "device": {
+        "deviceKey": "product-triple:297:32770:1536",
+        "manufacturerId": 297,
+        "productType": 32770,
+        "productId": 1536
+      },
+      "compiled": {
+        "profile": {
+          "profileId": "product-triple:297:32770:1536",
+          "match": {
+            "manufacturerId": 297,
+            "productType": 32770,
+            "productId": 1536
+          },
+          "classification": {
+            "homeyClass": "lock",
+            "driverTemplateId": "product-yale-lock",
+            "confidence": "curated",
+            "uncurated": false
+          },
+          "capabilities": [
+            {
+              "capabilityId": "enum_select",
+              "inboundMapping": {
+                "kind": "value",
+                "selector": {
+                  "commandClass": 98,
+                  "endpoint": 0,
+                  "property": "currentMode"
+                }
+              },
+              "directionality": "inbound-only",
+              "provenance": {
+                "layer": "project-product",
+                "ruleId": "product-yale-yrd226-class-and-lock",
+                "action": "replace",
+                "sourceRef": "product-yale-yrd226-class-and-lock",
+                "reason": "cc=98,ep=0,prop=currentMode",
+                "supersedes": [
+                  "ha-derived:ha:ha_extracted_select_door_lock_719"
+                ]
+              }
+            },
+            {
+              "capabilityId": "locked",
+              "inboundMapping": {
+                "kind": "value",
+                "selector": {
+                  "commandClass": 98,
+                  "endpoint": 0,
+                  "property": "currentMode"
+                }
+              },
+              "directionality": "inbound-only",
+              "flags": {
+                "allowMulti": true
+              },
+              "provenance": {
+                "layer": "project-product",
+                "ruleId": "product-yale-yrd226-class-and-lock",
+                "action": "replace",
+                "sourceRef": "product-yale-yrd226-class-and-lock",
+                "reason": "cc=98,ep=0,prop=currentMode",
+                "supersedes": [
+                  "ha-derived:ha:ha_extracted_lock_714_714"
+                ]
+              }
+            }
+          ],
+          "provenance": {
+            "layer": "project-generic",
+            "ruleId": "compiler:compile-profile-plan",
+            "action": "fill",
+            "sourceRef": "compiler",
+            "reason": "deviceKey=product-triple:297:32770:1536"
+          }
+        },
+        "report": {
+          "actions": [],
+          "suppressedActions": [],
+          "summary": {
+            "appliedActions": 6,
+            "unmatchedActions": 162,
+            "totalActions": 169,
+            "appliedProjectProductActions": 3,
+            "suppressedFillActions": 2,
+            "ignoredValues": 0
+          },
+          "profileOutcome": "curated",
+          "byRule": [],
+          "bySuppressedSlot": [],
+          "curationCandidates": {
+            "likelyNeedsReview": false,
+            "reasons": [
+              "suppressed-fill-actions:2",
+              "high-unmatched-ratio:0.96"
+            ]
+          },
+          "diagnosticDeviceKey": "product-triple:297-32770-1536"
+        },
+        "ruleSources": [
+          {
+            "filePath": "rules/ha-derived/home-assistant.zwave_js.generated.json",
+            "ruleCount": 71,
+            "ruleIds": [
+              "ha:ha_extracted_fan_has_fan_value_mapping_184",
+              "ha:ha_extracted_fan_has_fan_value_mapping_197",
+              "ha:ha_extracted_fan_has_fan_value_mapping_209",
+              "ha:ha_extracted_fan_has_fan_value_mapping_226",
+              "ha:ha_extracted_fan_has_fan_value_mapping_239",
+              "ha:ha_extracted_fan_has_fan_value_mapping_258",
+              "ha:ha_extracted_cover_shutter_tilt_276",
+              "ha:ha_extracted_cover_shutter_tilt_308",
+              "ha:ha_extracted_cover_shutter_346",
+              "ha:ha_extracted_cover_gate_361",
+              "ha:ha_extracted_cover_shutter_tilt_373",
+              "ha:ha_extracted_cover_shutter_411",
+              "ha:ha_extracted_cover_shutter_426",
+              "ha:ha_extracted_cover_blind_435",
+              "ha:ha_extracted_cover_blind_444",
+              "ha:ha_extracted_cover_shutter_453",
+              "ha:ha_extracted_cover_shutter_469",
+              "ha:ha_extracted_select_486_486",
+              "ha:ha_extracted_cover_shade_500",
+              "ha:ha_extracted_switch_509_509",
+              "ha:ha_extracted_climate_dynamic_current_temp_518",
+              "ha:ha_extracted_climate_dynamic_current_temp_580",
+              "ha:ha_extracted_climate_dynamic_current_temp_628",
+              "ha:ha_extracted_select_multilevel_switch_666",
+              "ha:ha_extracted_light_zwa2_led_color_684",
+              "ha:ha_extracted_light_zwa2_led_onoff_698",
+              "ha:ha_extracted_lock_714_714",
+              "ha:ha_extracted_select_door_lock_719",
+              "ha:ha_extracted_lock_725_725",
+              "ha:ha_extracted_binary_sensor_property_735",
+              "ha:ha_extracted_fan_thermostat_fan_748",
+              "ha:ha_extracted_humidifier_760_760",
+              "ha:ha_extracted_climate_770_770",
+              "ha:ha_extracted_climate_779_779",
+              "ha:ha_extracted_binary_sensor_boolean_797",
+              "ha:ha_extracted_binary_sensor_boolean_808",
+              "ha:ha_extracted_binary_sensor_boolean_817",
+              "ha:ha_extracted_binary_sensor_boolean_829",
+              "ha:ha_extracted_sensor_string_sensor_842",
+              "ha:ha_extracted_sensor_numeric_sensor_851",
+              "ha:ha_extracted_sensor_numeric_sensor_864",
+              "ha:ha_extracted_sensor_numeric_sensor_874",
+              "ha:ha_extracted_sensor_list_884",
+              "ha:ha_extracted_sensor_numeric_sensor_894",
+              "ha:ha_extracted_sensor_meter_908",
+              "ha:ha_extracted_number_921_921",
+              "ha:ha_extracted_button_934_934",
+              "ha:ha_extracted_switch_indicator_945",
+              "ha:ha_extracted_switch_barrier_event_signaling_state_959",
+              "ha:ha_extracted_cover_window_covering_970",
+              "ha:ha_extracted_cover_window_covering_975",
+              "ha:ha_extracted_cover_multilevel_switch_981",
+              "ha:ha_extracted_cover_motorized_barrier_999",
+              "ha:ha_extracted_fan_fan_1016",
+              "ha:ha_extracted_number_valve_control_1026",
+              "ha:ha_extracted_light_1039_1039",
+              "ha:ha_extracted_switch_1045_1045",
+              "ha:ha_extracted_light_color_onoff_1055",
+              "ha:ha_extracted_switch_1062_1062",
+              "ha:ha_extracted_light_color_onoff_1068",
+              "ha:ha_extracted_light_1078_1078",
+              "ha:ha_extracted_sensor_numeric_sensor_1094",
+              "ha:ha_extracted_siren_1111_1111",
+              "ha:ha_extracted_select_default_tone_1117",
+              "ha:ha_extracted_number_volume_1129",
+              "ha:ha_extracted_select_1141_1141",
+              "ha:ha_extracted_button_notification_idle_1151",
+              "ha:ha_extracted_button_meter_reset_1164",
+              "ha:ha_extracted_binary_sensor_notification_1174",
+              "ha:ha_extracted_sensor_notification_alarm_1188",
+              "ha:ha_extracted_sensor_notification_1201"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-1120-2-136.json",
+            "ruleCount": 6,
+            "ruleIds": [
+              "product-shelly-wave-plug-us-class-onoff",
+              "product-shelly-wave-plug-us-meter-power",
+              "product-shelly-wave-plug-us-meter-energy",
+              "product-shelly-wave-plug-us-remove-meter-reset-button",
+              "product-shelly-wave-plug-us-remove-notification-generic",
+              "product-shelly-wave-plug-us-remove-meter-generic"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-622-17235-23089.json",
+            "ruleCount": 2,
+            "ruleIds": [
+              "product-swf-csz1-cover-class-and-position",
+              "product-swf-csz1-battery-prefer-measure-battery"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-29-12801-1.json",
+            "ruleCount": 1,
+            "ruleIds": [
+              "product-leviton-dz6hd-class-and-dim"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-29-65-2.json",
+            "ruleCount": 1,
+            "ruleIds": [
+              "product-leviton-zw6hd-class-and-dim"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-29-13313-1.json",
+            "ruleCount": 1,
+            "ruleIds": [
+              "product-leviton-dz15s-class-and-onoff"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-29-66-2.json",
+            "ruleCount": 1,
+            "ruleIds": [
+              "product-leviton-zw15s-class-and-onoff"
+            ]
+          },
+          {
+            "filePath": "rules/project/product/product-297-32770-1536.json",
+            "ruleCount": 1,
+            "ruleIds": [
+              "product-yale-yrd226-class-and-lock"
+            ]
+          },
+          {
+            "filePath": "rules/project/generic/base-generic.json",
+            "ruleCount": 3,
+            "ruleIds": [
+              "generic-switch-binary-onoff",
+              "generic-switch-multilevel-dim",
+              "generic-battery-level"
+            ]
+          }
+        ]
+      }
+    }
+  ]
 }

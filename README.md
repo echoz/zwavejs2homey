@@ -125,6 +125,12 @@ Build compiled profiles from live nodes:
 npm run compiler:build -- --url ws://HOST:PORT --all-nodes --manifest-file rules/manifest.json --output-file /tmp/compiled-live.json
 ```
 
+Build the bundled Homey runtime compiled artifact (static, rule-derived):
+
+```bash
+npm run compiler:build:bundled
+```
+
 Inspect/validate/simulate compile results:
 
 ```bash
@@ -156,7 +162,7 @@ cd co.lazylabs.zwavejs2homey && homey app validate
 `build:homey` also refreshes vendored runtime packages in `co.lazylabs.zwavejs2homey/vendor/`
 so `homey app run` does not depend on workspace-external package links.
 It also compiles and syncs Homey runtime JS entrypoints (`app.js`, `drivers/*/*.js`) used by
-Homey preprocess.
+Homey preprocess, and regenerates the bundled compiled profiles artifact from `rules/manifest.json`.
 
 Run the Homey app in development:
 

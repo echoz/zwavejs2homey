@@ -12,7 +12,7 @@
   },
   "brandColor": "#2484bf",
   "category": ["tools"],
-  "permissions": [],
+  "permissions": ["homey:manager:api"],
   "api": {
     "getRuntimeDiagnostics": {
       "method": "GET",

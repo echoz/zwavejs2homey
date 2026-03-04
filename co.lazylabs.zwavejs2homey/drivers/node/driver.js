@@ -11,43 +11,101 @@ module.exports = class NodeDriver extends homey_1.default.Driver {
     async onInit() {
         this.log('NodeDriver initialized');
     }
+    extractZoneNames(source) {
+        const valuesToScan = [];
+        if (Array.isArray(source)) {
+            valuesToScan.push(...source);
+        }
+        else if (source && typeof source === 'object') {
+            const objectSource = source;
+            if (Array.isArray(objectSource.zones))
+                valuesToScan.push(...objectSource.zones);
+            if (objectSource.zones && typeof objectSource.zones === 'object') {
+                valuesToScan.push(...Object.values(objectSource.zones));
+            }
+            valuesToScan.push(...Object.values(objectSource));
+        }
+        const uniqueNames = new Set();
+        for (const value of valuesToScan) {
+            if (!value || typeof value !== 'object')
+                continue;
+            const zone = value;
+            if (typeof zone.name !== 'string')
+                continue;
+            const trimmed = zone.name.trim();
+            if (trimmed.length > 0)
+                uniqueNames.add(trimmed);
+        }
+        return [...uniqueNames];
+    }
+    async loadHomeyZoneNamesFromApi() {
+        const api = this.homey.api;
+        const get = api?.get;
+        if (typeof get !== 'function')
+            return [];
+        const requestPaths = ['manager/zones/zone', '/manager/zones/zone'];
+        let lastError;
+        for (const requestPath of requestPaths) {
+            try {
+                const response = await new Promise((resolve, reject) => {
+                    if (get.length >= 2) {
+                        get(requestPath, (error, result) => {
+                            if (error) {
+                                reject(error);
+                                return;
+                            }
+                            resolve(result);
+                        });
+                        return;
+                    }
+                    Promise.resolve(get(requestPath))
+                        .then((result) => resolve(result))
+                        .catch((error) => reject(error));
+                });
+                const names = this.extractZoneNames(response);
+                if (names.length > 0)
+                    return names;
+            }
+            catch (error) {
+                lastError = error;
+            }
+        }
+        if (lastError) {
+            this.error('Failed to load Homey zones via Manager API during node pairing', {
+                error: lastError,
+            });
+        }
+        return [];
+    }
     async loadHomeyZoneNames() {
         const zonesManager = this.homey.zones;
         const getZones = zonesManager?.getZones;
-        if (typeof getZones !== 'function')
-            return [];
-        try {
-            const zones = await new Promise((resolve, reject) => {
-                if (getZones.length >= 1) {
-                    getZones((error, result) => {
-                        if (error) {
-                            reject(error);
-                            return;
-                        }
-                        resolve(result ?? {});
-                    });
-                    return;
-                }
-                Promise.resolve(getZones())
-                    .then((result) => resolve(result ?? {}))
-                    .catch((error) => reject(error));
-            });
-            const names = [];
-            for (const zone of Object.values(zones)) {
-                if (!zone || typeof zone !== 'object')
-                    continue;
-                if (typeof zone.name !== 'string')
-                    continue;
-                const trimmed = zone.name.trim();
-                if (trimmed.length > 0)
-                    names.push(trimmed);
+        if (typeof getZones === 'function') {
+            try {
+                const zones = await new Promise((resolve, reject) => {
+                    if (getZones.length >= 1) {
+                        getZones((error, result) => {
+                            if (error) {
+                                reject(error);
+                                return;
+                            }
+                            resolve(result ?? {});
+                        });
+                        return;
+                    }
+                    Promise.resolve(getZones())
+                        .then((result) => resolve(result ?? {}))
+                        .catch((error) => reject(error));
+                });
+                const names = this.extractZoneNames(zones);
+                if (names.length > 0)
+                    return names;
             }
-            return names;
+            catch (error) {
+                this.error('Failed to load Homey zones via manager during node pairing', { error });
+            }
         }
-        catch (error) {
-            this.error('Failed to load Homey zones during node pairing', { error });
-            return [];
-        }
+        return this.loadHomeyZoneNamesFromApi();
     }
     async onPairListDevices() {
         const app = this.homey.app;

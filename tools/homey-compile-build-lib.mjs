@@ -4,6 +4,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { formatJsonCompact, formatJsonPretty } from './output-format-lib.mjs';
+import { sanitizeJsonPathsForRepo } from './repo-path-sanitization-lib.mjs';
 import { connectAndInitialize, fetchNodeDetails, fetchNodesList } from './zwjs-inspect-lib.mjs';
 import {
   DEFAULT_HOMEY_AUTHORING_VOCABULARY_FILE,
@@ -342,7 +343,7 @@ export async function buildCompiledProfilesArtifact(command, deps = {}) {
     }),
   };
 
-  return createArtifactImpl(entries, source);
+  return sanitizeJsonPathsForRepo(createArtifactImpl(entries, source));
 }
 
 export function formatBuildOutput(artifact, format) {

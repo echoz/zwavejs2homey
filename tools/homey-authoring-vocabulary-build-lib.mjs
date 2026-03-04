@@ -124,8 +124,8 @@ function loadHomeyLibSystemVocabulary(homeyLibRoot) {
 
   return {
     version: typeof homeyLibPackage.version === 'string' ? homeyLibPackage.version : undefined,
-    classesPath,
-    capabilitiesPath,
+    classesSourceRef: 'assets/device/classes.json',
+    capabilitiesSourceRef: 'assets/capability/capabilities.json',
     classIds: normalizeIdList(readJson(classesPath), 'homey-lib classes'),
     capabilityIds: normalizeIdList(readJson(capabilitiesPath), 'homey-lib capabilities'),
   };
@@ -209,7 +209,7 @@ export function buildHomeyAuthoringVocabularyArtifact(command) {
       classSources,
       classId,
       'homey-lib-system',
-      `${homeyLibVersionTag}:${toDisplayPath(systemVocabulary.classesPath)}`,
+      `${homeyLibVersionTag}:${systemVocabulary.classesSourceRef}`,
     );
   }
 
@@ -218,7 +218,7 @@ export function buildHomeyAuthoringVocabularyArtifact(command) {
       capabilitySources,
       capabilityId,
       'homey-lib-system',
-      `${homeyLibVersionTag}:${toDisplayPath(systemVocabulary.capabilitiesPath)}`,
+      `${homeyLibVersionTag}:${systemVocabulary.capabilitiesSourceRef}`,
     );
   }
 
@@ -233,7 +233,7 @@ export function buildHomeyAuthoringVocabularyArtifact(command) {
     },
     {
       homeyLibVersion: systemVocabulary.version,
-      homeyLibRoot: toDisplayPath(homeyLibRoot),
+      homeyLibRoot: homeyLibVersionTag,
       composeCapabilitiesDir: toDisplayPath(command.composeCapabilitiesDir),
     },
   );

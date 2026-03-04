@@ -10,10 +10,11 @@ class FakeHomeyDriver {
     this._logs = [];
   }
 
-  _configureHarness({ app, devices, zones } = {}) {
+  _configureHarness({ app, devices, zones, api } = {}) {
     const nextHomey = { ...this.homey };
     if (app) nextHomey.app = app;
     if (typeof zones !== 'undefined') nextHomey.zones = zones;
+    if (typeof api !== 'undefined') nextHomey.api = api;
     this.homey = nextHomey;
     if (Array.isArray(devices)) this._devices = devices;
   }
@@ -265,6 +266,37 @@ test('node driver keeps id prefix when location maps to a known Homey zone', asy
   assert.equal(candidates.length, 1);
   assert.equal(candidates[0]?.name, '[21] Kitchen Pendant');
   assert.equal(candidates[0]?.store?.location, 'Kitchen');
+  assert.equal(candidates[0]?.store?.locationMatchedZone, true);
+});
+
+test('node driver can resolve zone names via Homey manager API fallback', async () => {
+  const client = {
+    async getNodeList() {
+      return {
+        nodes: [{ nodeId: 33, name: 'Desk Lamp', location: 'Study' }],
+      };
+    },
+  };
+  const driver = new NodeDriver();
+  driver._configureHarness({
+    app: {
+      getZwjsClient: () => client,
+      getBridgeId: () => 'main',
+    },
+    api: {
+      async get(path) {
+        assert.match(path, /manager\/zones\/zone/);
+        return {
+          z1: { name: 'Study' },
+        };
+      },
+    },
+    devices: [],
+  });
+
+  const candidates = await driver.onPairListDevices();
+  assert.equal(candidates.length, 1);
+  assert.equal(candidates[0]?.name, '[33] Desk Lamp');
   assert.equal(candidates[0]?.store?.locationMatchedZone, true);
 });
 

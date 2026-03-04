@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { buildCompiledProfilesArtifact } from './homey-compile-build-lib.mjs';
 import { runLiveInspectCommand } from './homey-compile-inspect-live-lib.mjs';
 import { formatJsonPretty } from './output-format-lib.mjs';
+import { sanitizeJsonPathsForRepo } from './repo-path-sanitization-lib.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DEFAULT_RULE_MANIFEST_FILE = path.join(REPO_ROOT, 'rules', 'manifest.json');
@@ -991,6 +992,10 @@ function buildMachineSummaryFromInput(command, input, gateResult, generatedAtIso
   };
 }
 
+function sanitizeForRepo(value) {
+  return sanitizeJsonPathsForRepo(value, REPO_ROOT);
+}
+
 export function getUsageText() {
   return [
     'Usage:',
@@ -1462,24 +1467,25 @@ export async function runValidateLiveCommand(command, io = console, deps = {}) {
       gateResult,
       generatedAtIso,
     );
+    const sanitizedMachineSummary = sanitizeForRepo(machineSummary);
     if (commandWithBaseline.summaryJsonFile) {
       fs.writeFileSync(
         commandWithBaseline.summaryJsonFile,
-        `${formatJsonPretty(machineSummary)}\n`,
+        `${formatJsonPretty(sanitizedMachineSummary)}\n`,
         'utf8',
       );
     }
     if (commandWithBaseline.saveBaselineSummaryJsonFile) {
       fs.writeFileSync(
         commandWithBaseline.saveBaselineSummaryJsonFile,
-        `${formatJsonPretty(machineSummary)}\n`,
+        `${formatJsonPretty(sanitizedMachineSummary)}\n`,
         'utf8',
       );
     }
     if (commandWithBaseline.redactedSummaryJsonFile) {
       fs.writeFileSync(
         commandWithBaseline.redactedSummaryJsonFile,
-        `${formatJsonPretty(buildRedactedMachineSummary(machineSummary))}\n`,
+        `${formatJsonPretty(buildRedactedMachineSummary(sanitizedMachineSummary))}\n`,
         'utf8',
       );
     }
@@ -1511,7 +1517,7 @@ export async function runValidateLiveCommand(command, io = console, deps = {}) {
       summary,
       markdown: undefined,
       gateResult,
-      machineSummary,
+      machineSummary: sanitizedMachineSummary,
     };
   }
 
@@ -1530,6 +1536,7 @@ export async function runValidateLiveCommand(command, io = console, deps = {}) {
         `Compiled file "${commandWithBaseline.compiledFile}" must contain a JSON object`,
       );
     }
+    artifact = sanitizeForRepo(artifact);
   } else {
     const buildCommand = {
       url: commandWithBaseline.url,
@@ -1550,7 +1557,7 @@ export async function runValidateLiveCommand(command, io = console, deps = {}) {
       ruleInputMode: commandWithBaseline.ruleInputMode,
     };
 
-    artifact = await buildImpl(buildCommand, deps);
+    artifact = sanitizeForRepo(await buildImpl(buildCommand, deps));
     fs.writeFileSync(commandWithBaseline.artifactFile, `${formatJsonPretty(artifact)}\n`, 'utf8');
   }
 
@@ -1617,24 +1624,25 @@ export async function runValidateLiveCommand(command, io = console, deps = {}) {
     gateResult,
     generatedAtIso,
   );
+  const sanitizedMachineSummary = sanitizeForRepo(machineSummary);
   if (commandWithBaseline.summaryJsonFile) {
     fs.writeFileSync(
       commandWithBaseline.summaryJsonFile,
-      `${formatJsonPretty(machineSummary)}\n`,
+      `${formatJsonPretty(sanitizedMachineSummary)}\n`,
       'utf8',
     );
   }
   if (commandWithBaseline.redactedSummaryJsonFile) {
     fs.writeFileSync(
       commandWithBaseline.redactedSummaryJsonFile,
-      `${formatJsonPretty(buildRedactedMachineSummary(machineSummary))}\n`,
+      `${formatJsonPretty(buildRedactedMachineSummary(sanitizedMachineSummary))}\n`,
       'utf8',
     );
   }
   if (commandWithBaseline.saveBaselineSummaryJsonFile) {
     fs.writeFileSync(
       commandWithBaseline.saveBaselineSummaryJsonFile,
-      `${formatJsonPretty(machineSummary)}\n`,
+      `${formatJsonPretty(sanitizedMachineSummary)}\n`,
       'utf8',
     );
   }
@@ -1685,5 +1693,5 @@ export async function runValidateLiveCommand(command, io = console, deps = {}) {
     }
   }
 
-  return { artifact, results, summary, markdown, gateResult, machineSummary };
+  return { artifact, results, summary, markdown, gateResult, machineSummary: sanitizedMachineSummary };
 }
