@@ -94,7 +94,7 @@ module.exports = class NodeDriver extends Homey.Driver {
 
   private async loadHomeyZoneNamesFromApi(): Promise<string[]> {
     const api = (this.homey as unknown as { api?: HomeyApiLike }).api;
-    const get = api?.get;
+    const get = typeof api?.get === 'function' ? api.get.bind(api) : undefined;
     if (typeof get !== 'function') return [];
 
     const requestPaths = ['manager/zones/zone', '/manager/zones/zone'];
@@ -134,7 +134,8 @@ module.exports = class NodeDriver extends Homey.Driver {
 
   private async loadHomeyZoneNames(): Promise<string[]> {
     const zonesManager = (this.homey as unknown as { zones?: HomeyZonesManagerLike }).zones;
-    const getZones = zonesManager?.getZones;
+    const getZones =
+      typeof zonesManager?.getZones === 'function' ? zonesManager.getZones.bind(zonesManager) : undefined;
     if (typeof getZones === 'function') {
       try {
         const zones = await new Promise<Record<string, HomeyZoneLike>>((resolve, reject) => {

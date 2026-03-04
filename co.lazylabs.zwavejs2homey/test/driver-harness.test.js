@@ -284,7 +284,9 @@ test('node driver can resolve zone names via Homey manager API fallback', async 
       getBridgeId: () => 'main',
     },
     api: {
+      _calls: [],
       async get(path) {
+        this._calls.push(path);
         assert.match(path, /manager\/zones\/zone/);
         return {
           z1: { name: 'Study' },
@@ -298,6 +300,7 @@ test('node driver can resolve zone names via Homey manager API fallback', async 
   assert.equal(candidates.length, 1);
   assert.equal(candidates[0]?.name, '[33] Desk Lamp');
   assert.equal(candidates[0]?.store?.locationMatchedZone, true);
+  assert.deepEqual(driver.homey.api._calls.length >= 1, true);
 });
 
 test('node driver repair session exposes device tools snapshot handlers', async () => {
