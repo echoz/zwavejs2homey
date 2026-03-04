@@ -34,9 +34,15 @@ export interface NodePairCandidate {
     ready: boolean;
     manufacturer: string | null;
     product: string | null;
+    location: string | null;
+    locationMatchedZone: boolean;
     interviewStage: string | null;
     inferredHomeyClass: string;
   };
+}
+
+export interface NodePairingBuildOptions {
+  knownZoneNames?: ReadonlyArray<string>;
 }
 
 export function hasBridgePairDeviceFromData(
@@ -57,4 +63,5 @@ export function buildNodePairCandidates(
   bridgeId: string,
   existingNodeIds: ReadonlySet<number>,
   nodeKind?: string,
+  options?: NodePairingBuildOptions,
 ): NodePairCandidate[];

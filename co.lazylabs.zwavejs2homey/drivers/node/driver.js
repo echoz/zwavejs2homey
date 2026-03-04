@@ -11,6 +11,44 @@ module.exports = class NodeDriver extends homey_1.default.Driver {
     async onInit() {
         this.log('NodeDriver initialized');
     }
+    async loadHomeyZoneNames() {
+        const zonesManager = this.homey.zones;
+        const getZones = zonesManager?.getZones;
+        if (typeof getZones !== 'function')
+            return [];
+        try {
+            const zones = await new Promise((resolve, reject) => {
+                if (getZones.length >= 1) {
+                    getZones((error, result) => {
+                        if (error) {
+                            reject(error);
+                            return;
+                        }
+                        resolve(result ?? {});
+                    });
+                    return;
+                }
+                Promise.resolve(getZones())
+                    .then((result) => resolve(result ?? {}))
+                    .catch((error) => reject(error));
+            });
+            const names = [];
+            for (const zone of Object.values(zones)) {
+                if (!zone || typeof zone !== 'object')
+                    continue;
+                if (typeof zone.name !== 'string')
+                    continue;
+                const trimmed = zone.name.trim();
+                if (trimmed.length > 0)
+                    names.push(trimmed);
+            }
+            return names;
+        }
+        catch (error) {
+            this.error('Failed to load Homey zones during node pairing', { error });
+            return [];
+        }
+    }
     async onPairListDevices() {
         const app = this.homey.app;
         const client = app.getZwjsClient?.();
@@ -23,7 +61,10 @@ module.exports = class NodeDriver extends homey_1.default.Driver {
         });
         const existingNodeIds = (0, pairing_1.collectExistingNodeIdsFromData)(existingData, bridgeId);
         const { nodes } = await client.getNodeList();
-        const candidates = (0, pairing_1.buildNodePairCandidates)(nodes, bridgeId, existingNodeIds);
+        const knownZoneNames = await this.loadHomeyZoneNames();
+        const candidates = (0, pairing_1.buildNodePairCandidates)(nodes, bridgeId, existingNodeIds, undefined, {
+            knownZoneNames,
+        });
         for (const candidate of candidates) {
             if (!app.resolveCompiledProfileEntry)
                 continue;
@@ -52,6 +93,7 @@ module.exports = class NodeDriver extends homey_1.default.Driver {
             discovered: nodes.length,
             existing: existingNodeIds.size,
             candidates: candidates.length,
+            knownZones: knownZoneNames.length,
         });
         return candidates;
     }

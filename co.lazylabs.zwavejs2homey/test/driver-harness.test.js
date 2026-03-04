@@ -10,8 +10,11 @@ class FakeHomeyDriver {
     this._logs = [];
   }
 
-  _configureHarness({ app, devices } = {}) {
-    if (app) this.homey = { app };
+  _configureHarness({ app, devices, zones } = {}) {
+    const nextHomey = { ...this.homey };
+    if (app) nextHomey.app = app;
+    if (typeof zones !== 'undefined') nextHomey.zones = zones;
+    this.homey = nextHomey;
     if (Array.isArray(devices)) this._devices = devices;
   }
 
@@ -201,6 +204,68 @@ test('node driver applies class icon inference when compiled profile resolver ma
   assert.equal(candidates.length, 1);
   assert.equal(candidates[0]?.icon, '/pair-icons/light.svg');
   assert.equal(candidates[0]?.store?.inferredHomeyClass, 'light');
+});
+
+test('node driver includes unmatched location in pair label and drops node id prefix', async () => {
+  const client = {
+    async getNodeList() {
+      return {
+        nodes: [{ nodeId: 12, name: 'Wall Dimmer', location: 'Upstairs Hall' }],
+      };
+    },
+  };
+  const driver = new NodeDriver();
+  driver._configureHarness({
+    app: {
+      getZwjsClient: () => client,
+      getBridgeId: () => 'main',
+    },
+    zones: {
+      getZones(callback) {
+        callback(null, {
+          kitchen: { name: 'Kitchen' },
+        });
+      },
+    },
+    devices: [],
+  });
+
+  const candidates = await driver.onPairListDevices();
+  assert.equal(candidates.length, 1);
+  assert.equal(candidates[0]?.name, 'Wall Dimmer - Upstairs Hall');
+  assert.equal(candidates[0]?.store?.location, 'Upstairs Hall');
+  assert.equal(candidates[0]?.store?.locationMatchedZone, false);
+});
+
+test('node driver keeps id prefix when location maps to a known Homey zone', async () => {
+  const client = {
+    async getNodeList() {
+      return {
+        nodes: [{ nodeId: 21, name: 'Kitchen Pendant', location: 'Kitchen' }],
+      };
+    },
+  };
+  const driver = new NodeDriver();
+  driver._configureHarness({
+    app: {
+      getZwjsClient: () => client,
+      getBridgeId: () => 'main',
+    },
+    zones: {
+      async getZones() {
+        return {
+          kitchen: { name: 'Kitchen' },
+        };
+      },
+    },
+    devices: [],
+  });
+
+  const candidates = await driver.onPairListDevices();
+  assert.equal(candidates.length, 1);
+  assert.equal(candidates[0]?.name, '[21] Kitchen Pendant');
+  assert.equal(candidates[0]?.store?.location, 'Kitchen');
+  assert.equal(candidates[0]?.store?.locationMatchedZone, true);
 });
 
 test('node driver repair session exposes device tools snapshot handlers', async () => {

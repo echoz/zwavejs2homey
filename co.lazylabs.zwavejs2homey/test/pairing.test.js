@@ -73,6 +73,8 @@ test('node pair candidates are filtered, sorted and normalized', () => {
         ready: true,
         manufacturer: null,
         product: null,
+        location: null,
+        locationMatchedZone: false,
         interviewStage: null,
         inferredHomeyClass: 'other',
       },
@@ -90,6 +92,8 @@ test('node pair candidates are filtered, sorted and normalized', () => {
         ready: false,
         manufacturer: null,
         product: 'Outlet',
+        location: null,
+        locationMatchedZone: false,
         interviewStage: null,
         inferredHomeyClass: 'other',
       },
@@ -107,9 +111,51 @@ test('node pair candidates are filtered, sorted and normalized', () => {
         ready: false,
         manufacturer: 'Yale',
         product: 'YRD226',
+        location: null,
+        locationMatchedZone: false,
         interviewStage: '7',
         inferredHomeyClass: 'other',
       },
     },
   ]);
+});
+
+test('node pair candidates include location in name when zone match is unavailable', () => {
+  const candidates = buildNodePairCandidates(
+    [{ nodeId: 12, name: 'Wall Dimmer', location: 'Upstairs Hall' }],
+    'main',
+    new Set(),
+    undefined,
+    { knownZoneNames: ['Kitchen', 'Living Room'] },
+  );
+
+  assert.equal(candidates[0]?.name, 'Wall Dimmer - Upstairs Hall');
+  assert.equal(candidates[0]?.store.location, 'Upstairs Hall');
+  assert.equal(candidates[0]?.store.locationMatchedZone, false);
+});
+
+test('node pair candidates keep id-prefixed naming when location maps to a Homey zone', () => {
+  const candidates = buildNodePairCandidates(
+    [{ nodeId: 14, name: 'Pendant', location: 'Kitchen' }],
+    'main',
+    new Set(),
+    undefined,
+    { knownZoneNames: ['kitchen'] },
+  );
+
+  assert.equal(candidates[0]?.name, '[14] Pendant');
+  assert.equal(candidates[0]?.store.location, 'Kitchen');
+  assert.equal(candidates[0]?.store.locationMatchedZone, true);
+});
+
+test('node pair candidates fall back to node id when both name and location are unavailable', () => {
+  const candidates = buildNodePairCandidates(
+    [{ nodeId: 22, name: '   ', location: '   ' }],
+    'main',
+    new Set(),
+  );
+
+  assert.equal(candidates[0]?.name, '22');
+  assert.equal(candidates[0]?.store.location, null);
+  assert.equal(candidates[0]?.store.locationMatchedZone, false);
 });

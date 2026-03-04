@@ -49,9 +49,55 @@ interface RepairSessionLike {
   setHandler: (event: string, handler: (payload?: unknown) => Promise<unknown>) => void;
 }
 
+interface HomeyZoneLike {
+  name?: unknown;
+}
+
+interface HomeyZonesManagerLike {
+  getZones?: ((callback: (error: unknown, zones?: Record<string, HomeyZoneLike>) => void) => void) &
+    (() => Promise<Record<string, HomeyZoneLike>>);
+}
+
 module.exports = class NodeDriver extends Homey.Driver {
   async onInit() {
     this.log('NodeDriver initialized');
+  }
+
+  private async loadHomeyZoneNames(): Promise<string[]> {
+    const zonesManager = (this.homey as unknown as { zones?: HomeyZonesManagerLike }).zones;
+    const getZones = zonesManager?.getZones;
+    if (typeof getZones !== 'function') return [];
+
+    try {
+      const zones = await new Promise<Record<string, HomeyZoneLike>>((resolve, reject) => {
+        if (getZones.length >= 1) {
+          getZones((error: unknown, result?: Record<string, HomeyZoneLike>) => {
+            if (error) {
+              reject(error);
+              return;
+            }
+            resolve(result ?? {});
+          });
+          return;
+        }
+
+        Promise.resolve(getZones())
+          .then((result) => resolve(result ?? {}))
+          .catch((error) => reject(error));
+      });
+
+      const names: string[] = [];
+      for (const zone of Object.values(zones)) {
+        if (!zone || typeof zone !== 'object') continue;
+        if (typeof zone.name !== 'string') continue;
+        const trimmed = zone.name.trim();
+        if (trimmed.length > 0) names.push(trimmed);
+      }
+      return names;
+    } catch (error) {
+      this.error('Failed to load Homey zones during node pairing', { error });
+      return [];
+    }
   }
 
   async onPairListDevices() {
@@ -67,8 +113,11 @@ module.exports = class NodeDriver extends Homey.Driver {
     });
     const existingNodeIds = collectExistingNodeIdsFromData(existingData, bridgeId);
     const { nodes } = await client.getNodeList();
+    const knownZoneNames = await this.loadHomeyZoneNames();
 
-    const candidates = buildNodePairCandidates(nodes, bridgeId, existingNodeIds);
+    const candidates = buildNodePairCandidates(nodes, bridgeId, existingNodeIds, undefined, {
+      knownZoneNames,
+    });
     for (const candidate of candidates) {
       if (!app.resolveCompiledProfileEntry) continue;
       try {
@@ -99,6 +148,7 @@ module.exports = class NodeDriver extends Homey.Driver {
       discovered: nodes.length,
       existing: existingNodeIds.size,
       candidates: candidates.length,
+      knownZones: knownZoneNames.length,
     });
     return candidates;
   }
