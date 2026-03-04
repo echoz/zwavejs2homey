@@ -182,6 +182,23 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
     'zwjs.event.node.metadata-updated',
   ]);
 
+  private static readonly DRIVER_READY_RETRY_MS = 25;
+
+  private static readonly DRIVER_READY_TIMEOUT_MS = 5000;
+
+  private static wait(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  private static isDriverNotInitializedError(error: unknown, driverId: string): boolean {
+    if (!(error instanceof Error)) return false;
+    const message = error.message;
+    return (
+      message === `Driver Not Initialized: ${driverId}` ||
+      message.startsWith('Driver Not Initialized:')
+    );
+  }
+
   private static toStringOrNull(value: unknown): string | null {
     if (typeof value !== 'string') return null;
     const trimmed = value.trim();
@@ -599,7 +616,10 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
 
   private async refreshNodeRuntimeMappings(reason: string): Promise<void> {
     try {
-      const nodeDriver = this.homey.drivers.getDriver('node');
+      const nodeDriver = await this.getDriverWhenReady<{
+        getDevices: () => Array<{ onRuntimeMappingsRefresh?: (refreshReason: string) => Promise<void> }>;
+      }>('node', `refreshNodeRuntimeMappings:${reason}`);
+      if (!nodeDriver) return;
       const devices = nodeDriver.getDevices() as Array<{
         onRuntimeMappingsRefresh?: (refreshReason: string) => Promise<void>;
       }>;
@@ -619,7 +639,12 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
 
   private async refreshBridgeRuntimeDiagnostics(reason: string): Promise<void> {
     try {
-      const bridgeDriver = this.homey.drivers.getDriver('bridge');
+      const bridgeDriver = await this.getDriverWhenReady<{
+        getDevices: () => Array<{
+          onRuntimeDiagnosticsRefresh?: (refreshReason: string) => Promise<void>;
+        }>;
+      }>('bridge', `refreshBridgeRuntimeDiagnostics:${reason}`);
+      if (!bridgeDriver) return;
       const devices = bridgeDriver.getDevices() as Array<{
         onRuntimeDiagnosticsRefresh?: (refreshReason: string) => Promise<void>;
       }>;
@@ -653,7 +678,13 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
 
   private async refreshNodeRuntimeMappingsForNode(nodeId: number, reason: string): Promise<void> {
     try {
-      const nodeDriver = this.homey.drivers.getDriver('node');
+      const nodeDriver = await this.getDriverWhenReady<{
+        getDevices: () => Array<{
+          getData?: () => { bridgeId?: string; nodeId?: number } | undefined;
+          onRuntimeMappingsRefresh?: (refreshReason: string) => Promise<void>;
+        }>;
+      }>('node', `refreshNodeRuntimeMappingsForNode:${reason}`);
+      if (!nodeDriver) return;
       const devices = nodeDriver.getDevices() as Array<{
         getData?: () => { bridgeId?: string; nodeId?: number } | undefined;
         onRuntimeMappingsRefresh?: (refreshReason: string) => Promise<void>;
@@ -681,6 +712,36 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
     } catch (error) {
       this.error('Failed targeted node runtime mapping refresh', { nodeId, reason, error });
     }
+  }
+
+  private async getDriverWhenReady<TDriver>(
+    driverId: string,
+    reason: string,
+  ): Promise<TDriver | undefined> {
+    const startedAt = Date.now();
+    const timeoutAt = startedAt + Zwavejs2HomeyApp.DRIVER_READY_TIMEOUT_MS;
+    let attempts = 0;
+    while (!this.shuttingDown) {
+      attempts += 1;
+      try {
+        return this.homey.drivers.getDriver(driverId) as TDriver;
+      } catch (error) {
+        if (!Zwavejs2HomeyApp.isDriverNotInitializedError(error, driverId)) {
+          throw error;
+        }
+        if (Date.now() >= timeoutAt) {
+          this.error('Timed out waiting for driver initialization', {
+            driverId,
+            reason,
+            attempts,
+            waitedMs: Date.now() - startedAt,
+          });
+          return undefined;
+        }
+        await Zwavejs2HomeyApp.wait(Zwavejs2HomeyApp.DRIVER_READY_RETRY_MS);
+      }
+    }
+    return undefined;
   }
 
   private onSettingsChanged = (key: string): void => {

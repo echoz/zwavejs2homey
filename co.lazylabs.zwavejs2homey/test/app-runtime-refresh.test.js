@@ -46,6 +46,27 @@ class FakeDriversManager {
   }
 }
 
+class FakeDelayedDriversManager extends FakeDriversManager {
+  constructor(nodeDevices, bridgeDevices = [], failCounts = {}) {
+    super(nodeDevices, bridgeDevices);
+    this.failCounts = {
+      node: failCounts.node ?? 0,
+      bridge: failCounts.bridge ?? 0,
+    };
+  }
+
+  getDriver(driverId) {
+    if (driverId === 'node' || driverId === 'bridge') {
+      const remaining = this.failCounts[driverId] ?? 0;
+      if (remaining > 0) {
+        this.failCounts[driverId] = remaining - 1;
+        throw new Error(`Driver Not Initialized: ${driverId}`);
+      }
+    }
+    return super.getDriver(driverId);
+  }
+}
+
 class FakeHomeyApp {
   constructor() {
     this.homey = {
@@ -227,6 +248,44 @@ test('app refreshes node runtime mappings on startup and settings changes', asyn
   });
   await flushEventQueue();
   assert.equal(refreshCalls.includes('curation-updated'), true);
+
+  await app.onUninit();
+});
+
+test('app waits for node and bridge drivers before startup refresh', async () => {
+  const refreshCalls = [];
+  const bridgeRefreshCalls = [];
+  const nodeDevices = [
+    {
+      async onRuntimeMappingsRefresh(reason) {
+        refreshCalls.push(reason);
+      },
+    },
+  ];
+  const bridgeDevices = [
+    {
+      async onRuntimeDiagnosticsRefresh(reason) {
+        bridgeRefreshCalls.push(reason);
+      },
+    },
+  ];
+
+  const { app } = loadAppClass(nodeDevices, bridgeDevices);
+  app.homey.drivers = new FakeDelayedDriversManager(nodeDevices, bridgeDevices, {
+    node: 2,
+    bridge: 2,
+  });
+  await app.onInit();
+
+  assert.deepEqual(refreshCalls, ['startup']);
+  assert.deepEqual(bridgeRefreshCalls, ['startup']);
+  const startupRaceErrors = app.errors.filter(
+    (entry) =>
+      /Failed to refresh node runtime mappings|Failed to refresh bridge runtime diagnostics|Driver Not Initialized/.test(
+        String(entry.message),
+      ),
+  );
+  assert.equal(startupRaceErrors.length, 0);
 
   await app.onUninit();
 });

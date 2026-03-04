@@ -52,6 +52,16 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
                 });
             };
         }
+        static wait(ms) {
+            return new Promise((resolve) => setTimeout(resolve, ms));
+        }
+        static isDriverNotInitializedError(error, driverId) {
+            if (!(error instanceof Error))
+                return false;
+            const message = error.message;
+            return (message === `Driver Not Initialized: ${driverId}` ||
+                message.startsWith('Driver Not Initialized:'));
+        }
         static toStringOrNull(value) {
             if (typeof value !== 'string')
                 return null;
@@ -419,7 +429,9 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
         }
         async refreshNodeRuntimeMappings(reason) {
             try {
-                const nodeDriver = this.homey.drivers.getDriver('node');
+                const nodeDriver = await this.getDriverWhenReady('node', `refreshNodeRuntimeMappings:${reason}`);
+                if (!nodeDriver)
+                    return;
                 const devices = nodeDriver.getDevices();
                 this.log('Refreshing node runtime mappings', {
                     reason,
@@ -437,7 +449,9 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
         }
         async refreshBridgeRuntimeDiagnostics(reason) {
             try {
-                const bridgeDriver = this.homey.drivers.getDriver('bridge');
+                const bridgeDriver = await this.getDriverWhenReady('bridge', `refreshBridgeRuntimeDiagnostics:${reason}`);
+                if (!bridgeDriver)
+                    return;
                 const devices = bridgeDriver.getDevices();
                 this.log('Refreshing bridge runtime diagnostics', {
                     reason,
@@ -468,7 +482,9 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
         }
         async refreshNodeRuntimeMappingsForNode(nodeId, reason) {
             try {
-                const nodeDriver = this.homey.drivers.getDriver('node');
+                const nodeDriver = await this.getDriverWhenReady('node', `refreshNodeRuntimeMappingsForNode:${reason}`);
+                if (!nodeDriver)
+                    return;
                 const devices = nodeDriver.getDevices();
                 let refreshed = 0;
                 for (const device of devices) {
@@ -493,6 +509,33 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
             catch (error) {
                 this.error('Failed targeted node runtime mapping refresh', { nodeId, reason, error });
             }
+        }
+        async getDriverWhenReady(driverId, reason) {
+            const startedAt = Date.now();
+            const timeoutAt = startedAt + _a.DRIVER_READY_TIMEOUT_MS;
+            let attempts = 0;
+            while (!this.shuttingDown) {
+                attempts += 1;
+                try {
+                    return this.homey.drivers.getDriver(driverId);
+                }
+                catch (error) {
+                    if (!_a.isDriverNotInitializedError(error, driverId)) {
+                        throw error;
+                    }
+                    if (Date.now() >= timeoutAt) {
+                        this.error('Timed out waiting for driver initialization', {
+                            driverId,
+                            reason,
+                            attempts,
+                            waitedMs: Date.now() - startedAt,
+                        });
+                        return undefined;
+                    }
+                    await _a.wait(_a.DRIVER_READY_RETRY_MS);
+                }
+            }
+            return undefined;
         }
         /**
          * onInit is called when the app is initialized.
@@ -1006,4 +1049,6 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
         'zwjs.event.node.value-added',
         'zwjs.event.node.metadata-updated',
     ]),
+    _a.DRIVER_READY_RETRY_MS = 25,
+    _a.DRIVER_READY_TIMEOUT_MS = 5000,
     _a);
