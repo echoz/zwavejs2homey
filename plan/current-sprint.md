@@ -22,6 +22,16 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## Recently Completed
 
+- Latest bridge repair presenter-view slice:
+  - migrated `drivers/bridge/repair/bridge_tools.html` inline repair logic into dedicated TypeScript modules:
+    - `drivers/bridge/repair/bridge_tools.presenter.ts`
+    - `drivers/bridge/repair/bridge_tools.page.ts`
+  - page now uses thin DOM/event wiring in view layer with state/reduction/view-model logic in presenter layer
+  - added presenter behavioral tests in `test/bridge-tools-presenter.test.js` for:
+    - action-needed default filtering
+    - filter switching to all nodes
+    - load-error handling and empty-state behavior
+
 - Latest TypeScript-completion slice (Homey app runtime modules):
   - added TypeScript source files for all previously hand-authored runtime JS modules:
     - `api.ts`
