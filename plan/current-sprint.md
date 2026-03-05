@@ -19,6 +19,11 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## Recently Completed
 
+- Latest settings diagnostics UX closure slice:
+  - added explicit `Runtime Status` and `Action Needed` fields to settings diagnostics
+  - added contextual runtime hint messaging for “needs attention” vs “no action required” outcomes
+  - hardened settings diagnostics rendering by escaping runtime-provided text while preserving styled status pills
+
 - Latest repair-view rendering hardening slice:
   - hardened bridge/node repair custom views to escape runtime-provided strings before rendering HTML
   - applies to key/value renderers and bridge node-table rows to avoid malformed content or injection from upstream runtime text

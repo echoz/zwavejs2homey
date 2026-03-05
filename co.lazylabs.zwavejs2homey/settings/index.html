@@ -175,6 +175,12 @@
       .warnings li {
         color: var(--warn);
       }
+
+      .hint {
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 12px;
+      }
     </style>
   </head>
   <body>
@@ -208,6 +214,7 @@
       <section class="panel">
         <h2>Runtime Diagnostics</h2>
         <div id="runtime-kv" class="kv"></div>
+        <div id="runtime-hint" class="hint">Diagnostics not loaded yet.</div>
         <ul id="warnings" class="warnings" hidden></ul>
         <div class="row">
           <button id="refreshDiagnosticsBtn" type="button">Refresh Diagnostics</button>
@@ -228,6 +235,7 @@
       const resetBtn = document.getElementById('resetBtn');
       const status = document.getElementById('status');
       const runtimeKv = document.getElementById('runtime-kv');
+      const runtimeHint = document.getElementById('runtime-hint');
       const warnings = document.getElementById('warnings');
       const refreshDiagnosticsBtn = document.getElementById('refreshDiagnosticsBtn');
       const openBridgeToolsBtn = document.getElementById('openBridgeToolsBtn');
@@ -244,9 +252,11 @@
           return;
         }
         runtimeKv.innerHTML = rows
-          .map(
-            ([key, value]) => `<div class="k">${key}</div><div class="v">${value ?? 'n/a'}</div>`,
-          )
+          .map(([key, value]) => {
+            const renderedKey = escapeHtml(key);
+            const renderedValue = renderRuntimeValue(value);
+            return `<div class="k">${renderedKey}</div><div class="v">${renderedValue}</div>`;
+          })
           .join('');
       }
 
@@ -257,7 +267,27 @@
           return;
         }
         warnings.hidden = false;
-        warnings.innerHTML = messages.map((message) => `<li>${String(message)}</li>`).join('');
+        warnings.innerHTML = messages.map((message) => `<li>${escapeHtml(String(message))}</li>`).join('');
+      }
+
+      function escapeHtml(value) {
+        return String(value)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function htmlValue(value) {
+        return { html: String(value) };
+      }
+
+      function renderRuntimeValue(value) {
+        if (value && typeof value === 'object' && value.html) {
+          return String(value.html);
+        }
+        return escapeHtml(asText(value));
       }
 
       function formatIso(value) {
@@ -274,12 +304,20 @@
 
       function connectionPill(zwjs) {
         if (!zwjs || zwjs.available !== true) {
-          return '<span class="status-pill error">Unavailable</span>';
+          return htmlValue('<span class="status-pill error">Unavailable</span>');
         }
         if (zwjs.transportConnected === true) {
-          return '<span class="status-pill ok">Connected</span>';
+          return htmlValue('<span class="status-pill ok">Connected</span>');
         }
-        return '<span class="status-pill warn">Disconnected</span>';
+        return htmlValue('<span class="status-pill warn">Disconnected</span>');
+      }
+
+      function runtimeStatusLabel(data) {
+        if (!data.zwjs || data.zwjs.available !== true) return 'Bridge Not Configured';
+        if (data.zwjs.transportConnected !== true) return 'Bridge Disconnected';
+        const nodes = Array.isArray(data.nodes) ? data.nodes : [];
+        if (nodes.length > 0) return 'Imported Nodes Available';
+        return 'Ready, No Nodes Imported';
       }
 
       function updateTokenVisibility() {
@@ -389,13 +427,21 @@
         const updatesAvailable = nodes.filter(
           (node) => node && node.recommendation && node.recommendation.available === true,
         ).length;
+        const actionableCount = nodes.filter(
+          (node) =>
+            node &&
+            node.recommendation &&
+            (node.recommendation.backfillNeeded === true || node.recommendation.available === true),
+        ).length;
 
         setRuntimeRows([
+          ['Runtime Status', runtimeStatusLabel(data)],
           ['Bridge', asText(data.bridgeId)],
           ['ZWJS', connectionPill(data.zwjs)],
           ['Lifecycle', asText(data.zwjs && data.zwjs.lifecycle)],
           ['ZWJS Server', asText(data.zwjs && data.zwjs.serverVersion)],
           ['Imported Nodes', asText(nodes.length)],
+          ['Action Needed', asText(actionableCount)],
           ['Profile Updates', asText(updatesAvailable)],
           ['Backfill Needed', asText(backfillNeeded)],
           [
@@ -406,10 +452,15 @@
           ['Last Updated', formatIso(data.generatedAt)],
         ]);
         setWarnings(buildRuntimeWarnings(data));
+        runtimeHint.textContent =
+          actionableCount > 0
+            ? `${actionableCount} imported node(s) need attention in Bridge Tools.`
+            : 'No immediate runtime actions are required.';
       }
 
       function refreshDiagnostics(Homey) {
         refreshDiagnosticsBtn.disabled = true;
+        runtimeHint.textContent = 'Refreshing runtime diagnostics...';
         setStatus('Refreshing runtime diagnostics...', 'muted');
         Homey.api('GET', '/runtime/diagnostics', null, (error, response) => {
           refreshDiagnosticsBtn.disabled = false;
@@ -417,6 +468,7 @@
             setStatus(`Failed to load runtime diagnostics: ${error.message || error}`, 'error');
             setRuntimeRows([]);
             setWarnings(['Runtime diagnostics endpoint is unavailable.']);
+            runtimeHint.textContent = 'Runtime diagnostics unavailable.';
             return;
           }
           const parsed = parseRuntimeResponse(response);
@@ -424,6 +476,7 @@
             setStatus(parsed.error, 'error');
             setRuntimeRows([]);
             setWarnings(['Runtime diagnostics payload is invalid.']);
+            runtimeHint.textContent = 'Runtime diagnostics payload is invalid.';
             return;
           }
           renderRuntimeDiagnostics(parsed.data);
