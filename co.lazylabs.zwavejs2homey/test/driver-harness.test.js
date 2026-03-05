@@ -8,6 +8,7 @@ class FakeHomeyDriver {
     this.homey = { app: {} };
     this._devices = [];
     this._logs = [];
+    this._errors = [];
   }
 
   _configureHarness({ app, devices, zones, api } = {}) {
@@ -27,8 +28,16 @@ class FakeHomeyDriver {
     return [...this._logs];
   }
 
+  _getErrors() {
+    return [...this._errors];
+  }
+
   log(message, meta) {
     this._logs.push({ message, meta });
+  }
+
+  error(message, meta) {
+    this._errors.push({ message, meta });
   }
 }
 
@@ -36,6 +45,7 @@ class FakeHomeyDevice {
   constructor() {
     this.homey = { app: {} };
     this._logs = [];
+    this._errors = [];
     this._store = new Map();
   }
 
@@ -47,12 +57,20 @@ class FakeHomeyDevice {
     return [...this._logs];
   }
 
+  _getErrors() {
+    return [...this._errors];
+  }
+
   _getStoreValue(key) {
     return this._store.get(key);
   }
 
   log(message, meta) {
     this._logs.push({ message, meta });
+  }
+
+  error(message, meta) {
+    this._errors.push({ message, meta });
   }
 
   async setStoreValue(key, value) {
@@ -413,6 +431,41 @@ test('node driver keeps pairing functional when only homey.api is present', asyn
   assert.equal(candidates.length, 1);
   assert.equal(candidates[0]?.name, 'Desk Lamp - Study');
   assert.equal(candidates[0]?.store?.locationMatchedZone, false);
+});
+
+test('node driver pairing still returns candidates when node state lookup hangs', async () => {
+  const client = {
+    async getNodeList() {
+      return {
+        nodes: [{ nodeId: 44, name: 'Hall Lamp', location: 'Hallway' }],
+      };
+    },
+    async getNodeState() {
+      return await new Promise(() => {});
+    },
+  };
+  const driver = new NodeDriver();
+  const previousTimeout = NodeDriver.PAIR_NODE_STATE_TIMEOUT_MS;
+  NodeDriver.PAIR_NODE_STATE_TIMEOUT_MS = 25;
+  driver._configureHarness({
+    app: {
+      getZwjsClient: () => client,
+      getBridgeId: () => 'main',
+      resolveCompiledProfileEntry: () => ({ by: 'none' }),
+    },
+    devices: [],
+  });
+
+  try {
+    const startedAt = Date.now();
+    const candidates = await driver.onPairListDevices();
+    const elapsedMs = Date.now() - startedAt;
+    assert.equal(candidates.length, 1);
+    assert.equal(candidates[0]?.data?.nodeId, 44);
+    assert.equal(elapsedMs < 1000, true);
+  } finally {
+    NodeDriver.PAIR_NODE_STATE_TIMEOUT_MS = previousTimeout;
+  }
 });
 
 test('node driver repair session exposes device tools snapshot handlers', async () => {

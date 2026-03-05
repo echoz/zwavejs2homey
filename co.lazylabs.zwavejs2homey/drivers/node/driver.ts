@@ -17,9 +17,7 @@ type RecommendationActionSelection =
 interface AppRuntimeAccess {
   getZwjsClient?: () => ZwjsClient | undefined;
   getBridgeId?: () => string;
-  resolveCompiledProfileEntry?: (
-    selector: ReturnType<typeof buildNodeResolverSelector>,
-  ) => {
+  resolveCompiledProfileEntry?: (selector: ReturnType<typeof buildNodeResolverSelector>) => {
     by: string;
     entry?: {
       compiled?: {
@@ -59,8 +57,60 @@ interface HomeyZonesManagerLike {
 }
 
 module.exports = class NodeDriver extends Homey.Driver {
+  private static readonly PAIR_NODE_LIST_TIMEOUT_MS = 8000;
+
+  private static readonly PAIR_ZONE_LOOKUP_TIMEOUT_MS = 1500;
+
+  private static readonly PAIR_NODE_STATE_TIMEOUT_MS = 1000;
+
+  private static readonly PAIR_ICON_INFERENCE_CONCURRENCY = 6;
+
   async onInit() {
     this.log('NodeDriver initialized');
+  }
+
+  private async withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+    return await new Promise<T>((resolve, reject) => {
+      let settled = false;
+      const timeoutHandle = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        reject(new Error(`${label} timed out after ${timeoutMs}ms`));
+      }, timeoutMs);
+
+      promise.then(
+        (value) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timeoutHandle);
+          resolve(value);
+        },
+        (error) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timeoutHandle);
+          reject(error);
+        },
+      );
+    });
+  }
+
+  private async runWithConcurrencyLimit<T>(
+    items: T[],
+    limit: number,
+    worker: (item: T) => Promise<void>,
+  ): Promise<void> {
+    const safeLimit = Math.max(1, Math.min(limit, items.length || 1));
+    let index = 0;
+    const runWorker = async () => {
+      while (true) {
+        const currentIndex = index;
+        index += 1;
+        if (currentIndex >= items.length) return;
+        await worker(items[currentIndex]);
+      }
+    };
+    await Promise.all(Array.from({ length: safeLimit }, () => runWorker()));
   }
 
   private extractZoneNames(source: unknown): string[] {
@@ -90,7 +140,9 @@ module.exports = class NodeDriver extends Homey.Driver {
   private async loadHomeyZoneNames(): Promise<string[]> {
     const zonesManager = (this.homey as unknown as { zones?: HomeyZonesManagerLike }).zones;
     const getZones =
-      typeof zonesManager?.getZones === 'function' ? zonesManager.getZones.bind(zonesManager) : undefined;
+      typeof zonesManager?.getZones === 'function'
+        ? zonesManager.getZones.bind(zonesManager)
+        : undefined;
     if (typeof getZones === 'function') {
       try {
         const zones = await new Promise<Record<string, HomeyZoneLike>>((resolve, reject) => {
@@ -131,35 +183,64 @@ module.exports = class NodeDriver extends Homey.Driver {
       return device.getData() as HomeyDeviceData | undefined;
     });
     const existingNodeIds = collectExistingNodeIdsFromData(existingData, bridgeId);
-    const { nodes } = await client.getNodeList();
-    const knownZoneNames = await this.loadHomeyZoneNames();
+    const nodeListResult = await this.withTimeout(
+      client.getNodeList(),
+      NodeDriver.PAIR_NODE_LIST_TIMEOUT_MS,
+      'node list lookup',
+    );
+    const nodes = Array.isArray(nodeListResult?.nodes) ? nodeListResult.nodes : [];
+    let knownZoneNames: string[] = [];
+    try {
+      knownZoneNames = await this.withTimeout(
+        this.loadHomeyZoneNames(),
+        NodeDriver.PAIR_ZONE_LOOKUP_TIMEOUT_MS,
+        'zone lookup',
+      );
+    } catch (error) {
+      this.error(
+        'Timed out loading Homey zones during node pairing; continuing without zone hints',
+        {
+          error,
+        },
+      );
+      knownZoneNames = [];
+    }
 
     const candidates = buildNodePairCandidates(nodes, bridgeId, existingNodeIds, undefined, {
       knownZoneNames,
     });
-    for (const candidate of candidates) {
-      if (!app.resolveCompiledProfileEntry) continue;
-      try {
-        const nodeStateResult = await client.getNodeState(candidate.data.nodeId);
-        if (!nodeStateResult.success) continue;
-        const selector = buildNodeResolverSelector(
-          { bridgeId, nodeId: candidate.data.nodeId },
-          nodeStateResult.result?.state,
-        );
-        const match = app.resolveCompiledProfileEntry(selector);
-        if (match?.by === 'none') continue;
-        const homeyClass = normalizeHomeyClassForPairIcon(
-          match?.entry?.compiled?.profile?.classification?.homeyClass,
-        );
-        candidate.icon = resolvePairIconForHomeyClass(homeyClass);
-        candidate.store.inferredHomeyClass = homeyClass;
-      } catch (error) {
-        this.error('Failed to infer node pairing icon', {
-          bridgeId,
-          nodeId: candidate.data.nodeId,
-          error,
-        });
-      }
+    if (app.resolveCompiledProfileEntry) {
+      await this.runWithConcurrencyLimit(
+        candidates,
+        NodeDriver.PAIR_ICON_INFERENCE_CONCURRENCY,
+        async (candidate) => {
+          try {
+            const nodeStateResult = await this.withTimeout(
+              client.getNodeState(candidate.data.nodeId),
+              NodeDriver.PAIR_NODE_STATE_TIMEOUT_MS,
+              `node ${candidate.data.nodeId} state lookup`,
+            );
+            if (!nodeStateResult.success) return;
+            const selector = buildNodeResolverSelector(
+              { bridgeId, nodeId: candidate.data.nodeId },
+              nodeStateResult.result?.state,
+            );
+            const match = app.resolveCompiledProfileEntry?.(selector);
+            if (match?.by === 'none') return;
+            const homeyClass = normalizeHomeyClassForPairIcon(
+              match?.entry?.compiled?.profile?.classification?.homeyClass,
+            );
+            candidate.icon = resolvePairIconForHomeyClass(homeyClass);
+            candidate.store.inferredHomeyClass = homeyClass;
+          } catch (error) {
+            this.error('Failed to infer node pairing icon', {
+              bridgeId,
+              nodeId: candidate.data.nodeId,
+              error,
+            });
+          }
+        },
+      );
     }
 
     this.log('Node pair list generated', {

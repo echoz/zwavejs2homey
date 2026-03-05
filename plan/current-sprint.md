@@ -19,6 +19,12 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## Recently Completed
 
+- Latest node pairing timeout-hardening slice:
+  - added defensive timeouts for pairing-time node list lookup, zone lookup, and per-node state/icon inference
+  - icon inference now runs with bounded concurrency and timeout guards so one slow node no longer blocks the pair list
+  - pairing now degrades gracefully when zone lookup times out (continues without zone hints)
+  - added harness regression coverage for hanging node-state lookups to prevent spinner-lock regressions
+
 - Latest bridge pairing guidance slice:
   - added post-add bridge pairing guidance custom view (`next_steps`) to keep node import flow explicit within Homey template constraints
   - bridge pair flow now navigates:

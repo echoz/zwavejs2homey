@@ -69,7 +69,18 @@
         },
         {
           "id": "add_devices",
-          "template": "add_devices"
+          "template": "add_devices",
+          "navigation": {
+            "next": "next_steps"
+          }
+        },
+        {
+          "id": "next_steps"
+        }
+      ],
+      "repair": [
+        {
+          "id": "bridge_tools"
         }
       ],
       "images": {
