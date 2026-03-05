@@ -313,6 +313,23 @@
           return `${label} (${normalized})`;
         }
 
+        function buildNodeStatusSummary(nodeState) {
+          const parts = [];
+          if (typeof nodeState.isFailed === 'boolean') {
+            parts.push(nodeState.isFailed ? 'Failed' : 'Healthy');
+          }
+          if (typeof nodeState.ready === 'boolean') {
+            parts.push(nodeState.ready ? 'Ready' : 'Not Ready');
+          }
+          if (typeof nodeState.interviewStage === 'string' && nodeState.interviewStage.trim()) {
+            parts.push(`Interview: ${nodeState.interviewStage.trim()}`);
+          }
+          if (typeof nodeState.status === 'string' && nodeState.status.trim()) {
+            parts.push(`State: ${nodeState.status.trim()}`);
+          }
+          return parts.length > 0 ? parts.join(' · ') : 'n/a';
+        }
+
         function setKvRows(container, rows) {
           container.innerHTML = rows
             .map(([key, value, className]) => {
@@ -382,18 +399,7 @@
           const zwjsConnection = `${toSafeText(runtimeZwjs.lifecycle)} / ${
             runtimeZwjs.transportConnected === true ? 'connected' : 'disconnected'
           }`;
-          const nodeReady =
-            typeof nodeState.ready === 'boolean'
-              ? nodeState.ready
-                ? 'Ready'
-                : 'Not Ready'
-              : 'n/a';
-          const nodeFailed =
-            typeof nodeState.isFailed === 'boolean'
-              ? nodeState.isFailed
-                ? 'Failed'
-                : 'Healthy'
-              : 'n/a';
+          const nodeStatus = buildNodeStatusSummary(nodeState);
           backfillBtn.disabled = isBusy || !canBackfill;
           adoptBtn.disabled = isBusy || !canAdopt;
           const deviceLabel =
@@ -412,10 +418,7 @@
             ['Product', nodeState.product],
             ['Product Triple', productTriple, ' mono'],
             ['Location', nodeState.location],
-            ['Interview Stage', nodeState.interviewStage],
-            ['Node Status', nodeState.status],
-            ['Node Ready', nodeReady],
-            ['Node Failed', nodeFailed],
+            ['Node Status', nodeStatus],
             ['ZWJS', zwjsConnection],
             ['ZWJS Server', runtimeZwjs.serverVersion],
             [
