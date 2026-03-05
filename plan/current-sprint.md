@@ -19,6 +19,14 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## Recently Completed
 
+- Latest bridge triage count UX slice:
+  - added live counts to bridge node filters:
+    - `Action Needed (N)`
+    - `All (N)`
+  - added node-list meta line to clarify current scope:
+    - action-needed subset vs full list
+  - keeps default action-needed triage while making list scope explicit at a glance
+
 - Latest bridge triage filter UX slice:
   - added one-click node list filters in Bridge Tools:
     - `Action Needed` (default)

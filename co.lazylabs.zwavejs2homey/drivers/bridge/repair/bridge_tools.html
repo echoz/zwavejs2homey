@@ -299,6 +299,7 @@
           <button id="filter-all-btn" class="toggle-button">All</button>
         </div>
       </div>
+      <div id="nodes-meta" class="hint" style="margin-bottom: 8px"></div>
       <div id="nodes-empty" class="hint" hidden>No imported node devices found.</div>
       <table id="nodes-table" class="nodes-table" hidden>
         <thead>
@@ -334,6 +335,7 @@
         const runtimeKv = document.getElementById('runtime-kv');
         const runtimeAdvancedKv = document.getElementById('runtime-advanced-kv');
         const summaryKv = document.getElementById('summary-kv');
+        const nodesMeta = document.getElementById('nodes-meta');
         const nodesTable = document.getElementById('nodes-table');
         const nodesEmpty = document.getElementById('nodes-empty');
         const nodesTbody = document.getElementById('nodes-tbody');
@@ -457,9 +459,12 @@
             subtitleEl.textContent = state.loading
               ? 'Loading bridge diagnostics...'
               : 'No diagnostics available.';
+            filterActionNeededBtn.textContent = 'Action Needed';
+            filterAllBtn.textContent = 'All';
             runtimeKv.innerHTML = '';
             runtimeAdvancedKv.innerHTML = '';
             summaryKv.innerHTML = '';
+            nodesMeta.textContent = '';
             nodesEmpty.hidden = false;
             nodesTable.hidden = true;
             nodesTbody.innerHTML = '';
@@ -520,10 +525,19 @@
                 return leftId.localeCompare(rightId);
               })
             : [];
+          const actionNeededNodes = nodes.filter((node) => recommendationPriority(node) < 2);
+          filterActionNeededBtn.textContent = `Action Needed (${actionNeededNodes.length})`;
+          filterAllBtn.textContent = `All (${nodes.length})`;
           const visibleNodes =
             state.filterMode === 'action-needed'
-              ? nodes.filter((node) => recommendationPriority(node) < 2)
+              ? actionNeededNodes
               : nodes;
+          nodesMeta.textContent =
+            nodes.length === 0
+              ? 'No imported nodes available.'
+              : state.filterMode === 'action-needed'
+                ? `Showing ${visibleNodes.length} of ${nodes.length} imported nodes that require action.`
+                : `Showing all ${nodes.length} imported nodes.`;
 
           if (visibleNodes.length === 0) {
             nodesEmpty.hidden = false;
