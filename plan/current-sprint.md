@@ -19,6 +19,14 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## Recently Completed
 
+- Latest node Device Tools clarity split slice:
+  - split node repair diagnostics into two explicit sections:
+    - `ZWJS Node` (manufacturer/product/location/status/transport context)
+    - `Adapter` (profile class/match/confidence/source/mapping/curation state)
+  - renamed confidence display to `Profile Confidence` and added explicit meaning copy
+  - added `Profile Source` row so `high/curated confidence + no curation entry` is explicitly represented as compiled-profile-only behavior
+  - updated recommendation copy to explain confidence vs per-device curation responsibility
+
 - Latest bridge Device Tools essentials/advanced UX slice:
   - aligned bridge repair screen with node repair ergonomics by moving verbose runtime metadata into a collapsed `Advanced` section
   - kept bridge essentials prominent (runtime health + summary) and suppressed empty-value rows in advanced diagnostics

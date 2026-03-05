@@ -240,8 +240,13 @@
     <div class="panel-grid">
       <div class="panel-column">
         <section class="panel">
-          <h2>Diagnostics</h2>
-          <div id="diagnostics-kv" class="kv"></div>
+          <h2>ZWJS Node</h2>
+          <div id="zwjs-node-kv" class="kv"></div>
+        </section>
+
+        <section class="panel">
+          <h2>Adapter</h2>
+          <div id="adapter-kv" class="kv"></div>
         </section>
 
         <section class="panel">
@@ -334,7 +339,8 @@
         const statusLine = document.getElementById('status-line');
         const subtitle = document.getElementById('device-subtitle');
         const errorPanel = document.getElementById('error-panel');
-        const diagnosticsKv = document.getElementById('diagnostics-kv');
+        const zwjsNodeKv = document.getElementById('zwjs-node-kv');
+        const adapterKv = document.getElementById('adapter-kv');
         const recommendationContent = document.getElementById('recommendation-content');
         const profileRefKv = document.getElementById('profile-reference-kv');
         const whyKv = document.getElementById('why-kv');
@@ -385,6 +391,31 @@
             parts.push(`State: ${nodeState.status.trim()}`);
           }
           return parts.length > 0 ? parts.join(' · ') : 'n/a';
+        }
+
+        function describeConfidence(confidence) {
+          const normalized =
+            typeof confidence === 'string' ? confidence.trim().toLowerCase() : '';
+          if (normalized === 'curated') {
+            return 'Curated profile match';
+          }
+          if (normalized === 'ha-derived') {
+            return 'Home Assistant-derived profile match';
+          }
+          if (normalized === 'generic') {
+            return 'Generic fallback profile';
+          }
+          if (normalized.length > 0) {
+            return normalized;
+          }
+          return 'n/a';
+        }
+
+        function describeProfileSource(snapshot) {
+          if (snapshot.curation && snapshot.curation.entryPresent) {
+            return 'Compiled profile + device curation override';
+          }
+          return 'Compiled profile only (no device override)';
         }
 
         function isMissingValue(value) {
@@ -441,7 +472,8 @@
             subtitle.textContent = state.loading
               ? 'Loading device context...'
               : 'No device data available.';
-            diagnosticsKv.innerHTML = '';
+            zwjsNodeKv.innerHTML = '';
+            adapterKv.innerHTML = '';
             recommendationContent.innerHTML =
               '<p class="hint">No recommendation data available.</p>';
             profileRefKv.innerHTML = '';
@@ -471,26 +503,32 @@
             runtimeZwjs.transportConnected === true ? 'connected' : 'disconnected'
           }`;
           const nodeStatus = buildNodeStatusSummary(nodeState);
+          const confidenceSummary = describeConfidence(snapshot.profile.confidence);
+          const profileSourceSummary = describeProfileSource(snapshot);
           backfillBtn.disabled = isBusy || !canBackfill;
           adoptBtn.disabled = isBusy || !canAdopt;
           const deviceLabel =
             snapshot.device.nodeId !== null ? `Node ${snapshot.device.nodeId}` : 'Node';
           subtitle.textContent = `${deviceLabel} · ${snapshot.device.homeyDeviceId}`;
 
-          setKvRows(diagnosticsKv, [
-            ['Homey Class', snapshot.profile.homeyClass],
-            ['Confidence', snapshot.profile.confidence],
-            ['Profile ID', snapshot.profile.profileId, ' mono'],
-            [
-              'Match',
-              `${toSafeText(snapshot.profile.matchBy)} / ${toSafeText(snapshot.profile.matchKey)}`,
-            ],
+          setKvRows(zwjsNodeKv, [
             ['Manufacturer', nodeState.manufacturer],
             ['Product', nodeState.product],
             ['Location', nodeState.location],
             ['Node Status', nodeStatus],
             ['ZWJS', zwjsConnection],
             ['ZWJS Server', runtimeZwjs.serverVersion],
+          ], { omitEmpty: true });
+
+          setKvRows(adapterKv, [
+            ['Homey Class', snapshot.profile.homeyClass],
+            ['Profile Confidence', confidenceSummary],
+            ['Profile Source', profileSourceSummary],
+            ['Profile ID', snapshot.profile.profileId, ' mono'],
+            [
+              'Match',
+              `${toSafeText(snapshot.profile.matchBy)} / ${toSafeText(snapshot.profile.matchKey)}`,
+            ],
             [
               'Inbound Mapping',
               `${snapshot.mapping.inboundEnabled}/${snapshot.mapping.inboundConfigured} enabled`,
@@ -507,6 +545,9 @@
             <p class="hint" style="margin:8px 0 0;">${toSafeText(
               reasonLabels[snapshot.recommendation.reason] || snapshot.recommendation.reason,
             )}</p>
+            <p class="hint" style="margin:6px 0 0;">
+              Profile confidence describes compiled profile matching strength. Device curation is an optional per-device override.
+            </p>
           `;
 
           setKvRows(profileRefKv, [
