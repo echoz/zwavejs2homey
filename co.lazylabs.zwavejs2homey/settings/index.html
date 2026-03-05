@@ -6,16 +6,57 @@
     <title>ZWJS Connection</title>
     <script type="text/javascript" src="/homey.js" data-origin="settings"></script>
     <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f6f8fb;
+        --panel: #ffffff;
+        --panel-border: #d8dfec;
+        --text: #1f2937;
+        --muted: #64748b;
+        --ok: #0f766e;
+        --warn: #b45309;
+        --danger: #b91c1c;
+        --accent: #1d4ed8;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
       body {
-        font-family: sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         margin: 16px;
-        color: var(--homey-text-color, #1f2937);
-        background: var(--homey-background-color, #ffffff);
+        color: var(--text);
+        background: var(--bg);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      @media (min-width: 980px) {
+        .grid {
+          grid-template-columns: minmax(0, 1fr) minmax(320px, 40%);
+        }
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        border-radius: 12px;
+        padding: 12px;
       }
 
       h1 {
         font-size: 1.1rem;
         margin: 0 0 12px;
+      }
+
+      h2 {
+        margin: 0 0 8px;
+        font-size: 14px;
       }
 
       p {
@@ -35,10 +76,24 @@
         width: 100%;
         padding: 8px;
         font-size: 14px;
-        color: var(--homey-text-color, #1f2937);
-        background: var(--homey-background-color, #ffffff);
-        border: 1px solid var(--homey-line-color, #d1d5db);
+        color: var(--text);
+        background: transparent;
+        border: 1px solid var(--panel-border);
         border-radius: 8px;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      button.primary {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
       }
 
       .row {
@@ -48,44 +103,118 @@
         margin-top: 12px;
       }
 
-      .message {
-        margin-top: 12px;
-        font-size: 13px;
-      }
-
       .muted {
-        opacity: 0.8;
+        color: var(--muted);
       }
 
       .hidden {
         display: none;
       }
+
+      .message {
+        margin-top: 12px;
+        font-size: 13px;
+      }
+
+      .message.ok {
+        color: var(--ok);
+      }
+
+      .message.warn {
+        color: var(--warn);
+      }
+
+      .message.error {
+        color: var(--danger);
+      }
+
+      .kv {
+        display: grid;
+        grid-template-columns: 140px minmax(0, 1fr);
+        row-gap: 6px;
+        column-gap: 10px;
+        font-size: 13px;
+      }
+
+      .kv .k {
+        color: var(--muted);
+      }
+
+      .status-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        border: 1px solid transparent;
+      }
+
+      .status-pill.ok {
+        color: var(--ok);
+        background: rgba(15, 118, 110, 0.1);
+        border-color: rgba(15, 118, 110, 0.35);
+      }
+
+      .status-pill.warn {
+        color: var(--warn);
+        background: rgba(180, 83, 9, 0.1);
+        border-color: rgba(180, 83, 9, 0.35);
+      }
+
+      .status-pill.error {
+        color: var(--danger);
+        background: rgba(185, 28, 28, 0.1);
+        border-color: rgba(185, 28, 28, 0.35);
+      }
+
+      .warnings {
+        margin: 8px 0 0;
+        padding-left: 18px;
+      }
+
+      .warnings li {
+        color: var(--warn);
+      }
     </style>
   </head>
   <body>
-    <h1>ZWJS Connection</h1>
-    <p class="muted">Configure how this app connects to your Z-Wave JS UI server.</p>
+    <div class="grid">
+      <section class="panel">
+        <h1>ZWJS Connection</h1>
+        <p class="muted">Configure how this app connects to your Z-Wave JS UI server.</p>
 
-    <label for="url">WebSocket URL</label>
-    <input id="url" type="text" placeholder="ws://192.168.1.15:3000" />
+        <label for="url">WebSocket URL</label>
+        <input id="url" type="text" placeholder="ws://192.168.1.15:3000" />
 
-    <label for="authType">Authentication</label>
-    <select id="authType">
-      <option value="none">None</option>
-      <option value="bearer">Bearer token</option>
-    </select>
+        <label for="authType">Authentication</label>
+        <select id="authType">
+          <option value="none">None</option>
+          <option value="bearer">Bearer token</option>
+        </select>
 
-    <div id="tokenWrap" class="hidden">
-      <label for="token">Bearer token</label>
-      <input id="token" type="password" placeholder="Paste token" />
+        <div id="tokenWrap" class="hidden">
+          <label for="token">Bearer token</label>
+          <input id="token" type="password" placeholder="Paste token" />
+        </div>
+
+        <div class="row">
+          <button id="saveBtn" class="primary" type="button">Save</button>
+          <button id="resetBtn" type="button">Reset To Defaults</button>
+        </div>
+
+        <p id="status" class="message muted"></p>
+      </section>
+
+      <section class="panel">
+        <h2>Runtime Diagnostics</h2>
+        <div id="runtime-kv" class="kv"></div>
+        <ul id="warnings" class="warnings" hidden></ul>
+        <div class="row">
+          <button id="refreshDiagnosticsBtn" type="button">Refresh Diagnostics</button>
+          <button id="openBridgeToolsBtn" type="button">Open Bridge Tools</button>
+        </div>
+      </section>
     </div>
-
-    <div class="row">
-      <button id="saveBtn" type="button">Save</button>
-      <button id="resetBtn" type="button">Reset To Defaults</button>
-    </div>
-
-    <p id="status" class="message muted"></p>
 
     <script>
       const SETTINGS_KEY = 'zwjs_connection';
@@ -98,12 +227,59 @@
       const saveBtn = document.getElementById('saveBtn');
       const resetBtn = document.getElementById('resetBtn');
       const status = document.getElementById('status');
+      const runtimeKv = document.getElementById('runtime-kv');
+      const warnings = document.getElementById('warnings');
+      const refreshDiagnosticsBtn = document.getElementById('refreshDiagnosticsBtn');
+      const openBridgeToolsBtn = document.getElementById('openBridgeToolsBtn');
 
-      function setStatus(message, isError = false) {
+      function setStatus(message, tone = 'muted') {
         status.textContent = message;
-        status.style.color = isError
-          ? 'var(--homey-color-red, #b00020)'
-          : 'var(--homey-text-color-light, #6b7280)';
+        status.classList.remove('ok', 'warn', 'error', 'muted');
+        status.classList.add(tone);
+      }
+
+      function setRuntimeRows(rows) {
+        if (!Array.isArray(rows) || rows.length === 0) {
+          runtimeKv.innerHTML = '<div class="k">Status</div><div class="v">n/a</div>';
+          return;
+        }
+        runtimeKv.innerHTML = rows
+          .map(
+            ([key, value]) => `<div class="k">${key}</div><div class="v">${value ?? 'n/a'}</div>`,
+          )
+          .join('');
+      }
+
+      function setWarnings(messages) {
+        if (!Array.isArray(messages) || messages.length === 0) {
+          warnings.hidden = true;
+          warnings.innerHTML = '';
+          return;
+        }
+        warnings.hidden = false;
+        warnings.innerHTML = messages.map((message) => `<li>${String(message)}</li>`).join('');
+      }
+
+      function formatIso(value) {
+        if (!value) return 'n/a';
+        const parsed = new Date(value);
+        if (Number.isNaN(parsed.getTime())) return String(value);
+        return parsed.toLocaleString();
+      }
+
+      function asText(value) {
+        if (value === null || typeof value === 'undefined' || value === '') return 'n/a';
+        return String(value);
+      }
+
+      function connectionPill(zwjs) {
+        if (!zwjs || zwjs.available !== true) {
+          return '<span class="status-pill error">Unavailable</span>';
+        }
+        if (zwjs.transportConnected === true) {
+          return '<span class="status-pill ok">Connected</span>';
+        }
+        return '<span class="status-pill warn">Disconnected</span>';
       }
 
       function updateTokenVisibility() {
@@ -174,10 +350,91 @@
         };
       }
 
+      function parseRuntimeResponse(response) {
+        if (!response || typeof response !== 'object') {
+          return { error: 'Runtime diagnostics response is invalid.' };
+        }
+        if (response.ok === true && response.data && typeof response.data === 'object') {
+          return { data: response.data };
+        }
+        if (response.ok === false && response.error && typeof response.error === 'object') {
+          return { error: response.error.message || 'Runtime diagnostics unavailable.' };
+        }
+        return { error: 'Runtime diagnostics response is missing expected fields.' };
+      }
+
+      function buildRuntimeWarnings(data) {
+        const messages = [];
+        if (!data.zwjs || data.zwjs.available !== true) {
+          messages.push('ZWJS client is unavailable. Save a valid connection URL.');
+          return messages;
+        }
+        if (data.zwjs.transportConnected !== true) {
+          messages.push('ZWJS transport is disconnected. Pair/import may return empty results.');
+        }
+        if (!data.compiledProfiles || data.compiledProfiles.loaded !== true) {
+          messages.push('Compiled profiles are not loaded. Runtime matching may fall back.');
+        }
+        if (!data.curation || data.curation.loaded !== true) {
+          messages.push('Curation runtime failed to load. Device overrides may be unavailable.');
+        }
+        return messages;
+      }
+
+      function renderRuntimeDiagnostics(data) {
+        const nodes = Array.isArray(data.nodes) ? data.nodes : [];
+        const backfillNeeded = nodes.filter(
+          (node) => node && node.recommendation && node.recommendation.backfillNeeded === true,
+        ).length;
+        const updatesAvailable = nodes.filter(
+          (node) => node && node.recommendation && node.recommendation.available === true,
+        ).length;
+
+        setRuntimeRows([
+          ['Bridge', asText(data.bridgeId)],
+          ['ZWJS', connectionPill(data.zwjs)],
+          ['Lifecycle', asText(data.zwjs && data.zwjs.lifecycle)],
+          ['ZWJS Server', asText(data.zwjs && data.zwjs.serverVersion)],
+          ['Imported Nodes', asText(nodes.length)],
+          ['Profile Updates', asText(updatesAvailable)],
+          ['Backfill Needed', asText(backfillNeeded)],
+          [
+            'Compiled Profiles',
+            data.compiledProfiles && data.compiledProfiles.loaded === true ? 'Loaded' : 'Missing',
+          ],
+          ['Curation', data.curation && data.curation.loaded === true ? 'Loaded' : 'Unavailable'],
+          ['Last Updated', formatIso(data.generatedAt)],
+        ]);
+        setWarnings(buildRuntimeWarnings(data));
+      }
+
+      function refreshDiagnostics(Homey) {
+        refreshDiagnosticsBtn.disabled = true;
+        setStatus('Refreshing runtime diagnostics...', 'muted');
+        Homey.api('GET', '/runtime/diagnostics', null, (error, response) => {
+          refreshDiagnosticsBtn.disabled = false;
+          if (error) {
+            setStatus(`Failed to load runtime diagnostics: ${error.message || error}`, 'error');
+            setRuntimeRows([]);
+            setWarnings(['Runtime diagnostics endpoint is unavailable.']);
+            return;
+          }
+          const parsed = parseRuntimeResponse(response);
+          if (parsed.error) {
+            setStatus(parsed.error, 'error');
+            setRuntimeRows([]);
+            setWarnings(['Runtime diagnostics payload is invalid.']);
+            return;
+          }
+          renderRuntimeDiagnostics(parsed.data);
+          setStatus('Runtime diagnostics refreshed.', 'ok');
+        });
+      }
+
       function loadSettings(Homey) {
         Homey.get(SETTINGS_KEY, (error, raw) => {
           if (error) {
-            setStatus(`Failed to load settings: ${error.message || error}`, true);
+            setStatus(`Failed to load settings: ${error.message || error}`, 'error');
             Homey.ready();
             return;
           }
@@ -187,7 +444,8 @@
           authTypeSelect.value = settings.authType;
           tokenInput.value = settings.token;
           updateTokenVisibility();
-          setStatus('Settings loaded.');
+          setStatus('Settings loaded.', 'ok');
+          refreshDiagnostics(Homey);
           Homey.ready();
         });
       }
@@ -200,16 +458,17 @@
         saveBtn.addEventListener('click', () => {
           const result = getPayloadOrError();
           if (result.error) {
-            setStatus(result.error, true);
+            setStatus(result.error, 'error');
             return;
           }
 
           Homey.set(SETTINGS_KEY, result.payload, (error) => {
             if (error) {
-              setStatus(`Failed to save settings: ${error.message || error}`, true);
+              setStatus(`Failed to save settings: ${error.message || error}`, 'error');
               return;
             }
-            setStatus('Saved. Connection will be reloaded automatically.');
+            setStatus('Saved. Connection will be reloaded automatically.', 'ok');
+            refreshDiagnostics(Homey);
           });
         });
 
@@ -220,15 +479,27 @@
           };
           Homey.set(SETTINGS_KEY, payload, (error) => {
             if (error) {
-              setStatus(`Failed to reset settings: ${error.message || error}`, true);
+              setStatus(`Failed to reset settings: ${error.message || error}`, 'error');
               return;
             }
             urlInput.value = DEFAULT_URL;
             authTypeSelect.value = 'none';
             tokenInput.value = '';
             updateTokenVisibility();
-            setStatus('Reset to defaults. Connection will be reloaded automatically.');
+            setStatus('Reset to defaults. Connection will be reloaded automatically.', 'ok');
+            refreshDiagnostics(Homey);
           });
+        });
+
+        refreshDiagnosticsBtn.addEventListener('click', () => {
+          refreshDiagnostics(Homey);
+        });
+
+        openBridgeToolsBtn.addEventListener('click', () => {
+          setStatus(
+            'Open the paired ZWJS Bridge device and use Repair to access Bridge Tools diagnostics.',
+            'muted',
+          );
         });
       }
 

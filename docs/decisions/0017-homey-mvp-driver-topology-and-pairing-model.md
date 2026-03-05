@@ -32,8 +32,10 @@ Pairing/onboarding model:
 - If inclusion is initiated from `bridge`, the app does not auto-open `node` pairing or auto-create Homey node devices.
 - User explicitly completes import through `node` pairing (or equivalent explicit add action).
 - No cross-driver automatic pairing handoff is assumed in v1.
-- MVP pairing uses Homey system templates (`list_devices`, `add_devices`); deep layout/styling customization is out of scope for v1.
-- Richer onboarding UX will move to custom pairing views in a later phase.
+- MVP pairing keeps Homey system templates for selection/add (`list_devices`, `add_devices`) and uses custom post-add views for guidance:
+  - bridge flow: `next_steps`
+  - node flow: `import_summary`
+- Deep custom pairing layouts beyond template steps remain out of scope for v1.
 
 Bridge singleton policy:
 
@@ -51,9 +53,9 @@ Positive:
 
 Tradeoffs:
 
-- bridge-initiated inclusion requires an explicit follow-up import step in v1
-- app needs clear user messaging for "inclusion completed, now import node"
-- system template constraints limit how much guidance can be presented inline during pairing
+- bridge-initiated inclusion still requires an explicit follow-up import step in v1
+- system template constraints still limit custom layout during device selection/add steps
+- onboarding clarity relies on post-add custom guidance/summary views
 
 ## Follow-up Implementation Notes
 
@@ -66,3 +68,5 @@ Tradeoffs:
 - `bridge` and `node` driver scaffolds are implemented in `co.lazylabs.zwavejs2homey/drivers`.
 - `bridge` pairing enforces singleton behavior through stable `device.data.id = zwjs-bridge-main`.
 - `node` pairing imports from live ZWJS node list, filters controller node (`nodeId = 1`), and dedupes by `bridgeId + nodeId`.
+- `bridge` pairing flow now includes post-add custom guidance view (`next_steps`) with live onboarding status.
+- `node` pairing flow now includes post-add custom summary view (`import_summary`) with live import status.

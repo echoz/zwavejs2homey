@@ -134,11 +134,10 @@ Done so far:
 In progress / next:
 
 1. continue broadening runtime mapping coverage with tests
-2. continue Device Tools UX polish over recommendation state and diagnostics
-3. keep MVP pairing on Homey system templates (`list_devices` -> `add_devices`) and defer richer pairing UX to custom views
-4. lock/confirm generic inference policy for adapter runtime:
+2. lock/confirm generic inference policy for adapter runtime:
    - compile-time generic layer remains active in compiler artifacts
    - adapter runtime currently uses compiled resolution + safe no-match fallback; broader runtime generic inference remains a deliberate follow-up decision
+3. run a focused Homey UX review pass (pairing + settings + repair views) against real app usage feedback
 
 Exit criteria:
 
@@ -150,10 +149,10 @@ Exit criteria:
 
 Planned:
 
-1. Homey settings/diagnostics UX for profile + curation state
+1. iterate on Homey settings/diagnostics UX for profile + curation state
 2. support/log bundle workflows
 3. non-production protocol validation runs (deferred Phase 2 items)
-4. custom Homey pairing views for richer add/import UX where system templates are too constrained
+4. optional deeper custom Homey pairing layouts where system templates remain too constrained
 
 ## Active Risks
 

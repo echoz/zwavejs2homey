@@ -1,0 +1,246 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Node Import Summary</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f6f8fb;
+        --panel: #ffffff;
+        --panel-border: #d8dfec;
+        --text: #1f2937;
+        --muted: #64748b;
+        --accent: #1d4ed8;
+      }
+
+      body {
+        margin: 0;
+        padding: 16px;
+        background: var(--bg);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        border-radius: 12px;
+        padding: 16px;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: 18px;
+      }
+
+      p {
+        margin: 8px 0;
+        color: var(--muted);
+        line-height: 1.4;
+      }
+
+      .kv {
+        display: grid;
+        grid-template-columns: 150px minmax(0, 1fr);
+        row-gap: 6px;
+        column-gap: 10px;
+        font-size: 13px;
+        margin-top: 10px;
+      }
+
+      .kv .k {
+        color: var(--muted);
+      }
+
+      .status-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        border: 1px solid transparent;
+      }
+
+      .status-pill.ok {
+        color: #0f766e;
+        background: rgba(15, 118, 110, 0.1);
+        border-color: rgba(15, 118, 110, 0.35);
+      }
+
+      .status-pill.warn {
+        color: #b45309;
+        background: rgba(180, 83, 9, 0.1);
+        border-color: rgba(180, 83, 9, 0.35);
+      }
+
+      .status-pill.error {
+        color: #b91c1c;
+        background: rgba(185, 28, 28, 0.1);
+        border-color: rgba(185, 28, 28, 0.35);
+      }
+
+      .warnings {
+        margin: 8px 0 0;
+        padding-left: 18px;
+      }
+
+      .warnings li {
+        color: #b45309;
+      }
+
+      .hint {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .button-group {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .button {
+        border: 1px solid var(--accent);
+        background: transparent;
+        color: var(--accent);
+        border-radius: 10px;
+        padding: 10px 12px;
+        font-size: 14px;
+        cursor: pointer;
+      }
+
+      .button.secondary {
+        border-color: var(--panel-border);
+        color: var(--text);
+      }
+    </style>
+  </head>
+  <body>
+    <section class="panel">
+      <h1>Node Import Complete</h1>
+      <p>Your selected nodes were added to Homey.</p>
+      <p>Use this summary to confirm import status and remaining devices.</p>
+      <div id="status-kv" class="kv"></div>
+      <ul id="warnings" class="warnings" hidden></ul>
+      <p id="status-line" class="hint">Loading status...</p>
+      <div class="button-group">
+        <button id="refresh-btn" class="button secondary">Refresh Status</button>
+        <button id="done-btn" class="button">Done</button>
+      </div>
+    </section>
+
+    <script>
+      (function () {
+        const state = {
+          loading: false,
+          status: null,
+          error: null,
+        };
+
+        const statusKv = document.getElementById('status-kv');
+        const warningsEl = document.getElementById('warnings');
+        const statusLine = document.getElementById('status-line');
+        const refreshBtn = document.getElementById('refresh-btn');
+        const doneBtn = document.getElementById('done-btn');
+
+        function asText(value) {
+          if (value === null || typeof value === 'undefined' || value === '') return 'n/a';
+          return String(value);
+        }
+
+        function asTime(value) {
+          if (!value) return 'n/a';
+          const parsed = new Date(value);
+          if (Number.isNaN(parsed.getTime())) return String(value);
+          return parsed.toLocaleString();
+        }
+
+        function connectionPill(status) {
+          if (!status || !status.zwjs || status.zwjs.available !== true) {
+            return '<span class="status-pill error">Unavailable</span>';
+          }
+          if (status.zwjs.transportConnected === true) {
+            return '<span class="status-pill ok">Connected</span>';
+          }
+          return '<span class="status-pill warn">Disconnected</span>';
+        }
+
+        function setKvRows(rows) {
+          if (!Array.isArray(rows) || rows.length === 0) {
+            statusKv.innerHTML = '<div class="k">Status</div><div class="v">n/a</div>';
+            return;
+          }
+          statusKv.innerHTML = rows
+            .map(
+              ([key, value]) => `<div class="k">${key}</div><div class="v">${asText(value)}</div>`,
+            )
+            .join('');
+        }
+
+        function render() {
+          refreshBtn.disabled = state.loading;
+          if (!state.status) {
+            setKvRows([]);
+            warningsEl.hidden = true;
+            warningsEl.innerHTML = '';
+            statusLine.textContent = state.loading
+              ? 'Loading status...'
+              : state.error || 'Status unavailable.';
+            return;
+          }
+
+          const status = state.status;
+          setKvRows([
+            ['Bridge', asText(status.bridgeId)],
+            ['ZWJS', connectionPill(status)],
+            ['Lifecycle', asText(status.zwjs && status.zwjs.lifecycle)],
+            ['ZWJS Server', asText(status.zwjs && status.zwjs.serverVersion)],
+            ['Discovered Nodes', status.discoveredNodes],
+            ['Imported Nodes', status.importedNodes],
+            ['Pending Import', status.pendingImportNodes],
+            ['Updated', asTime(status.generatedAt)],
+          ]);
+
+          const warnings = Array.isArray(status.warnings) ? status.warnings : [];
+          if (warnings.length > 0) {
+            warningsEl.hidden = false;
+            warningsEl.innerHTML = warnings
+              .map((warning) => `<li>${asText(warning)}</li>`)
+              .join('');
+          } else {
+            warningsEl.hidden = true;
+            warningsEl.innerHTML = '';
+          }
+
+          statusLine.textContent = state.error || 'Status loaded.';
+        }
+
+        async function loadStatus() {
+          state.loading = true;
+          state.error = null;
+          render();
+          try {
+            state.status = await Homey.emit('import_summary:get_status');
+          } catch (error) {
+            state.status = null;
+            state.error = error && error.message ? error.message : 'Failed to load status.';
+          } finally {
+            state.loading = false;
+            render();
+          }
+        }
+
+        refreshBtn.addEventListener('click', () => {
+          loadStatus();
+        });
+        doneBtn.addEventListener('click', () => {
+          Homey.done();
+        });
+
+        Homey.ready();
+        loadStatus();
+      })();
+    </script>
+  </body>
+</html>

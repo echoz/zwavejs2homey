@@ -17,6 +17,13 @@ type RecommendationActionSelection =
 interface AppRuntimeAccess {
   getZwjsClient?: () => ZwjsClient | undefined;
   getBridgeId?: () => string;
+  getNodeRuntimeDiagnostics?: (options?: { homeyDeviceId?: string }) => Promise<{
+    bridgeId: string;
+    nodes: Array<{
+      homeyDeviceId: string | null;
+      nodeId: number | null;
+    }>;
+  }>;
   resolveCompiledProfileEntry?: (selector: ReturnType<typeof buildNodeResolverSelector>) => {
     by: string;
     entry?: {
@@ -83,6 +90,104 @@ module.exports = class NodeDriver extends Homey.Driver {
       this.log('Node pair list requested');
       return await this.onPairListDevices();
     });
+    session.setHandler('import_summary:get_status', async () => {
+      return this.loadImportSummaryStatus();
+    });
+  }
+
+  private countImportedNodeDevices(bridgeId: string): number {
+    return this.getDevices()
+      .map((device) => device.getData() as HomeyDeviceData | undefined)
+      .filter((entry) => entry?.kind === 'zwjs-node' && entry.bridgeId === bridgeId)
+      .filter((entry) => typeof entry?.nodeId === 'number' && Number.isInteger(entry.nodeId))
+      .length;
+  }
+
+  private async loadImportSummaryStatus(): Promise<{
+    generatedAt: string;
+    bridgeId: string;
+    zwjs: {
+      available: boolean;
+      transportConnected: boolean;
+      lifecycle: string;
+      serverVersion: string | null;
+      adapterFamily: string | null;
+    };
+    discoveredNodes: number | null;
+    importedNodes: number;
+    pendingImportNodes: number | null;
+    warnings: string[];
+  }> {
+    const app = this.homey.app as AppRuntimeAccess;
+    const bridgeId = app.getBridgeId?.() ?? ZWJS_DEFAULT_BRIDGE_ID;
+    const client = app.getZwjsClient?.();
+    const status = client?.getStatus?.();
+    const warnings: string[] = [];
+    const zwjs = {
+      available: Boolean(client),
+      transportConnected: status?.transportConnected === true,
+      lifecycle: typeof status?.lifecycle === 'string' ? status.lifecycle : 'stopped',
+      serverVersion:
+        typeof status?.serverVersion === 'string' && status.serverVersion.trim().length > 0
+          ? status.serverVersion.trim()
+          : null,
+      adapterFamily:
+        typeof status?.adapterFamily === 'string' && status.adapterFamily.trim().length > 0
+          ? status.adapterFamily.trim()
+          : null,
+    };
+
+    let discoveredNodes: number | null = null;
+    if (client) {
+      try {
+        const nodeList = await client.getNodeList();
+        const nodes = Array.isArray(nodeList?.nodes) ? nodeList.nodes : [];
+        discoveredNodes = nodes.filter((node) => {
+          const nodeId = node?.nodeId;
+          return typeof nodeId === 'number' && Number.isInteger(nodeId) && nodeId > 1;
+        }).length;
+      } catch (error) {
+        this.error('Failed to load node list for node import summary status', {
+          error,
+          bridgeId,
+        });
+        warnings.push('Unable to load discovered-node count from ZWJS.');
+      }
+    } else {
+      warnings.push('ZWJS client is unavailable; configure zwjs_connection.url in app settings.');
+    }
+
+    let importedNodes = this.countImportedNodeDevices(bridgeId);
+    if (app.getNodeRuntimeDiagnostics) {
+      try {
+        const diagnostics = await app.getNodeRuntimeDiagnostics();
+        if (Array.isArray(diagnostics.nodes)) {
+          importedNodes = diagnostics.nodes.length;
+        }
+      } catch (error) {
+        this.error('Failed to load runtime node diagnostics for import summary status', {
+          error,
+          bridgeId,
+        });
+        warnings.push('Unable to load imported-node count from runtime diagnostics.');
+      }
+    }
+
+    const pendingImportNodes =
+      typeof discoveredNodes === 'number' ? Math.max(discoveredNodes - importedNodes, 0) : null;
+    if (!zwjs.transportConnected) {
+      warnings.push('ZWJS transport is not connected; discovery/import counts may be stale.');
+    }
+
+    return {
+      generatedAt: new Date().toISOString(),
+      bridgeId,
+      zwjs,
+      discoveredNodes,
+      importedNodes,
+      pendingImportNodes,
+      warnings,
+    };
   }
 
   private async withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
@@ -309,9 +414,12 @@ module.exports = class NodeDriver extends Homey.Driver {
         error,
       });
       if (latestCandidates.length > 0) {
-        this.log('Node pairing flow failed after candidate discovery; returning partial pair list', {
-          candidates: latestCandidates.length,
-        });
+        this.log(
+          'Node pairing flow failed after candidate discovery; returning partial pair list',
+          {
+            candidates: latestCandidates.length,
+          },
+        );
         return latestCandidates;
       }
       return [];

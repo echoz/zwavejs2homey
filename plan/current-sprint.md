@@ -19,6 +19,31 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## Recently Completed
 
+- Latest settings diagnostics UX polish slice:
+  - upgraded app settings page to include a runtime diagnostics panel alongside connection settings
+  - diagnostics panel now surfaces:
+    - ZWJS connection lifecycle/server state
+    - imported-node count
+    - recommendation/backfill totals
+    - compiled profile + curation load state
+    - operator-facing warnings for disconnected/unavailable runtime states
+  - added in-page diagnostics refresh and kept save/reset flows coupled to immediate diagnostics refresh
+  - refreshed settings page visual styling for consistent light/dark readability and clearer status tones
+
+- Latest pairing UX polish slice (template-safe node import summary):
+  - extended node pair flow to include custom summary step:
+    - `list_devices -> add_devices -> import_summary`
+  - added node pairing custom-view runtime status API (`import_summary:get_status`)
+  - new import summary view now shows:
+    - ZWJS connection/lifecycle/version
+    - discovered node count (non-controller)
+    - imported node count
+    - pending import estimate
+    - warning list when runtime/transport data is unavailable
+  - added harness + pair-flow coverage for:
+    - import-summary status handlers (healthy and degraded states)
+    - node driver compose flow contract with custom `import_summary` step
+
 - Latest pairing UX polish slice (template-safe bridge guidance):
   - added bridge pairing custom-view runtime status API (`next_steps:get_status`) in bridge driver pair session
   - bridge next-steps view now shows live onboarding health signals:

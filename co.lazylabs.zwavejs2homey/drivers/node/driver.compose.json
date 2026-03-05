@@ -16,7 +16,13 @@
     },
     {
       "id": "add_devices",
-      "template": "add_devices"
+      "template": "add_devices",
+      "navigation": {
+        "next": "import_summary"
+      }
+    },
+    {
+      "id": "import_summary"
     }
   ],
   "repair": [

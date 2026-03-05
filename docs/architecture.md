@@ -116,8 +116,11 @@ Owns:
 - runtime compiled profile resolution + mapping execution
 - `curation.v1` load/validate/lower/apply integration
 - pairing UX policy:
-  - current MVP uses Homey system pairing templates (`list_devices` -> `add_devices`)
-  - richer flow/presentation requires custom pairing views (planned post-MVP)
+  - current MVP keeps Homey system templates for selection/add (`list_devices` -> `add_devices`)
+  - custom post-add guidance/summary views are now used for onboarding clarity:
+    - bridge: `next_steps`
+    - node: `import_summary`
+  - deep custom pairing layouts beyond template steps remain post-MVP
 
 ## Current State
 

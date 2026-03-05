@@ -18,6 +18,84 @@ module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
                 this.log('Node pair list requested');
                 return await this.onPairListDevices();
             });
+            session.setHandler('import_summary:get_status', async () => {
+                return this.loadImportSummaryStatus();
+            });
+        }
+        countImportedNodeDevices(bridgeId) {
+            return this.getDevices()
+                .map((device) => device.getData())
+                .filter((entry) => entry?.kind === 'zwjs-node' && entry.bridgeId === bridgeId)
+                .filter((entry) => typeof entry?.nodeId === 'number' && Number.isInteger(entry.nodeId))
+                .length;
+        }
+        async loadImportSummaryStatus() {
+            const app = this.homey.app;
+            const bridgeId = app.getBridgeId?.() ?? pairing_1.ZWJS_DEFAULT_BRIDGE_ID;
+            const client = app.getZwjsClient?.();
+            const status = client?.getStatus?.();
+            const warnings = [];
+            const zwjs = {
+                available: Boolean(client),
+                transportConnected: status?.transportConnected === true,
+                lifecycle: typeof status?.lifecycle === 'string' ? status.lifecycle : 'stopped',
+                serverVersion: typeof status?.serverVersion === 'string' && status.serverVersion.trim().length > 0
+                    ? status.serverVersion.trim()
+                    : null,
+                adapterFamily: typeof status?.adapterFamily === 'string' && status.adapterFamily.trim().length > 0
+                    ? status.adapterFamily.trim()
+                    : null,
+            };
+            let discoveredNodes = null;
+            if (client) {
+                try {
+                    const nodeList = await client.getNodeList();
+                    const nodes = Array.isArray(nodeList?.nodes) ? nodeList.nodes : [];
+                    discoveredNodes = nodes.filter((node) => {
+                        const nodeId = node?.nodeId;
+                        return typeof nodeId === 'number' && Number.isInteger(nodeId) && nodeId > 1;
+                    }).length;
+                }
+                catch (error) {
+                    this.error('Failed to load node list for node import summary status', {
+                        error,
+                        bridgeId,
+                    });
+                    warnings.push('Unable to load discovered-node count from ZWJS.');
+                }
+            }
+            else {
+                warnings.push('ZWJS client is unavailable; configure zwjs_connection.url in app settings.');
+            }
+            let importedNodes = this.countImportedNodeDevices(bridgeId);
+            if (app.getNodeRuntimeDiagnostics) {
+                try {
+                    const diagnostics = await app.getNodeRuntimeDiagnostics();
+                    if (Array.isArray(diagnostics.nodes)) {
+                        importedNodes = diagnostics.nodes.length;
+                    }
+                }
+                catch (error) {
+                    this.error('Failed to load runtime node diagnostics for import summary status', {
+                        error,
+                        bridgeId,
+                    });
+                    warnings.push('Unable to load imported-node count from runtime diagnostics.');
+                }
+            }
+            const pendingImportNodes = typeof discoveredNodes === 'number' ? Math.max(discoveredNodes - importedNodes, 0) : null;
+            if (!zwjs.transportConnected) {
+                warnings.push('ZWJS transport is not connected; discovery/import counts may be stale.');
+            }
+            return {
+                generatedAt: new Date().toISOString(),
+                bridgeId,
+                zwjs,
+                discoveredNodes,
+                importedNodes,
+                pendingImportNodes,
+                warnings,
+            };
         }
         async withTimeout(promise, timeoutMs, label) {
             return await new Promise((resolve, reject) => {

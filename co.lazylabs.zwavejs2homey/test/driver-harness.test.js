@@ -479,16 +479,35 @@ test('node driver throws a clear error when zwjs client is unavailable', async (
   );
 });
 
-test('node driver pair session registers list_devices handler', async () => {
+test('node driver pair session registers list_devices and import_summary status handlers', async () => {
   const driver = new NodeDriver();
   driver._configureHarness({
     app: {
       getZwjsClient: () => ({
+        getStatus() {
+          return {
+            transportConnected: true,
+            lifecycle: 'connected',
+            serverVersion: '3.4.0',
+            adapterFamily: 'zwjs-default',
+          };
+        },
         async getNodeList() {
-          return { nodes: [{ nodeId: 2, name: 'Desk Light' }] };
+          return {
+            nodes: [
+              { nodeId: 1, name: 'Controller' },
+              { nodeId: 2, name: 'Desk Light' },
+            ],
+          };
         },
       }),
       getBridgeId: () => 'main',
+      async getNodeRuntimeDiagnostics() {
+        return {
+          bridgeId: 'main',
+          nodes: [{ homeyDeviceId: 'main:2', nodeId: 2 }],
+        };
+      },
     },
     devices: [],
   });
@@ -502,10 +521,42 @@ test('node driver pair session registers list_devices handler', async () => {
 
   await driver.onPair(session);
   assert.equal(typeof handlers.get('list_devices'), 'function');
+  assert.equal(typeof handlers.get('import_summary:get_status'), 'function');
   const candidates = await handlers.get('list_devices')();
+  const summary = await handlers.get('import_summary:get_status')();
   assert.equal(Array.isArray(candidates), true);
   assert.equal(candidates.length, 1);
   assert.equal(candidates[0]?.data?.nodeId, 2);
+  assert.equal(summary.discoveredNodes, 1);
+  assert.equal(summary.importedNodes, 1);
+  assert.equal(summary.pendingImportNodes, 0);
+  assert.deepEqual(summary.warnings, []);
+});
+
+test('node driver import_summary status includes warnings when zwjs is unavailable', async () => {
+  const driver = new NodeDriver();
+  driver._configureHarness({
+    app: {
+      getBridgeId: () => 'main',
+    },
+    devices: [],
+  });
+
+  const handlers = new Map();
+  const session = {
+    setHandler(event, handler) {
+      handlers.set(event, handler);
+    },
+  };
+
+  await driver.onPair(session);
+  const summary = await handlers.get('import_summary:get_status')();
+  assert.equal(summary.discoveredNodes, null);
+  assert.equal(summary.importedNodes, 0);
+  assert.equal(summary.pendingImportNodes, null);
+  assert.equal(summary.zwjs.available, false);
+  assert.equal(Array.isArray(summary.warnings), true);
+  assert.equal(summary.warnings.length >= 1, true);
 });
 
 test('node driver returns pair candidates with controller/duplicates filtered out', async () => {
