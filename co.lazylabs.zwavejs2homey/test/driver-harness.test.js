@@ -468,6 +468,37 @@ test('node driver pairing still returns candidates when node state lookup hangs'
   }
 });
 
+test('node driver pairing returns quickly with empty list when node list lookup hangs', async () => {
+  const client = {
+    async getNodeList() {
+      return await new Promise(() => {});
+    },
+  };
+  const driver = new NodeDriver();
+  const previousListTimeout = NodeDriver.PAIR_NODE_LIST_TIMEOUT_MS;
+  const previousFlowTimeout = NodeDriver.PAIR_FLOW_TIMEOUT_MS;
+  NodeDriver.PAIR_NODE_LIST_TIMEOUT_MS = 25;
+  NodeDriver.PAIR_FLOW_TIMEOUT_MS = 100;
+  driver._configureHarness({
+    app: {
+      getZwjsClient: () => client,
+      getBridgeId: () => 'main',
+    },
+    devices: [],
+  });
+
+  try {
+    const startedAt = Date.now();
+    const candidates = await driver.onPairListDevices();
+    const elapsedMs = Date.now() - startedAt;
+    assert.deepEqual(candidates, []);
+    assert.equal(elapsedMs < 1000, true);
+  } finally {
+    NodeDriver.PAIR_NODE_LIST_TIMEOUT_MS = previousListTimeout;
+    NodeDriver.PAIR_FLOW_TIMEOUT_MS = previousFlowTimeout;
+  }
+});
+
 test('node driver repair session exposes device tools snapshot handlers', async () => {
   const snapshotCalls = [];
   const actionCalls = [];

@@ -19,6 +19,12 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## Recently Completed
 
+- Latest node pairing spinner-lock hardening slice:
+  - wrapped node pairing flow with defensive global timeout and fail-safe empty-list fallback
+  - node list lookup timeout failures now return gracefully instead of blocking pairing indefinitely
+  - icon inference timeout is now isolated so pairing can still return candidates even when per-node state lookups stall
+  - added harness coverage for hanging node-list and node-state lookups
+
 - Latest node pairing timeout-hardening slice:
   - added defensive timeouts for pairing-time node list lookup, zone lookup, and per-node state/icon inference
   - icon inference now runs with bounded concurrency and timeout guards so one slow node no longer blocks the pair list

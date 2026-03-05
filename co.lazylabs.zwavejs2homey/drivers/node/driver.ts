@@ -57,6 +57,8 @@ interface HomeyZonesManagerLike {
 }
 
 module.exports = class NodeDriver extends Homey.Driver {
+  private static readonly PAIR_FLOW_TIMEOUT_MS = 12000;
+
   private static readonly PAIR_NODE_LIST_TIMEOUT_MS = 8000;
 
   private static readonly PAIR_ZONE_LOOKUP_TIMEOUT_MS = 1500;
@@ -178,79 +180,118 @@ module.exports = class NodeDriver extends Homey.Driver {
       throw new Error('ZWJS client unavailable. Verify bridge connection settings.');
     }
 
-    const bridgeId = app.getBridgeId?.() ?? ZWJS_DEFAULT_BRIDGE_ID;
-    const existingData = this.getDevices().map((device) => {
-      return device.getData() as HomeyDeviceData | undefined;
-    });
-    const existingNodeIds = collectExistingNodeIdsFromData(existingData, bridgeId);
-    const nodeListResult = await this.withTimeout(
-      client.getNodeList(),
-      NodeDriver.PAIR_NODE_LIST_TIMEOUT_MS,
-      'node list lookup',
-    );
-    const nodes = Array.isArray(nodeListResult?.nodes) ? nodeListResult.nodes : [];
-    let knownZoneNames: string[] = [];
+    const runPairFlow = async () => {
+      const bridgeId = app.getBridgeId?.() ?? ZWJS_DEFAULT_BRIDGE_ID;
+      const existingData = this.getDevices().map((device) => {
+        return device.getData() as HomeyDeviceData | undefined;
+      });
+      const existingNodeIds = collectExistingNodeIdsFromData(existingData, bridgeId);
+      let nodes = [];
+      try {
+        const nodeListResult = await this.withTimeout(
+          client.getNodeList(),
+          NodeDriver.PAIR_NODE_LIST_TIMEOUT_MS,
+          'node list lookup',
+        );
+        nodes = Array.isArray(nodeListResult?.nodes) ? nodeListResult.nodes : [];
+      } catch (error) {
+        this.error('Failed to load node list during pairing', {
+          error,
+        });
+        return [];
+      }
+
+      let knownZoneNames: string[] = [];
+      try {
+        knownZoneNames = await this.withTimeout(
+          this.loadHomeyZoneNames(),
+          NodeDriver.PAIR_ZONE_LOOKUP_TIMEOUT_MS,
+          'zone lookup',
+        );
+      } catch (error) {
+        this.error(
+          'Timed out loading Homey zones during node pairing; continuing without zone hints',
+          {
+            error,
+          },
+        );
+        knownZoneNames = [];
+      }
+
+      const candidates = buildNodePairCandidates(nodes, bridgeId, existingNodeIds, undefined, {
+        knownZoneNames,
+      });
+      if (app.resolveCompiledProfileEntry) {
+        try {
+          await this.withTimeout(
+            this.runWithConcurrencyLimit(
+              candidates,
+              NodeDriver.PAIR_ICON_INFERENCE_CONCURRENCY,
+              async (candidate) => {
+                try {
+                  const nodeStateResult = await this.withTimeout(
+                    client.getNodeState(candidate.data.nodeId),
+                    NodeDriver.PAIR_NODE_STATE_TIMEOUT_MS,
+                    `node ${candidate.data.nodeId} state lookup`,
+                  );
+                  if (!nodeStateResult.success) return;
+                  const selector = buildNodeResolverSelector(
+                    { bridgeId, nodeId: candidate.data.nodeId },
+                    nodeStateResult.result?.state,
+                  );
+                  const match = app.resolveCompiledProfileEntry?.(selector);
+                  if (match?.by === 'none') return;
+                  const homeyClass = normalizeHomeyClassForPairIcon(
+                    match?.entry?.compiled?.profile?.classification?.homeyClass,
+                  );
+                  candidate.icon = resolvePairIconForHomeyClass(homeyClass);
+                  candidate.store.inferredHomeyClass = homeyClass;
+                } catch (error) {
+                  this.error('Failed to infer node pairing icon', {
+                    bridgeId,
+                    nodeId: candidate.data.nodeId,
+                    error,
+                  });
+                }
+              },
+            ),
+            NodeDriver.PAIR_FLOW_TIMEOUT_MS,
+            'node icon inference',
+          );
+        } catch (error) {
+          this.error(
+            'Node pairing icon inference timed out; returning candidates without inferred icons',
+            {
+              error,
+              bridgeId,
+              candidates: candidates.length,
+            },
+          );
+        }
+      }
+
+      this.log('Node pair list generated', {
+        bridgeId,
+        discovered: nodes.length,
+        existing: existingNodeIds.size,
+        candidates: candidates.length,
+        knownZones: knownZoneNames.length,
+      });
+      return candidates;
+    };
+
     try {
-      knownZoneNames = await this.withTimeout(
-        this.loadHomeyZoneNames(),
-        NodeDriver.PAIR_ZONE_LOOKUP_TIMEOUT_MS,
-        'zone lookup',
+      return await this.withTimeout(
+        runPairFlow(),
+        NodeDriver.PAIR_FLOW_TIMEOUT_MS,
+        'node pairing flow',
       );
     } catch (error) {
-      this.error(
-        'Timed out loading Homey zones during node pairing; continuing without zone hints',
-        {
-          error,
-        },
-      );
-      knownZoneNames = [];
+      this.error('Node pairing flow failed; returning empty candidate list', {
+        error,
+      });
+      return [];
     }
-
-    const candidates = buildNodePairCandidates(nodes, bridgeId, existingNodeIds, undefined, {
-      knownZoneNames,
-    });
-    if (app.resolveCompiledProfileEntry) {
-      await this.runWithConcurrencyLimit(
-        candidates,
-        NodeDriver.PAIR_ICON_INFERENCE_CONCURRENCY,
-        async (candidate) => {
-          try {
-            const nodeStateResult = await this.withTimeout(
-              client.getNodeState(candidate.data.nodeId),
-              NodeDriver.PAIR_NODE_STATE_TIMEOUT_MS,
-              `node ${candidate.data.nodeId} state lookup`,
-            );
-            if (!nodeStateResult.success) return;
-            const selector = buildNodeResolverSelector(
-              { bridgeId, nodeId: candidate.data.nodeId },
-              nodeStateResult.result?.state,
-            );
-            const match = app.resolveCompiledProfileEntry?.(selector);
-            if (match?.by === 'none') return;
-            const homeyClass = normalizeHomeyClassForPairIcon(
-              match?.entry?.compiled?.profile?.classification?.homeyClass,
-            );
-            candidate.icon = resolvePairIconForHomeyClass(homeyClass);
-            candidate.store.inferredHomeyClass = homeyClass;
-          } catch (error) {
-            this.error('Failed to infer node pairing icon', {
-              bridgeId,
-              nodeId: candidate.data.nodeId,
-              error,
-            });
-          }
-        },
-      );
-    }
-
-    this.log('Node pair list generated', {
-      bridgeId,
-      discovered: nodes.length,
-      existing: existingNodeIds.size,
-      candidates: candidates.length,
-      knownZones: knownZoneNames.length,
-    });
-    return candidates;
   }
 
   async onRepair(session: RepairSessionLike, device: Homey.Device) {
