@@ -355,6 +355,19 @@
           return String(value);
         }
 
+        function escapeHtml(value) {
+          return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+        }
+
+        function asHtml(value) {
+          return escapeHtml(asText(value));
+        }
+
         function asTime(value) {
           if (!value) return 'n/a';
           const parsed = new Date(value);
@@ -386,7 +399,7 @@
           container.innerHTML = normalizedRows
             .map(([key, value, className]) => {
               const nextClass = className ? ` ${className}` : '';
-              return `<div class=\"k\">${key}</div><div class=\"v${nextClass}\">${asText(value)}</div>`;
+              return `<div class=\"k\">${escapeHtml(key)}</div><div class=\"v${nextClass}\">${asHtml(value)}</div>`;
             })
             .join('');
         }
@@ -675,29 +688,29 @@
                     ? node.node.location.trim()
                     : null;
                 return `<tr>
-                  <td>${nodeLabel}<br/><span class=\"mono\">${asText(node.homeyDeviceId)}</span></td>
-                  <td>${asText(nodeIdentityLabel(node))}<br/><span class=\"hint\">${asText(
+                  <td>${asHtml(nodeLabel)}<br/><span class=\"mono\">${asHtml(node.homeyDeviceId)}</span></td>
+                  <td>${asHtml(nodeIdentityLabel(node))}<br/><span class=\"hint\">${asHtml(
                     nodeStateLabel(node),
-                  )}</span><br/><span class=\"hint\">Location: ${asText(location)}</span></td>
-                  <td><span class=\"mono\">${asText(
+                  )}</span><br/><span class=\"hint\">Location: ${asHtml(location)}</span></td>
+                  <td><span class=\"mono\">${asHtml(
                     node.profile.profileId,
-                  )}</span><br/><span class=\"hint\">Class: ${asText(
+                  )}</span><br/><span class=\"hint\">Class: ${asHtml(
                     node.profile.homeyClass,
-                  )} · ${asText(profileConfidenceLabel(node))}</span><br/><span class=\"hint\">${asText(
+                  )} · ${asHtml(profileConfidenceLabel(node))}</span><br/><span class=\"hint\">${asHtml(
                     profileSourceLabel(node),
-                  )}</span><br/><span class=\"hint\">Match: ${asText(
+                  )}</span><br/><span class=\"hint\">Match: ${asHtml(
                     profileMatchLabel(node),
-                  )}</span><br/><span class=\"hint\">Fallback: ${asText(
+                  )}</span><br/><span class=\"hint\">Fallback: ${asHtml(
                     node.profile.fallbackReason,
                   )}</span></td>
                   <td>${recommendationPill(node)}<br/><span class=\"hint\">${recommendationLabel(
                     node,
-                  )}</span><br/><span class=\"hint\">${asText(
+                  )}</span><br/><span class=\"hint\">${asHtml(
                     recommendationReasonLabel(node),
                   )}</span></td>
-                  <td>${mapping}<br/><span class=\"hint\">Capabilities: ${asText(
+                  <td>${asHtml(mapping)}<br/><span class=\"hint\">Capabilities: ${asHtml(
                     node.mapping.capabilityCount,
-                  )} · Vertical Slice: ${node.mapping.verticalSliceApplied ? 'Yes' : 'No'}</span><br/><span class=\"hint\">Skipped: ${asText(
+                  )} · Vertical Slice: ${node.mapping.verticalSliceApplied ? 'Yes' : 'No'}</span><br/><span class=\"hint\">Skipped: ${asHtml(
                     skipReasonSummary(node.mapping.skipReasons),
                   )}</span></td>
                 </tr>`;

@@ -19,6 +19,11 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## Recently Completed
 
+- Latest repair-view rendering hardening slice:
+  - hardened bridge/node repair custom views to escape runtime-provided strings before rendering HTML
+  - applies to key/value renderers and bridge node-table rows to avoid malformed content or injection from upstream runtime text
+  - keeps recommendation/status pill rendering behavior unchanged while making dynamic text safe-by-default
+
 - Latest pairing UX closure slice:
   - finalized bridge/node pairing summary screens with consistent onboarding status semantics (`Import Status`)
   - hardened both pairing custom views against HTML injection by escaping runtime-provided node/profile/warning text before rendering

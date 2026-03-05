@@ -377,6 +377,19 @@
           return String(value);
         }
 
+        function escapeHtml(value) {
+          return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+        }
+
+        function toSafeHtml(value) {
+          return escapeHtml(toSafeText(value));
+        }
+
         function recommendationReasonLabel(reasonCode, reasonLabel) {
           if (typeof reasonLabel === 'string' && reasonLabel.trim().length > 0) {
             return reasonLabel.trim();
@@ -528,7 +541,7 @@
           container.innerHTML = normalizedRows
             .map(([key, value, className]) => {
               const valueClass = className ? ` ${className}` : '';
-              return `<div class="k">${key}</div><div class="v${valueClass}">${toSafeText(value)}</div>`;
+              return `<div class="k">${escapeHtml(key)}</div><div class="v${valueClass}">${toSafeHtml(value)}</div>`;
             })
             .join('');
         }
@@ -668,7 +681,7 @@
 
           recommendationContent.innerHTML = `
             <div>${recommendationBadge(snapshot)}</div>
-            <p class="hint" style="margin:8px 0 0;">${toSafeText(
+            <p class="hint" style="margin:8px 0 0;">${toSafeHtml(
               recommendationReasonLabel(
                 snapshot.recommendation.reason,
                 snapshot.recommendation.reasonLabel,
