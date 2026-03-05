@@ -175,6 +175,7 @@ interface NodeDeviceToolsSnapshotV1 {
     curation: HomeyCurationRuntimeStatusV1;
   };
   node: NodeStateSnapshotV1;
+  sync: NodeRuntimeDiagnosticsEntry['sync'];
   profile: NodeRuntimeDiagnosticsEntry['profile'];
   profileAttribution: NodeRuntimeDiagnosticsEntry['profileAttribution'];
   mapping: NodeRuntimeDiagnosticsEntry['mapping'];
@@ -1157,6 +1158,7 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
         curation: this.getCurationStatus(),
       },
       node: diagnosticsEntry.node,
+      sync: diagnosticsEntry.sync,
       profile: diagnosticsEntry.profile,
       profileAttribution: diagnosticsEntry.profileAttribution,
       mapping: diagnosticsEntry.mapping,

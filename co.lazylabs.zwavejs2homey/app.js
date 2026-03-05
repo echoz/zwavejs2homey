@@ -821,6 +821,7 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
                     curation: this.getCurationStatus(),
                 },
                 node: diagnosticsEntry.node,
+                sync: diagnosticsEntry.sync,
                 profile: diagnosticsEntry.profile,
                 profileAttribution: diagnosticsEntry.profileAttribution,
                 mapping: diagnosticsEntry.mapping,

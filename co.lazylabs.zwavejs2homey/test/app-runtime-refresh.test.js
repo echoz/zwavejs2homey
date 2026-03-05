@@ -615,6 +615,7 @@ test('app node device tools snapshot returns targeted diagnostics payload', asyn
       nodeId: 8,
       profileResolution: {
         syncedAt: '2026-03-02T00:00:00.000Z',
+        syncReason: 'startup',
         matchBy: 'product-triple',
         matchKey: '29:66:2',
         profileId: 'profile-main-8',
@@ -622,6 +623,17 @@ test('app node device tools snapshot returns targeted diagnostics payload', asyn
           homeyClass: 'socket',
           confidence: 'curated',
           uncurated: false,
+        },
+        curationLoaded: true,
+        curationSource: 'settings',
+        curationError: null,
+        curationEntryPresent: true,
+        curationReport: {
+          summary: {
+            applied: 4,
+            skipped: 1,
+            errors: 0,
+          },
         },
         nodeState: {
           manufacturerId: 29,
@@ -644,7 +656,19 @@ test('app node device tools snapshot returns targeted diagnostics payload', asyn
         storedBaselineHash: 'old-hash-8',
         currentBaselinePipelineFingerprint: 'pf-next',
         storedBaselinePipelineFingerprint: 'pf-old',
-        mappingDiagnostics: [],
+        verticalSliceApplied: true,
+        mappingDiagnostics: [
+          {
+            capabilityId: 'onoff',
+            inbound: { configured: true, enabled: true, reason: null },
+            outbound: { configured: true, enabled: true, reason: null },
+          },
+          {
+            capabilityId: 'measure_power',
+            inbound: { configured: true, enabled: false, reason: 'inbound_selector_not_defined' },
+            outbound: { configured: true, enabled: false, reason: 'outbound_target_not_writeable' },
+          },
+        ],
       },
     }),
   ];
@@ -658,11 +682,13 @@ test('app node device tools snapshot returns targeted diagnostics payload', asyn
   assert.equal(snapshot.device.homeyDeviceId, 'main:8');
   assert.equal(snapshot.profile.profileId, 'profile-main-8');
   assert.equal(snapshot.profileAttribution.confidenceCode, 'curated');
-  assert.equal(snapshot.profileAttribution.sourceCode, 'compiled-only');
-  assert.equal(snapshot.profileAttribution.curationEntryPresent, false);
+  assert.equal(snapshot.profileAttribution.sourceCode, 'compiled+curation-override');
+  assert.equal(snapshot.profileAttribution.curationEntryPresent, true);
   assert.equal(snapshot.recommendation.suggestedAction, 'adopt-recommended-baseline');
   assert.equal(snapshot.recommendation.actionable, true);
   assert.equal(snapshot.recommendation.reasonLabel, 'Compiled profile changed for this device.');
+  assert.equal(snapshot.sync.syncedAt, '2026-03-02T00:00:00.000Z');
+  assert.equal(snapshot.sync.syncReason, 'startup');
   assert.equal(snapshot.node.manufacturerId, 29);
   assert.equal(snapshot.node.productType, 66);
   assert.equal(snapshot.node.productId, 2);
@@ -670,6 +696,21 @@ test('app node device tools snapshot returns targeted diagnostics payload', asyn
   assert.equal(snapshot.node.product, 'DZ6HD');
   assert.equal(snapshot.node.location, 'Study');
   assert.equal(snapshot.runtime.zwjs.serverVersion, '3.4.0');
+  assert.equal(snapshot.curation.loaded, true);
+  assert.equal(snapshot.curation.source, 'settings');
+  assert.equal(snapshot.curation.entryPresent, true);
+  assert.equal(snapshot.curation.appliedActions, 4);
+  assert.equal(snapshot.curation.skippedActions, 1);
+  assert.equal(snapshot.mapping.verticalSliceApplied, true);
+  assert.equal(snapshot.mapping.capabilityCount, 2);
+  assert.equal(snapshot.mapping.inboundConfigured, 2);
+  assert.equal(snapshot.mapping.inboundEnabled, 1);
+  assert.equal(snapshot.mapping.inboundSkipped, 1);
+  assert.equal(snapshot.mapping.outboundConfigured, 2);
+  assert.equal(snapshot.mapping.outboundEnabled, 1);
+  assert.equal(snapshot.mapping.outboundSkipped, 1);
+  assert.equal(snapshot.mapping.skipReasons.inbound_selector_not_defined, 1);
+  assert.equal(snapshot.mapping.skipReasons.outbound_target_not_writeable, 1);
   assert.equal(snapshot.profileReference.currentBaselineHash, 'next-hash-8');
   assert.equal(snapshot.profileReference.storedBaselineHash, 'old-hash-8');
   assert.equal(snapshot.ui.readOnly, true);

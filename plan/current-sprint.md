@@ -19,6 +19,19 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## Recently Completed
 
+- Latest node read-only enrichment slice:
+  - expanded node Device Tools read-only diagnostics to surface richer operator context:
+    - ZWJS identity/status: product triple, firmware, ready/failed flags
+    - adapter context: fallback reason, uncurated flag, vertical-slice state, mapped capability count
+    - curation context: loaded/source/applied/skipped/error counters
+  - split advanced diagnostics into clearer sections:
+    - `Profile Reference`
+    - `Mapping Skip Reasons`
+    - `Runtime Context`
+    - `Decision Context`
+  - added mapping skip-reason breakdown rendering and sync/runtime timestamp visibility in node repair UI
+  - extended node Device Tools snapshot contract with `sync` payload and locked behavior in runtime tests
+
 - Latest bridge read-only enrichment slice:
   - expanded bridge diagnostics snapshot node payload to include:
     - ZWJS identity/status fields (`manufacturer`, `product`, `location`, readiness/failure/interview state)

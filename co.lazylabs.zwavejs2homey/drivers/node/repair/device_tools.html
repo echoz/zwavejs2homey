@@ -272,6 +272,10 @@
             <div class="advanced-content">
               <h3>Profile Reference</h3>
               <div id="profile-reference-kv" class="kv"></div>
+              <h3>Mapping Skip Reasons</h3>
+              <div id="mapping-skip-kv" class="kv"></div>
+              <h3>Runtime Context</h3>
+              <div id="runtime-context-kv" class="kv"></div>
               <h3>Decision Context</h3>
               <div id="why-kv" class="kv"></div>
             </div>
@@ -343,6 +347,8 @@
         const adapterKv = document.getElementById('adapter-kv');
         const recommendationContent = document.getElementById('recommendation-content');
         const profileRefKv = document.getElementById('profile-reference-kv');
+        const mappingSkipKv = document.getElementById('mapping-skip-kv');
+        const runtimeContextKv = document.getElementById('runtime-context-kv');
         const whyKv = document.getElementById('why-kv');
         const latestActionKv = document.getElementById('latest-action-kv');
         const backfillBtn = document.getElementById('backfill-btn');
@@ -442,6 +448,25 @@
           return parts.map((value) => (isMissingValue(value) ? 'n/a' : String(value))).join(':');
         }
 
+        function formatBooleanFlag(value) {
+          if (value === true) return 'Yes';
+          if (value === false) return 'No';
+          return 'n/a';
+        }
+
+        function mappingSkipReasonRows(skipReasons) {
+          if (!skipReasons || typeof skipReasons !== 'object') {
+            return [['Skip Reasons', 'None']];
+          }
+          const entries = Object.entries(skipReasons)
+            .filter(([, count]) => typeof count === 'number' && count > 0)
+            .sort((left, right) => right[1] - left[1]);
+          if (entries.length === 0) {
+            return [['Skip Reasons', 'None']];
+          }
+          return entries.map(([reason, count]) => [reason, count, ' mono']);
+        }
+
         function setKvRows(container, rows, options) {
           const omitEmpty = options && options.omitEmpty === true;
           const normalizedRows = omitEmpty ? rows.filter((row) => !isMissingValue(row[1])) : rows;
@@ -486,6 +511,8 @@
             recommendationContent.innerHTML =
               '<p class="hint">No recommendation data available.</p>';
             profileRefKv.innerHTML = '';
+            mappingSkipKv.innerHTML = '';
+            runtimeContextKv.innerHTML = '';
             whyKv.innerHTML = '';
             latestActionKv.innerHTML = '';
             backfillBtn.disabled = true;
@@ -543,7 +570,11 @@
             [
               ['Manufacturer', nodeState.manufacturer],
               ['Product', nodeState.product],
+              ['Product Triple', productTriple, ' mono'],
               ['Location', nodeState.location],
+              ['Firmware', nodeState.firmwareVersion],
+              ['Ready', formatBooleanFlag(nodeState.ready)],
+              ['Failed', formatBooleanFlag(nodeState.isFailed)],
               ['Node Status', nodeStatus],
               ['ZWJS', zwjsConnection],
               ['ZWJS Server', runtimeZwjs.serverVersion],
@@ -559,19 +590,28 @@
               ['Effective Source', profileSourceSummary],
               ['Device Override', overrideSummary],
               ['Profile ID', snapshot.profile.profileId, ' mono'],
+              ['Profile Fallback', snapshot.profile.fallbackReason],
+              ['Uncurated', formatBooleanFlag(snapshot.profile.uncurated)],
               [
                 'Match',
                 `${toSafeText(snapshot.profile.matchBy)} / ${toSafeText(snapshot.profile.matchKey)}`,
               ],
+              ['Vertical Slice', formatBooleanFlag(snapshot.mapping.verticalSliceApplied)],
+              ['Mapped Capabilities', snapshot.mapping.capabilityCount],
               [
                 'Inbound Mapping',
-                `${snapshot.mapping.inboundEnabled}/${snapshot.mapping.inboundConfigured} enabled`,
+                `${snapshot.mapping.inboundEnabled}/${snapshot.mapping.inboundConfigured} enabled (${snapshot.mapping.inboundSkipped} skipped)`,
               ],
               [
                 'Outbound Mapping',
-                `${snapshot.mapping.outboundEnabled}/${snapshot.mapping.outboundConfigured} enabled`,
+                `${snapshot.mapping.outboundEnabled}/${snapshot.mapping.outboundConfigured} enabled (${snapshot.mapping.outboundSkipped} skipped)`,
               ],
               ['Curation Entry', snapshot.curation.entryPresent ? 'Present' : 'Missing'],
+              ['Curation Source', snapshot.curation.source],
+              ['Curation Loaded', formatBooleanFlag(snapshot.curation.loaded)],
+              ['Curation Applied', snapshot.curation.appliedActions],
+              ['Curation Skipped', snapshot.curation.skippedActions],
+              ['Curation Errors', snapshot.curation.errorCount],
             ],
             { omitEmpty: true },
           );
@@ -605,6 +645,23 @@
             { omitEmpty: true },
           );
 
+          setKvRows(mappingSkipKv, mappingSkipReasonRows(snapshot.mapping.skipReasons), {
+            omitEmpty: false,
+          });
+
+          setKvRows(
+            runtimeContextKv,
+            [
+              ['Sync Reason', snapshot.sync ? snapshot.sync.syncReason : null],
+              ['Profile Synced At', formatIsoOrNull(snapshot.sync ? snapshot.sync.syncedAt : null)],
+              ['Runtime Generated At', formatIsoOrNull(snapshot.generatedAt)],
+              ['ZWJS Last Message', formatIsoOrNull(runtimeZwjs.lastMessageAt)],
+              ['ZWJS Connected At', formatIsoOrNull(runtimeZwjs.connectedAt)],
+              ['Curation Error', snapshot.curation.error],
+            ],
+            { omitEmpty: true },
+          );
+
           setKvRows(
             whyKv,
             [
@@ -620,9 +677,12 @@
               ['Actionable', snapshot.recommendation.actionable ? 'Yes' : 'No'],
               ['Fallback Reason', snapshot.profile.fallbackReason],
               ['Product Triple', productTriple, ' mono'],
-              ['ZWJS Last Message', formatIsoOrNull(runtimeZwjs.lastMessageAt)],
-              ['ZWJS Connected At', formatIsoOrNull(runtimeZwjs.connectedAt)],
-              ['Last Sync', formatIsoOrNull(snapshot.generatedAt)],
+              ['Rule Profile ID', snapshot.profile.profileId, ' mono'],
+              [
+                'Rule Match',
+                `${toSafeText(snapshot.profile.matchBy)} / ${toSafeText(snapshot.profile.matchKey)}`,
+              ],
+              ['Rule Source', profileSourceSummary],
             ],
             { omitEmpty: true },
           );
