@@ -181,6 +181,7 @@
       <p>Use this summary to confirm import status and remaining devices.</p>
       <div id="status-kv" class="kv"></div>
       <h2 class="section-title">Imported Nodes</h2>
+      <p id="imported-meta" class="hint">Waiting for import summary…</p>
       <div id="imported-table-wrap" class="node-table-wrap" hidden>
         <table class="node-table">
           <thead>
@@ -195,7 +196,7 @@
           <tbody id="imported-table-body"></tbody>
         </table>
       </div>
-      <div id="imported-empty" class="table-empty" hidden>No imported node details available.</div>
+      <div id="imported-empty" class="table-empty" hidden>No nodes imported yet.</div>
       <ul id="warnings" class="warnings" hidden></ul>
       <p id="status-line" class="hint">Loading status...</p>
       <div class="button-group">
@@ -218,6 +219,7 @@
         const importedTableWrap = document.getElementById('imported-table-wrap');
         const importedTableBody = document.getElementById('imported-table-body');
         const importedEmpty = document.getElementById('imported-empty');
+        const importedMeta = document.getElementById('imported-meta');
         const refreshBtn = document.getElementById('refresh-btn');
         const doneBtn = document.getElementById('done-btn');
 
@@ -269,15 +271,26 @@
 
         function renderImportedNodes(status) {
           const entries = Array.isArray(status.importedNodeDetails) ? status.importedNodeDetails : [];
+          const importedCount =
+            typeof status.importedNodes === 'number' && status.importedNodes >= 0
+              ? status.importedNodes
+              : entries.length;
+          const bridgeLabel = asText(status.bridgeId);
           if (entries.length === 0) {
             importedTableWrap.hidden = true;
             importedTableBody.innerHTML = '';
             importedEmpty.hidden = false;
+            importedMeta.textContent = `Imported ${importedCount} node(s) on bridge ${bridgeLabel}.`;
+            importedEmpty.textContent =
+              importedCount > 0
+                ? 'Imported nodes exist but detailed diagnostics are unavailable in this session.'
+                : 'No nodes imported yet for this bridge.';
             return;
           }
 
           importedTableWrap.hidden = false;
           importedEmpty.hidden = true;
+          importedMeta.textContent = `Showing ${entries.length} imported node(s) on bridge ${bridgeLabel}.`;
           importedTableBody.innerHTML = entries
             .map((entry) => {
               const manufacturer = asText(entry.manufacturer);
@@ -323,6 +336,7 @@
             importedTableWrap.hidden = true;
             importedTableBody.innerHTML = '';
             importedEmpty.hidden = false;
+            importedMeta.textContent = 'Waiting for import summary…';
             statusLine.textContent = state.loading
               ? 'Loading status...'
               : state.error || 'Status unavailable.';
@@ -353,7 +367,7 @@
           }
           renderImportedNodes(status);
 
-          statusLine.textContent = state.error || 'Status loaded.';
+          statusLine.textContent = state.error || `Status loaded at ${asTime(status.generatedAt)}.`;
         }
 
         async function loadStatus() {

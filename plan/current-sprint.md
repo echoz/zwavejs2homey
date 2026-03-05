@@ -19,6 +19,11 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## Recently Completed
 
+- Latest pairing summary UX polish slice:
+  - aligned bridge `next_steps` and node `import_summary` screens for consistent table semantics and messaging
+  - added imported-node context hints (`Imported N` / `Showing N`) and clearer empty states when diagnostics are unavailable
+  - aligned status footer messaging to include last-refresh timestamps
+
 - Latest bridge next-steps context parity slice:
   - extended bridge pairing `next_steps:get_status` payload with `importedNodeDetails`
   - bridge next-steps custom view now renders imported-node rows (identity/profile/recommendation) instead of summary counts only

@@ -190,11 +190,13 @@
       <p>Next step: import your Z-Wave nodes from the <strong>ZWJS Node</strong> driver.</p>
       <div class="kv" id="status-kv"></div>
       <h2 class="section-title">Imported Nodes</h2>
+      <p id="imported-meta" class="hint">Waiting for bridge runtime summary…</p>
       <div id="imported-table-wrap" class="node-table-wrap" hidden>
         <table class="node-table">
           <thead>
             <tr>
               <th>Node</th>
+              <th>Bridge</th>
               <th>Identity</th>
               <th>Profile</th>
               <th>Recommendation</th>
@@ -203,7 +205,7 @@
           <tbody id="imported-table-body"></tbody>
         </table>
       </div>
-      <div id="imported-empty" class="table-empty" hidden>No imported node details available.</div>
+      <div id="imported-empty" class="table-empty" hidden>No nodes imported yet.</div>
       <ul id="warnings" class="warnings" hidden></ul>
       <p class="hint" id="status-line">Loading status...</p>
       <ol>
@@ -231,6 +233,7 @@
         const importedTableWrap = document.getElementById('imported-table-wrap');
         const importedTableBody = document.getElementById('imported-table-body');
         const importedEmpty = document.getElementById('imported-empty');
+        const importedMeta = document.getElementById('imported-meta');
         const refreshBtn = document.getElementById('refresh-btn');
         const doneBtn = document.getElementById('done-btn');
 
@@ -282,15 +285,26 @@
 
         function renderImportedNodes(status) {
           const entries = Array.isArray(status.importedNodeDetails) ? status.importedNodeDetails : [];
+          const importedCount =
+            typeof status.importedNodes === 'number' && status.importedNodes >= 0
+              ? status.importedNodes
+              : entries.length;
+          const bridgeLabel = asText(status.bridgeId);
           if (entries.length === 0) {
             importedTableWrap.hidden = true;
             importedTableBody.innerHTML = '';
             importedEmpty.hidden = false;
+            importedMeta.textContent = `Imported ${importedCount} node(s) on bridge ${bridgeLabel}.`;
+            importedEmpty.textContent =
+              importedCount > 0
+                ? 'Imported nodes exist but detailed diagnostics are unavailable in this session.'
+                : 'No nodes imported yet for this bridge.';
             return;
           }
 
           importedTableWrap.hidden = false;
           importedEmpty.hidden = true;
+          importedMeta.textContent = `Showing ${entries.length} imported node(s) on bridge ${bridgeLabel}.`;
           importedTableBody.innerHTML = entries
             .map((entry) => {
               const manufacturer = asText(entry.manufacturer);
@@ -304,6 +318,7 @@
               return `
                 <tr>
                   <td>#${asText(entry.nodeId)}<br /><span class="hint">${asText(entry.name)}</span></td>
+                  <td>${asText(entry.bridgeId)}</td>
                   <td>
                     ${manufacturer} / ${product}<br />
                     <span class="hint">Location: ${location}</span><br />
@@ -335,6 +350,7 @@
             importedTableWrap.hidden = true;
             importedTableBody.innerHTML = '';
             importedEmpty.hidden = false;
+            importedMeta.textContent = 'Waiting for bridge runtime summary…';
             statusLine.textContent = state.loading
               ? 'Loading status...'
               : state.error || 'Status unavailable.';
@@ -364,7 +380,7 @@
             warningsEl.innerHTML = '';
           }
           renderImportedNodes(status);
-          statusLine.textContent = state.error || 'Status loaded.';
+          statusLine.textContent = state.error || `Status loaded at ${asTime(status.generatedAt)}.`;
         }
 
         async function loadStatus() {
