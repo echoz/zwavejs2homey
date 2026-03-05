@@ -19,6 +19,17 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## Recently Completed
 
+- Latest profile terminology clarity slice:
+  - replaced ambiguous `curated profile match` wording with rule-origin terminology:
+    - `Project rule match`
+    - `Home Assistant-derived rule match`
+    - `Generic fallback rule`
+  - updated node Device Tools labels to reduce conflation between rule matching and per-device overrides:
+    - `Rule Match Level`
+    - `Effective Source`
+    - `Device Override`
+  - aligned bridge fallback attribution wording with the same terminology
+
 - Latest bridge triage count UX slice:
   - added live counts to bridge node filters:
     - `Action Needed (N)`

@@ -177,10 +177,10 @@ test('bridge driver repair session exposes bridge tools snapshot handlers', asyn
               },
               profileAttribution: {
                 confidenceCode: 'curated',
-                confidenceLabel: 'Curated profile match',
+                confidenceLabel: 'Project rule match',
                 sourceCode: 'compiled+curation-override',
                 sourceLabel: 'Compiled profile + device override',
-                summary: 'Curated profile match; device-specific override present',
+                summary: 'Project rule match; device override present',
                 curationEntryPresent: true,
               },
               recommendation: {

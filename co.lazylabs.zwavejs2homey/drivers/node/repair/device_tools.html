@@ -396,15 +396,9 @@
         function describeConfidence(confidence) {
           const normalized =
             typeof confidence === 'string' ? confidence.trim().toLowerCase() : '';
-          if (normalized === 'curated') {
-            return 'Curated profile match';
-          }
-          if (normalized === 'ha-derived') {
-            return 'Home Assistant-derived profile match';
-          }
-          if (normalized === 'generic') {
-            return 'Generic fallback profile';
-          }
+          if (normalized === 'curated') return 'Project rule match';
+          if (normalized === 'ha-derived') return 'Home Assistant-derived rule match';
+          if (normalized === 'generic') return 'Generic fallback rule';
           if (normalized.length > 0) {
             return normalized;
           }
@@ -518,10 +512,13 @@
                 null,
                 snapshot.curation && snapshot.curation.entryPresent === true,
               );
-          const profileSummary =
-            profileAttribution && typeof profileAttribution.summary === 'string'
-              ? profileAttribution.summary
-              : null;
+          const overrideSummary = profileAttribution
+            ? profileAttribution.curationEntryPresent === true
+              ? 'Present'
+              : 'None'
+            : snapshot.curation && snapshot.curation.entryPresent === true
+              ? 'Present'
+              : 'None';
           backfillBtn.disabled = isBusy || !canBackfill;
           adoptBtn.disabled = isBusy || !canAdopt;
           const deviceLabel =
@@ -539,9 +536,9 @@
 
           setKvRows(adapterKv, [
             ['Homey Class', snapshot.profile.homeyClass],
-            ['Profile Confidence', confidenceSummary],
-            ['Profile Source', profileSourceSummary],
-            ['Profile Attribution', profileSummary],
+            ['Rule Match Level', confidenceSummary],
+            ['Effective Source', profileSourceSummary],
+            ['Device Override', overrideSummary],
             ['Profile ID', snapshot.profile.profileId, ' mono'],
             [
               'Match',
@@ -564,7 +561,7 @@
               reasonLabels[snapshot.recommendation.reason] || snapshot.recommendation.reason,
             )}</p>
             <p class="hint" style="margin:6px 0 0;">
-              Profile confidence describes compiled profile matching strength. Device curation is an optional per-device override.
+              Rule match level explains which rule tier classified this node. Device override is optional and per-device.
             </p>
           `;
 

@@ -419,10 +419,10 @@
             node.profile && typeof node.profile.confidence === 'string'
               ? node.profile.confidence.trim().toLowerCase()
               : '';
-          if (confidence === 'curated') return 'Curated profile match';
-          if (confidence === 'ha-derived') return 'Home Assistant-derived profile match';
-          if (confidence === 'generic') return 'Generic fallback profile';
-          return 'Unknown profile confidence';
+          if (confidence === 'curated') return 'Project rule match';
+          if (confidence === 'ha-derived') return 'Home Assistant-derived rule match';
+          if (confidence === 'generic') return 'Generic fallback rule';
+          return 'Unknown rule match level';
         }
 
         function profileSourceLabel(node) {

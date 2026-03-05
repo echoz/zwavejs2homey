@@ -101,10 +101,10 @@ module.exports = class BridgeDriver extends Homey.Driver {
   private describeProfileConfidenceLabel(confidence: unknown): string {
     const normalized =
       typeof confidence === 'string' ? confidence.trim().toLowerCase() : '';
-    if (normalized === 'curated') return 'Curated profile match';
-    if (normalized === 'ha-derived') return 'Home Assistant-derived profile match';
-    if (normalized === 'generic') return 'Generic fallback profile';
-    return 'Unknown profile confidence';
+    if (normalized === 'curated') return 'Project rule match';
+    if (normalized === 'ha-derived') return 'Home Assistant-derived rule match';
+    if (normalized === 'generic') return 'Generic fallback rule';
+    return 'Unknown rule match level';
   }
 
   private normalizeProfileAttribution(node: {
@@ -151,9 +151,9 @@ module.exports = class BridgeDriver extends Homey.Driver {
           : 'Profile resolution pending';
     const summary =
       sourceCode === 'compiled+curation-override'
-        ? `${confidenceLabel}; device-specific override present`
+        ? `${confidenceLabel}; device override present`
         : sourceCode === 'compiled-only'
-          ? `${confidenceLabel}; no device-specific override`
+          ? `${confidenceLabel}; no device override`
           : 'Profile resolution is pending; runtime defaults are active';
 
     return {

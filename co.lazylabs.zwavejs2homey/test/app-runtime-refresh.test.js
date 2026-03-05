@@ -555,7 +555,7 @@ test('app diagnostics snapshot normalizes recommendation and mapping summary fie
   assert.equal(node8.recommendation.reason, 'baseline-hash-changed');
   assert.equal(node8.recommendation.currentPipelineFingerprint, 'pf-new');
   assert.equal(node8.profileAttribution.confidenceCode, 'curated');
-  assert.equal(node8.profileAttribution.confidenceLabel, 'Curated profile match');
+  assert.equal(node8.profileAttribution.confidenceLabel, 'Project rule match');
   assert.equal(node8.profileAttribution.sourceCode, 'compiled+curation-override');
   assert.equal(node8.profileAttribution.curationEntryPresent, true);
   assert.equal(node8.curation.appliedActions, 3);

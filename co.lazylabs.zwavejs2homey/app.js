@@ -90,12 +90,12 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
         }
         static describeProfileConfidenceCode(code) {
             if (code === 'curated')
-                return 'Curated profile match';
+                return 'Project rule match';
             if (code === 'ha-derived')
-                return 'Home Assistant-derived profile match';
+                return 'Home Assistant-derived rule match';
             if (code === 'generic')
-                return 'Generic fallback profile';
-            return 'Unknown profile confidence';
+                return 'Generic fallback rule';
+            return 'Unknown rule match level';
         }
         static describeProfileSourceCode(code) {
             if (code === 'compiled+curation-override')
@@ -113,9 +113,9 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
                 : 'unresolved';
             const sourceLabel = _a.describeProfileSourceCode(sourceCode);
             const summary = sourceCode === 'compiled+curation-override'
-                ? `${confidenceLabel}; device-specific override present`
+                ? `${confidenceLabel}; device override present`
                 : sourceCode === 'compiled-only'
-                    ? `${confidenceLabel}; no device-specific override`
+                    ? `${confidenceLabel}; no device override`
                     : 'Profile resolution is pending; runtime defaults are active';
             return {
                 confidenceCode: options.confidenceCode,
