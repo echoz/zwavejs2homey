@@ -22,6 +22,18 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## Recently Completed
 
+- Latest presenter-view extraction slice:
+  - moved pairing/custom-page business logic out of inline scripts into dedicated presenter modules:
+    - `drivers/bridge/pair/next_steps.presenter.js`
+    - `drivers/node/pair/import_summary.presenter.js`
+  - moved settings page business logic out of `settings/index.html` inline script into:
+    - `settings/settings.presenter.js`
+    - `settings/settings.page.js`
+  - custom pages now use thin page controllers for DOM wiring and keep decision logic in presenters
+  - added presenter-focused unit coverage in `test/page-presenters.test.js` for:
+    - settings normalization/validation/runtime-diagnostics view-model behavior
+    - bridge/node pairing presenter state transitions and imported-row view-model output
+
 - Latest pairing-pill rendering regression fix:
   - fixed escaped status-pill HTML in bridge/node pairing summary screens (`Connected` pill now renders as a pill, not literal markup)
   - retained safe escaping for all runtime-provided text while allowing explicit trusted pill markup via wrapped values

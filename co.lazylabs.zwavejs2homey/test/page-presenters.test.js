@@ -1,0 +1,231 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+
+const settingsPresenter = require('../settings/settings.presenter.js');
+const bridgeNextStepsPresenter = require('../drivers/bridge/pair/next_steps.presenter.js');
+const nodeImportSummaryPresenter = require('../drivers/node/pair/import_summary.presenter.js');
+
+function rowValue(viewModel, key) {
+  const row = Array.isArray(viewModel.rows)
+    ? viewModel.rows.find((item) => item && item.key === key)
+    : null;
+  return row ? row.value : undefined;
+}
+
+function statusRowValue(viewModel, key) {
+  const row = Array.isArray(viewModel.statusRows)
+    ? viewModel.statusRows.find((item) => item && item.key === key)
+    : null;
+  return row ? row.value : undefined;
+}
+
+test('settings presenter normalizes and validates connection settings', () => {
+  const normalized = settingsPresenter.normalizeLoadedSettings(null);
+  assert.equal(normalized.url, settingsPresenter.DEFAULT_URL);
+  assert.equal(normalized.authType, 'none');
+  assert.equal(normalized.token, '');
+
+  const normalizedBearer = settingsPresenter.normalizeLoadedSettings({
+    url: '  ws://192.168.1.15:3000 ',
+    auth: {
+      type: 'bearer',
+      token: '  abc123  ',
+    },
+  });
+  assert.deepEqual(normalizedBearer, {
+    url: 'ws://192.168.1.15:3000',
+    authType: 'bearer',
+    token: 'abc123',
+  });
+
+  assert.deepEqual(
+    settingsPresenter.validateSettingsInput({
+      url: 'ws://localhost:3000',
+      authType: 'none',
+      token: '',
+    }),
+    {
+      payload: {
+        url: 'ws://localhost:3000',
+        auth: { type: 'none' },
+      },
+    },
+  );
+
+  assert.deepEqual(
+    settingsPresenter.validateSettingsInput({
+      url: 'wss://example.com/zwave',
+      authType: 'bearer',
+      token: 'token-1',
+    }),
+    {
+      payload: {
+        url: 'wss://example.com/zwave',
+        auth: {
+          type: 'bearer',
+          token: 'token-1',
+        },
+      },
+    },
+  );
+
+  assert.equal(
+    settingsPresenter.validateSettingsInput({
+      url: 'http://example.com',
+      authType: 'none',
+      token: '',
+    }).error,
+    'URL must start with ws:// or wss://.',
+  );
+
+  assert.equal(
+    settingsPresenter.validateSettingsInput({
+      url: 'ws://localhost:3000',
+      authType: 'bearer',
+      token: '',
+    }).error,
+    'Bearer token is required when authentication is bearer.',
+  );
+});
+
+test('settings presenter parses runtime diagnostics and builds warning-aware view model', () => {
+  assert.deepEqual(
+    settingsPresenter.parseRuntimeResponse({ ok: true, data: { bridgeId: 'main' } }),
+    {
+      data: { bridgeId: 'main' },
+    },
+  );
+  assert.equal(
+    settingsPresenter.parseRuntimeResponse({ ok: false, error: { message: 'boom' } }).error,
+    'boom',
+  );
+  assert.equal(
+    settingsPresenter.parseRuntimeResponse({ ok: false }).error,
+    'Runtime diagnostics response is missing expected fields.',
+  );
+
+  const runtimeData = {
+    bridgeId: 'main',
+    generatedAt: '2026-03-03T12:00:00.000Z',
+    zwjs: {
+      available: true,
+      transportConnected: false,
+      lifecycle: 'disconnected',
+      serverVersion: '1.0.0',
+    },
+    compiledProfiles: {
+      loaded: false,
+    },
+    curation: {
+      loaded: false,
+    },
+    nodes: [
+      {
+        recommendation: {
+          available: true,
+          backfillNeeded: false,
+        },
+      },
+      {
+        recommendation: {
+          available: false,
+          backfillNeeded: true,
+        },
+      },
+      {},
+    ],
+  };
+
+  const viewModel = settingsPresenter.buildRuntimeViewModel(runtimeData);
+  assert.equal(rowValue(viewModel, 'Runtime Status'), 'Bridge Disconnected');
+  assert.equal(rowValue(viewModel, 'Imported Nodes'), '3');
+  assert.equal(rowValue(viewModel, 'Action Needed'), '2');
+  assert.equal(rowValue(viewModel, 'Profile Updates'), '1');
+  assert.equal(rowValue(viewModel, 'Backfill Needed'), '1');
+  assert.equal(rowValue(viewModel, 'Compiled Profiles'), 'Missing');
+  assert.equal(rowValue(viewModel, 'Curation'), 'Unavailable');
+  assert.equal(viewModel.warningCount, 3);
+  assert.deepEqual(viewModel.warnings, [
+    'ZWJS transport is disconnected. Pair/import may return empty results.',
+    'Compiled profiles are not loaded. Runtime matching may fall back.',
+    'Curation runtime failed to load. Device overrides may be unavailable.',
+  ]);
+  assert.equal(viewModel.runtimeHint, '2 imported node(s) need attention in Bridge Tools.');
+});
+
+function runPairPresenterContract(name, presenter) {
+  test(`${name} presenter transitions load state and builds imported node table rows`, () => {
+    const initial = presenter.createInitialState();
+    assert.equal(initial.loading, false);
+    assert.equal(initial.status, null);
+    assert.equal(initial.error, null);
+
+    const loading = presenter.reduce(initial, { type: 'load_start' });
+    assert.equal(loading.loading, true);
+    assert.equal(loading.error, null);
+
+    const failed = presenter.reduce(loading, { type: 'load_error', message: 'network down' });
+    assert.equal(failed.loading, false);
+    assert.equal(failed.status, null);
+    assert.equal(failed.error, 'network down');
+
+    const failedView = presenter.buildViewModel(failed);
+    assert.equal(failedView.refreshDisabled, false);
+    assert.equal(failedView.statusRows.length, 0);
+    assert.equal(failedView.statusLine, 'network down');
+
+    const status = {
+      bridgeId: 'main',
+      importedNodes: 1,
+      pendingImportNodes: 2,
+      discoveredNodes: 3,
+      generatedAt: '2026-03-03T12:00:00.000Z',
+      warnings: ['transport disconnected'],
+      zwjs: {
+        available: true,
+        transportConnected: true,
+        lifecycle: 'connected',
+        serverVersion: '3.4.0',
+      },
+      importedNodeDetails: [
+        {
+          bridgeId: 'main',
+          nodeId: 12,
+          name: 'Kitchen Dimmer',
+          manufacturer: 'Leviton',
+          product: 'DZ6HD',
+          location: 'Kitchen',
+          status: 'Alive',
+          profileHomeyClass: 'light',
+          profileId: 'product-triple:29:12801:1',
+          profileMatch: 'product-triple',
+          recommendationAction: 'adopt-recommended-baseline',
+          recommendationReason: 'compiled profile changed',
+        },
+      ],
+    };
+
+    const loaded = presenter.reduce(initial, { type: 'load_success', status });
+    const viewModel = presenter.buildViewModel(loaded);
+    assert.equal(viewModel.refreshDisabled, false);
+    assert.equal(statusRowValue(viewModel, 'Import Status'), 'Ready to Import (2 pending)');
+
+    const zwjsRow = statusRowValue(viewModel, 'ZWJS');
+    assert.deepEqual(zwjsRow, {
+      label: 'Connected',
+      tone: 'ok',
+    });
+
+    assert.equal(viewModel.importedRows.length, 1);
+    assert.equal(viewModel.importedRows[0].nodeId, '12');
+    assert.equal(viewModel.importedRows[0].profileClass, 'light');
+    assert.equal(viewModel.importedRows[0].recommendation.label, 'Adopt Update');
+    assert.equal(viewModel.importedRows[0].recommendation.tone, 'danger');
+    assert.equal(viewModel.hasImportedRows, true);
+    assert.match(viewModel.importedMeta, /Showing 1 imported node\(s\) on bridge main\./);
+    assert.match(viewModel.statusLine, /Status loaded at /);
+  });
+}
+
+runPairPresenterContract('bridge next_steps', bridgeNextStepsPresenter);
+runPairPresenterContract('node import_summary', nodeImportSummaryPresenter);
