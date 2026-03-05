@@ -19,6 +19,13 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## Recently Completed
 
+- Latest bridge triage filter UX slice:
+  - added one-click node list filters in Bridge Tools:
+    - `Action Needed` (default)
+    - `All`
+  - filtering uses recommendation state priority and keeps action-needed triage focused by default
+  - empty-state messaging now explains when no nodes currently require action and guides switching to `All`
+
 - Latest bridge profile-attribution UX slice:
   - propagated node `profileAttribution` into bridge repair snapshots, with fallback derivation when older runtime payloads omit attribution fields
   - updated Bridge Tools node rows to surface profile confidence/source semantics consistently with node Device Tools

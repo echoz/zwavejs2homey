@@ -86,6 +86,39 @@
         font-size: 14px;
       }
 
+      .section-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 8px;
+      }
+
+      .section-toolbar h2 {
+        margin: 0;
+      }
+
+      .toggle-group {
+        display: inline-flex;
+        gap: 6px;
+      }
+
+      .toggle-button {
+        border: 1px solid var(--panel-border);
+        background: transparent;
+        color: var(--muted);
+        border-radius: 999px;
+        padding: 4px 10px;
+        font-size: 12px;
+        cursor: pointer;
+      }
+
+      .toggle-button.is-active {
+        border-color: var(--accent);
+        color: var(--accent);
+        background: rgba(29, 78, 216, 0.08);
+      }
+
       details {
         border: 1px dashed var(--panel-border);
         border-radius: 10px;
@@ -259,7 +292,13 @@
     </section>
 
     <section class="panel" style="margin-top: 12px">
-      <h2>Nodes</h2>
+      <div class="section-toolbar">
+        <h2>Nodes</h2>
+        <div class="toggle-group">
+          <button id="filter-action-needed-btn" class="toggle-button is-active">Action Needed</button>
+          <button id="filter-all-btn" class="toggle-button">All</button>
+        </div>
+      </div>
       <div id="nodes-empty" class="hint" hidden>No imported node devices found.</div>
       <table id="nodes-table" class="nodes-table" hidden>
         <thead>
@@ -285,10 +324,13 @@
           error: null,
           status: 'Initializing...',
           tone: 'neutral',
+          filterMode: 'action-needed',
         };
 
         const subtitleEl = document.getElementById('subtitle');
         const refreshBtn = document.getElementById('refresh-btn');
+        const filterActionNeededBtn = document.getElementById('filter-action-needed-btn');
+        const filterAllBtn = document.getElementById('filter-all-btn');
         const runtimeKv = document.getElementById('runtime-kv');
         const runtimeAdvancedKv = document.getElementById('runtime-advanced-kv');
         const summaryKv = document.getElementById('summary-kv');
@@ -399,6 +441,10 @@
 
         function render() {
           refreshBtn.disabled = state.loading;
+          filterActionNeededBtn.disabled = state.loading;
+          filterAllBtn.disabled = state.loading;
+          filterActionNeededBtn.classList.toggle('is-active', state.filterMode === 'action-needed');
+          filterAllBtn.classList.toggle('is-active', state.filterMode === 'all');
           statusEl.classList.remove('ok', 'warn', 'error');
           if (state.tone === 'ok') statusEl.classList.add('ok');
           if (state.tone === 'warn') statusEl.classList.add('warn');
@@ -474,14 +520,23 @@
                 return leftId.localeCompare(rightId);
               })
             : [];
-          if (nodes.length === 0) {
+          const visibleNodes =
+            state.filterMode === 'action-needed'
+              ? nodes.filter((node) => recommendationPriority(node) < 2)
+              : nodes;
+
+          if (visibleNodes.length === 0) {
             nodesEmpty.hidden = false;
             nodesTable.hidden = true;
             nodesTbody.innerHTML = '';
+            nodesEmpty.textContent =
+              nodes.length > 0 && state.filterMode === 'action-needed'
+                ? 'No nodes currently require action. Switch to All to inspect every node.'
+                : 'No imported node devices found.';
           } else {
             nodesEmpty.hidden = true;
             nodesTable.hidden = false;
-            nodesTbody.innerHTML = nodes
+            nodesTbody.innerHTML = visibleNodes
               .map((node) => {
                 const nodeLabel = node.nodeId !== null ? `Node ${node.nodeId}` : 'Node n/a';
                 const mapping = `${node.mapping.inboundEnabled}/${node.mapping.inboundConfigured} in, ${node.mapping.outboundEnabled}/${node.mapping.outboundConfigured} out`;
@@ -527,6 +582,14 @@
         }
 
         refreshBtn.addEventListener('click', () => loadSnapshot('bridge_tools:refresh'));
+        filterActionNeededBtn.addEventListener('click', () => {
+          state.filterMode = 'action-needed';
+          render();
+        });
+        filterAllBtn.addEventListener('click', () => {
+          state.filterMode = 'all';
+          render();
+        });
 
         Homey.ready();
         loadSnapshot('bridge_tools:get_snapshot');
