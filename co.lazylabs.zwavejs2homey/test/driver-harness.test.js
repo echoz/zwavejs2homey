@@ -175,6 +175,14 @@ test('bridge driver repair session exposes bridge tools snapshot handlers', asyn
                 confidence: 'curated',
                 fallbackReason: null,
               },
+              profileAttribution: {
+                confidenceCode: 'curated',
+                confidenceLabel: 'Curated profile match',
+                sourceCode: 'compiled+curation-override',
+                sourceLabel: 'Compiled profile + device override',
+                summary: 'Curated profile match; device-specific override present',
+                curationEntryPresent: true,
+              },
               recommendation: {
                 available: true,
                 reason: 'baseline-hash-changed',
@@ -215,6 +223,8 @@ test('bridge driver repair session exposes bridge tools snapshot handlers', asyn
   assert.equal(first.nodeSummary.curationEntryCount, 1);
   assert.equal(first.nodeSummary.recommendationAvailableCount, 1);
   assert.equal(first.nodeSummary.inboundSkipped, 1);
+  assert.equal(first.nodes[0].profileAttribution.confidenceCode, 'curated');
+  assert.equal(first.nodes[0].profileAttribution.sourceCode, 'compiled+curation-override');
   assert.equal(second.runtime.zwjs.serverVersion, '3.4.0');
   assert.equal(diagnosticsCalls.length, 2);
 });
@@ -241,6 +251,91 @@ test('bridge driver repair handler rejects when diagnostics API is unavailable',
     () => handlers.get('bridge_tools:get_snapshot')(),
     /Bridge Tools unavailable: app runtime diagnostics API is not ready\./,
   );
+});
+
+test('bridge driver derives profile attribution when runtime payload omits it', async () => {
+  const driver = new BridgeDriver();
+  driver._configureHarness({
+    app: {
+      async getNodeRuntimeDiagnostics() {
+        return {
+          generatedAt: '2026-03-04T10:00:00.000Z',
+          bridgeId: 'main',
+          zwjs: {
+            available: true,
+            transportConnected: true,
+            lifecycle: 'connected',
+            versionReceived: true,
+            initialized: true,
+            listening: true,
+            authenticated: null,
+            serverVersion: '3.4.0',
+            adapterFamily: 'zwjs-default',
+            reconnectAttempt: null,
+            connectedAt: '2026-03-04T09:59:00.000Z',
+            lastMessageAt: '2026-03-04T10:00:00.000Z',
+          },
+          compiledProfiles: {
+            loaded: true,
+            sourcePath: '/tmp/compiled.json',
+            generatedAt: '2026-03-04T09:50:00.000Z',
+            pipelineFingerprint: 'pf-1',
+            entryCount: 12,
+            errorMessage: null,
+          },
+          curation: {
+            loaded: true,
+            source: 'settings',
+            entryCount: 2,
+            errorMessage: null,
+          },
+          nodes: [
+            {
+              homeyDeviceId: 'main:11',
+              nodeId: 11,
+              curation: {
+                entryPresent: false,
+              },
+              profile: {
+                profileId: 'product-triple:20:1:2',
+                homeyClass: 'light',
+                confidence: 'curated',
+                fallbackReason: null,
+              },
+              recommendation: {
+                available: false,
+                reason: 'no-curation-entry',
+                backfillNeeded: false,
+              },
+              mapping: {
+                inboundConfigured: 1,
+                inboundEnabled: 1,
+                outboundConfigured: 1,
+                outboundEnabled: 1,
+              },
+            },
+          ],
+        };
+      },
+    },
+    devices: [],
+  });
+
+  const handlers = new Map();
+  const session = {
+    setHandler(event, handler) {
+      handlers.set(event, handler);
+    },
+  };
+
+  await driver.onRepair(session, {
+    getData: () => ({ id: 'zwjs-bridge-main', bridgeId: 'main' }),
+  });
+
+  const snapshot = await handlers.get('bridge_tools:get_snapshot')();
+  assert.equal(snapshot.nodes[0].profileAttribution.confidenceCode, 'curated');
+  assert.equal(snapshot.nodes[0].profileAttribution.sourceCode, 'compiled-only');
+  assert.equal(snapshot.nodes[0].profileAttribution.curationEntryPresent, false);
 });
 
 test('node driver throws a clear error when zwjs client is unavailable', async () => {

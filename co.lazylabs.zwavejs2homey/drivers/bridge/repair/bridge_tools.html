@@ -363,6 +363,40 @@
           return 'None';
         }
 
+        function profileConfidenceLabel(node) {
+          const attribution =
+            node.profileAttribution && typeof node.profileAttribution === 'object'
+              ? node.profileAttribution
+              : null;
+          if (attribution && attribution.confidenceLabel) {
+            return attribution.confidenceLabel;
+          }
+          const confidence =
+            node.profile && typeof node.profile.confidence === 'string'
+              ? node.profile.confidence.trim().toLowerCase()
+              : '';
+          if (confidence === 'curated') return 'Curated profile match';
+          if (confidence === 'ha-derived') return 'Home Assistant-derived profile match';
+          if (confidence === 'generic') return 'Generic fallback profile';
+          return 'Unknown profile confidence';
+        }
+
+        function profileSourceLabel(node) {
+          const attribution =
+            node.profileAttribution && typeof node.profileAttribution === 'object'
+              ? node.profileAttribution
+              : null;
+          if (attribution && attribution.sourceLabel) return attribution.sourceLabel;
+          const hasProfile =
+            node.profile &&
+            (node.profile.profileId || node.profile.fallbackReason);
+          if (!hasProfile) return 'Profile resolution pending';
+          if (node.curation && node.curation.entryPresent) {
+            return 'Compiled profile + device override';
+          }
+          return 'Compiled profile only';
+        }
+
         function render() {
           refreshBtn.disabled = state.loading;
           statusEl.classList.remove('ok', 'warn', 'error');
@@ -453,8 +487,12 @@
                 const mapping = `${node.mapping.inboundEnabled}/${node.mapping.inboundConfigured} in, ${node.mapping.outboundEnabled}/${node.mapping.outboundConfigured} out`;
                 return `<tr>
                   <td>${nodeLabel}<br/><span class=\"mono\">${asText(node.homeyDeviceId)}</span></td>
-                  <td>${asText(node.profile.homeyClass)}</td>
-                  <td><span class=\"mono\">${asText(node.profile.profileId)}</span></td>
+                  <td>${asText(node.profile.homeyClass)}<br/><span class=\"hint\">${asText(
+                    profileConfidenceLabel(node),
+                  )}</span></td>
+                  <td><span class=\"mono\">${asText(
+                    node.profile.profileId,
+                  )}</span><br/><span class=\"hint\">${asText(profileSourceLabel(node))}</span></td>
                   <td>${recommendationPill(node)}<br/><span class=\"hint\">${recommendationLabel(
                     node,
                   )}</span><br/><span class=\"mono\">${asText(

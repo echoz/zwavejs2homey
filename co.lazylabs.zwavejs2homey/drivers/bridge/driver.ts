@@ -45,6 +45,14 @@ interface AppRuntimeAccess {
         confidence: string | null;
         fallbackReason: string | null;
       };
+      profileAttribution?: {
+        confidenceCode: string | null;
+        confidenceLabel: string;
+        sourceCode: string;
+        sourceLabel: string;
+        summary: string;
+        curationEntryPresent: boolean;
+      };
       recommendation: {
         available: boolean;
         reason: string | null;
@@ -90,6 +98,74 @@ module.exports = class BridgeDriver extends Homey.Driver {
     return [createBridgePairCandidate()];
   }
 
+  private describeProfileConfidenceLabel(confidence: unknown): string {
+    const normalized =
+      typeof confidence === 'string' ? confidence.trim().toLowerCase() : '';
+    if (normalized === 'curated') return 'Curated profile match';
+    if (normalized === 'ha-derived') return 'Home Assistant-derived profile match';
+    if (normalized === 'generic') return 'Generic fallback profile';
+    return 'Unknown profile confidence';
+  }
+
+  private normalizeProfileAttribution(node: {
+    profileAttribution?: {
+      confidenceCode: string | null;
+      confidenceLabel: string;
+      sourceCode: string;
+      sourceLabel: string;
+      summary: string;
+      curationEntryPresent: boolean;
+    };
+    profile: {
+      profileId: string | null;
+      confidence: string | null;
+      fallbackReason: string | null;
+    };
+    curation: {
+      entryPresent: boolean;
+    };
+  }): {
+    confidenceCode: string | null;
+    confidenceLabel: string;
+    sourceCode: string;
+    sourceLabel: string;
+    summary: string;
+    curationEntryPresent: boolean;
+  } {
+    if (node.profileAttribution && typeof node.profileAttribution === 'object') {
+      return node.profileAttribution;
+    }
+
+    const confidenceCode = node.profile.confidence ?? null;
+    const confidenceLabel = this.describeProfileConfidenceLabel(confidenceCode);
+    const sourceCode = node.profile.profileId || node.profile.fallbackReason
+      ? node.curation.entryPresent
+        ? 'compiled+curation-override'
+        : 'compiled-only'
+      : 'unresolved';
+    const sourceLabel =
+      sourceCode === 'compiled+curation-override'
+        ? 'Compiled profile + device override'
+        : sourceCode === 'compiled-only'
+          ? 'Compiled profile only'
+          : 'Profile resolution pending';
+    const summary =
+      sourceCode === 'compiled+curation-override'
+        ? `${confidenceLabel}; device-specific override present`
+        : sourceCode === 'compiled-only'
+          ? `${confidenceLabel}; no device-specific override`
+          : 'Profile resolution is pending; runtime defaults are active';
+
+    return {
+      confidenceCode,
+      confidenceLabel,
+      sourceCode,
+      sourceLabel,
+      summary,
+      curationEntryPresent: node.curation.entryPresent,
+    };
+  }
+
   async onRepair(session: RepairSessionLike, device: Homey.Device) {
     const app = this.homey.app as AppRuntimeAccess;
     const loadSnapshot = async (): Promise<unknown> => {
@@ -124,6 +200,7 @@ module.exports = class BridgeDriver extends Homey.Driver {
           nodeId: node.nodeId,
           curation: node.curation,
           profile: node.profile,
+          profileAttribution: this.normalizeProfileAttribution(node),
           recommendation: node.recommendation,
           mapping: {
             inboundConfigured: node.mapping.inboundConfigured,

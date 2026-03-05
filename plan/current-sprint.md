@@ -19,6 +19,13 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## Recently Completed
 
+- Latest bridge profile-attribution UX slice:
+  - propagated node `profileAttribution` into bridge repair snapshots, with fallback derivation when older runtime payloads omit attribution fields
+  - updated Bridge Tools node rows to surface profile confidence/source semantics consistently with node Device Tools
+  - added harness coverage for:
+    - attribution pass-through in bridge snapshots
+    - fallback attribution derivation behavior
+
 - Latest profile-attribution contract slice (backend-first):
   - added normalized `profileAttribution` payload to node diagnostics snapshots:
     - `confidenceCode` / `confidenceLabel`
