@@ -22,6 +22,10 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## Recently Completed
 
+- Latest pairing-pill rendering regression fix:
+  - fixed escaped status-pill HTML in bridge/node pairing summary screens (`Connected` pill now renders as a pill, not literal markup)
+  - retained safe escaping for all runtime-provided text while allowing explicit trusted pill markup via wrapped values
+
 - Latest UX freeze gate slice:
   - completed pairing/settings/repair UX polish pass for MVP
   - locked UX scope so follow-up work returns to runtime/adaptor behavior and test coverage

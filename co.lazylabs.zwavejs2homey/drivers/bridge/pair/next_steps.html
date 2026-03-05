@@ -255,6 +255,17 @@
           return escapeHtml(asText(value));
         }
 
+        function htmlValue(value) {
+          return { html: String(value) };
+        }
+
+        function renderValue(value) {
+          if (value && typeof value === 'object' && value.html) {
+            return String(value.html);
+          }
+          return asHtml(value);
+        }
+
         function asTime(value) {
           if (!value) return 'n/a';
           const parsed = new Date(value);
@@ -270,7 +281,7 @@
           statusKv.innerHTML = rows
             .map(
               ([key, value]) =>
-                `<div class="k">${escapeHtml(key)}</div><div class="v">${asHtml(value)}</div>`,
+                `<div class="k">${escapeHtml(key)}</div><div class="v">${renderValue(value)}</div>`,
             )
             .join('');
         }
@@ -296,12 +307,12 @@
 
         function connectionPill(status) {
           if (!status || !status.zwjs || status.zwjs.available !== true) {
-            return '<span class="status-pill error">Unavailable</span>';
+            return htmlValue('<span class="status-pill error">Unavailable</span>');
           }
           if (status.zwjs.transportConnected === true) {
-            return '<span class="status-pill ok">Connected</span>';
+            return htmlValue('<span class="status-pill ok">Connected</span>');
           }
-          return '<span class="status-pill warn">Disconnected</span>';
+          return htmlValue('<span class="status-pill warn">Disconnected</span>');
         }
 
         function recommendationClass(action) {
