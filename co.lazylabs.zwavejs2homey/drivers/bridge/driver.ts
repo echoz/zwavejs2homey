@@ -17,6 +17,7 @@ interface AppRuntimeAccess {
         getNodeList?: () => Promise<{
           nodes?: Array<{
             nodeId?: unknown;
+            name?: unknown;
           }>;
         }>;
       }
@@ -54,6 +55,7 @@ interface AppRuntimeAccess {
     };
     nodes: Array<{
       homeyDeviceId: string | null;
+      bridgeId?: string | null;
       nodeId: number | null;
       node: {
         manufacturerId: number | null;
@@ -175,6 +177,21 @@ module.exports = class BridgeDriver extends Homey.Driver {
     discoveredNodes: number | null;
     importedNodes: number | null;
     pendingImportNodes: number | null;
+    importedNodeDetails: Array<{
+      homeyDeviceId: string | null;
+      bridgeId: string;
+      nodeId: number | null;
+      name: string | null;
+      manufacturer: string | null;
+      product: string | null;
+      location: string | null;
+      status: string | null;
+      profileHomeyClass: string | null;
+      profileId: string | null;
+      profileMatch: string | null;
+      recommendationAction: string;
+      recommendationReason: string | null;
+    }>;
     warnings: string[];
   }> {
     const app = this.homey.app as AppRuntimeAccess;
@@ -195,7 +212,23 @@ module.exports = class BridgeDriver extends Homey.Driver {
     };
 
     let discoveredNodes: number | null = null;
+    const discoveredNodeNames = new Map<number, string>();
     let importedNodes: number | null = null;
+    let importedNodeDetails: Array<{
+      homeyDeviceId: string | null;
+      bridgeId: string;
+      nodeId: number | null;
+      name: string | null;
+      manufacturer: string | null;
+      product: string | null;
+      location: string | null;
+      status: string | null;
+      profileHomeyClass: string | null;
+      profileId: string | null;
+      profileMatch: string | null;
+      recommendationAction: string;
+      recommendationReason: string | null;
+    }> = [];
     let bridgeId: string = ZWJS_DEFAULT_BRIDGE_ID;
     const warnings: string[] = [];
 
@@ -205,6 +238,12 @@ module.exports = class BridgeDriver extends Homey.Driver {
         const nodes = Array.isArray(nodeList?.nodes) ? nodeList.nodes : [];
         discoveredNodes = nodes.filter((node) => {
           const nodeId = node?.nodeId;
+          if (typeof node?.name === 'string' && typeof nodeId === 'number' && Number.isInteger(nodeId)) {
+            const trimmedName = node.name.trim();
+            if (trimmedName.length > 0) {
+              discoveredNodeNames.set(nodeId, trimmedName);
+            }
+          }
           return typeof nodeId === 'number' && Number.isInteger(nodeId) && nodeId > 1;
         }).length;
       } catch (error) {
@@ -225,7 +264,46 @@ module.exports = class BridgeDriver extends Homey.Driver {
         ) {
           bridgeId = diagnostics.bridgeId.trim();
         }
-        importedNodes = Array.isArray(diagnostics.nodes) ? diagnostics.nodes.length : 0;
+        if (Array.isArray(diagnostics.nodes)) {
+          importedNodeDetails = diagnostics.nodes
+            .filter((node) => {
+              const nodeBridgeId = this.normalizeStringOrNull(node.bridgeId);
+              if (!nodeBridgeId) return true;
+              return nodeBridgeId === bridgeId;
+            })
+            .map((node) => {
+              const nodeId =
+                typeof node.nodeId === 'number' && Number.isInteger(node.nodeId) ? node.nodeId : null;
+              return {
+                homeyDeviceId: this.normalizeStringOrNull(node.homeyDeviceId),
+                bridgeId: this.normalizeStringOrNull(node.bridgeId) ?? bridgeId,
+                nodeId,
+                name: nodeId !== null ? discoveredNodeNames.get(nodeId) ?? null : null,
+                manufacturer: this.normalizeStringOrNull(node.node?.manufacturer),
+                product: this.normalizeStringOrNull(node.node?.product),
+                location: this.normalizeStringOrNull(node.node?.location),
+                status: this.normalizeStringOrNull(node.node?.status),
+                profileHomeyClass: this.normalizeStringOrNull(node.profile?.homeyClass),
+                profileId: this.normalizeStringOrNull(node.profile?.profileId),
+                profileMatch: this.toProfileMatchSummary(node.profile),
+                recommendationAction: this.toRecommendationAction(node.recommendation),
+                recommendationReason: this.normalizeStringOrNull(node.recommendation?.reasonLabel),
+              };
+            })
+            .sort((left, right) => {
+              if (left.nodeId !== null && right.nodeId !== null && left.nodeId !== right.nodeId) {
+                return left.nodeId - right.nodeId;
+              }
+              if (left.nodeId !== null && right.nodeId === null) return -1;
+              if (left.nodeId === null && right.nodeId !== null) return 1;
+              const leftId = left.homeyDeviceId ?? '';
+              const rightId = right.homeyDeviceId ?? '';
+              return leftId.localeCompare(rightId);
+            });
+          importedNodes = importedNodeDetails.length;
+        } else {
+          importedNodes = 0;
+        }
       } catch (error) {
         this.error('Failed to load imported node count for bridge next steps status', { error });
         warnings.push('Unable to read imported node count from runtime diagnostics.');
@@ -250,8 +328,34 @@ module.exports = class BridgeDriver extends Homey.Driver {
       discoveredNodes,
       importedNodes,
       pendingImportNodes,
+      importedNodeDetails,
       warnings,
     };
+  }
+
+  private normalizeStringOrNull(value: unknown): string | null {
+    if (typeof value !== 'string') return null;
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+
+  private toProfileMatchSummary(profile: {
+    matchBy: string | null;
+    matchKey: string | null;
+  }): string | null {
+    const matchBy = this.normalizeStringOrNull(profile.matchBy);
+    const matchKey = this.normalizeStringOrNull(profile.matchKey);
+    if (!matchBy && !matchKey) return null;
+    return `${matchBy ?? 'n/a'} / ${matchKey ?? 'n/a'}`;
+  }
+
+  private toRecommendationAction(recommendation: {
+    available: boolean;
+    backfillNeeded: boolean;
+  }): string {
+    if (recommendation.backfillNeeded) return 'backfill-marker';
+    if (recommendation.available) return 'adopt-recommended-baseline';
+    return 'none';
   }
 
   private describeProfileConfidenceLabel(confidence: unknown): string {

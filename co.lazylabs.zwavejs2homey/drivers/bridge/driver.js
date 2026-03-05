@@ -44,7 +44,9 @@ module.exports = class BridgeDriver extends homey_1.default.Driver {
                 : null,
         };
         let discoveredNodes = null;
+        const discoveredNodeNames = new Map();
         let importedNodes = null;
+        let importedNodeDetails = [];
         let bridgeId = pairing_1.ZWJS_DEFAULT_BRIDGE_ID;
         const warnings = [];
         if (client?.getNodeList) {
@@ -53,6 +55,12 @@ module.exports = class BridgeDriver extends homey_1.default.Driver {
                 const nodes = Array.isArray(nodeList?.nodes) ? nodeList.nodes : [];
                 discoveredNodes = nodes.filter((node) => {
                     const nodeId = node?.nodeId;
+                    if (typeof node?.name === 'string' && typeof nodeId === 'number' && Number.isInteger(nodeId)) {
+                        const trimmedName = node.name.trim();
+                        if (trimmedName.length > 0) {
+                            discoveredNodeNames.set(nodeId, trimmedName);
+                        }
+                    }
                     return typeof nodeId === 'number' && Number.isInteger(nodeId) && nodeId > 1;
                 }).length;
             }
@@ -72,7 +80,49 @@ module.exports = class BridgeDriver extends homey_1.default.Driver {
                     diagnostics.bridgeId.trim().length > 0) {
                     bridgeId = diagnostics.bridgeId.trim();
                 }
-                importedNodes = Array.isArray(diagnostics.nodes) ? diagnostics.nodes.length : 0;
+                if (Array.isArray(diagnostics.nodes)) {
+                    importedNodeDetails = diagnostics.nodes
+                        .filter((node) => {
+                        const nodeBridgeId = this.normalizeStringOrNull(node.bridgeId);
+                        if (!nodeBridgeId)
+                            return true;
+                        return nodeBridgeId === bridgeId;
+                    })
+                        .map((node) => {
+                        const nodeId = typeof node.nodeId === 'number' && Number.isInteger(node.nodeId) ? node.nodeId : null;
+                        return {
+                            homeyDeviceId: this.normalizeStringOrNull(node.homeyDeviceId),
+                            bridgeId: this.normalizeStringOrNull(node.bridgeId) ?? bridgeId,
+                            nodeId,
+                            name: nodeId !== null ? discoveredNodeNames.get(nodeId) ?? null : null,
+                            manufacturer: this.normalizeStringOrNull(node.node?.manufacturer),
+                            product: this.normalizeStringOrNull(node.node?.product),
+                            location: this.normalizeStringOrNull(node.node?.location),
+                            status: this.normalizeStringOrNull(node.node?.status),
+                            profileHomeyClass: this.normalizeStringOrNull(node.profile?.homeyClass),
+                            profileId: this.normalizeStringOrNull(node.profile?.profileId),
+                            profileMatch: this.toProfileMatchSummary(node.profile),
+                            recommendationAction: this.toRecommendationAction(node.recommendation),
+                            recommendationReason: this.normalizeStringOrNull(node.recommendation?.reasonLabel),
+                        };
+                    })
+                        .sort((left, right) => {
+                        if (left.nodeId !== null && right.nodeId !== null && left.nodeId !== right.nodeId) {
+                            return left.nodeId - right.nodeId;
+                        }
+                        if (left.nodeId !== null && right.nodeId === null)
+                            return -1;
+                        if (left.nodeId === null && right.nodeId !== null)
+                            return 1;
+                        const leftId = left.homeyDeviceId ?? '';
+                        const rightId = right.homeyDeviceId ?? '';
+                        return leftId.localeCompare(rightId);
+                    });
+                    importedNodes = importedNodeDetails.length;
+                }
+                else {
+                    importedNodes = 0;
+                }
             }
             catch (error) {
                 this.error('Failed to load imported node count for bridge next steps status', { error });
@@ -96,8 +146,29 @@ module.exports = class BridgeDriver extends homey_1.default.Driver {
             discoveredNodes,
             importedNodes,
             pendingImportNodes,
+            importedNodeDetails,
             warnings,
         };
+    }
+    normalizeStringOrNull(value) {
+        if (typeof value !== 'string')
+            return null;
+        const trimmed = value.trim();
+        return trimmed.length > 0 ? trimmed : null;
+    }
+    toProfileMatchSummary(profile) {
+        const matchBy = this.normalizeStringOrNull(profile.matchBy);
+        const matchKey = this.normalizeStringOrNull(profile.matchKey);
+        if (!matchBy && !matchKey)
+            return null;
+        return `${matchBy ?? 'n/a'} / ${matchKey ?? 'n/a'}`;
+    }
+    toRecommendationAction(recommendation) {
+        if (recommendation.backfillNeeded)
+            return 'backfill-marker';
+        if (recommendation.available)
+            return 'adopt-recommended-baseline';
+        return 'none';
     }
     describeProfileConfidenceLabel(confidence) {
         const normalized = typeof confidence === 'string' ? confidence.trim().toLowerCase() : '';

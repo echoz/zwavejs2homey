@@ -140,7 +140,11 @@ test('bridge driver pair session exposes next steps status handler', async () =>
           },
           async getNodeList() {
             return {
-              nodes: [{ nodeId: 1 }, { nodeId: 5 }, { nodeId: 8 }],
+              nodes: [
+                { nodeId: 1, name: 'Controller' },
+                { nodeId: 5, name: 'Office Lamp' },
+                { nodeId: 8, name: 'Porch Sensor' },
+              ],
             };
           },
         };
@@ -148,7 +152,30 @@ test('bridge driver pair session exposes next steps status handler', async () =>
       async getNodeRuntimeDiagnostics() {
         return {
           bridgeId: 'main',
-          nodes: [{ homeyDeviceId: 'main:5' }],
+          nodes: [
+            {
+              homeyDeviceId: 'main:5',
+              bridgeId: 'main',
+              nodeId: 5,
+              node: {
+                manufacturer: 'Leviton',
+                product: 'DZ6HD',
+                location: 'Study',
+                status: 'Alive',
+              },
+              profile: {
+                matchBy: 'product-triple',
+                matchKey: '29:12801:1',
+                profileId: 'product-triple:29:12801:1',
+                homeyClass: 'light',
+              },
+              recommendation: {
+                available: false,
+                backfillNeeded: false,
+                reasonLabel: 'No recommendation is available.',
+              },
+            },
+          ],
         };
       },
     },
@@ -176,6 +203,14 @@ test('bridge driver pair session exposes next steps status handler', async () =>
   assert.equal(status.discoveredNodes, 2);
   assert.equal(status.importedNodes, 1);
   assert.equal(status.pendingImportNodes, 1);
+  assert.equal(Array.isArray(status.importedNodeDetails), true);
+  assert.equal(status.importedNodeDetails.length, 1);
+  assert.equal(status.importedNodeDetails[0]?.nodeId, 5);
+  assert.equal(status.importedNodeDetails[0]?.name, 'Office Lamp');
+  assert.equal(status.importedNodeDetails[0]?.manufacturer, 'Leviton');
+  assert.equal(status.importedNodeDetails[0]?.product, 'DZ6HD');
+  assert.equal(status.importedNodeDetails[0]?.profileHomeyClass, 'light');
+  assert.equal(status.importedNodeDetails[0]?.recommendationAction, 'none');
   assert.deepEqual(status.warnings, []);
 });
 
@@ -199,6 +234,7 @@ test('bridge driver next steps status includes warnings when runtime is unavaila
   assert.equal(status.discoveredNodes, null);
   assert.equal(status.importedNodes, null);
   assert.equal(status.pendingImportNodes, null);
+  assert.deepEqual(status.importedNodeDetails, []);
   assert.equal(Array.isArray(status.warnings), true);
   assert.equal(status.warnings.length >= 2, true);
 });
