@@ -553,6 +553,7 @@ test('app diagnostics snapshot normalizes recommendation and mapping summary fie
   assert.ok(node8);
   assert.equal(node8.recommendation.available, true);
   assert.equal(node8.recommendation.reason, 'baseline-hash-changed');
+  assert.equal(node8.recommendation.reasonLabel, 'Compiled profile changed for this device.');
   assert.equal(node8.recommendation.currentPipelineFingerprint, 'pf-new');
   assert.equal(node8.profileAttribution.confidenceCode, 'curated');
   assert.equal(node8.profileAttribution.confidenceLabel, 'Project rule match');
@@ -661,6 +662,7 @@ test('app node device tools snapshot returns targeted diagnostics payload', asyn
   assert.equal(snapshot.profileAttribution.curationEntryPresent, false);
   assert.equal(snapshot.recommendation.suggestedAction, 'adopt-recommended-baseline');
   assert.equal(snapshot.recommendation.actionable, true);
+  assert.equal(snapshot.recommendation.reasonLabel, 'Compiled profile changed for this device.');
   assert.equal(snapshot.node.manufacturerId, 29);
   assert.equal(snapshot.node.productType, 66);
   assert.equal(snapshot.node.productId, 2);
@@ -693,6 +695,10 @@ test('app node device tools snapshot supports profile-resolution-pending devices
   assert.equal(snapshot.profileAttribution.sourceCode, 'unresolved');
   assert.equal(snapshot.profileAttribution.confidenceCode, null);
   assert.equal(snapshot.recommendation.reason, 'profile-resolution-not-ready');
+  assert.equal(
+    snapshot.recommendation.reasonLabel,
+    'Runtime mapping has not been generated for this device yet.',
+  );
   assert.equal(snapshot.recommendation.actionable, false);
   assert.equal(snapshot.profileReference.currentBaselineHash, null);
 

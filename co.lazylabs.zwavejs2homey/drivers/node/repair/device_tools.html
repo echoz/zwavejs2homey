@@ -301,7 +301,7 @@
           statusTone: 'neutral',
         };
 
-        const reasonLabels = {
+        const recommendationReasonFallbackLabels = {
           'baseline-hash-changed': 'Compiled profile changed for this device.',
           'marker-missing-backfill':
             'Profile reference metadata is missing for this curated device.',
@@ -368,10 +368,27 @@
           return String(value);
         }
 
+        function recommendationReasonLabel(reasonCode, reasonLabel) {
+          if (typeof reasonLabel === 'string' && reasonLabel.trim().length > 0) {
+            return reasonLabel.trim();
+          }
+          if (!reasonCode) return null;
+          const normalized = String(reasonCode);
+          return recommendationReasonFallbackLabels[normalized] || normalized;
+        }
+
         function toReasonDetail(code, labels) {
           if (!code) return 'n/a';
           const normalized = String(code);
           const label = labels[normalized];
+          if (!label || label === normalized) return normalized;
+          return `${label} (${normalized})`;
+        }
+
+        function toRecommendationReasonDetail(reasonCode, reasonLabel) {
+          if (!reasonCode) return 'n/a';
+          const normalized = String(reasonCode);
+          const label = recommendationReasonLabel(normalized, reasonLabel);
           if (!label || label === normalized) return normalized;
           return `${label} (${normalized})`;
         }
@@ -394,8 +411,7 @@
         }
 
         function describeConfidence(confidence) {
-          const normalized =
-            typeof confidence === 'string' ? confidence.trim().toLowerCase() : '';
+          const normalized = typeof confidence === 'string' ? confidence.trim().toLowerCase() : '';
           if (normalized === 'curated') return 'Project rule match';
           if (normalized === 'ha-derived') return 'Home Assistant-derived rule match';
           if (normalized === 'generic') return 'Generic fallback rule';
@@ -423,18 +439,15 @@
         function buildProductTriple(nodeState) {
           const parts = [nodeState.manufacturerId, nodeState.productType, nodeState.productId];
           if (parts.every((value) => isMissingValue(value))) return null;
-          return parts
-            .map((value) => (isMissingValue(value) ? 'n/a' : String(value)))
-            .join(':');
+          return parts.map((value) => (isMissingValue(value) ? 'n/a' : String(value))).join(':');
         }
 
         function setKvRows(container, rows, options) {
           const omitEmpty = options && options.omitEmpty === true;
-          const normalizedRows = omitEmpty
-            ? rows.filter((row) => !isMissingValue(row[1]))
-            : rows;
+          const normalizedRows = omitEmpty ? rows.filter((row) => !isMissingValue(row[1])) : rows;
           if (normalizedRows.length === 0) {
-            container.innerHTML = '<div class="k">Details</div><div class="v hint">No data available.</div>';
+            container.innerHTML =
+              '<div class="k">Details</div><div class="v hint">No data available.</div>';
             return;
           }
           container.innerHTML = normalizedRows
@@ -525,74 +538,112 @@
             snapshot.device.nodeId !== null ? `Node ${snapshot.device.nodeId}` : 'Node';
           subtitle.textContent = `${deviceLabel} · ${snapshot.device.homeyDeviceId}`;
 
-          setKvRows(zwjsNodeKv, [
-            ['Manufacturer', nodeState.manufacturer],
-            ['Product', nodeState.product],
-            ['Location', nodeState.location],
-            ['Node Status', nodeStatus],
-            ['ZWJS', zwjsConnection],
-            ['ZWJS Server', runtimeZwjs.serverVersion],
-          ], { omitEmpty: true });
+          setKvRows(
+            zwjsNodeKv,
+            [
+              ['Manufacturer', nodeState.manufacturer],
+              ['Product', nodeState.product],
+              ['Location', nodeState.location],
+              ['Node Status', nodeStatus],
+              ['ZWJS', zwjsConnection],
+              ['ZWJS Server', runtimeZwjs.serverVersion],
+            ],
+            { omitEmpty: true },
+          );
 
-          setKvRows(adapterKv, [
-            ['Homey Class', snapshot.profile.homeyClass],
-            ['Rule Match Level', confidenceSummary],
-            ['Effective Source', profileSourceSummary],
-            ['Device Override', overrideSummary],
-            ['Profile ID', snapshot.profile.profileId, ' mono'],
+          setKvRows(
+            adapterKv,
             [
-              'Match',
-              `${toSafeText(snapshot.profile.matchBy)} / ${toSafeText(snapshot.profile.matchKey)}`,
+              ['Homey Class', snapshot.profile.homeyClass],
+              ['Rule Match Level', confidenceSummary],
+              ['Effective Source', profileSourceSummary],
+              ['Device Override', overrideSummary],
+              ['Profile ID', snapshot.profile.profileId, ' mono'],
+              [
+                'Match',
+                `${toSafeText(snapshot.profile.matchBy)} / ${toSafeText(snapshot.profile.matchKey)}`,
+              ],
+              [
+                'Inbound Mapping',
+                `${snapshot.mapping.inboundEnabled}/${snapshot.mapping.inboundConfigured} enabled`,
+              ],
+              [
+                'Outbound Mapping',
+                `${snapshot.mapping.outboundEnabled}/${snapshot.mapping.outboundConfigured} enabled`,
+              ],
+              ['Curation Entry', snapshot.curation.entryPresent ? 'Present' : 'Missing'],
             ],
-            [
-              'Inbound Mapping',
-              `${snapshot.mapping.inboundEnabled}/${snapshot.mapping.inboundConfigured} enabled`,
-            ],
-            [
-              'Outbound Mapping',
-              `${snapshot.mapping.outboundEnabled}/${snapshot.mapping.outboundConfigured} enabled`,
-            ],
-            ['Curation Entry', snapshot.curation.entryPresent ? 'Present' : 'Missing'],
-          ], { omitEmpty: true });
+            { omitEmpty: true },
+          );
 
           recommendationContent.innerHTML = `
             <div>${recommendationBadge(snapshot)}</div>
             <p class="hint" style="margin:8px 0 0;">${toSafeText(
-              reasonLabels[snapshot.recommendation.reason] || snapshot.recommendation.reason,
+              recommendationReasonLabel(
+                snapshot.recommendation.reason,
+                snapshot.recommendation.reasonLabel,
+              ),
             )}</p>
             <p class="hint" style="margin:6px 0 0;">
               Rule match level explains which rule tier classified this node. Device override is optional and per-device.
             </p>
           `;
 
-          setKvRows(profileRefKv, [
-            ['Projection', snapshot.profileReference.projectionVersion],
-            ['Current Hash', snapshot.profileReference.currentBaselineHash, ' mono'],
-            ['Stored Hash', snapshot.profileReference.storedBaselineHash, ' mono'],
-            ['Current Fingerprint', snapshot.profileReference.currentPipelineFingerprint, ' mono'],
-            ['Stored Fingerprint', snapshot.profileReference.storedPipelineFingerprint, ' mono'],
-          ], { omitEmpty: true });
+          setKvRows(
+            profileRefKv,
+            [
+              ['Projection', snapshot.profileReference.projectionVersion],
+              ['Current Hash', snapshot.profileReference.currentBaselineHash, ' mono'],
+              ['Stored Hash', snapshot.profileReference.storedBaselineHash, ' mono'],
+              [
+                'Current Fingerprint',
+                snapshot.profileReference.currentPipelineFingerprint,
+                ' mono',
+              ],
+              ['Stored Fingerprint', snapshot.profileReference.storedPipelineFingerprint, ' mono'],
+            ],
+            { omitEmpty: true },
+          );
 
-          setKvRows(whyKv, [
-            ['Reason', toReasonDetail(snapshot.recommendation.reason, reasonLabels)],
-            ['Reason Code', snapshot.recommendation.reason, ' mono'],
-            ['Suggested Action', snapshot.recommendation.suggestedAction],
-            ['Actionable', snapshot.recommendation.actionable ? 'Yes' : 'No'],
-            ['Fallback Reason', snapshot.profile.fallbackReason],
-            ['Product Triple', productTriple, ' mono'],
-            ['ZWJS Last Message', formatIsoOrNull(runtimeZwjs.lastMessageAt)],
-            ['ZWJS Connected At', formatIsoOrNull(runtimeZwjs.connectedAt)],
-            ['Last Sync', formatIsoOrNull(snapshot.generatedAt)],
-          ], { omitEmpty: true });
+          setKvRows(
+            whyKv,
+            [
+              [
+                'Reason',
+                toRecommendationReasonDetail(
+                  snapshot.recommendation.reason,
+                  snapshot.recommendation.reasonLabel,
+                ),
+              ],
+              ['Reason Code', snapshot.recommendation.reason, ' mono'],
+              ['Suggested Action', snapshot.recommendation.suggestedAction],
+              ['Actionable', snapshot.recommendation.actionable ? 'Yes' : 'No'],
+              ['Fallback Reason', snapshot.profile.fallbackReason],
+              ['Product Triple', productTriple, ' mono'],
+              ['ZWJS Last Message', formatIsoOrNull(runtimeZwjs.lastMessageAt)],
+              ['ZWJS Connected At', formatIsoOrNull(runtimeZwjs.connectedAt)],
+              ['Last Sync', formatIsoOrNull(snapshot.generatedAt)],
+            ],
+            { omitEmpty: true },
+          );
 
           if (state.latestActionResult && typeof state.latestActionResult === 'object') {
             const result = state.latestActionResult;
+            const latestReasonLabel =
+              result.latestReason &&
+              snapshot.recommendation &&
+              snapshot.recommendation.reason === result.latestReason
+                ? snapshot.recommendation.reasonLabel
+                : null;
             setKvRows(latestActionKv, [
               ['Executed', result.executed === true ? 'Yes' : 'No'],
               ['Requested Action', result.requestedAction],
               ['Selected Action', result.selectedAction],
               ['Reason', toReasonDetail(result.reason, actionReasonLabels)],
-              ['Latest State', toReasonDetail(result.latestReason, reasonLabels)],
+              [
+                'Latest State',
+                toRecommendationReasonDetail(result.latestReason, latestReasonLabel),
+              ],
               ['State Changed', result.stateChanged === true ? 'Yes' : 'No'],
             ]);
           } else {
@@ -670,12 +721,22 @@
                 ? actionResult.latestReason
                 : null;
             if (latestReasonCode) {
-              const latestReasonLabel =
-                actionReasonLabels[latestReasonCode] ||
-                reasonLabels[latestReasonCode] ||
-                latestReasonCode;
+              const snapshotReasonLabel =
+                state.snapshot &&
+                state.snapshot.recommendation &&
+                state.snapshot.recommendation.reason === latestReasonCode
+                  ? state.snapshot.recommendation.reasonLabel
+                  : null;
+              const latestReasonLabel = recommendationReasonLabel(
+                latestReasonCode,
+                snapshotReasonLabel,
+              );
+              const latestReasonSummary =
+                actionReasonLabels[latestReasonCode] || latestReasonLabel || latestReasonCode;
               return {
-                message: `Action state changed while applying update. Latest state: ${latestReasonLabel}`,
+                message: `Action state changed while applying update. Latest state: ${
+                  latestReasonSummary
+                }`,
                 tone: 'warn',
               };
             }

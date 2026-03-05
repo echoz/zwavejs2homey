@@ -106,6 +106,7 @@ interface NodeRuntimeDiagnosticsEntry {
   recommendation: {
     available: boolean;
     reason: string | null;
+    reasonLabel: string | null;
     backfillNeeded: boolean;
     projectionVersion: string | null;
     currentBaselineHash: string | null;
@@ -181,6 +182,7 @@ interface NodeDeviceToolsSnapshotV1 {
   recommendation: {
     available: boolean;
     reason: string | null;
+    reasonLabel: string | null;
     backfillNeeded: boolean;
     suggestedAction: RecommendationActionKindV1;
     actionable: boolean;
@@ -224,6 +226,16 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
     'zwjs.event.node.metadata-updated',
   ]);
 
+  private static readonly RECOMMENDATION_REASON_LABELS: Record<string, string> = {
+    'baseline-hash-changed': 'Compiled profile changed for this device.',
+    'marker-missing-backfill': 'Profile reference metadata is missing for this curated device.',
+    'baseline-hash-unchanged': 'Current curated profile still matches the compiled baseline.',
+    'profile-resolution-not-ready': 'Runtime mapping has not been generated for this device yet.',
+    'no-curation-entry': 'No curation exists yet for this device.',
+    'missing-homey-device-id': 'Device identifier is unavailable in runtime diagnostics.',
+    none: 'No recommendation is available.',
+  };
+
   private static readonly DRIVER_READY_RETRY_MS = 25;
 
   private static readonly DRIVER_READY_TIMEOUT_MS = 5000;
@@ -265,9 +277,7 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
     return null;
   }
 
-  private static describeProfileConfidenceCode(
-    code: ProfileConfidenceCodeV1 | null,
-  ): string {
+  private static describeProfileConfidenceCode(code: ProfileConfidenceCodeV1 | null): string {
     if (code === 'curated') return 'Project rule match';
     if (code === 'ha-derived') return 'Home Assistant-derived rule match';
     if (code === 'generic') return 'Generic fallback rule';
@@ -278,6 +288,11 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
     if (code === 'compiled+curation-override') return 'Compiled profile + device override';
     if (code === 'compiled-only') return 'Compiled profile only';
     return 'Profile resolution pending';
+  }
+
+  private static describeRecommendationReason(reasonCode: string | null): string | null {
+    if (!reasonCode) return null;
+    return Zwavejs2HomeyApp.RECOMMENDATION_REASON_LABELS[reasonCode] ?? reasonCode;
   }
 
   private static buildProfileAttribution(options: {
@@ -468,9 +483,14 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
     }
     const profileId = Zwavejs2HomeyApp.toStringOrNull(profileResolution.profileId);
     const fallbackReason = Zwavejs2HomeyApp.toStringOrNull(profileResolution.fallbackReason);
-    const confidenceCode = Zwavejs2HomeyApp.normalizeProfileConfidenceCode(classification?.confidence);
+    const confidenceCode = Zwavejs2HomeyApp.normalizeProfileConfidenceCode(
+      classification?.confidence,
+    );
     const curationEntryPresent = Zwavejs2HomeyApp.toBooleanOrDefault(
       profileResolution.curationEntryPresent,
+    );
+    const recommendationReason = Zwavejs2HomeyApp.toStringOrNull(
+      profileResolution.recommendationReason,
     );
     return {
       homeyDeviceId,
@@ -507,7 +527,8 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
       },
       recommendation: {
         available: Zwavejs2HomeyApp.toBooleanOrDefault(profileResolution.recommendationAvailable),
-        reason: Zwavejs2HomeyApp.toStringOrNull(profileResolution.recommendationReason),
+        reason: recommendationReason,
+        reasonLabel: Zwavejs2HomeyApp.describeRecommendationReason(recommendationReason),
         backfillNeeded: Zwavejs2HomeyApp.toBooleanOrDefault(
           profileResolution.recommendationBackfillNeeded,
         ),
@@ -590,6 +611,7 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
       recommendation: {
         available: false,
         reason: 'profile-resolution-not-ready',
+        reasonLabel: Zwavejs2HomeyApp.describeRecommendationReason('profile-resolution-not-ready'),
         backfillNeeded: false,
         projectionVersion: null,
         currentBaselineHash: null,
@@ -1142,6 +1164,7 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
       recommendation: {
         available: diagnosticsEntry.recommendation.available,
         reason: diagnosticsEntry.recommendation.reason,
+        reasonLabel: diagnosticsEntry.recommendation.reasonLabel,
         backfillNeeded: diagnosticsEntry.recommendation.backfillNeeded,
         suggestedAction: recommendation.action,
         actionable: recommendation.action !== 'none',

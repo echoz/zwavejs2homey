@@ -287,6 +287,8 @@
         <div class="advanced-content">
           <h3>Runtime Detail</h3>
           <div id="runtime-advanced-kv" class="kv"></div>
+          <h3>Recommendation Codes</h3>
+          <div id="recommendation-codes-kv" class="kv"></div>
         </div>
       </details>
     </section>
@@ -295,7 +297,9 @@
       <div class="section-toolbar">
         <h2>Nodes</h2>
         <div class="toggle-group">
-          <button id="filter-action-needed-btn" class="toggle-button is-active">Action Needed</button>
+          <button id="filter-action-needed-btn" class="toggle-button is-active">
+            Action Needed
+          </button>
           <button id="filter-all-btn" class="toggle-button">All</button>
         </div>
       </div>
@@ -334,6 +338,7 @@
         const filterAllBtn = document.getElementById('filter-all-btn');
         const runtimeKv = document.getElementById('runtime-kv');
         const runtimeAdvancedKv = document.getElementById('runtime-advanced-kv');
+        const recommendationCodesKv = document.getElementById('recommendation-codes-kv');
         const summaryKv = document.getElementById('summary-kv');
         const nodesMeta = document.getElementById('nodes-meta');
         const nodesTable = document.getElementById('nodes-table');
@@ -369,9 +374,7 @@
 
         function setKv(container, rows, options) {
           const omitEmpty = options && options.omitEmpty === true;
-          const normalizedRows = omitEmpty
-            ? rows.filter((row) => !isMissingValue(row[1]))
-            : rows;
+          const normalizedRows = omitEmpty ? rows.filter((row) => !isMissingValue(row[1])) : rows;
           if (normalizedRows.length === 0) {
             container.innerHTML =
               '<div class="k">Details</div><div class="v hint">No data available.</div>';
@@ -407,6 +410,18 @@
           return 'None';
         }
 
+        function recommendationReasonLabel(node) {
+          const reasonLabel =
+            node.recommendation && typeof node.recommendation.reasonLabel === 'string'
+              ? node.recommendation.reasonLabel.trim()
+              : '';
+          if (reasonLabel.length > 0) return reasonLabel;
+          if (node.recommendation && typeof node.recommendation.reason === 'string') {
+            return node.recommendation.reason;
+          }
+          return recommendationLabel(node);
+        }
+
         function profileConfidenceLabel(node) {
           const attribution =
             node.profileAttribution && typeof node.profileAttribution === 'object'
@@ -432,8 +447,7 @@
               : null;
           if (attribution && attribution.sourceLabel) return attribution.sourceLabel;
           const hasProfile =
-            node.profile &&
-            (node.profile.profileId || node.profile.fallbackReason);
+            node.profile && (node.profile.profileId || node.profile.fallbackReason);
           if (!hasProfile) return 'Profile resolution pending';
           if (node.curation && node.curation.entryPresent) {
             return 'Compiled profile + device override';
@@ -463,6 +477,7 @@
             filterAllBtn.textContent = 'All';
             runtimeKv.innerHTML = '';
             runtimeAdvancedKv.innerHTML = '';
+            recommendationCodesKv.innerHTML = '';
             summaryKv.innerHTML = '';
             nodesMeta.textContent = '';
             nodesEmpty.hidden = false;
@@ -476,27 +491,42 @@
             snapshot.device.homeyDeviceId,
           )}`;
 
-          setKv(runtimeKv, [
-            ['Lifecycle', snapshot.runtime.zwjs.lifecycle],
-            ['Connected', snapshot.runtime.zwjs.transportConnected ? 'Yes' : 'No'],
-            ['Server Version', snapshot.runtime.zwjs.serverVersion],
-            ['Adapter Family', snapshot.runtime.zwjs.adapterFamily],
-            ['Compiled Loaded', snapshot.runtime.compiledProfiles.loaded ? 'Yes' : 'No'],
-            ['Compiled Entries', snapshot.runtime.compiledProfiles.entryCount],
-            ['Curation Loaded', snapshot.runtime.curation.loaded ? 'Yes' : 'No'],
-            ['Curation Entries', snapshot.runtime.curation.entryCount],
-          ], { omitEmpty: true });
+          setKv(
+            runtimeKv,
+            [
+              ['Lifecycle', snapshot.runtime.zwjs.lifecycle],
+              ['Connected', snapshot.runtime.zwjs.transportConnected ? 'Yes' : 'No'],
+              ['Server Version', snapshot.runtime.zwjs.serverVersion],
+              ['Adapter Family', snapshot.runtime.zwjs.adapterFamily],
+              ['Compiled Loaded', snapshot.runtime.compiledProfiles.loaded ? 'Yes' : 'No'],
+              ['Compiled Entries', snapshot.runtime.compiledProfiles.entryCount],
+              ['Curation Loaded', snapshot.runtime.curation.loaded ? 'Yes' : 'No'],
+              ['Curation Entries', snapshot.runtime.curation.entryCount],
+            ],
+            { omitEmpty: true },
+          );
 
-          setKv(runtimeAdvancedKv, [
-            ['Last Message', asTimeOrNull(snapshot.runtime.zwjs.lastMessageAt)],
-            ['Connected At', asTimeOrNull(snapshot.runtime.zwjs.connectedAt)],
-            ['Compiled Fingerprint', snapshot.runtime.compiledProfiles.pipelineFingerprint, ' mono'],
-            ['Compiled Generated At', asTimeOrNull(snapshot.runtime.compiledProfiles.generatedAt)],
-            ['Compiled Source', snapshot.runtime.compiledProfiles.sourcePath, ' mono'],
-            ['Compiled Error', snapshot.runtime.compiledProfiles.errorMessage],
-            ['Curation Source', snapshot.runtime.curation.source],
-            ['Curation Error', snapshot.runtime.curation.errorMessage],
-          ], { omitEmpty: true });
+          setKv(
+            runtimeAdvancedKv,
+            [
+              ['Last Message', asTimeOrNull(snapshot.runtime.zwjs.lastMessageAt)],
+              ['Connected At', asTimeOrNull(snapshot.runtime.zwjs.connectedAt)],
+              [
+                'Compiled Fingerprint',
+                snapshot.runtime.compiledProfiles.pipelineFingerprint,
+                ' mono',
+              ],
+              [
+                'Compiled Generated At',
+                asTimeOrNull(snapshot.runtime.compiledProfiles.generatedAt),
+              ],
+              ['Compiled Source', snapshot.runtime.compiledProfiles.sourcePath, ' mono'],
+              ['Compiled Error', snapshot.runtime.compiledProfiles.errorMessage],
+              ['Curation Source', snapshot.runtime.curation.source],
+              ['Curation Error', snapshot.runtime.curation.errorMessage],
+            ],
+            { omitEmpty: true },
+          );
 
           setKv(summaryKv, [
             ['Imported Nodes', snapshot.nodeSummary.total],
@@ -528,10 +558,17 @@
           const actionNeededNodes = nodes.filter((node) => recommendationPriority(node) < 2);
           filterActionNeededBtn.textContent = `Action Needed (${actionNeededNodes.length})`;
           filterAllBtn.textContent = `All (${nodes.length})`;
-          const visibleNodes =
-            state.filterMode === 'action-needed'
-              ? actionNeededNodes
-              : nodes;
+          const visibleNodes = state.filterMode === 'action-needed' ? actionNeededNodes : nodes;
+          setKv(
+            recommendationCodesKv,
+            nodes
+              .filter((node) => !isMissingValue(node.recommendation && node.recommendation.reason))
+              .map((node) => {
+                const nodeLabel = node.nodeId !== null ? `Node ${node.nodeId}` : 'Node n/a';
+                return [nodeLabel, node.recommendation.reason, ' mono'];
+              }),
+            { omitEmpty: true },
+          );
           nodesMeta.textContent =
             nodes.length === 0
               ? 'No imported nodes available.'
@@ -564,8 +601,8 @@
                   )}</span><br/><span class=\"hint\">${asText(profileSourceLabel(node))}</span></td>
                   <td>${recommendationPill(node)}<br/><span class=\"hint\">${recommendationLabel(
                     node,
-                  )}</span><br/><span class=\"mono\">${asText(
-                    node.recommendation.reason,
+                  )}</span><br/><span class=\"hint\">${asText(
+                    recommendationReasonLabel(node),
                   )}</span></td>
                   <td>${mapping}</td>
                 </tr>`;

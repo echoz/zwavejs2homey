@@ -56,6 +56,7 @@ interface AppRuntimeAccess {
       recommendation: {
         available: boolean;
         reason: string | null;
+        reasonLabel?: string | null;
         backfillNeeded: boolean;
       };
       mapping: {
@@ -99,8 +100,7 @@ module.exports = class BridgeDriver extends Homey.Driver {
   }
 
   private describeProfileConfidenceLabel(confidence: unknown): string {
-    const normalized =
-      typeof confidence === 'string' ? confidence.trim().toLowerCase() : '';
+    const normalized = typeof confidence === 'string' ? confidence.trim().toLowerCase() : '';
     if (normalized === 'curated') return 'Project rule match';
     if (normalized === 'ha-derived') return 'Home Assistant-derived rule match';
     if (normalized === 'generic') return 'Generic fallback rule';
@@ -138,11 +138,12 @@ module.exports = class BridgeDriver extends Homey.Driver {
 
     const confidenceCode = node.profile.confidence ?? null;
     const confidenceLabel = this.describeProfileConfidenceLabel(confidenceCode);
-    const sourceCode = node.profile.profileId || node.profile.fallbackReason
-      ? node.curation.entryPresent
-        ? 'compiled+curation-override'
-        : 'compiled-only'
-      : 'unresolved';
+    const sourceCode =
+      node.profile.profileId || node.profile.fallbackReason
+        ? node.curation.entryPresent
+          ? 'compiled+curation-override'
+          : 'compiled-only'
+        : 'unresolved';
     const sourceLabel =
       sourceCode === 'compiled+curation-override'
         ? 'Compiled profile + device override'
