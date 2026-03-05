@@ -19,6 +19,11 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## Recently Completed
 
+- Latest pairing UX closure slice:
+  - finalized bridge/node pairing summary screens with consistent onboarding status semantics (`Import Status`)
+  - hardened both pairing custom views against HTML injection by escaping runtime-provided node/profile/warning text before rendering
+  - pairing summary screens are now treated as MVP-frozen unless field-level feedback identifies a defect
+
 - Latest pairing summary UX polish slice:
   - aligned bridge `next_steps` and node `import_summary` screens for consistent table semantics and messaging
   - added imported-node context hints (`Imported N` / `Showing N`) and clearer empty states when diagnostics are unavailable

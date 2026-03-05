@@ -242,6 +242,19 @@
           return String(value);
         }
 
+        function escapeHtml(value) {
+          return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+        }
+
+        function asHtml(value) {
+          return escapeHtml(asText(value));
+        }
+
         function asTime(value) {
           if (!value) return 'n/a';
           const parsed = new Date(value);
@@ -256,9 +269,29 @@
           }
           statusKv.innerHTML = rows
             .map(
-              ([key, value]) => `<div class="k">${key}</div><div class="v">${asText(value)}</div>`,
+              ([key, value]) =>
+                `<div class="k">${escapeHtml(key)}</div><div class="v">${asHtml(value)}</div>`,
             )
             .join('');
+        }
+
+        function importStatusLabel(status) {
+          if (!status || !status.zwjs || status.zwjs.available !== true) {
+            return 'Bridge Not Configured';
+          }
+          if (status.zwjs.transportConnected !== true) {
+            return 'Bridge Disconnected';
+          }
+          if (typeof status.pendingImportNodes === 'number' && status.pendingImportNodes > 0) {
+            return `Ready to Import (${status.pendingImportNodes} pending)`;
+          }
+          if (typeof status.importedNodes === 'number' && status.importedNodes > 0) {
+            return 'Imported and Up to Date';
+          }
+          if (status.discoveredNodes === 0) {
+            return 'No Discoverable Nodes';
+          }
+          return 'Status Unknown';
         }
 
         function connectionPill(status) {
@@ -317,23 +350,23 @@
               const recommendationReason = asText(entry.recommendationReason);
               return `
                 <tr>
-                  <td>#${asText(entry.nodeId)}<br /><span class="hint">${asText(entry.name)}</span></td>
-                  <td>${asText(entry.bridgeId)}</td>
+                  <td>#${asHtml(entry.nodeId)}<br /><span class="hint">${asHtml(entry.name)}</span></td>
+                  <td>${asHtml(entry.bridgeId)}</td>
                   <td>
-                    ${manufacturer} / ${product}<br />
-                    <span class="hint">Location: ${location}</span><br />
-                    <span class="hint">Status: ${statusLabel}</span>
+                    ${asHtml(manufacturer)} / ${asHtml(product)}<br />
+                    <span class="hint">Location: ${asHtml(location)}</span><br />
+                    <span class="hint">Status: ${asHtml(statusLabel)}</span>
                   </td>
                   <td>
-                    Class: ${profileClass}<br />
-                    <span class="hint">${profileId}</span><br />
-                    <span class="hint">${profileMatch}</span>
+                    Class: ${asHtml(profileClass)}<br />
+                    <span class="hint">${asHtml(profileId)}</span><br />
+                    <span class="hint">${asHtml(profileMatch)}</span>
                   </td>
                   <td>
                     <span class="${recommendationClass(entry.recommendationAction)}">${recommendationLabel(
                       entry.recommendationAction,
                     )}</span><br />
-                    <span class="hint">${recommendationReason}</span>
+                    <span class="hint">${asHtml(recommendationReason)}</span>
                   </td>
                 </tr>
               `;
@@ -359,6 +392,7 @@
 
           const status = state.status;
           setKvRows([
+            ['Import Status', importStatusLabel(status)],
             ['Bridge', asText(status.bridgeId)],
             ['ZWJS', connectionPill(status)],
             ['Lifecycle', asText(status.zwjs && status.zwjs.lifecycle)],
@@ -373,7 +407,7 @@
           if (warnings.length > 0) {
             warningsEl.hidden = false;
             warningsEl.innerHTML = warnings
-              .map((warning) => `<li>${asText(warning)}</li>`)
+              .map((warning) => `<li>${asHtml(warning)}</li>`)
               .join('');
           } else {
             warningsEl.hidden = true;
