@@ -21,6 +21,9 @@ module.exports = class BridgeDriver extends homey_1.default.Driver {
         return [(0, pairing_1.createBridgePairCandidate)()];
     }
     async onPair(session) {
+        session.setHandler('list_devices', async () => {
+            return this.onPairListDevices();
+        });
         session.setHandler('next_steps:get_status', async () => {
             return this.loadNextStepsStatus();
         });

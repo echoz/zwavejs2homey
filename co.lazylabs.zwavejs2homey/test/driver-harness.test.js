@@ -163,8 +163,13 @@ test('bridge driver pair session exposes next steps status handler', async () =>
   };
 
   await driver.onPair(session);
+  assert.equal(typeof handlers.get('list_devices'), 'function');
   assert.equal(typeof handlers.get('next_steps:get_status'), 'function');
+  const candidates = await handlers.get('list_devices')();
   const status = await handlers.get('next_steps:get_status')();
+  assert.equal(Array.isArray(candidates), true);
+  assert.equal(candidates.length, 1);
+  assert.equal(candidates[0]?.data?.id, 'zwjs-bridge-main');
   assert.equal(status.bridgeId, 'main');
   assert.equal(status.zwjs.available, true);
   assert.equal(status.zwjs.transportConnected, true);

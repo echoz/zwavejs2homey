@@ -154,6 +154,9 @@ module.exports = class BridgeDriver extends Homey.Driver {
   }
 
   async onPair(session: PairSessionLike) {
+    session.setHandler('list_devices', async () => {
+      return this.onPairListDevices();
+    });
     session.setHandler('next_steps:get_status', async () => {
       return this.loadNextStepsStatus();
     });
