@@ -19,6 +19,15 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## Recently Completed
 
+- Latest node Device Tools essentials/advanced UX slice:
+  - reduced default diagnostics view to essential operator context (class/confidence/profile/manufacturer/product/location/status/mapping/curation)
+  - moved verbose metadata into a collapsed `Advanced` section:
+    - profile reference hashes/fingerprints
+    - raw recommendation reason code
+    - product triple and runtime timestamps
+  - added empty-value suppression in key/value rendering to reduce noisy `n/a` rows in normal repair workflows
+  - consolidated recommendation panel copy to human-readable reason by default
+
 - Latest node pairing reliability + diagnostics correctness slice:
   - fixed node pairing timeout race so discovered candidates are preserved when late-stage inference overruns global flow timeout
   - split icon-inference timeout from global pair-flow timeout and added partial-candidate fallback logging

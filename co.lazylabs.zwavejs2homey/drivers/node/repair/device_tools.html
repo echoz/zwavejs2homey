@@ -104,6 +104,52 @@
         font-size: 14px;
       }
 
+      details {
+        border: 1px dashed var(--panel-border);
+        border-radius: 10px;
+        padding: 8px 10px;
+        background: rgba(100, 116, 139, 0.04);
+      }
+
+      details[open] {
+        background: transparent;
+      }
+
+      summary {
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--muted);
+        list-style: none;
+      }
+
+      summary::-webkit-details-marker {
+        display: none;
+      }
+
+      summary::before {
+        content: '▸ ';
+      }
+
+      details[open] summary::before {
+        content: '▾ ';
+      }
+
+      .advanced-content {
+        margin-top: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .advanced-content h3 {
+        margin: 0;
+        font-size: 12px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
       .kv {
         display: grid;
         grid-template-columns: 150px minmax(0, 1fr);
@@ -204,11 +250,6 @@
         </section>
 
         <section class="panel">
-          <h2>Profile Reference</h2>
-          <div id="profile-reference-kv" class="kv"></div>
-        </section>
-
-        <section class="panel">
           <h2>Actions</h2>
           <div class="actions">
             <button id="backfill-btn" class="button">Backfill Marker</button>
@@ -218,13 +259,22 @@
             Actions are available when a recommendation requires explicit confirmation.
           </p>
         </section>
+
+        <section class="panel">
+          <h2>Advanced</h2>
+          <details>
+            <summary>Show advanced diagnostics</summary>
+            <div class="advanced-content">
+              <h3>Profile Reference</h3>
+              <div id="profile-reference-kv" class="kv"></div>
+              <h3>Decision Context</h3>
+              <div id="why-kv" class="kv"></div>
+            </div>
+          </details>
+        </section>
       </div>
 
       <aside class="panel-column">
-        <section class="panel">
-          <h2>Why</h2>
-          <div id="why-kv" class="kv"></div>
-        </section>
         <section class="panel">
           <h2>Latest Action</h2>
           <div id="latest-action-kv" class="kv"></div>
@@ -300,6 +350,13 @@
           return date.toLocaleString();
         }
 
+        function formatIsoOrNull(ts) {
+          if (!ts) return null;
+          const date = new Date(ts);
+          if (Number.isNaN(date.getTime())) return String(ts);
+          return date.toLocaleString();
+        }
+
         function toSafeText(value) {
           if (value === null || typeof value === 'undefined' || value === '') return 'n/a';
           return String(value);
@@ -330,8 +387,30 @@
           return parts.length > 0 ? parts.join(' · ') : 'n/a';
         }
 
-        function setKvRows(container, rows) {
-          container.innerHTML = rows
+        function isMissingValue(value) {
+          if (value === null || typeof value === 'undefined') return true;
+          if (typeof value === 'string' && value.trim().length === 0) return true;
+          return false;
+        }
+
+        function buildProductTriple(nodeState) {
+          const parts = [nodeState.manufacturerId, nodeState.productType, nodeState.productId];
+          if (parts.every((value) => isMissingValue(value))) return null;
+          return parts
+            .map((value) => (isMissingValue(value) ? 'n/a' : String(value)))
+            .join(':');
+        }
+
+        function setKvRows(container, rows, options) {
+          const omitEmpty = options && options.omitEmpty === true;
+          const normalizedRows = omitEmpty
+            ? rows.filter((row) => !isMissingValue(row[1]))
+            : rows;
+          if (normalizedRows.length === 0) {
+            container.innerHTML = '<div class="k">Details</div><div class="v hint">No data available.</div>';
+            return;
+          }
+          container.innerHTML = normalizedRows
             .map(([key, value, className]) => {
               const valueClass = className ? ` ${className}` : '';
               return `<div class="k">${key}</div><div class="v${valueClass}">${toSafeText(value)}</div>`;
@@ -387,15 +466,7 @@
           const runtimeZwjs =
             snapshot.runtime && snapshot.runtime.zwjs ? snapshot.runtime.zwjs : {};
           const nodeState = snapshot.node || {};
-          const productTriple = [
-            nodeState.manufacturerId,
-            nodeState.productType,
-            nodeState.productId,
-          ]
-            .map((value) =>
-              value === null || typeof value === 'undefined' ? 'n/a' : String(value),
-            )
-            .join(':');
+          const productTriple = buildProductTriple(nodeState);
           const zwjsConnection = `${toSafeText(runtimeZwjs.lifecycle)} / ${
             runtimeZwjs.transportConnected === true ? 'connected' : 'disconnected'
           }`;
@@ -416,7 +487,6 @@
             ],
             ['Manufacturer', nodeState.manufacturer],
             ['Product', nodeState.product],
-            ['Product Triple', productTriple, ' mono'],
             ['Location', nodeState.location],
             ['Node Status', nodeStatus],
             ['ZWJS', zwjsConnection],
@@ -430,15 +500,12 @@
               `${snapshot.mapping.outboundEnabled}/${snapshot.mapping.outboundConfigured} enabled`,
             ],
             ['Curation Entry', snapshot.curation.entryPresent ? 'Present' : 'Missing'],
-          ]);
+          ], { omitEmpty: true });
 
           recommendationContent.innerHTML = `
             <div>${recommendationBadge(snapshot)}</div>
             <p class="hint" style="margin:8px 0 0;">${toSafeText(
               reasonLabels[snapshot.recommendation.reason] || snapshot.recommendation.reason,
-            )}</p>
-            <p class="hint mono" style="margin:6px 0 0;">Reason Code: ${toSafeText(
-              snapshot.recommendation.reason,
             )}</p>
           `;
 
@@ -448,17 +515,19 @@
             ['Stored Hash', snapshot.profileReference.storedBaselineHash, ' mono'],
             ['Current Fingerprint', snapshot.profileReference.currentPipelineFingerprint, ' mono'],
             ['Stored Fingerprint', snapshot.profileReference.storedPipelineFingerprint, ' mono'],
-          ]);
+          ], { omitEmpty: true });
 
           setKvRows(whyKv, [
             ['Reason', toReasonDetail(snapshot.recommendation.reason, reasonLabels)],
+            ['Reason Code', snapshot.recommendation.reason, ' mono'],
             ['Suggested Action', snapshot.recommendation.suggestedAction],
             ['Actionable', snapshot.recommendation.actionable ? 'Yes' : 'No'],
             ['Fallback Reason', snapshot.profile.fallbackReason],
-            ['ZWJS Last Message', formatIso(runtimeZwjs.lastMessageAt)],
-            ['ZWJS Connected At', formatIso(runtimeZwjs.connectedAt)],
-            ['Last Sync', formatIso(snapshot.generatedAt)],
-          ]);
+            ['Product Triple', productTriple, ' mono'],
+            ['ZWJS Last Message', formatIsoOrNull(runtimeZwjs.lastMessageAt)],
+            ['ZWJS Connected At', formatIsoOrNull(runtimeZwjs.connectedAt)],
+            ['Last Sync', formatIsoOrNull(snapshot.generatedAt)],
+          ], { omitEmpty: true });
 
           if (state.latestActionResult && typeof state.latestActionResult === 'object') {
             const result = state.latestActionResult;
