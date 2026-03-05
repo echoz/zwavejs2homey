@@ -22,6 +22,23 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## Recently Completed
 
+- Latest TypeScript-completion slice (Homey app runtime modules):
+  - added TypeScript source files for all previously hand-authored runtime JS modules:
+    - `api.ts`
+    - `runtime-api-client.ts`
+    - `pairing.ts`
+    - `pairing-icons.ts`
+    - `node-runtime.ts`
+    - `compiled-profiles.ts`
+    - `curation.ts`
+  - removed legacy local declaration-only files that are now superseded by TypeScript sources:
+    - `pairing.d.ts`
+    - `pairing-icons.d.ts`
+    - `node-runtime.d.ts`
+    - `compiled-profiles.d.ts`
+    - `curation.d.ts`
+  - confirmed runtime sync pipeline now keeps generated JS artifacts aligned with all TypeScript sources
+
 - Latest TypeScript migration slice (page presenter/view layer):
   - added TypeScript source files for custom Homey page presenter/view logic:
     - `drivers/bridge/pair/next_steps.presenter.ts`
