@@ -19,6 +19,15 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## Recently Completed
 
+- Latest repair UX consistency slice:
+  - aligned bridge/node repair terminology:
+    - `Rule Match`
+    - `Profile Source`
+    - `Device Override`
+    - `Curation Status`
+  - bridge repair runtime/summary now surfaces explicit `Runtime Status` and `Action Needed` counts
+  - bridge node table profile column now mirrors node-repair semantics (rule match, profile source, curation state, match key, fallback)
+
 - Latest settings diagnostics UX closure slice:
   - added explicit `Runtime Status` and `Action Needed` fields to settings diagnostics
   - added contextual runtime hint messaging for “needs attention” vs “no action required” outcomes

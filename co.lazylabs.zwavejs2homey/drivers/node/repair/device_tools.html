@@ -650,23 +650,23 @@
           setKvRows(
             adapterKv,
             [
-              ['Homey Class', snapshot.profile.homeyClass],
-              ['Rule Match Level', confidenceSummary],
-              ['Effective Source', profileSourceSummary],
+              ['Device Class', snapshot.profile.homeyClass],
+              ['Rule Match', confidenceSummary],
+              ['Profile Source', profileSourceSummary],
               ['Device Override', overrideSummary],
-              ['Profile ID', snapshot.profile.profileId, ' mono'],
-              ['Profile Fallback', snapshot.profile.fallbackReason],
-              ['Uncurated', formatBooleanFlag(snapshot.profile.uncurated)],
-              [
-                'Match',
-                `${toSafeText(snapshot.profile.matchBy)} / ${toSafeText(snapshot.profile.matchKey)}`,
-              ],
-              ['Vertical Slice', formatBooleanFlag(snapshot.mapping.verticalSliceApplied)],
-              ['Mapped Capabilities', snapshot.mapping.capabilityCount],
               ['Curation Status', curationStatusSummary.status],
               ['Curation Summary', curationStatusSummary.summary],
               ['Curation Entry', snapshot.curation.entryPresent ? 'Present' : 'Missing'],
               ['Curation Source', snapshot.curation.source],
+              ['Profile ID', snapshot.profile.profileId, ' mono'],
+              [
+                'Match',
+                `${toSafeText(snapshot.profile.matchBy)} / ${toSafeText(snapshot.profile.matchKey)}`,
+              ],
+              ['Profile Fallback', snapshot.profile.fallbackReason],
+              ['Uncurated', formatBooleanFlag(snapshot.profile.uncurated)],
+              ['Mapped Capabilities', snapshot.mapping.capabilityCount],
+              ['Vertical Slice', formatBooleanFlag(snapshot.mapping.verticalSliceApplied)],
               [
                 'Inbound Mapping',
                 `${snapshot.mapping.inboundEnabled}/${snapshot.mapping.inboundConfigured} enabled (${snapshot.mapping.inboundSkipped} skipped)`,
@@ -688,7 +688,7 @@
               ),
             )}</p>
             <p class="hint" style="margin:6px 0 0;">
-              Rule match level explains which rule tier classified this node. Device override is optional and per-device.
+              Rule match indicates which rule tier classified this node. Profile source shows compiled-only vs device-override resolution.
             </p>
           `;
 

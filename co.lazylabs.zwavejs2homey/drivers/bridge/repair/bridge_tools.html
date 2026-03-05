@@ -530,6 +530,44 @@
           return 'Compiled profile only';
         }
 
+        function runtimeStatusLabel(snapshot) {
+          if (!snapshot.runtime || !snapshot.runtime.zwjs || snapshot.runtime.zwjs.available !== true) {
+            return 'Bridge Not Configured';
+          }
+          if (snapshot.runtime.zwjs.transportConnected !== true) {
+            return 'Bridge Disconnected';
+          }
+          if (
+            snapshot.runtime.compiledProfiles &&
+            snapshot.runtime.compiledProfiles.loaded !== true
+          ) {
+            return 'Connected (Compiled Profiles Missing)';
+          }
+          if (snapshot.nodeSummary && snapshot.nodeSummary.total > 0) {
+            return 'Connected (Imported Nodes Available)';
+          }
+          return 'Connected (No Imported Nodes)';
+        }
+
+        function toNonNegativeCount(value) {
+          if (typeof value !== 'number' || !Number.isFinite(value)) return 0;
+          return value > 0 ? Math.trunc(value) : 0;
+        }
+
+        function buildCurationStatusSummary(curation) {
+          const loaded = curation && curation.loaded === true;
+          const applied = toNonNegativeCount(curation && curation.appliedActions);
+          const skipped = toNonNegativeCount(curation && curation.skippedActions);
+          const errors = toNonNegativeCount(curation && curation.errorCount);
+          const hasEntry = curation && curation.entryPresent === true;
+          if (!loaded) return 'Unavailable';
+          if (errors > 0) return 'Error';
+          if (applied > 0) return 'Applied';
+          if (skipped > 0) return 'Skipped';
+          if (hasEntry) return 'No Change';
+          return 'No Override';
+        }
+
         function render() {
           refreshBtn.disabled = state.loading;
           filterActionNeededBtn.disabled = state.loading;
@@ -567,11 +605,32 @@
             snapshot.device.homeyDeviceId,
           )}`;
 
+          const nodes = Array.isArray(snapshot.nodes)
+            ? [...snapshot.nodes].sort((left, right) => {
+                const byPriority = recommendationPriority(left) - recommendationPriority(right);
+                if (byPriority !== 0) return byPriority;
+                const leftNodeId =
+                  typeof left.nodeId === 'number' && Number.isInteger(left.nodeId)
+                    ? left.nodeId
+                    : Number.MAX_SAFE_INTEGER;
+                const rightNodeId =
+                  typeof right.nodeId === 'number' && Number.isInteger(right.nodeId)
+                    ? right.nodeId
+                    : Number.MAX_SAFE_INTEGER;
+                if (leftNodeId !== rightNodeId) return leftNodeId - rightNodeId;
+                const leftId = left.homeyDeviceId ? String(left.homeyDeviceId) : '';
+                const rightId = right.homeyDeviceId ? String(right.homeyDeviceId) : '';
+                return leftId.localeCompare(rightId);
+              })
+            : [];
+          const actionNeededNodes = nodes.filter((node) => recommendationPriority(node) < 2);
+
           setKv(
             runtimeKv,
             [
+              ['Runtime Status', runtimeStatusLabel(snapshot)],
               ['Lifecycle', snapshot.runtime.zwjs.lifecycle],
-              ['Connected', snapshot.runtime.zwjs.transportConnected ? 'Yes' : 'No'],
+              ['Transport', snapshot.runtime.zwjs.transportConnected ? 'Connected' : 'Disconnected'],
               ['Server Version', snapshot.runtime.zwjs.serverVersion],
               ['Adapter Family', snapshot.runtime.zwjs.adapterFamily],
               ['Compiled Loaded', snapshot.runtime.compiledProfiles.loaded ? 'Yes' : 'No'],
@@ -614,32 +673,13 @@
             ['Curation Applied', snapshot.nodeSummary.curationAppliedActions],
             ['Curation Skipped', snapshot.nodeSummary.curationSkippedActions],
             ['Curation Errors', snapshot.nodeSummary.curationErrorCount],
-            ['Recommendations', snapshot.nodeSummary.recommendationAvailableCount],
+            ['Action Needed', actionNeededNodes.length],
+            ['Profile Updates', snapshot.nodeSummary.recommendationAvailableCount],
             ['Backfill Needed', snapshot.nodeSummary.recommendationBackfillCount],
             ['Mapped Capabilities', snapshot.nodeSummary.capabilityCount],
             ['Inbound Skipped', snapshot.nodeSummary.inboundSkipped],
             ['Outbound Skipped', snapshot.nodeSummary.outboundSkipped],
           ]);
-
-          const nodes = Array.isArray(snapshot.nodes)
-            ? [...snapshot.nodes].sort((left, right) => {
-                const byPriority = recommendationPriority(left) - recommendationPriority(right);
-                if (byPriority !== 0) return byPriority;
-                const leftNodeId =
-                  typeof left.nodeId === 'number' && Number.isInteger(left.nodeId)
-                    ? left.nodeId
-                    : Number.MAX_SAFE_INTEGER;
-                const rightNodeId =
-                  typeof right.nodeId === 'number' && Number.isInteger(right.nodeId)
-                    ? right.nodeId
-                    : Number.MAX_SAFE_INTEGER;
-                if (leftNodeId !== rightNodeId) return leftNodeId - rightNodeId;
-                const leftId = left.homeyDeviceId ? String(left.homeyDeviceId) : '';
-                const rightId = right.homeyDeviceId ? String(right.homeyDeviceId) : '';
-                return leftId.localeCompare(rightId);
-              })
-            : [];
-          const actionNeededNodes = nodes.filter((node) => recommendationPriority(node) < 2);
           filterActionNeededBtn.textContent = `Action Needed (${actionNeededNodes.length})`;
           filterAllBtn.textContent = `All (${nodes.length})`;
           const visibleNodes = state.filterMode === 'action-needed' ? actionNeededNodes : nodes;
@@ -687,6 +727,7 @@
                   node.node && typeof node.node.location === 'string' && node.node.location.trim()
                     ? node.node.location.trim()
                     : null;
+                const curationStatus = buildCurationStatusSummary(node.curation);
                 return `<tr>
                   <td>${asHtml(nodeLabel)}<br/><span class=\"mono\">${asHtml(node.homeyDeviceId)}</span></td>
                   <td>${asHtml(nodeIdentityLabel(node))}<br/><span class=\"hint\">${asHtml(
@@ -696,16 +737,18 @@
                     node.profile.profileId,
                   )}</span><br/><span class=\"hint\">Class: ${asHtml(
                     node.profile.homeyClass,
-                  )} · ${asHtml(profileConfidenceLabel(node))}</span><br/><span class=\"hint\">${asHtml(
+                  )}</span><br/><span class=\"hint\">Rule Match: ${asHtml(
+                    profileConfidenceLabel(node),
+                  )}</span><br/><span class=\"hint\">Profile Source: ${asHtml(
                     profileSourceLabel(node),
+                  )}</span><br/><span class=\"hint\">Curation: ${asHtml(
+                    curationStatus,
                   )}</span><br/><span class=\"hint\">Match: ${asHtml(
                     profileMatchLabel(node),
                   )}</span><br/><span class=\"hint\">Fallback: ${asHtml(
                     node.profile.fallbackReason,
                   )}</span></td>
-                  <td>${recommendationPill(node)}<br/><span class=\"hint\">${recommendationLabel(
-                    node,
-                  )}</span><br/><span class=\"hint\">${asHtml(
+                  <td>${recommendationPill(node)}<br/><span class=\"hint\">${asHtml(
                     recommendationReasonLabel(node),
                   )}</span></td>
                   <td>${asHtml(mapping)}<br/><span class=\"hint\">Capabilities: ${asHtml(
