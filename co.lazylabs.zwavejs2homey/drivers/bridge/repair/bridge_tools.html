@@ -86,6 +86,52 @@
         font-size: 14px;
       }
 
+      details {
+        border: 1px dashed var(--panel-border);
+        border-radius: 10px;
+        padding: 8px 10px;
+        background: rgba(100, 116, 139, 0.04);
+      }
+
+      details[open] {
+        background: transparent;
+      }
+
+      summary {
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--muted);
+        list-style: none;
+      }
+
+      summary::-webkit-details-marker {
+        display: none;
+      }
+
+      summary::before {
+        content: '▸ ';
+      }
+
+      details[open] summary::before {
+        content: '▾ ';
+      }
+
+      .advanced-content {
+        margin-top: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .advanced-content h3 {
+        margin: 0;
+        font-size: 12px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
       .kv {
         display: grid;
         grid-template-columns: 150px minmax(0, 1fr);
@@ -125,6 +171,33 @@
       .hint {
         color: var(--muted);
         font-size: 12px;
+      }
+
+      .status-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        border: 1px solid transparent;
+      }
+
+      .status-pill.ok {
+        color: var(--ok);
+        background: rgba(15, 118, 110, 0.1);
+        border-color: rgba(15, 118, 110, 0.35);
+      }
+
+      .status-pill.warn {
+        color: var(--warn);
+        background: rgba(180, 83, 9, 0.1);
+        border-color: rgba(180, 83, 9, 0.35);
+      }
+
+      .status-pill.danger {
+        color: var(--danger);
+        background: rgba(185, 28, 28, 0.1);
+        border-color: rgba(185, 28, 28, 0.35);
       }
 
       .status {
@@ -175,6 +248,17 @@
     </div>
 
     <section class="panel" style="margin-top: 12px">
+      <h2>Advanced</h2>
+      <details>
+        <summary>Show advanced diagnostics</summary>
+        <div class="advanced-content">
+          <h3>Runtime Detail</h3>
+          <div id="runtime-advanced-kv" class="kv"></div>
+        </div>
+      </details>
+    </section>
+
+    <section class="panel" style="margin-top: 12px">
       <h2>Nodes</h2>
       <div id="nodes-empty" class="hint" hidden>No imported node devices found.</div>
       <table id="nodes-table" class="nodes-table" hidden>
@@ -206,6 +290,7 @@
         const subtitleEl = document.getElementById('subtitle');
         const refreshBtn = document.getElementById('refresh-btn');
         const runtimeKv = document.getElementById('runtime-kv');
+        const runtimeAdvancedKv = document.getElementById('runtime-advanced-kv');
         const summaryKv = document.getElementById('summary-kv');
         const nodesTable = document.getElementById('nodes-table');
         const nodesEmpty = document.getElementById('nodes-empty');
@@ -225,13 +310,51 @@
           return parsed.toLocaleString();
         }
 
-        function setKv(container, rows) {
-          container.innerHTML = rows
+        function asTimeOrNull(value) {
+          if (!value) return null;
+          const parsed = new Date(value);
+          if (Number.isNaN(parsed.getTime())) return String(value);
+          return parsed.toLocaleString();
+        }
+
+        function isMissingValue(value) {
+          if (value === null || typeof value === 'undefined') return true;
+          if (typeof value === 'string' && value.trim().length === 0) return true;
+          return false;
+        }
+
+        function setKv(container, rows, options) {
+          const omitEmpty = options && options.omitEmpty === true;
+          const normalizedRows = omitEmpty
+            ? rows.filter((row) => !isMissingValue(row[1]))
+            : rows;
+          if (normalizedRows.length === 0) {
+            container.innerHTML =
+              '<div class="k">Details</div><div class="v hint">No data available.</div>';
+            return;
+          }
+          container.innerHTML = normalizedRows
             .map(([key, value, className]) => {
               const nextClass = className ? ` ${className}` : '';
               return `<div class=\"k\">${key}</div><div class=\"v${nextClass}\">${asText(value)}</div>`;
             })
             .join('');
+        }
+
+        function recommendationPriority(node) {
+          if (node.recommendation.backfillNeeded) return 0;
+          if (node.recommendation.available) return 1;
+          return 2;
+        }
+
+        function recommendationPill(node) {
+          if (node.recommendation.backfillNeeded) {
+            return '<span class="status-pill warn">Backfill Marker</span>';
+          }
+          if (node.recommendation.available) {
+            return '<span class="status-pill danger">Adopt Update</span>';
+          }
+          return '<span class="status-pill ok">No Action</span>';
         }
 
         function recommendationLabel(node) {
@@ -255,6 +378,7 @@
               ? 'Loading bridge diagnostics...'
               : 'No diagnostics available.';
             runtimeKv.innerHTML = '';
+            runtimeAdvancedKv.innerHTML = '';
             summaryKv.innerHTML = '';
             nodesEmpty.hidden = false;
             nodesTable.hidden = true;
@@ -272,13 +396,22 @@
             ['Connected', snapshot.runtime.zwjs.transportConnected ? 'Yes' : 'No'],
             ['Server Version', snapshot.runtime.zwjs.serverVersion],
             ['Adapter Family', snapshot.runtime.zwjs.adapterFamily],
-            ['Last Message', asTime(snapshot.runtime.zwjs.lastMessageAt)],
-            ['Connected At', asTime(snapshot.runtime.zwjs.connectedAt)],
             ['Compiled Loaded', snapshot.runtime.compiledProfiles.loaded ? 'Yes' : 'No'],
             ['Compiled Entries', snapshot.runtime.compiledProfiles.entryCount],
             ['Curation Loaded', snapshot.runtime.curation.loaded ? 'Yes' : 'No'],
             ['Curation Entries', snapshot.runtime.curation.entryCount],
-          ]);
+          ], { omitEmpty: true });
+
+          setKv(runtimeAdvancedKv, [
+            ['Last Message', asTimeOrNull(snapshot.runtime.zwjs.lastMessageAt)],
+            ['Connected At', asTimeOrNull(snapshot.runtime.zwjs.connectedAt)],
+            ['Compiled Fingerprint', snapshot.runtime.compiledProfiles.pipelineFingerprint, ' mono'],
+            ['Compiled Generated At', asTimeOrNull(snapshot.runtime.compiledProfiles.generatedAt)],
+            ['Compiled Source', snapshot.runtime.compiledProfiles.sourcePath, ' mono'],
+            ['Compiled Error', snapshot.runtime.compiledProfiles.errorMessage],
+            ['Curation Source', snapshot.runtime.curation.source],
+            ['Curation Error', snapshot.runtime.curation.errorMessage],
+          ], { omitEmpty: true });
 
           setKv(summaryKv, [
             ['Imported Nodes', snapshot.nodeSummary.total],
@@ -289,7 +422,24 @@
             ['Outbound Skipped', snapshot.nodeSummary.outboundSkipped],
           ]);
 
-          const nodes = Array.isArray(snapshot.nodes) ? snapshot.nodes : [];
+          const nodes = Array.isArray(snapshot.nodes)
+            ? [...snapshot.nodes].sort((left, right) => {
+                const byPriority = recommendationPriority(left) - recommendationPriority(right);
+                if (byPriority !== 0) return byPriority;
+                const leftNodeId =
+                  typeof left.nodeId === 'number' && Number.isInteger(left.nodeId)
+                    ? left.nodeId
+                    : Number.MAX_SAFE_INTEGER;
+                const rightNodeId =
+                  typeof right.nodeId === 'number' && Number.isInteger(right.nodeId)
+                    ? right.nodeId
+                    : Number.MAX_SAFE_INTEGER;
+                if (leftNodeId !== rightNodeId) return leftNodeId - rightNodeId;
+                const leftId = left.homeyDeviceId ? String(left.homeyDeviceId) : '';
+                const rightId = right.homeyDeviceId ? String(right.homeyDeviceId) : '';
+                return leftId.localeCompare(rightId);
+              })
+            : [];
           if (nodes.length === 0) {
             nodesEmpty.hidden = false;
             nodesTable.hidden = true;
@@ -305,7 +455,9 @@
                   <td>${nodeLabel}<br/><span class=\"mono\">${asText(node.homeyDeviceId)}</span></td>
                   <td>${asText(node.profile.homeyClass)}</td>
                   <td><span class=\"mono\">${asText(node.profile.profileId)}</span></td>
-                  <td>${recommendationLabel(node)}<br/><span class=\"mono\">${asText(
+                  <td>${recommendationPill(node)}<br/><span class=\"hint\">${recommendationLabel(
+                    node,
+                  )}</span><br/><span class=\"mono\">${asText(
                     node.recommendation.reason,
                   )}</span></td>
                   <td>${mapping}</td>

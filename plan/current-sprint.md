@@ -19,6 +19,15 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## Recently Completed
 
+- Latest bridge Device Tools essentials/advanced UX slice:
+  - aligned bridge repair screen with node repair ergonomics by moving verbose runtime metadata into a collapsed `Advanced` section
+  - kept bridge essentials prominent (runtime health + summary) and suppressed empty-value rows in advanced diagnostics
+  - improved node table readability with recommendation status pills and deterministic sorting:
+    - backfill-needed first
+    - adopt-update next
+    - no-action last
+    - then node ID / Homey device ID
+
 - Latest node Device Tools essentials/advanced UX slice:
   - reduced default diagnostics view to essential operator context (class/confidence/profile/manufacturer/product/location/status/mapping/curation)
   - moved verbose metadata into a collapsed `Advanced` section:
