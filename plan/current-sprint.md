@@ -19,6 +19,12 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## Recently Completed
 
+- Latest bridge pairing guidance slice:
+  - added post-add bridge pairing guidance custom view (`next_steps`) to keep node import flow explicit within Homey template constraints
+  - bridge pair flow now navigates:
+    - `list_devices -> add_devices -> next_steps`
+  - added pairing-flow test coverage for bridge custom guidance view wiring
+
 - Latest bridge read-only tools slice:
   - added bridge repair custom view host (`bridge_tools`) with read-only diagnostics and per-node summary rendering
   - wired bridge driver repair session handlers:
