@@ -1,7 +1,26 @@
 import Homey from 'homey';
-import { createBridgePairCandidate, hasBridgePairDeviceFromData } from '../../pairing';
+import {
+  createBridgePairCandidate,
+  hasBridgePairDeviceFromData,
+  ZWJS_DEFAULT_BRIDGE_ID,
+} from '../../pairing';
 
 interface AppRuntimeAccess {
+  getZwjsClient?: () =>
+    | {
+        getStatus?: () => {
+          transportConnected?: boolean;
+          lifecycle?: string;
+          serverVersion?: string | null;
+          adapterFamily?: string | null;
+        };
+        getNodeList?: () => Promise<{
+          nodes?: Array<{
+            nodeId?: unknown;
+          }>;
+        }>;
+      }
+    | undefined;
   getNodeRuntimeDiagnostics?: (options?: { homeyDeviceId?: string }) => Promise<{
     generatedAt: string;
     bridgeId: string;
@@ -104,6 +123,10 @@ interface RepairSessionLike {
   setHandler: (event: string, handler: (payload?: unknown) => Promise<unknown>) => void;
 }
 
+interface PairSessionLike {
+  setHandler: (event: string, handler: (payload?: unknown) => Promise<unknown>) => void;
+}
+
 interface HomeyBridgeDeviceData {
   id?: string;
   bridgeId?: string;
@@ -128,6 +151,104 @@ module.exports = class BridgeDriver extends Homey.Driver {
     }
 
     return [createBridgePairCandidate()];
+  }
+
+  async onPair(session: PairSessionLike) {
+    session.setHandler('next_steps:get_status', async () => {
+      return this.loadNextStepsStatus();
+    });
+  }
+
+  private async loadNextStepsStatus(): Promise<{
+    generatedAt: string;
+    bridgeId: string;
+    zwjs: {
+      available: boolean;
+      transportConnected: boolean;
+      lifecycle: string;
+      serverVersion: string | null;
+      adapterFamily: string | null;
+    };
+    discoveredNodes: number | null;
+    importedNodes: number | null;
+    pendingImportNodes: number | null;
+    warnings: string[];
+  }> {
+    const app = this.homey.app as AppRuntimeAccess;
+    const client = app.getZwjsClient?.();
+    const status = client?.getStatus?.();
+    const zwjs = {
+      available: Boolean(client),
+      transportConnected: status?.transportConnected === true,
+      lifecycle: typeof status?.lifecycle === 'string' ? status.lifecycle : 'stopped',
+      serverVersion:
+        typeof status?.serverVersion === 'string' && status.serverVersion.trim().length > 0
+          ? status.serverVersion.trim()
+          : null,
+      adapterFamily:
+        typeof status?.adapterFamily === 'string' && status.adapterFamily.trim().length > 0
+          ? status.adapterFamily.trim()
+          : null,
+    };
+
+    let discoveredNodes: number | null = null;
+    let importedNodes: number | null = null;
+    let bridgeId: string = ZWJS_DEFAULT_BRIDGE_ID;
+    const warnings: string[] = [];
+
+    if (client?.getNodeList) {
+      try {
+        const nodeList = await client.getNodeList();
+        const nodes = Array.isArray(nodeList?.nodes) ? nodeList.nodes : [];
+        discoveredNodes = nodes.filter((node) => {
+          const nodeId = node?.nodeId;
+          return typeof nodeId === 'number' && Number.isInteger(nodeId) && nodeId > 1;
+        }).length;
+      } catch (error) {
+        this.error('Failed to load node list for bridge next steps status', { error });
+        warnings.push('Unable to load node discovery status from ZWJS.');
+      }
+    } else {
+      warnings.push('ZWJS client is unavailable; configure zwjs_connection.url in app settings.');
+    }
+
+    if (app.getNodeRuntimeDiagnostics) {
+      try {
+        const diagnostics = await app.getNodeRuntimeDiagnostics();
+        if (
+          diagnostics &&
+          typeof diagnostics.bridgeId === 'string' &&
+          diagnostics.bridgeId.trim().length > 0
+        ) {
+          bridgeId = diagnostics.bridgeId.trim();
+        }
+        importedNodes = Array.isArray(diagnostics.nodes) ? diagnostics.nodes.length : 0;
+      } catch (error) {
+        this.error('Failed to load imported node count for bridge next steps status', { error });
+        warnings.push('Unable to read imported node count from runtime diagnostics.');
+      }
+    } else {
+      warnings.push('Runtime diagnostics are not ready yet.');
+    }
+
+    let pendingImportNodes: number | null = null;
+    if (typeof discoveredNodes === 'number' && typeof importedNodes === 'number') {
+      pendingImportNodes = Math.max(discoveredNodes - importedNodes, 0);
+    }
+
+    if (!zwjs.transportConnected) {
+      warnings.push('ZWJS transport is not connected; node import list may be empty.');
+    }
+
+    return {
+      generatedAt: new Date().toISOString(),
+      bridgeId,
+      zwjs,
+      discoveredNodes,
+      importedNodes,
+      pendingImportNodes,
+      warnings,
+    };
   }
 
   private describeProfileConfidenceLabel(confidence: unknown): string {

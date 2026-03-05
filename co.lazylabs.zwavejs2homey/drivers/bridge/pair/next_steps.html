@@ -40,6 +40,46 @@
         line-height: 1.4;
       }
 
+      .kv {
+        display: grid;
+        grid-template-columns: 150px minmax(0, 1fr);
+        row-gap: 6px;
+        column-gap: 10px;
+        font-size: 13px;
+        margin-top: 10px;
+      }
+
+      .kv .k {
+        color: var(--muted);
+      }
+
+      .status-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        border: 1px solid transparent;
+      }
+
+      .status-pill.ok {
+        color: #0f766e;
+        background: rgba(15, 118, 110, 0.1);
+        border-color: rgba(15, 118, 110, 0.35);
+      }
+
+      .status-pill.warn {
+        color: #b45309;
+        background: rgba(180, 83, 9, 0.1);
+        border-color: rgba(180, 83, 9, 0.35);
+      }
+
+      .status-pill.error {
+        color: #b91c1c;
+        background: rgba(185, 28, 28, 0.1);
+        border-color: rgba(185, 28, 28, 0.35);
+      }
+
       ol {
         margin: 12px 0;
         padding-left: 18px;
@@ -51,7 +91,6 @@
 
       .button {
         margin-top: 12px;
-        width: 100%;
         border: 1px solid var(--accent);
         background: transparent;
         color: var(--accent);
@@ -60,28 +99,159 @@
         font-size: 14px;
         cursor: pointer;
       }
+
+      .button-group {
+        display: flex;
+        gap: 8px;
+      }
+
+      .button.secondary {
+        border-color: var(--panel-border);
+        color: var(--text);
+      }
+
+      .hint {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .warnings {
+        margin: 8px 0 0;
+        padding-left: 18px;
+      }
+
+      .warnings li {
+        color: #b45309;
+      }
     </style>
   </head>
   <body>
     <section class="panel">
       <h1>Bridge Added</h1>
       <p>The ZWJS Bridge is now paired with Homey.</p>
-      <p>Next step: import your Z-Wave nodes.</p>
+      <p>Next step: import your Z-Wave nodes from the <strong>ZWJS Node</strong> driver.</p>
+      <div class="kv" id="status-kv"></div>
+      <ul id="warnings" class="warnings" hidden></ul>
+      <p class="hint" id="status-line">Loading status...</p>
       <ol>
         <li>Go back to Add Device.</li>
         <li>Select <strong>ZWJS Node</strong>.</li>
         <li>Choose the nodes you want to import.</li>
       </ol>
-      <button id="done-btn" class="button">Done</button>
+      <div class="button-group">
+        <button id="refresh-btn" class="button secondary">Refresh Status</button>
+        <button id="done-btn" class="button">Done</button>
+      </div>
     </section>
 
     <script>
       (function () {
+        const state = {
+          loading: false,
+          status: null,
+          error: null,
+        };
+
+        const statusKv = document.getElementById('status-kv');
+        const warningsEl = document.getElementById('warnings');
+        const statusLine = document.getElementById('status-line');
+        const refreshBtn = document.getElementById('refresh-btn');
         const doneBtn = document.getElementById('done-btn');
+
+        function asText(value) {
+          if (value === null || typeof value === 'undefined' || value === '') return 'n/a';
+          return String(value);
+        }
+
+        function asTime(value) {
+          if (!value) return 'n/a';
+          const parsed = new Date(value);
+          if (Number.isNaN(parsed.getTime())) return String(value);
+          return parsed.toLocaleString();
+        }
+
+        function setKvRows(rows) {
+          if (!Array.isArray(rows) || rows.length === 0) {
+            statusKv.innerHTML = '<div class="k">Status</div><div class="v">n/a</div>';
+            return;
+          }
+          statusKv.innerHTML = rows
+            .map(
+              ([key, value]) => `<div class="k">${key}</div><div class="v">${asText(value)}</div>`,
+            )
+            .join('');
+        }
+
+        function connectionPill(status) {
+          if (!status || !status.zwjs || status.zwjs.available !== true) {
+            return '<span class="status-pill error">Unavailable</span>';
+          }
+          if (status.zwjs.transportConnected === true) {
+            return '<span class="status-pill ok">Connected</span>';
+          }
+          return '<span class="status-pill warn">Disconnected</span>';
+        }
+
+        function render() {
+          refreshBtn.disabled = state.loading;
+          if (!state.status) {
+            setKvRows([]);
+            warningsEl.hidden = true;
+            warningsEl.innerHTML = '';
+            statusLine.textContent = state.loading
+              ? 'Loading status...'
+              : state.error || 'Status unavailable.';
+            return;
+          }
+
+          const status = state.status;
+          setKvRows([
+            ['Bridge', asText(status.bridgeId)],
+            ['ZWJS', connectionPill(status)],
+            ['Lifecycle', asText(status.zwjs && status.zwjs.lifecycle)],
+            ['ZWJS Server', asText(status.zwjs && status.zwjs.serverVersion)],
+            ['Discovered Nodes', status.discoveredNodes],
+            ['Imported Nodes', status.importedNodes],
+            ['Pending Import', status.pendingImportNodes],
+            ['Updated', asTime(status.generatedAt)],
+          ]);
+
+          const warnings = Array.isArray(status.warnings) ? status.warnings : [];
+          if (warnings.length > 0) {
+            warningsEl.hidden = false;
+            warningsEl.innerHTML = warnings
+              .map((warning) => `<li>${asText(warning)}</li>`)
+              .join('');
+          } else {
+            warningsEl.hidden = true;
+            warningsEl.innerHTML = '';
+          }
+          statusLine.textContent = state.error || 'Status loaded.';
+        }
+
+        async function loadStatus() {
+          state.loading = true;
+          state.error = null;
+          render();
+          try {
+            state.status = await Homey.emit('next_steps:get_status');
+          } catch (error) {
+            state.status = null;
+            state.error = error && error.message ? error.message : 'Failed to load status.';
+          } finally {
+            state.loading = false;
+            render();
+          }
+        }
+
+        refreshBtn.addEventListener('click', () => {
+          loadStatus();
+        });
         doneBtn.addEventListener('click', () => {
           Homey.done();
         });
         Homey.ready();
+        loadStatus();
       })();
     </script>
   </body>

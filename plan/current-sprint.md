@@ -19,6 +19,19 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## Recently Completed
 
+- Latest pairing UX polish slice (template-safe bridge guidance):
+  - added bridge pairing custom-view runtime status API (`next_steps:get_status`) in bridge driver pair session
+  - bridge next-steps view now shows live onboarding health signals:
+    - ZWJS connection/lifecycle/version
+    - discovered node count (non-controller)
+    - imported node count
+    - pending import estimate
+    - warning list when runtime/transport data is unavailable
+  - kept pairing flow within Homey template constraints (`list_devices -> add_devices -> next_steps`)
+  - added harness coverage for:
+    - healthy next-steps status payload
+    - degraded next-steps status warning behavior
+
 - Latest node read-only enrichment slice:
   - expanded node Device Tools read-only diagnostics to surface richer operator context:
     - ZWJS identity/status: product triple, firmware, ready/failed flags

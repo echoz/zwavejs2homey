@@ -124,6 +124,80 @@ test('bridge driver returns no candidates when singleton bridge already exists',
   assert.deepEqual(candidates, []);
 });
 
+test('bridge driver pair session exposes next steps status handler', async () => {
+  const driver = new BridgeDriver();
+  driver._configureHarness({
+    app: {
+      getZwjsClient() {
+        return {
+          getStatus() {
+            return {
+              transportConnected: true,
+              lifecycle: 'connected',
+              serverVersion: '3.4.0',
+              adapterFamily: 'zwjs-default',
+            };
+          },
+          async getNodeList() {
+            return {
+              nodes: [{ nodeId: 1 }, { nodeId: 5 }, { nodeId: 8 }],
+            };
+          },
+        };
+      },
+      async getNodeRuntimeDiagnostics() {
+        return {
+          bridgeId: 'main',
+          nodes: [{ homeyDeviceId: 'main:5' }],
+        };
+      },
+    },
+    devices: [],
+  });
+
+  const handlers = new Map();
+  const session = {
+    setHandler(event, handler) {
+      handlers.set(event, handler);
+    },
+  };
+
+  await driver.onPair(session);
+  assert.equal(typeof handlers.get('next_steps:get_status'), 'function');
+  const status = await handlers.get('next_steps:get_status')();
+  assert.equal(status.bridgeId, 'main');
+  assert.equal(status.zwjs.available, true);
+  assert.equal(status.zwjs.transportConnected, true);
+  assert.equal(status.discoveredNodes, 2);
+  assert.equal(status.importedNodes, 1);
+  assert.equal(status.pendingImportNodes, 1);
+  assert.deepEqual(status.warnings, []);
+});
+
+test('bridge driver next steps status includes warnings when runtime is unavailable', async () => {
+  const driver = new BridgeDriver();
+  driver._configureHarness({
+    app: {},
+    devices: [],
+  });
+
+  const handlers = new Map();
+  const session = {
+    setHandler(event, handler) {
+      handlers.set(event, handler);
+    },
+  };
+
+  await driver.onPair(session);
+  const status = await handlers.get('next_steps:get_status')();
+  assert.equal(status.zwjs.available, false);
+  assert.equal(status.discoveredNodes, null);
+  assert.equal(status.importedNodes, null);
+  assert.equal(status.pendingImportNodes, null);
+  assert.equal(Array.isArray(status.warnings), true);
+  assert.equal(status.warnings.length >= 2, true);
+});
+
 test('bridge driver repair session exposes bridge tools snapshot handlers', async () => {
   const diagnosticsCalls = [];
   const driver = new BridgeDriver();
