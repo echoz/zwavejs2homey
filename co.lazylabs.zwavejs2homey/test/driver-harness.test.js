@@ -166,14 +166,40 @@ test('bridge driver repair session exposes bridge tools snapshot handlers', asyn
             {
               homeyDeviceId: 'main:8',
               nodeId: 8,
+              node: {
+                manufacturerId: 29,
+                productType: 66,
+                productId: 2,
+                manufacturer: 'Leviton',
+                product: 'DZ6HD',
+                location: 'Study',
+                interviewStage: 'Complete',
+                status: 'Alive',
+                firmwareVersion: '1.1',
+                ready: true,
+                isFailed: false,
+              },
+              sync: {
+                syncedAt: '2026-03-04T10:00:00.000Z',
+                syncReason: 'startup',
+              },
               curation: {
+                loaded: true,
+                source: 'settings',
+                error: null,
                 entryPresent: true,
+                appliedActions: 3,
+                skippedActions: 1,
+                errorCount: 0,
               },
               profile: {
+                matchBy: 'product-triple',
+                matchKey: '29:66:2',
                 profileId: 'product-triple:29:66:2',
+                fallbackReason: null,
                 homeyClass: 'socket',
                 confidence: 'curated',
-                fallbackReason: null,
+                uncurated: false,
               },
               profileAttribution: {
                 confidenceCode: 'curated',
@@ -186,13 +212,21 @@ test('bridge driver repair session exposes bridge tools snapshot handlers', asyn
               recommendation: {
                 available: true,
                 reason: 'baseline-hash-changed',
+                reasonLabel: 'Compiled profile changed for this device.',
                 backfillNeeded: false,
               },
               mapping: {
+                verticalSliceApplied: true,
+                capabilityCount: 2,
                 inboundConfigured: 2,
                 inboundEnabled: 1,
                 outboundConfigured: 2,
                 outboundEnabled: 2,
+                inboundSkipped: 1,
+                outboundSkipped: 0,
+                skipReasons: {
+                  inbound_selector_not_defined: 1,
+                },
               },
             },
           ],
@@ -220,11 +254,23 @@ test('bridge driver repair session exposes bridge tools snapshot handlers', asyn
   assert.equal(first.schemaVersion, 'bridge-device-tools/v1');
   assert.equal(first.device.homeyDeviceId, 'zwjs-bridge-main');
   assert.equal(first.nodeSummary.total, 1);
+  assert.equal(first.nodeSummary.profileResolvedCount, 1);
+  assert.equal(first.nodeSummary.profilePendingCount, 0);
+  assert.equal(first.nodeSummary.readyCount, 1);
+  assert.equal(first.nodeSummary.failedCount, 0);
   assert.equal(first.nodeSummary.curationEntryCount, 1);
+  assert.equal(first.nodeSummary.curationAppliedActions, 3);
+  assert.equal(first.nodeSummary.curationSkippedActions, 1);
+  assert.equal(first.nodeSummary.curationErrorCount, 0);
   assert.equal(first.nodeSummary.recommendationAvailableCount, 1);
+  assert.equal(first.nodeSummary.capabilityCount, 2);
   assert.equal(first.nodeSummary.inboundSkipped, 1);
+  assert.equal(first.nodeSummary.skipReasons.inbound_selector_not_defined, 1);
   assert.equal(first.nodes[0].profileAttribution.confidenceCode, 'curated');
   assert.equal(first.nodes[0].profileAttribution.sourceCode, 'compiled+curation-override');
+  assert.equal(first.nodes[0].node.manufacturer, 'Leviton');
+  assert.equal(first.nodes[0].sync.syncReason, 'startup');
+  assert.equal(first.nodes[0].mapping.capabilityCount, 2);
   assert.equal(second.runtime.zwjs.serverVersion, '3.4.0');
   assert.equal(diagnosticsCalls.length, 2);
 });
@@ -336,6 +382,12 @@ test('bridge driver derives profile attribution when runtime payload omits it', 
   assert.equal(snapshot.nodes[0].profileAttribution.confidenceCode, 'curated');
   assert.equal(snapshot.nodes[0].profileAttribution.sourceCode, 'compiled-only');
   assert.equal(snapshot.nodes[0].profileAttribution.curationEntryPresent, false);
+  assert.equal(snapshot.nodes[0].node.manufacturer, null);
+  assert.equal(snapshot.nodes[0].sync.syncReason, null);
+  assert.equal(
+    snapshot.nodes[0].mapping.skipReasons && typeof snapshot.nodes[0].mapping.skipReasons,
+    'object',
+  );
 });
 
 test('node driver throws a clear error when zwjs client is unavailable', async () => {

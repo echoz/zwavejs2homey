@@ -36,14 +36,40 @@ interface AppRuntimeAccess {
     nodes: Array<{
       homeyDeviceId: string | null;
       nodeId: number | null;
+      node: {
+        manufacturerId: number | null;
+        productType: number | null;
+        productId: number | null;
+        manufacturer: string | null;
+        product: string | null;
+        location: string | null;
+        interviewStage: string | null;
+        status: string | null;
+        firmwareVersion: string | null;
+        ready: boolean | null;
+        isFailed: boolean | null;
+      };
+      sync: {
+        syncedAt: string | null;
+        syncReason: string | null;
+      };
       curation: {
+        loaded: boolean;
+        source: string | null;
+        error: string | null;
         entryPresent: boolean;
+        appliedActions: number;
+        skippedActions: number;
+        errorCount: number;
       };
       profile: {
+        matchBy: string | null;
+        matchKey: string | null;
         profileId: string | null;
+        fallbackReason: string | null;
         homeyClass: string | null;
         confidence: string | null;
-        fallbackReason: string | null;
+        uncurated: boolean;
       };
       profileAttribution?: {
         confidenceCode: string | null;
@@ -56,14 +82,19 @@ interface AppRuntimeAccess {
       recommendation: {
         available: boolean;
         reason: string | null;
-        reasonLabel?: string | null;
+        reasonLabel: string | null;
         backfillNeeded: boolean;
       };
       mapping: {
+        verticalSliceApplied: boolean;
+        capabilityCount: number;
         inboundConfigured: number;
         inboundEnabled: number;
+        inboundSkipped: number;
         outboundConfigured: number;
         outboundEnabled: number;
+        outboundSkipped: number;
+        skipReasons: Record<string, number>;
       };
     }>;
   }>;
@@ -176,40 +207,134 @@ module.exports = class BridgeDriver extends Homey.Driver {
       const diagnostics = await app.getNodeRuntimeDiagnostics();
       const nodeSummary = {
         total: diagnostics.nodes.length,
+        profileResolvedCount: 0,
+        profilePendingCount: 0,
+        readyCount: 0,
+        failedCount: 0,
         curationEntryCount: 0,
+        curationAppliedActions: 0,
+        curationSkippedActions: 0,
+        curationErrorCount: 0,
         recommendationAvailableCount: 0,
         recommendationBackfillCount: 0,
+        capabilityCount: 0,
         inboundSkipped: 0,
         outboundSkipped: 0,
+        skipReasons: {} as Record<string, number>,
       };
       const nodes = diagnostics.nodes.map((node) => {
-        if (node.curation.entryPresent) nodeSummary.curationEntryCount += 1;
+        const nodeState =
+          node.node && typeof node.node === 'object'
+            ? node.node
+            : {
+                manufacturerId: null,
+                productType: null,
+                productId: null,
+                manufacturer: null,
+                product: null,
+                location: null,
+                interviewStage: null,
+                status: null,
+                firmwareVersion: null,
+                ready: null,
+                isFailed: null,
+              };
+        const sync =
+          node.sync && typeof node.sync === 'object'
+            ? node.sync
+            : {
+                syncedAt: null,
+                syncReason: null,
+              };
+        const curation = {
+          loaded: node.curation.loaded === true,
+          source: node.curation.source ?? null,
+          error: node.curation.error ?? null,
+          entryPresent: node.curation.entryPresent === true,
+          appliedActions: Number.isInteger(node.curation.appliedActions)
+            ? node.curation.appliedActions
+            : 0,
+          skippedActions: Number.isInteger(node.curation.skippedActions)
+            ? node.curation.skippedActions
+            : 0,
+          errorCount: Number.isInteger(node.curation.errorCount) ? node.curation.errorCount : 0,
+        };
+        const profile = {
+          matchBy: node.profile.matchBy ?? null,
+          matchKey: node.profile.matchKey ?? null,
+          profileId: node.profile.profileId ?? null,
+          fallbackReason: node.profile.fallbackReason ?? null,
+          homeyClass: node.profile.homeyClass ?? null,
+          confidence: node.profile.confidence ?? null,
+          uncurated: node.profile.uncurated === true,
+        };
+        const skipReasons =
+          node.mapping.skipReasons && typeof node.mapping.skipReasons === 'object'
+            ? node.mapping.skipReasons
+            : {};
+        const mapping = {
+          verticalSliceApplied: node.mapping.verticalSliceApplied === true,
+          capabilityCount: Number.isInteger(node.mapping.capabilityCount)
+            ? node.mapping.capabilityCount
+            : 0,
+          inboundConfigured: Number.isInteger(node.mapping.inboundConfigured)
+            ? node.mapping.inboundConfigured
+            : 0,
+          inboundEnabled: Number.isInteger(node.mapping.inboundEnabled)
+            ? node.mapping.inboundEnabled
+            : 0,
+          outboundConfigured: Number.isInteger(node.mapping.outboundConfigured)
+            ? node.mapping.outboundConfigured
+            : 0,
+          outboundEnabled: Number.isInteger(node.mapping.outboundEnabled)
+            ? node.mapping.outboundEnabled
+            : 0,
+          skipReasons,
+        };
+
+        if (profile.profileId || profile.fallbackReason) nodeSummary.profileResolvedCount += 1;
+        else nodeSummary.profilePendingCount += 1;
+        if (nodeState.ready === true) nodeSummary.readyCount += 1;
+        if (nodeState.isFailed === true) nodeSummary.failedCount += 1;
+        if (curation.entryPresent) nodeSummary.curationEntryCount += 1;
+        nodeSummary.curationAppliedActions += curation.appliedActions;
+        nodeSummary.curationSkippedActions += curation.skippedActions;
+        nodeSummary.curationErrorCount += curation.errorCount;
         if (node.recommendation.available) nodeSummary.recommendationAvailableCount += 1;
         if (node.recommendation.backfillNeeded) nodeSummary.recommendationBackfillCount += 1;
-        const inboundSkipped = Math.max(
-          node.mapping.inboundConfigured - node.mapping.inboundEnabled,
-          0,
-        );
-        const outboundSkipped = Math.max(
-          node.mapping.outboundConfigured - node.mapping.outboundEnabled,
-          0,
-        );
+        nodeSummary.capabilityCount += mapping.capabilityCount;
+        const inboundSkipped = Math.max(mapping.inboundConfigured - mapping.inboundEnabled, 0);
+        const outboundSkipped = Math.max(mapping.outboundConfigured - mapping.outboundEnabled, 0);
         nodeSummary.inboundSkipped += inboundSkipped;
         nodeSummary.outboundSkipped += outboundSkipped;
+        for (const [reason, count] of Object.entries(mapping.skipReasons)) {
+          if (typeof count !== 'number' || count <= 0) continue;
+          nodeSummary.skipReasons[reason] = (nodeSummary.skipReasons[reason] ?? 0) + count;
+        }
         return {
           homeyDeviceId: node.homeyDeviceId,
           nodeId: node.nodeId,
-          curation: node.curation,
-          profile: node.profile,
+          node: nodeState,
+          sync,
+          curation,
+          profile,
           profileAttribution: this.normalizeProfileAttribution(node),
-          recommendation: node.recommendation,
+          recommendation: {
+            available: node.recommendation.available,
+            reason: node.recommendation.reason,
+            reasonLabel: node.recommendation.reasonLabel ?? null,
+            backfillNeeded: node.recommendation.backfillNeeded,
+          },
           mapping: {
-            inboundConfigured: node.mapping.inboundConfigured,
-            inboundEnabled: node.mapping.inboundEnabled,
-            outboundConfigured: node.mapping.outboundConfigured,
-            outboundEnabled: node.mapping.outboundEnabled,
+            verticalSliceApplied: mapping.verticalSliceApplied,
+            capabilityCount: mapping.capabilityCount,
+            inboundConfigured: mapping.inboundConfigured,
+            inboundEnabled: mapping.inboundEnabled,
             inboundSkipped,
+            outboundConfigured: mapping.outboundConfigured,
+            outboundEnabled: mapping.outboundEnabled,
             outboundSkipped,
+            skipReasons: mapping.skipReasons,
           },
         };
       });

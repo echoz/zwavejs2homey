@@ -19,6 +19,23 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## Recently Completed
 
+- Latest bridge read-only enrichment slice:
+  - expanded bridge diagnostics snapshot node payload to include:
+    - ZWJS identity/status fields (`manufacturer`, `product`, `location`, readiness/failure/interview state)
+    - sync metadata (`syncedAt`, `syncReason`)
+    - full profile/mapping/curation context used by adapter runtime
+  - expanded bridge summary metrics:
+    - resolved vs pending profiles
+    - ready vs failed nodes
+    - curation applied/skipped/error totals
+    - mapped capability total and aggregated mapping skip-reason counters
+  - updated Bridge Tools UI to surface richer read-only context:
+    - node identity + status + location
+    - profile match/fallback context
+    - mapping capability/slice/skip-reason summaries
+    - advanced mapping skip-reason diagnostics section
+  - added/updated harness coverage for enriched snapshot fields and compatibility defaults
+
 - Latest profile terminology clarity slice:
   - replaced ambiguous `curated profile match` wording with rule-origin terminology:
     - `Project rule match`

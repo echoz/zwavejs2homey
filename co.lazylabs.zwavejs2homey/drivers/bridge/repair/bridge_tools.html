@@ -289,6 +289,8 @@
           <div id="runtime-advanced-kv" class="kv"></div>
           <h3>Recommendation Codes</h3>
           <div id="recommendation-codes-kv" class="kv"></div>
+          <h3>Mapping Skip Reasons</h3>
+          <div id="mapping-skip-reasons-kv" class="kv"></div>
         </div>
       </details>
     </section>
@@ -309,7 +311,7 @@
         <thead>
           <tr>
             <th>Node</th>
-            <th>Class</th>
+            <th>Identity</th>
             <th>Profile</th>
             <th>Recommendation</th>
             <th>Mapping</th>
@@ -339,6 +341,7 @@
         const runtimeKv = document.getElementById('runtime-kv');
         const runtimeAdvancedKv = document.getElementById('runtime-advanced-kv');
         const recommendationCodesKv = document.getElementById('recommendation-codes-kv');
+        const mappingSkipReasonsKv = document.getElementById('mapping-skip-reasons-kv');
         const summaryKv = document.getElementById('summary-kv');
         const nodesMeta = document.getElementById('nodes-meta');
         const nodesTable = document.getElementById('nodes-table');
@@ -422,6 +425,65 @@
           return recommendationLabel(node);
         }
 
+        function nodeIdentityLabel(node) {
+          const manufacturer =
+            node.node && typeof node.node.manufacturer === 'string'
+              ? node.node.manufacturer.trim()
+              : '';
+          const product =
+            node.node && typeof node.node.product === 'string' ? node.node.product.trim() : '';
+          if (manufacturer.length > 0 && product.length > 0) return `${manufacturer} ${product}`;
+          if (manufacturer.length > 0) return manufacturer;
+          if (product.length > 0) return product;
+          return 'Unknown device';
+        }
+
+        function nodeStateLabel(node) {
+          const parts = [];
+          if (node.node && node.node.ready === true) parts.push('Ready');
+          else if (node.node && node.node.ready === false) parts.push('Not ready');
+          if (node.node && node.node.isFailed === true) parts.push('Failed');
+          else if (node.node && node.node.isFailed === false) parts.push('Healthy');
+          if (
+            node.node &&
+            typeof node.node.interviewStage === 'string' &&
+            node.node.interviewStage.trim().length > 0
+          ) {
+            parts.push(`Interview: ${node.node.interviewStage.trim()}`);
+          }
+          if (
+            node.node &&
+            typeof node.node.status === 'string' &&
+            node.node.status.trim().length > 0
+          ) {
+            parts.push(`Node: ${node.node.status.trim()}`);
+          }
+          return parts.length > 0 ? parts.join(' · ') : 'n/a';
+        }
+
+        function profileMatchLabel(node) {
+          const matchBy =
+            node.profile && typeof node.profile.matchBy === 'string' ? node.profile.matchBy : null;
+          const matchKey =
+            node.profile && typeof node.profile.matchKey === 'string'
+              ? node.profile.matchKey
+              : null;
+          if (!matchBy && !matchKey) return 'n/a';
+          return `${asText(matchBy)} / ${asText(matchKey)}`;
+        }
+
+        function skipReasonSummary(skipReasons) {
+          if (!skipReasons || typeof skipReasons !== 'object') return 'None';
+          const entries = Object.entries(skipReasons)
+            .filter(([, count]) => typeof count === 'number' && count > 0)
+            .sort((left, right) => right[1] - left[1]);
+          if (entries.length === 0) return 'None';
+          return entries
+            .slice(0, 2)
+            .map(([reason, count]) => `${reason} (${count})`)
+            .join(', ');
+        }
+
         function profileConfidenceLabel(node) {
           const attribution =
             node.profileAttribution && typeof node.profileAttribution === 'object'
@@ -478,6 +540,7 @@
             runtimeKv.innerHTML = '';
             runtimeAdvancedKv.innerHTML = '';
             recommendationCodesKv.innerHTML = '';
+            mappingSkipReasonsKv.innerHTML = '';
             summaryKv.innerHTML = '';
             nodesMeta.textContent = '';
             nodesEmpty.hidden = false;
@@ -530,9 +593,17 @@
 
           setKv(summaryKv, [
             ['Imported Nodes', snapshot.nodeSummary.total],
+            ['Profile Resolved', snapshot.nodeSummary.profileResolvedCount],
+            ['Profile Pending', snapshot.nodeSummary.profilePendingCount],
+            ['Ready Nodes', snapshot.nodeSummary.readyCount],
+            ['Failed Nodes', snapshot.nodeSummary.failedCount],
             ['Curation Entries', snapshot.nodeSummary.curationEntryCount],
+            ['Curation Applied', snapshot.nodeSummary.curationAppliedActions],
+            ['Curation Skipped', snapshot.nodeSummary.curationSkippedActions],
+            ['Curation Errors', snapshot.nodeSummary.curationErrorCount],
             ['Recommendations', snapshot.nodeSummary.recommendationAvailableCount],
             ['Backfill Needed', snapshot.nodeSummary.recommendationBackfillCount],
+            ['Mapped Capabilities', snapshot.nodeSummary.capabilityCount],
             ['Inbound Skipped', snapshot.nodeSummary.inboundSkipped],
             ['Outbound Skipped', snapshot.nodeSummary.outboundSkipped],
           ]);
@@ -569,6 +640,14 @@
               }),
             { omitEmpty: true },
           );
+          setKv(
+            mappingSkipReasonsKv,
+            Object.entries(snapshot.nodeSummary.skipReasons || {})
+              .filter(([, count]) => typeof count === 'number' && count > 0)
+              .sort((left, right) => right[1] - left[1])
+              .map(([reason, count]) => [reason, count, ' mono']),
+            { omitEmpty: true },
+          );
           nodesMeta.textContent =
             nodes.length === 0
               ? 'No imported nodes available.'
@@ -591,20 +670,36 @@
               .map((node) => {
                 const nodeLabel = node.nodeId !== null ? `Node ${node.nodeId}` : 'Node n/a';
                 const mapping = `${node.mapping.inboundEnabled}/${node.mapping.inboundConfigured} in, ${node.mapping.outboundEnabled}/${node.mapping.outboundConfigured} out`;
+                const location =
+                  node.node && typeof node.node.location === 'string' && node.node.location.trim()
+                    ? node.node.location.trim()
+                    : null;
                 return `<tr>
                   <td>${nodeLabel}<br/><span class=\"mono\">${asText(node.homeyDeviceId)}</span></td>
-                  <td>${asText(node.profile.homeyClass)}<br/><span class=\"hint\">${asText(
-                    profileConfidenceLabel(node),
-                  )}</span></td>
+                  <td>${asText(nodeIdentityLabel(node))}<br/><span class=\"hint\">${asText(
+                    nodeStateLabel(node),
+                  )}</span><br/><span class=\"hint\">Location: ${asText(location)}</span></td>
                   <td><span class=\"mono\">${asText(
                     node.profile.profileId,
-                  )}</span><br/><span class=\"hint\">${asText(profileSourceLabel(node))}</span></td>
+                  )}</span><br/><span class=\"hint\">Class: ${asText(
+                    node.profile.homeyClass,
+                  )} · ${asText(profileConfidenceLabel(node))}</span><br/><span class=\"hint\">${asText(
+                    profileSourceLabel(node),
+                  )}</span><br/><span class=\"hint\">Match: ${asText(
+                    profileMatchLabel(node),
+                  )}</span><br/><span class=\"hint\">Fallback: ${asText(
+                    node.profile.fallbackReason,
+                  )}</span></td>
                   <td>${recommendationPill(node)}<br/><span class=\"hint\">${recommendationLabel(
                     node,
                   )}</span><br/><span class=\"hint\">${asText(
                     recommendationReasonLabel(node),
                   )}</span></td>
-                  <td>${mapping}</td>
+                  <td>${mapping}<br/><span class=\"hint\">Capabilities: ${asText(
+                    node.mapping.capabilityCount,
+                  )} · Vertical Slice: ${node.mapping.verticalSliceApplied ? 'Yes' : 'No'}</span><br/><span class=\"hint\">Skipped: ${asText(
+                    skipReasonSummary(node.mapping.skipReasons),
+                  )}</span></td>
                 </tr>`;
               })
               .join('');
