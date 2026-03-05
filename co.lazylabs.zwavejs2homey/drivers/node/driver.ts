@@ -47,6 +47,10 @@ interface RepairSessionLike {
   setHandler: (event: string, handler: (payload?: unknown) => Promise<unknown>) => void;
 }
 
+interface PairSessionLike {
+  setHandler: (event: string, handler: (payload?: unknown) => Promise<unknown>) => void;
+}
+
 interface HomeyZoneLike {
   name?: unknown;
 }
@@ -67,8 +71,18 @@ module.exports = class NodeDriver extends Homey.Driver {
 
   private static readonly PAIR_ICON_INFERENCE_CONCURRENCY = 6;
 
+  private static readonly PAIR_ICON_INFERENCE_TIMEOUT_MS = 7000;
+
   async onInit() {
     this.log('NodeDriver initialized');
+  }
+
+  async onPair(session: PairSessionLike) {
+    this.log('Node pair session started');
+    session.setHandler('list_devices', async () => {
+      this.log('Node pair list requested');
+      return await this.onPairListDevices();
+    });
   }
 
   private async withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
@@ -177,9 +191,12 @@ module.exports = class NodeDriver extends Homey.Driver {
     const app = this.homey.app as AppRuntimeAccess;
     const client = app.getZwjsClient?.();
     if (!client) {
-      throw new Error('ZWJS client unavailable. Verify bridge connection settings.');
+      throw new Error(
+        'ZWJS client unavailable. Configure zwjs_connection.url in app settings and connect a bridge first.',
+      );
     }
 
+    let latestCandidates: ReturnType<typeof buildNodePairCandidates> = [];
     const runPairFlow = async () => {
       const bridgeId = app.getBridgeId?.() ?? ZWJS_DEFAULT_BRIDGE_ID;
       const existingData = this.getDevices().map((device) => {
@@ -221,6 +238,7 @@ module.exports = class NodeDriver extends Homey.Driver {
       const candidates = buildNodePairCandidates(nodes, bridgeId, existingNodeIds, undefined, {
         knownZoneNames,
       });
+      latestCandidates = candidates;
       if (app.resolveCompiledProfileEntry) {
         try {
           await this.withTimeout(
@@ -255,7 +273,7 @@ module.exports = class NodeDriver extends Homey.Driver {
                 }
               },
             ),
-            NodeDriver.PAIR_FLOW_TIMEOUT_MS,
+            NodeDriver.PAIR_ICON_INFERENCE_TIMEOUT_MS,
             'node icon inference',
           );
         } catch (error) {
@@ -290,6 +308,12 @@ module.exports = class NodeDriver extends Homey.Driver {
       this.error('Node pairing flow failed; returning empty candidate list', {
         error,
       });
+      if (latestCandidates.length > 0) {
+        this.log('Node pairing flow failed after candidate discovery; returning partial pair list', {
+          candidates: latestCandidates.length,
+        });
+        return latestCandidates;
+      }
       return [];
     }
   }

@@ -36,6 +36,8 @@ module.exports = class BridgeDriver extends homey_1.default.Driver {
                 outboundSkipped: 0,
             };
             const nodes = diagnostics.nodes.map((node) => {
+                if (node.curation.entryPresent)
+                    nodeSummary.curationEntryCount += 1;
                 if (node.recommendation.available)
                     nodeSummary.recommendationAvailableCount += 1;
                 if (node.recommendation.backfillNeeded)
@@ -47,6 +49,7 @@ module.exports = class BridgeDriver extends homey_1.default.Driver {
                 return {
                     homeyDeviceId: node.homeyDeviceId,
                     nodeId: node.nodeId,
+                    curation: node.curation,
                     profile: node.profile,
                     recommendation: node.recommendation,
                     mapping: {

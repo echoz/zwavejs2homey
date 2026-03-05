@@ -166,6 +166,9 @@ test('bridge driver repair session exposes bridge tools snapshot handlers', asyn
             {
               homeyDeviceId: 'main:8',
               nodeId: 8,
+              curation: {
+                entryPresent: true,
+              },
               profile: {
                 profileId: 'product-triple:29:66:2',
                 homeyClass: 'socket',
@@ -209,6 +212,7 @@ test('bridge driver repair session exposes bridge tools snapshot handlers', asyn
   assert.equal(first.schemaVersion, 'bridge-device-tools/v1');
   assert.equal(first.device.homeyDeviceId, 'zwjs-bridge-main');
   assert.equal(first.nodeSummary.total, 1);
+  assert.equal(first.nodeSummary.curationEntryCount, 1);
   assert.equal(first.nodeSummary.recommendationAvailableCount, 1);
   assert.equal(first.nodeSummary.inboundSkipped, 1);
   assert.equal(second.runtime.zwjs.serverVersion, '3.4.0');
@@ -250,8 +254,37 @@ test('node driver throws a clear error when zwjs client is unavailable', async (
 
   await assert.rejects(
     () => driver.onPairListDevices(),
-    /ZWJS client unavailable\. Verify bridge connection settings\./,
+    /ZWJS client unavailable\. Configure zwjs_connection\.url in app settings and connect a bridge first\./,
   );
+});
+
+test('node driver pair session registers list_devices handler', async () => {
+  const driver = new NodeDriver();
+  driver._configureHarness({
+    app: {
+      getZwjsClient: () => ({
+        async getNodeList() {
+          return { nodes: [{ nodeId: 2, name: 'Desk Light' }] };
+        },
+      }),
+      getBridgeId: () => 'main',
+    },
+    devices: [],
+  });
+
+  const handlers = new Map();
+  const session = {
+    setHandler(event, handler) {
+      handlers.set(event, handler);
+    },
+  };
+
+  await driver.onPair(session);
+  assert.equal(typeof handlers.get('list_devices'), 'function');
+  const candidates = await handlers.get('list_devices')();
+  assert.equal(Array.isArray(candidates), true);
+  assert.equal(candidates.length, 1);
+  assert.equal(candidates[0]?.data?.nodeId, 2);
 });
 
 test('node driver returns pair candidates with controller/duplicates filtered out', async () => {
@@ -496,6 +529,47 @@ test('node driver pairing returns quickly with empty list when node list lookup 
   } finally {
     NodeDriver.PAIR_NODE_LIST_TIMEOUT_MS = previousListTimeout;
     NodeDriver.PAIR_FLOW_TIMEOUT_MS = previousFlowTimeout;
+  }
+});
+
+test('node driver returns partial candidates when global pair timeout is reached after discovery', async () => {
+  const client = {
+    async getNodeList() {
+      return {
+        nodes: [{ nodeId: 45, name: 'Hallway Dimmer', location: 'Hallway' }],
+      };
+    },
+    async getNodeState() {
+      return await new Promise(() => {});
+    },
+  };
+  const driver = new NodeDriver();
+  const previousFlowTimeout = NodeDriver.PAIR_FLOW_TIMEOUT_MS;
+  const previousStateTimeout = NodeDriver.PAIR_NODE_STATE_TIMEOUT_MS;
+  const previousIconTimeout = NodeDriver.PAIR_ICON_INFERENCE_TIMEOUT_MS;
+  NodeDriver.PAIR_FLOW_TIMEOUT_MS = 40;
+  NodeDriver.PAIR_NODE_STATE_TIMEOUT_MS = 200;
+  NodeDriver.PAIR_ICON_INFERENCE_TIMEOUT_MS = 200;
+  driver._configureHarness({
+    app: {
+      getZwjsClient: () => client,
+      getBridgeId: () => 'main',
+      resolveCompiledProfileEntry: () => ({ by: 'none' }),
+    },
+    devices: [],
+  });
+
+  try {
+    const startedAt = Date.now();
+    const candidates = await driver.onPairListDevices();
+    const elapsedMs = Date.now() - startedAt;
+    assert.equal(candidates.length, 1);
+    assert.equal(candidates[0]?.data?.nodeId, 45);
+    assert.equal(elapsedMs < 1000, true);
+  } finally {
+    NodeDriver.PAIR_FLOW_TIMEOUT_MS = previousFlowTimeout;
+    NodeDriver.PAIR_NODE_STATE_TIMEOUT_MS = previousStateTimeout;
+    NodeDriver.PAIR_ICON_INFERENCE_TIMEOUT_MS = previousIconTimeout;
   }
 });
 

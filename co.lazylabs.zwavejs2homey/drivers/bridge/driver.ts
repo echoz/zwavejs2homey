@@ -36,6 +36,9 @@ interface AppRuntimeAccess {
     nodes: Array<{
       homeyDeviceId: string | null;
       nodeId: number | null;
+      curation: {
+        entryPresent: boolean;
+      };
       profile: {
         profileId: string | null;
         homeyClass: string | null;
@@ -103,6 +106,7 @@ module.exports = class BridgeDriver extends Homey.Driver {
         outboundSkipped: 0,
       };
       const nodes = diagnostics.nodes.map((node) => {
+        if (node.curation.entryPresent) nodeSummary.curationEntryCount += 1;
         if (node.recommendation.available) nodeSummary.recommendationAvailableCount += 1;
         if (node.recommendation.backfillNeeded) nodeSummary.recommendationBackfillCount += 1;
         const inboundSkipped = Math.max(
@@ -118,6 +122,7 @@ module.exports = class BridgeDriver extends Homey.Driver {
         return {
           homeyDeviceId: node.homeyDeviceId,
           nodeId: node.nodeId,
+          curation: node.curation,
           profile: node.profile,
           recommendation: node.recommendation,
           mapping: {

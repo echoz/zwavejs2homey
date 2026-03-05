@@ -12,6 +12,13 @@ module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
         async onInit() {
             this.log('NodeDriver initialized');
         }
+        async onPair(session) {
+            this.log('Node pair session started');
+            session.setHandler('list_devices', async () => {
+                this.log('Node pair list requested');
+                return await this.onPairListDevices();
+            });
+        }
         async withTimeout(promise, timeoutMs, label) {
             return await new Promise((resolve, reject) => {
                 let settled = false;
@@ -113,8 +120,9 @@ module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
             const app = this.homey.app;
             const client = app.getZwjsClient?.();
             if (!client) {
-                throw new Error('ZWJS client unavailable. Verify bridge connection settings.');
+                throw new Error('ZWJS client unavailable. Configure zwjs_connection.url in app settings and connect a bridge first.');
             }
+            let latestCandidates = [];
             const runPairFlow = async () => {
                 const bridgeId = app.getBridgeId?.() ?? pairing_1.ZWJS_DEFAULT_BRIDGE_ID;
                 const existingData = this.getDevices().map((device) => {
@@ -145,6 +153,7 @@ module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
                 const candidates = (0, pairing_1.buildNodePairCandidates)(nodes, bridgeId, existingNodeIds, undefined, {
                     knownZoneNames,
                 });
+                latestCandidates = candidates;
                 if (app.resolveCompiledProfileEntry) {
                     try {
                         await this.withTimeout(this.runWithConcurrencyLimit(candidates, _a.PAIR_ICON_INFERENCE_CONCURRENCY, async (candidate) => {
@@ -167,7 +176,7 @@ module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
                                     error,
                                 });
                             }
-                        }), _a.PAIR_FLOW_TIMEOUT_MS, 'node icon inference');
+                        }), _a.PAIR_ICON_INFERENCE_TIMEOUT_MS, 'node icon inference');
                     }
                     catch (error) {
                         this.error('Node pairing icon inference timed out; returning candidates without inferred icons', {
@@ -193,6 +202,12 @@ module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
                 this.error('Node pairing flow failed; returning empty candidate list', {
                     error,
                 });
+                if (latestCandidates.length > 0) {
+                    this.log('Node pairing flow failed after candidate discovery; returning partial pair list', {
+                        candidates: latestCandidates.length,
+                    });
+                    return latestCandidates;
+                }
                 return [];
             }
         }
@@ -267,4 +282,5 @@ module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
     _a.PAIR_ZONE_LOOKUP_TIMEOUT_MS = 1500,
     _a.PAIR_NODE_STATE_TIMEOUT_MS = 1000,
     _a.PAIR_ICON_INFERENCE_CONCURRENCY = 6,
+    _a.PAIR_ICON_INFERENCE_TIMEOUT_MS = 7000,
     _a);

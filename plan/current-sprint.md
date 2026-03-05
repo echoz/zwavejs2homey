@@ -19,6 +19,16 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## Recently Completed
 
+- Latest node pairing reliability + diagnostics correctness slice:
+  - fixed node pairing timeout race so discovered candidates are preserved when late-stage inference overruns global flow timeout
+  - split icon-inference timeout from global pair-flow timeout and added partial-candidate fallback logging
+  - restored explicit missing-client pair error (`zwjs_connection.url` + bridge setup guidance) instead of silent empty-list behavior
+  - fixed bridge Tools summary to correctly count curated nodes (`nodeSummary.curationEntryCount`)
+  - expanded harness coverage for:
+    - global-timeout-after-discovery partial candidate return
+    - bridge curation summary counting
+    - explicit missing-client error contract
+
 - Latest node pairing spinner-lock hardening slice:
   - wrapped node pairing flow with defensive global timeout and fail-safe empty-list fallback
   - node list lookup timeout failures now return gracefully instead of blocking pairing indefinitely
