@@ -2,6 +2,7 @@
   "extends": "@tsconfig/node16/tsconfig.json",
   "compilerOptions": {
     "allowJs": true,
+    "lib": ["ES2021", "DOM"],
     "outDir": ".homeybuild/"
   },
   "exclude": [".homeybuild", "node_modules"]

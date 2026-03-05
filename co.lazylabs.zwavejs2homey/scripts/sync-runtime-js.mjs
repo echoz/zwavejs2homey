@@ -6,28 +6,42 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const appRoot = path.resolve(__dirname, '..');
 
-const entries = [
-  {
-    from: path.join(appRoot, '.homeybuild/app.js'),
-    to: path.join(appRoot, 'app.js'),
-  },
-  {
-    from: path.join(appRoot, '.homeybuild/drivers/bridge/driver.js'),
-    to: path.join(appRoot, 'drivers/bridge/driver.js'),
-  },
-  {
-    from: path.join(appRoot, '.homeybuild/drivers/bridge/device.js'),
-    to: path.join(appRoot, 'drivers/bridge/device.js'),
-  },
-  {
-    from: path.join(appRoot, '.homeybuild/drivers/node/driver.js'),
-    to: path.join(appRoot, 'drivers/node/driver.js'),
-  },
-  {
-    from: path.join(appRoot, '.homeybuild/drivers/node/device.js'),
-    to: path.join(appRoot, 'drivers/node/device.js'),
-  },
-];
+const EXCLUDED_DIRS = new Set(['.homeybuild', 'node_modules', 'test', 'vendor']);
+
+async function collectRuntimeTsFiles(currentDir, relativeDir = '') {
+  const entries = await fs.readdir(currentDir, { withFileTypes: true });
+  const files = [];
+
+  for (const entry of entries) {
+    if (entry.name.startsWith('.')) continue;
+    const relativePath = path.join(relativeDir, entry.name);
+    const absolutePath = path.join(currentDir, entry.name);
+
+    if (entry.isDirectory()) {
+      if (EXCLUDED_DIRS.has(entry.name)) continue;
+      const nested = await collectRuntimeTsFiles(absolutePath, relativePath);
+      files.push(...nested);
+      continue;
+    }
+
+    if (!entry.isFile()) continue;
+    if (!entry.name.endsWith('.ts')) continue;
+    if (entry.name.endsWith('.d.ts')) continue;
+    files.push(relativePath);
+  }
+
+  return files;
+}
+
+const runtimeTsFiles = await collectRuntimeTsFiles(appRoot);
+
+const entries = runtimeTsFiles.map((relativeTsPath) => {
+  const relativeJsPath = relativeTsPath.replace(/\.ts$/u, '.js');
+  return {
+    from: path.join(appRoot, '.homeybuild', relativeJsPath),
+    to: path.join(appRoot, relativeJsPath),
+  };
+});
 
 for (const entry of entries) {
   await fs.access(entry.from);

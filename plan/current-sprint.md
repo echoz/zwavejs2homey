@@ -22,6 +22,18 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## Recently Completed
 
+- Latest TypeScript migration slice (page presenter/view layer):
+  - added TypeScript source files for custom Homey page presenter/view logic:
+    - `drivers/bridge/pair/next_steps.presenter.ts`
+    - `drivers/bridge/pair/next_steps.page.ts`
+    - `drivers/node/pair/import_summary.presenter.ts`
+    - `drivers/node/pair/import_summary.page.ts`
+    - `settings/settings.presenter.ts`
+    - `settings/settings.page.ts`
+  - enabled `DOM` lib in Homey app TypeScript config for browser-page typing
+  - upgraded runtime sync pipeline to copy compiled JS for all runtime `.ts` sources (instead of a hard-coded list)
+  - upgraded runtime-entrypoint parity test to enforce `.ts -> .js` sync for all runtime TypeScript sources
+
 - Latest presenter-view extraction slice:
   - moved pairing/custom-page business logic out of inline scripts into dedicated presenter modules:
     - `drivers/bridge/pair/next_steps.presenter.js`
