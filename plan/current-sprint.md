@@ -11,13 +11,20 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## In Progress
 
-- Phase 5 Homey adapter stabilization and UX pass:
-  - bridge/node pairing and runtime flows are working; focus is now quality, diagnostics, and usability
-  - continue expanding read-only bridge/node details surfaced from ZWJS runtime
-  - keep docs/ADRs/roadmap synchronized as MVP pairing constraints and UX direction evolve
+- Phase 5 Homey adapter stabilization and runtime-delivery pass:
+  - pairing/settings/repair UX is now MVP-frozen (changes are defect-driven only)
+  - next focus is runtime/adaptor feature delivery:
+    - broaden runtime mapping coverage with tests
+    - lock adapter generic-inference policy for no-profile-match behavior
+    - prepare bridge-session abstraction for future multi-bridge support
+  - keep docs/ADRs/roadmap synchronized as priorities shift from UX polish to runtime behavior
   - preserve strict package boundaries (`core`/`compiler`/`tui`/Homey app)
 
 ## Recently Completed
+
+- Latest UX freeze gate slice:
+  - completed pairing/settings/repair UX polish pass for MVP
+  - locked UX scope so follow-up work returns to runtime/adaptor behavior and test coverage
 
 - Latest settings/repair status micro-polish slice:
   - settings diagnostics now surface warning-tone status when runtime warnings are present

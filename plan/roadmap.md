@@ -137,7 +137,8 @@ In progress / next:
 2. lock/confirm generic inference policy for adapter runtime:
    - compile-time generic layer remains active in compiler artifacts
    - adapter runtime currently uses compiled resolution + safe no-match fallback; broader runtime generic inference remains a deliberate follow-up decision
-3. run a focused Homey UX review pass (settings + repair views) against real app usage feedback
+3. prepare adapter bridge-session abstraction for future multi-bridge support without changing current singleton behavior
+4. maintain pairing/settings/repair UX as MVP-frozen unless defects are reported
 
 Exit criteria:
 
