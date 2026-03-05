@@ -530,6 +530,34 @@
           };
         }
 
+        function buildNodeSnapshotWarnings(snapshot) {
+          const warnings = [];
+          if (!snapshot || !snapshot.runtime || !snapshot.runtime.zwjs) {
+            warnings.push('Runtime diagnostics are incomplete.');
+            return warnings;
+          }
+          if (snapshot.runtime.zwjs.available !== true) {
+            warnings.push('Bridge connection is not configured.');
+            return warnings;
+          }
+          if (snapshot.runtime.zwjs.transportConnected !== true) {
+            warnings.push('Bridge transport is disconnected.');
+          }
+          if (
+            !snapshot.runtime.compiledProfiles ||
+            snapshot.runtime.compiledProfiles.loaded !== true
+          ) {
+            warnings.push('Compiled profiles are unavailable.');
+          }
+          if (!snapshot.runtime.curation || snapshot.runtime.curation.loaded !== true) {
+            warnings.push('Curation runtime is unavailable.');
+          }
+          if (snapshot.recommendation && snapshot.recommendation.actionable === true) {
+            warnings.push('Device has a pending recommendation.');
+          }
+          return warnings;
+        }
+
         function setKvRows(container, rows, options) {
           const omitEmpty = options && options.omitEmpty === true;
           const normalizedRows = omitEmpty ? rows.filter((row) => !isMissingValue(row[1])) : rows;
@@ -819,6 +847,14 @@
           render();
           try {
             state.snapshot = await Homey.emit(eventName);
+            const warnings = buildNodeSnapshotWarnings(state.snapshot);
+            if (warnings.length > 0) {
+              state.statusMessage = warnings[0];
+              state.statusTone = 'warn';
+            } else {
+              state.statusMessage = `Last updated ${formatIso(state.snapshot.generatedAt)}`;
+              state.statusTone = 'ok';
+            }
           } catch (error) {
             const message = error && error.message ? error.message : 'Failed to load snapshot.';
             state.error = message;

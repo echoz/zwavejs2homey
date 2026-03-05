@@ -451,11 +451,13 @@
           ['Curation', data.curation && data.curation.loaded === true ? 'Loaded' : 'Unavailable'],
           ['Last Updated', formatIso(data.generatedAt)],
         ]);
-        setWarnings(buildRuntimeWarnings(data));
+        const warningsList = buildRuntimeWarnings(data);
+        setWarnings(warningsList);
         runtimeHint.textContent =
           actionableCount > 0
             ? `${actionableCount} imported node(s) need attention in Bridge Tools.`
             : 'No immediate runtime actions are required.';
+        return warningsList.length;
       }
 
       function refreshDiagnostics(Homey) {
@@ -479,8 +481,17 @@
             runtimeHint.textContent = 'Runtime diagnostics payload is invalid.';
             return;
           }
-          renderRuntimeDiagnostics(parsed.data);
-          setStatus('Runtime diagnostics refreshed.', 'ok');
+          const warningCount = renderRuntimeDiagnostics(parsed.data);
+          if (warningCount > 0) {
+            setStatus(
+              `Runtime diagnostics refreshed with ${warningCount} warning${
+                warningCount === 1 ? '' : 's'
+              }.`,
+              'warn',
+            );
+          } else {
+            setStatus('Runtime diagnostics refreshed.', 'ok');
+          }
         });
       }
 
@@ -550,7 +561,7 @@
 
         openBridgeToolsBtn.addEventListener('click', () => {
           setStatus(
-            'Open the paired ZWJS Bridge device and use Repair to access Bridge Tools diagnostics.',
+            'Open Devices -> ZWJS Bridge -> Repair to access Bridge Tools diagnostics.',
             'muted',
           );
         });

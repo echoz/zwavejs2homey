@@ -568,6 +568,37 @@
           return 'No Override';
         }
 
+        function buildBridgeSnapshotWarnings(snapshot) {
+          const warnings = [];
+          if (!snapshot || !snapshot.runtime || !snapshot.runtime.zwjs) {
+            warnings.push('Bridge runtime diagnostics are incomplete.');
+            return warnings;
+          }
+          if (snapshot.runtime.zwjs.available !== true) {
+            warnings.push('Bridge connection is not configured.');
+            return warnings;
+          }
+          if (snapshot.runtime.zwjs.transportConnected !== true) {
+            warnings.push('Bridge transport is disconnected.');
+          }
+          if (
+            !snapshot.runtime.compiledProfiles ||
+            snapshot.runtime.compiledProfiles.loaded !== true
+          ) {
+            warnings.push('Compiled profiles are unavailable.');
+          }
+          if (!snapshot.runtime.curation || snapshot.runtime.curation.loaded !== true) {
+            warnings.push('Curation runtime is unavailable.');
+          }
+          const actionable = Array.isArray(snapshot.nodes)
+            ? snapshot.nodes.filter((node) => recommendationPriority(node) < 2).length
+            : 0;
+          if (actionable > 0) {
+            warnings.push(`${actionable} node(s) require action.`);
+          }
+          return warnings;
+        }
+
         function render() {
           refreshBtn.disabled = state.loading;
           filterActionNeededBtn.disabled = state.loading;
@@ -770,8 +801,14 @@
           render();
           try {
             state.snapshot = await Homey.emit(eventName);
-            state.status = `Last updated ${asTime(state.snapshot.generatedAt)}`;
-            state.tone = 'ok';
+            const warnings = buildBridgeSnapshotWarnings(state.snapshot);
+            if (warnings.length > 0) {
+              state.status = `${warnings[0]} Last updated ${asTime(state.snapshot.generatedAt)}`;
+              state.tone = 'warn';
+            } else {
+              state.status = `Last updated ${asTime(state.snapshot.generatedAt)}`;
+              state.tone = 'ok';
+            }
           } catch (error) {
             state.error =
               error && error.message ? error.message : 'Failed to load bridge diagnostics.';

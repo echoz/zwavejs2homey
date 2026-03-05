@@ -19,6 +19,11 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## Recently Completed
 
+- Latest settings/repair status micro-polish slice:
+  - settings diagnostics now surface warning-tone status when runtime warnings are present
+  - bridge repair status line now reflects warning states (transport/config/profile/curation/action-needed) instead of always success tone
+  - node repair status line now reflects warning states (transport/config/profile/curation/pending recommendation) on refresh
+
 - Latest repair UX consistency slice:
   - aligned bridge/node repair terminology:
     - `Rule Match`
