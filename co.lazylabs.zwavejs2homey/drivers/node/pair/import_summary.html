@@ -114,6 +114,64 @@
         border-color: var(--panel-border);
         color: var(--text);
       }
+
+      .section-title {
+        margin: 14px 0 8px;
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--muted);
+      }
+
+      .node-table-wrap {
+        border: 1px solid var(--panel-border);
+        border-radius: 10px;
+        overflow: auto;
+      }
+
+      .node-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+      }
+
+      .node-table th,
+      .node-table td {
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--panel-border);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      .node-table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background: var(--panel);
+        color: var(--muted);
+        font-weight: 600;
+      }
+
+      .node-table tbody tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .pill-ok {
+        color: #0f766e;
+      }
+
+      .pill-warn {
+        color: #b45309;
+      }
+
+      .pill-action {
+        color: #b91c1c;
+      }
+
+      .table-empty {
+        padding: 10px;
+        color: var(--muted);
+        font-size: 12px;
+      }
     </style>
   </head>
   <body>
@@ -122,6 +180,22 @@
       <p>Your selected nodes were added to Homey.</p>
       <p>Use this summary to confirm import status and remaining devices.</p>
       <div id="status-kv" class="kv"></div>
+      <h2 class="section-title">Imported Nodes</h2>
+      <div id="imported-table-wrap" class="node-table-wrap" hidden>
+        <table class="node-table">
+          <thead>
+            <tr>
+              <th>Node</th>
+              <th>Bridge</th>
+              <th>Identity</th>
+              <th>Profile</th>
+              <th>Recommendation</th>
+            </tr>
+          </thead>
+          <tbody id="imported-table-body"></tbody>
+        </table>
+      </div>
+      <div id="imported-empty" class="table-empty" hidden>No imported node details available.</div>
       <ul id="warnings" class="warnings" hidden></ul>
       <p id="status-line" class="hint">Loading status...</p>
       <div class="button-group">
@@ -141,6 +215,9 @@
         const statusKv = document.getElementById('status-kv');
         const warningsEl = document.getElementById('warnings');
         const statusLine = document.getElementById('status-line');
+        const importedTableWrap = document.getElementById('imported-table-wrap');
+        const importedTableBody = document.getElementById('imported-table-body');
+        const importedEmpty = document.getElementById('imported-empty');
         const refreshBtn = document.getElementById('refresh-btn');
         const doneBtn = document.getElementById('done-btn');
 
@@ -178,12 +255,74 @@
             .join('');
         }
 
+        function recommendationClass(action) {
+          if (action === 'backfill-marker') return 'pill-warn';
+          if (action === 'adopt-recommended-baseline') return 'pill-action';
+          return 'pill-ok';
+        }
+
+        function recommendationLabel(action) {
+          if (action === 'backfill-marker') return 'Backfill Marker';
+          if (action === 'adopt-recommended-baseline') return 'Adopt Update';
+          return 'No Action';
+        }
+
+        function renderImportedNodes(status) {
+          const entries = Array.isArray(status.importedNodeDetails) ? status.importedNodeDetails : [];
+          if (entries.length === 0) {
+            importedTableWrap.hidden = true;
+            importedTableBody.innerHTML = '';
+            importedEmpty.hidden = false;
+            return;
+          }
+
+          importedTableWrap.hidden = false;
+          importedEmpty.hidden = true;
+          importedTableBody.innerHTML = entries
+            .map((entry) => {
+              const manufacturer = asText(entry.manufacturer);
+              const product = asText(entry.product);
+              const location = asText(entry.location);
+              const status = asText(entry.status);
+              const profileId = asText(entry.profileId);
+              const profileClass = asText(entry.profileHomeyClass);
+              const profileMatch = asText(entry.profileMatch);
+              const recommendationReason = asText(entry.recommendationReason);
+              return `
+                <tr>
+                  <td>#${asText(entry.nodeId)}<br /><span class="hint">${asText(entry.name)}</span></td>
+                  <td>${asText(entry.bridgeId)}</td>
+                  <td>
+                    ${manufacturer} / ${product}<br />
+                    <span class="hint">Location: ${location}</span><br />
+                    <span class="hint">Status: ${status}</span>
+                  </td>
+                  <td>
+                    Class: ${profileClass}<br />
+                    <span class="hint">${profileId}</span><br />
+                    <span class="hint">${profileMatch}</span>
+                  </td>
+                  <td>
+                    <span class="${recommendationClass(entry.recommendationAction)}">${recommendationLabel(
+                      entry.recommendationAction,
+                    )}</span><br />
+                    <span class="hint">${recommendationReason}</span>
+                  </td>
+                </tr>
+              `;
+            })
+            .join('');
+        }
+
         function render() {
           refreshBtn.disabled = state.loading;
           if (!state.status) {
             setKvRows([]);
             warningsEl.hidden = true;
             warningsEl.innerHTML = '';
+            importedTableWrap.hidden = true;
+            importedTableBody.innerHTML = '';
+            importedEmpty.hidden = false;
             statusLine.textContent = state.loading
               ? 'Loading status...'
               : state.error || 'Status unavailable.';
@@ -212,6 +351,7 @@
             warningsEl.hidden = true;
             warningsEl.innerHTML = '';
           }
+          renderImportedNodes(status);
 
           statusLine.textContent = state.error || 'Status loaded.';
         }

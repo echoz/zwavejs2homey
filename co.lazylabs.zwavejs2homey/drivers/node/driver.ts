@@ -22,6 +22,26 @@ interface AppRuntimeAccess {
     nodes: Array<{
       homeyDeviceId: string | null;
       nodeId: number | null;
+      bridgeId?: string | null;
+      node?: {
+        manufacturer?: string | null;
+        product?: string | null;
+        location?: string | null;
+        status?: string | null;
+        ready?: boolean | null;
+        isFailed?: boolean | null;
+      };
+      profile?: {
+        homeyClass?: string | null;
+        profileId?: string | null;
+        matchBy?: string | null;
+        matchKey?: string | null;
+      };
+      recommendation?: {
+        available?: boolean;
+        backfillNeeded?: boolean;
+        reasonLabel?: string | null;
+      };
     }>;
   }>;
   resolveCompiledProfileEntry?: (selector: ReturnType<typeof buildNodeResolverSelector>) => {
@@ -56,6 +76,22 @@ interface RepairSessionLike {
 
 interface PairSessionLike {
   setHandler: (event: string, handler: (payload?: unknown) => Promise<unknown>) => void;
+}
+
+interface ImportSummaryNodeEntry {
+  homeyDeviceId: string | null;
+  bridgeId: string;
+  nodeId: number | null;
+  name: string | null;
+  manufacturer: string | null;
+  product: string | null;
+  location: string | null;
+  status: string | null;
+  profileHomeyClass: string | null;
+  profileId: string | null;
+  profileMatch: string | null;
+  recommendationAction: string;
+  recommendationReason: string | null;
 }
 
 interface HomeyZoneLike {
@@ -116,6 +152,7 @@ module.exports = class NodeDriver extends Homey.Driver {
     discoveredNodes: number | null;
     importedNodes: number;
     pendingImportNodes: number | null;
+    importedNodeDetails: ImportSummaryNodeEntry[];
     warnings: string[];
   }> {
     const app = this.homey.app as AppRuntimeAccess;
@@ -136,6 +173,7 @@ module.exports = class NodeDriver extends Homey.Driver {
           ? status.adapterFamily.trim()
           : null,
     };
+    const discoveredNodeNames = new Map<number, string>();
 
     let discoveredNodes: number | null = null;
     if (client) {
@@ -144,6 +182,12 @@ module.exports = class NodeDriver extends Homey.Driver {
         const nodes = Array.isArray(nodeList?.nodes) ? nodeList.nodes : [];
         discoveredNodes = nodes.filter((node) => {
           const nodeId = node?.nodeId;
+          if (typeof node?.name === 'string' && typeof nodeId === 'number' && Number.isInteger(nodeId)) {
+            const trimmedName = node.name.trim();
+            if (trimmedName.length > 0) {
+              discoveredNodeNames.set(nodeId, trimmedName);
+            }
+          }
           return typeof nodeId === 'number' && Number.isInteger(nodeId) && nodeId > 1;
         }).length;
       } catch (error) {
@@ -157,12 +201,48 @@ module.exports = class NodeDriver extends Homey.Driver {
       warnings.push('ZWJS client is unavailable; configure zwjs_connection.url in app settings.');
     }
 
+    let importedNodeDetails: ImportSummaryNodeEntry[] = [];
     let importedNodes = this.countImportedNodeDevices(bridgeId);
     if (app.getNodeRuntimeDiagnostics) {
       try {
         const diagnostics = await app.getNodeRuntimeDiagnostics();
         if (Array.isArray(diagnostics.nodes)) {
-          importedNodes = diagnostics.nodes.length;
+          importedNodeDetails = diagnostics.nodes
+            .filter((entry) => {
+              const entryBridgeId = this.normalizeStringOrNull(entry.bridgeId);
+              if (!entryBridgeId) return true;
+              return entryBridgeId === bridgeId;
+            })
+            .map((entry) => {
+              const nodeId = typeof entry.nodeId === 'number' && Number.isInteger(entry.nodeId) ? entry.nodeId : null;
+              const recommendationAction = this.toRecommendationAction(entry.recommendation);
+              return {
+                homeyDeviceId: this.normalizeStringOrNull(entry.homeyDeviceId),
+                bridgeId: this.normalizeStringOrNull(entry.bridgeId) ?? bridgeId,
+                nodeId,
+                name: nodeId !== null ? discoveredNodeNames.get(nodeId) ?? null : null,
+                manufacturer: this.normalizeStringOrNull(entry.node?.manufacturer),
+                product: this.normalizeStringOrNull(entry.node?.product),
+                location: this.normalizeStringOrNull(entry.node?.location),
+                status: this.normalizeStringOrNull(entry.node?.status),
+                profileHomeyClass: this.normalizeStringOrNull(entry.profile?.homeyClass),
+                profileId: this.normalizeStringOrNull(entry.profile?.profileId),
+                profileMatch: this.buildProfileMatchSummary(entry.profile),
+                recommendationAction,
+                recommendationReason: this.normalizeStringOrNull(entry.recommendation?.reasonLabel),
+              };
+            })
+            .sort((left, right) => {
+              if (left.nodeId !== null && right.nodeId !== null && left.nodeId !== right.nodeId) {
+                return left.nodeId - right.nodeId;
+              }
+              if (left.nodeId !== null && right.nodeId === null) return -1;
+              if (left.nodeId === null && right.nodeId !== null) return 1;
+              const leftId = left.homeyDeviceId ?? '';
+              const rightId = right.homeyDeviceId ?? '';
+              return leftId.localeCompare(rightId);
+            });
+          importedNodes = importedNodeDetails.length;
         }
       } catch (error) {
         this.error('Failed to load runtime node diagnostics for import summary status', {
@@ -186,8 +266,34 @@ module.exports = class NodeDriver extends Homey.Driver {
       discoveredNodes,
       importedNodes,
       pendingImportNodes,
+      importedNodeDetails,
       warnings,
     };
+  }
+
+  private normalizeStringOrNull(value: unknown): string | null {
+    if (typeof value !== 'string') return null;
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+
+  private toRecommendationAction(recommendation: {
+    available?: boolean;
+    backfillNeeded?: boolean;
+  } | null | undefined): string {
+    if (recommendation?.backfillNeeded === true) return 'backfill-marker';
+    if (recommendation?.available === true) return 'adopt-recommended-baseline';
+    return 'none';
+  }
+
+  private buildProfileMatchSummary(profile: {
+    matchBy?: string | null;
+    matchKey?: string | null;
+  } | null | undefined): string | null {
+    const matchBy = this.normalizeStringOrNull(profile?.matchBy);
+    const matchKey = this.normalizeStringOrNull(profile?.matchKey);
+    if (!matchBy && !matchKey) return null;
+    return `${matchBy ?? 'n/a'} / ${matchKey ?? 'n/a'}`;
   }
 
   private async withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {

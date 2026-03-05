@@ -46,6 +46,7 @@ module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
                     ? status.adapterFamily.trim()
                     : null,
             };
+            const discoveredNodeNames = new Map();
             let discoveredNodes = null;
             if (client) {
                 try {
@@ -53,6 +54,12 @@ module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
                     const nodes = Array.isArray(nodeList?.nodes) ? nodeList.nodes : [];
                     discoveredNodes = nodes.filter((node) => {
                         const nodeId = node?.nodeId;
+                        if (typeof node?.name === 'string' && typeof nodeId === 'number' && Number.isInteger(nodeId)) {
+                            const trimmedName = node.name.trim();
+                            if (trimmedName.length > 0) {
+                                discoveredNodeNames.set(nodeId, trimmedName);
+                            }
+                        }
                         return typeof nodeId === 'number' && Number.isInteger(nodeId) && nodeId > 1;
                     }).length;
                 }
@@ -67,12 +74,51 @@ module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
             else {
                 warnings.push('ZWJS client is unavailable; configure zwjs_connection.url in app settings.');
             }
+            let importedNodeDetails = [];
             let importedNodes = this.countImportedNodeDevices(bridgeId);
             if (app.getNodeRuntimeDiagnostics) {
                 try {
                     const diagnostics = await app.getNodeRuntimeDiagnostics();
                     if (Array.isArray(diagnostics.nodes)) {
-                        importedNodes = diagnostics.nodes.length;
+                        importedNodeDetails = diagnostics.nodes
+                            .filter((entry) => {
+                            const entryBridgeId = this.normalizeStringOrNull(entry.bridgeId);
+                            if (!entryBridgeId)
+                                return true;
+                            return entryBridgeId === bridgeId;
+                        })
+                            .map((entry) => {
+                            const nodeId = typeof entry.nodeId === 'number' && Number.isInteger(entry.nodeId) ? entry.nodeId : null;
+                            const recommendationAction = this.toRecommendationAction(entry.recommendation);
+                            return {
+                                homeyDeviceId: this.normalizeStringOrNull(entry.homeyDeviceId),
+                                bridgeId: this.normalizeStringOrNull(entry.bridgeId) ?? bridgeId,
+                                nodeId,
+                                name: nodeId !== null ? discoveredNodeNames.get(nodeId) ?? null : null,
+                                manufacturer: this.normalizeStringOrNull(entry.node?.manufacturer),
+                                product: this.normalizeStringOrNull(entry.node?.product),
+                                location: this.normalizeStringOrNull(entry.node?.location),
+                                status: this.normalizeStringOrNull(entry.node?.status),
+                                profileHomeyClass: this.normalizeStringOrNull(entry.profile?.homeyClass),
+                                profileId: this.normalizeStringOrNull(entry.profile?.profileId),
+                                profileMatch: this.buildProfileMatchSummary(entry.profile),
+                                recommendationAction,
+                                recommendationReason: this.normalizeStringOrNull(entry.recommendation?.reasonLabel),
+                            };
+                        })
+                            .sort((left, right) => {
+                            if (left.nodeId !== null && right.nodeId !== null && left.nodeId !== right.nodeId) {
+                                return left.nodeId - right.nodeId;
+                            }
+                            if (left.nodeId !== null && right.nodeId === null)
+                                return -1;
+                            if (left.nodeId === null && right.nodeId !== null)
+                                return 1;
+                            const leftId = left.homeyDeviceId ?? '';
+                            const rightId = right.homeyDeviceId ?? '';
+                            return leftId.localeCompare(rightId);
+                        });
+                        importedNodes = importedNodeDetails.length;
                     }
                 }
                 catch (error) {
@@ -94,8 +140,29 @@ module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
                 discoveredNodes,
                 importedNodes,
                 pendingImportNodes,
+                importedNodeDetails,
                 warnings,
             };
+        }
+        normalizeStringOrNull(value) {
+            if (typeof value !== 'string')
+                return null;
+            const trimmed = value.trim();
+            return trimmed.length > 0 ? trimmed : null;
+        }
+        toRecommendationAction(recommendation) {
+            if (recommendation?.backfillNeeded === true)
+                return 'backfill-marker';
+            if (recommendation?.available === true)
+                return 'adopt-recommended-baseline';
+            return 'none';
+        }
+        buildProfileMatchSummary(profile) {
+            const matchBy = this.normalizeStringOrNull(profile?.matchBy);
+            const matchKey = this.normalizeStringOrNull(profile?.matchKey);
+            if (!matchBy && !matchKey)
+                return null;
+            return `${matchBy ?? 'n/a'} / ${matchKey ?? 'n/a'}`;
         }
         async withTimeout(promise, timeoutMs, label) {
             return await new Promise((resolve, reject) => {

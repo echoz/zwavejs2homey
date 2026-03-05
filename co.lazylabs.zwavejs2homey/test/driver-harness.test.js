@@ -510,7 +510,30 @@ test('node driver pair session registers list_devices and import_summary status 
       async getNodeRuntimeDiagnostics() {
         return {
           bridgeId: 'main',
-          nodes: [{ homeyDeviceId: 'main:2', nodeId: 2 }],
+          nodes: [
+            {
+              homeyDeviceId: 'main:2',
+              nodeId: 2,
+              bridgeId: 'main',
+              node: {
+                manufacturer: 'Leviton',
+                product: 'DZ6HD',
+                location: 'Study',
+                status: 'Alive',
+              },
+              profile: {
+                homeyClass: 'light',
+                profileId: 'product-triple:29:12801:1',
+                matchBy: 'product-triple',
+                matchKey: '29:12801:1',
+              },
+              recommendation: {
+                available: false,
+                backfillNeeded: false,
+                reasonLabel: 'No recommendation is available.',
+              },
+            },
+          ],
         };
       },
     },
@@ -536,6 +559,14 @@ test('node driver pair session registers list_devices and import_summary status 
   assert.equal(summary.importedNodes, 1);
   assert.equal(summary.pendingImportNodes, 0);
   assert.deepEqual(summary.warnings, []);
+  assert.equal(Array.isArray(summary.importedNodeDetails), true);
+  assert.equal(summary.importedNodeDetails.length, 1);
+  assert.equal(summary.importedNodeDetails[0]?.nodeId, 2);
+  assert.equal(summary.importedNodeDetails[0]?.name, 'Desk Light');
+  assert.equal(summary.importedNodeDetails[0]?.manufacturer, 'Leviton');
+  assert.equal(summary.importedNodeDetails[0]?.product, 'DZ6HD');
+  assert.equal(summary.importedNodeDetails[0]?.profileHomeyClass, 'light');
+  assert.equal(summary.importedNodeDetails[0]?.recommendationAction, 'none');
 });
 
 test('node driver import_summary status includes warnings when zwjs is unavailable', async () => {
@@ -560,6 +591,7 @@ test('node driver import_summary status includes warnings when zwjs is unavailab
   assert.equal(summary.importedNodes, 0);
   assert.equal(summary.pendingImportNodes, null);
   assert.equal(summary.zwjs.available, false);
+  assert.deepEqual(summary.importedNodeDetails, []);
   assert.equal(Array.isArray(summary.warnings), true);
   assert.equal(summary.warnings.length >= 1, true);
 });

@@ -276,6 +276,8 @@
               <div id="mapping-skip-kv" class="kv"></div>
               <h3>Runtime Context</h3>
               <div id="runtime-context-kv" class="kv"></div>
+              <h3>Curation Diagnostics</h3>
+              <div id="curation-kv" class="kv"></div>
               <h3>Decision Context</h3>
               <div id="why-kv" class="kv"></div>
             </div>
@@ -349,6 +351,7 @@
         const profileRefKv = document.getElementById('profile-reference-kv');
         const mappingSkipKv = document.getElementById('mapping-skip-kv');
         const runtimeContextKv = document.getElementById('runtime-context-kv');
+        const curationKv = document.getElementById('curation-kv');
         const whyKv = document.getElementById('why-kv');
         const latestActionKv = document.getElementById('latest-action-kv');
         const backfillBtn = document.getElementById('backfill-btn');
@@ -467,6 +470,53 @@
           return entries.map(([reason, count]) => [reason, count, ' mono']);
         }
 
+        function toNonNegativeCount(value) {
+          if (typeof value !== 'number' || !Number.isFinite(value)) return 0;
+          return value > 0 ? Math.trunc(value) : 0;
+        }
+
+        function buildCurationStatusSummary(curation) {
+          const loaded = curation && curation.loaded === true;
+          const applied = toNonNegativeCount(curation && curation.appliedActions);
+          const skipped = toNonNegativeCount(curation && curation.skippedActions);
+          const errors = toNonNegativeCount(curation && curation.errorCount);
+          const hasEntry = curation && curation.entryPresent === true;
+          if (!loaded) {
+            return {
+              status: 'Unavailable',
+              summary: 'Curation runtime is unavailable.',
+            };
+          }
+          if (errors > 0) {
+            return {
+              status: 'Error',
+              summary: `${errors} error(s), ${applied} applied, ${skipped} skipped.`,
+            };
+          }
+          if (applied > 0) {
+            return {
+              status: 'Applied',
+              summary: `${applied} action(s) applied, ${skipped} skipped.`,
+            };
+          }
+          if (skipped > 0) {
+            return {
+              status: 'Skipped',
+              summary: `${skipped} action(s) skipped, no applied actions.`,
+            };
+          }
+          if (hasEntry) {
+            return {
+              status: 'No Change',
+              summary: 'Device override exists but produced no changes in this sync.',
+            };
+          }
+          return {
+            status: 'No Override',
+            summary: 'Compiled profile is active without a device-specific override.',
+          };
+        }
+
         function setKvRows(container, rows, options) {
           const omitEmpty = options && options.omitEmpty === true;
           const normalizedRows = omitEmpty ? rows.filter((row) => !isMissingValue(row[1])) : rows;
@@ -513,6 +563,7 @@
             profileRefKv.innerHTML = '';
             mappingSkipKv.innerHTML = '';
             runtimeContextKv.innerHTML = '';
+            curationKv.innerHTML = '';
             whyKv.innerHTML = '';
             latestActionKv.innerHTML = '';
             backfillBtn.disabled = true;
@@ -552,6 +603,7 @@
                 null,
                 snapshot.curation && snapshot.curation.entryPresent === true,
               );
+          const curationStatusSummary = buildCurationStatusSummary(snapshot.curation);
           const overrideSummary = profileAttribution
             ? profileAttribution.curationEntryPresent === true
               ? 'Present'
@@ -598,6 +650,10 @@
               ],
               ['Vertical Slice', formatBooleanFlag(snapshot.mapping.verticalSliceApplied)],
               ['Mapped Capabilities', snapshot.mapping.capabilityCount],
+              ['Curation Status', curationStatusSummary.status],
+              ['Curation Summary', curationStatusSummary.summary],
+              ['Curation Entry', snapshot.curation.entryPresent ? 'Present' : 'Missing'],
+              ['Curation Source', snapshot.curation.source],
               [
                 'Inbound Mapping',
                 `${snapshot.mapping.inboundEnabled}/${snapshot.mapping.inboundConfigured} enabled (${snapshot.mapping.inboundSkipped} skipped)`,
@@ -606,12 +662,6 @@
                 'Outbound Mapping',
                 `${snapshot.mapping.outboundEnabled}/${snapshot.mapping.outboundConfigured} enabled (${snapshot.mapping.outboundSkipped} skipped)`,
               ],
-              ['Curation Entry', snapshot.curation.entryPresent ? 'Present' : 'Missing'],
-              ['Curation Source', snapshot.curation.source],
-              ['Curation Loaded', formatBooleanFlag(snapshot.curation.loaded)],
-              ['Curation Applied', snapshot.curation.appliedActions],
-              ['Curation Skipped', snapshot.curation.skippedActions],
-              ['Curation Errors', snapshot.curation.errorCount],
             ],
             { omitEmpty: true },
           );
@@ -660,6 +710,20 @@
               ['Curation Error', snapshot.curation.error],
             ],
             { omitEmpty: true },
+          );
+
+          setKvRows(
+            curationKv,
+            [
+              ['Loaded', formatBooleanFlag(snapshot.curation.loaded)],
+              ['Entry Present', formatBooleanFlag(snapshot.curation.entryPresent)],
+              ['Applied Actions', snapshot.curation.appliedActions],
+              ['Skipped Actions', snapshot.curation.skippedActions],
+              ['Error Count', snapshot.curation.errorCount],
+              ['Source', snapshot.curation.source],
+              ['Error', snapshot.curation.error],
+            ],
+            { omitEmpty: false },
           );
 
           setKvRows(

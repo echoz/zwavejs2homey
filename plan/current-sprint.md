@@ -19,6 +19,21 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## Recently Completed
 
+- Latest node import-summary context slice:
+  - extended node pair import-summary status payload with per-node imported details:
+    - bridge ID
+    - node ID + discovered name
+    - manufacturer/product/location/status
+    - profile class/profile ID/match summary
+    - recommendation action + reason label
+  - updated import summary custom view to render an imported-node table instead of counts only
+  - added harness coverage for imported-node details in `import_summary:get_status`
+
+- Latest node Device Tools curation-status UX slice:
+  - replaced raw top-level curation counters with a single `Curation Status` + `Curation Summary` row
+  - moved raw curation counters/details (`loaded`, `applied`, `skipped`, `errors`, source/error text) into `Advanced -> Curation Diagnostics`
+  - keeps default repair view concise while preserving full diagnostics on demand
+
 - Latest settings diagnostics UX polish slice:
   - upgraded app settings page to include a runtime diagnostics panel alongside connection settings
   - diagnostics panel now surfaces:
