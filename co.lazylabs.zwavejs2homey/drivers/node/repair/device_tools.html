@@ -411,10 +411,12 @@
           return 'n/a';
         }
 
-        function describeProfileSource(snapshot) {
-          if (snapshot.curation && snapshot.curation.entryPresent) {
-            return 'Compiled profile + device curation override';
+        function describeProfileSourceCode(sourceCode, curationEntryPresent) {
+          if (sourceCode === 'compiled+curation-override') {
+            return 'Compiled profile + device override';
           }
+          if (sourceCode === 'compiled-only') return 'Compiled profile only';
+          if (curationEntryPresent) return 'Compiled profile + device override';
           return 'Compiled profile only (no device override)';
         }
 
@@ -503,8 +505,23 @@
             runtimeZwjs.transportConnected === true ? 'connected' : 'disconnected'
           }`;
           const nodeStatus = buildNodeStatusSummary(nodeState);
-          const confidenceSummary = describeConfidence(snapshot.profile.confidence);
-          const profileSourceSummary = describeProfileSource(snapshot);
+          const profileAttribution =
+            snapshot.profileAttribution && typeof snapshot.profileAttribution === 'object'
+              ? snapshot.profileAttribution
+              : null;
+          const confidenceSummary = profileAttribution
+            ? toSafeText(profileAttribution.confidenceLabel)
+            : describeConfidence(snapshot.profile.confidence);
+          const profileSourceSummary = profileAttribution
+            ? toSafeText(profileAttribution.sourceLabel)
+            : describeProfileSourceCode(
+                null,
+                snapshot.curation && snapshot.curation.entryPresent === true,
+              );
+          const profileSummary =
+            profileAttribution && typeof profileAttribution.summary === 'string'
+              ? profileAttribution.summary
+              : null;
           backfillBtn.disabled = isBusy || !canBackfill;
           adoptBtn.disabled = isBusy || !canAdopt;
           const deviceLabel =
@@ -524,6 +541,7 @@
             ['Homey Class', snapshot.profile.homeyClass],
             ['Profile Confidence', confidenceSummary],
             ['Profile Source', profileSourceSummary],
+            ['Profile Attribution', profileSummary],
             ['Profile ID', snapshot.profile.profileId, ' mono'],
             [
               'Match',

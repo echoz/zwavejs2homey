@@ -62,6 +62,19 @@ interface NodeStateSnapshotV1 {
   isFailed: boolean | null;
 }
 
+type ProfileConfidenceCodeV1 = 'curated' | 'ha-derived' | 'generic';
+
+type ProfileSourceCodeV1 = 'compiled-only' | 'compiled+curation-override' | 'unresolved';
+
+interface ProfileAttributionV1 {
+  confidenceCode: ProfileConfidenceCodeV1 | null;
+  confidenceLabel: string;
+  sourceCode: ProfileSourceCodeV1;
+  sourceLabel: string;
+  summary: string;
+  curationEntryPresent: boolean;
+}
+
 interface NodeRuntimeDiagnosticsEntry {
   homeyDeviceId: string | null;
   bridgeId: string | null;
@@ -80,6 +93,7 @@ interface NodeRuntimeDiagnosticsEntry {
     confidence: string | null;
     uncurated: boolean;
   };
+  profileAttribution: ProfileAttributionV1;
   curation: {
     loaded: boolean;
     source: string | null;
@@ -161,6 +175,7 @@ interface NodeDeviceToolsSnapshotV1 {
   };
   node: NodeStateSnapshotV1;
   profile: NodeRuntimeDiagnosticsEntry['profile'];
+  profileAttribution: NodeRuntimeDiagnosticsEntry['profileAttribution'];
   mapping: NodeRuntimeDiagnosticsEntry['mapping'];
   curation: NodeRuntimeDiagnosticsEntry['curation'];
   recommendation: {
@@ -239,6 +254,60 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
 
   private static toBooleanOrDefault(value: unknown, fallback = false): boolean {
     return typeof value === 'boolean' ? value : fallback;
+  }
+
+  private static normalizeProfileConfidenceCode(value: unknown): ProfileConfidenceCodeV1 | null {
+    if (typeof value !== 'string') return null;
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'curated') return 'curated';
+    if (normalized === 'ha-derived') return 'ha-derived';
+    if (normalized === 'generic') return 'generic';
+    return null;
+  }
+
+  private static describeProfileConfidenceCode(
+    code: ProfileConfidenceCodeV1 | null,
+  ): string {
+    if (code === 'curated') return 'Curated profile match';
+    if (code === 'ha-derived') return 'Home Assistant-derived profile match';
+    if (code === 'generic') return 'Generic fallback profile';
+    return 'Unknown profile confidence';
+  }
+
+  private static describeProfileSourceCode(code: ProfileSourceCodeV1): string {
+    if (code === 'compiled+curation-override') return 'Compiled profile + device override';
+    if (code === 'compiled-only') return 'Compiled profile only';
+    return 'Profile resolution pending';
+  }
+
+  private static buildProfileAttribution(options: {
+    confidenceCode: ProfileConfidenceCodeV1 | null;
+    curationEntryPresent: boolean;
+    profileId: string | null;
+    fallbackReason: string | null;
+  }): ProfileAttributionV1 {
+    const confidenceLabel = Zwavejs2HomeyApp.describeProfileConfidenceCode(options.confidenceCode);
+    const sourceCode: ProfileSourceCodeV1 =
+      options.profileId || options.fallbackReason
+        ? options.curationEntryPresent
+          ? 'compiled+curation-override'
+          : 'compiled-only'
+        : 'unresolved';
+    const sourceLabel = Zwavejs2HomeyApp.describeProfileSourceCode(sourceCode);
+    const summary =
+      sourceCode === 'compiled+curation-override'
+        ? `${confidenceLabel}; device-specific override present`
+        : sourceCode === 'compiled-only'
+          ? `${confidenceLabel}; no device-specific override`
+          : 'Profile resolution is pending; runtime defaults are active';
+    return {
+      confidenceCode: options.confidenceCode,
+      confidenceLabel,
+      sourceCode,
+      sourceLabel,
+      summary,
+      curationEntryPresent: options.curationEntryPresent,
+    };
   }
 
   private static parseNumericIdentityOrNull(value: unknown): number | null {
@@ -397,6 +466,12 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
       }
       nodeId = Zwavejs2HomeyApp.toNumberOrNull(selectorNodeId);
     }
+    const profileId = Zwavejs2HomeyApp.toStringOrNull(profileResolution.profileId);
+    const fallbackReason = Zwavejs2HomeyApp.toStringOrNull(profileResolution.fallbackReason);
+    const confidenceCode = Zwavejs2HomeyApp.normalizeProfileConfidenceCode(classification?.confidence);
+    const curationEntryPresent = Zwavejs2HomeyApp.toBooleanOrDefault(
+      profileResolution.curationEntryPresent,
+    );
     return {
       homeyDeviceId,
       bridgeId,
@@ -409,17 +484,23 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
       profile: {
         matchBy: Zwavejs2HomeyApp.toStringOrNull(profileResolution.matchBy),
         matchKey: Zwavejs2HomeyApp.toStringOrNull(profileResolution.matchKey),
-        profileId: Zwavejs2HomeyApp.toStringOrNull(profileResolution.profileId),
-        fallbackReason: Zwavejs2HomeyApp.toStringOrNull(profileResolution.fallbackReason),
+        profileId,
+        fallbackReason,
         homeyClass: Zwavejs2HomeyApp.toStringOrNull(classification?.homeyClass),
-        confidence: Zwavejs2HomeyApp.toStringOrNull(classification?.confidence),
+        confidence: confidenceCode,
         uncurated: Zwavejs2HomeyApp.toBooleanOrDefault(classification?.uncurated, true),
       },
+      profileAttribution: Zwavejs2HomeyApp.buildProfileAttribution({
+        confidenceCode,
+        curationEntryPresent,
+        profileId,
+        fallbackReason,
+      }),
       curation: {
         loaded: Zwavejs2HomeyApp.toBooleanOrDefault(profileResolution.curationLoaded),
         source: Zwavejs2HomeyApp.toStringOrNull(profileResolution.curationSource),
         error: Zwavejs2HomeyApp.toStringOrNull(profileResolution.curationError),
-        entryPresent: Zwavejs2HomeyApp.toBooleanOrDefault(profileResolution.curationEntryPresent),
+        entryPresent: curationEntryPresent,
         appliedActions: Zwavejs2HomeyApp.toNumberOrNull(curationSummary?.applied) ?? 0,
         skippedActions: Zwavejs2HomeyApp.toNumberOrNull(curationSummary?.skipped) ?? 0,
         errorCount: Zwavejs2HomeyApp.toNumberOrNull(curationSummary?.errors) ?? 0,
@@ -491,6 +572,12 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
         confidence: null,
         uncurated: true,
       },
+      profileAttribution: Zwavejs2HomeyApp.buildProfileAttribution({
+        confidenceCode: null,
+        curationEntryPresent: false,
+        profileId: null,
+        fallbackReason: null,
+      }),
       curation: {
         loaded: this.curationRuntime.status.loaded,
         source: this.curationRuntime.status.source,
@@ -1049,6 +1136,7 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
       },
       node: diagnosticsEntry.node,
       profile: diagnosticsEntry.profile,
+      profileAttribution: diagnosticsEntry.profileAttribution,
       mapping: diagnosticsEntry.mapping,
       curation: diagnosticsEntry.curation,
       recommendation: {

@@ -76,6 +76,56 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
         static toBooleanOrDefault(value, fallback = false) {
             return typeof value === 'boolean' ? value : fallback;
         }
+        static normalizeProfileConfidenceCode(value) {
+            if (typeof value !== 'string')
+                return null;
+            const normalized = value.trim().toLowerCase();
+            if (normalized === 'curated')
+                return 'curated';
+            if (normalized === 'ha-derived')
+                return 'ha-derived';
+            if (normalized === 'generic')
+                return 'generic';
+            return null;
+        }
+        static describeProfileConfidenceCode(code) {
+            if (code === 'curated')
+                return 'Curated profile match';
+            if (code === 'ha-derived')
+                return 'Home Assistant-derived profile match';
+            if (code === 'generic')
+                return 'Generic fallback profile';
+            return 'Unknown profile confidence';
+        }
+        static describeProfileSourceCode(code) {
+            if (code === 'compiled+curation-override')
+                return 'Compiled profile + device override';
+            if (code === 'compiled-only')
+                return 'Compiled profile only';
+            return 'Profile resolution pending';
+        }
+        static buildProfileAttribution(options) {
+            const confidenceLabel = _a.describeProfileConfidenceCode(options.confidenceCode);
+            const sourceCode = options.profileId || options.fallbackReason
+                ? options.curationEntryPresent
+                    ? 'compiled+curation-override'
+                    : 'compiled-only'
+                : 'unresolved';
+            const sourceLabel = _a.describeProfileSourceCode(sourceCode);
+            const summary = sourceCode === 'compiled+curation-override'
+                ? `${confidenceLabel}; device-specific override present`
+                : sourceCode === 'compiled-only'
+                    ? `${confidenceLabel}; no device-specific override`
+                    : 'Profile resolution is pending; runtime defaults are active';
+            return {
+                confidenceCode: options.confidenceCode,
+                confidenceLabel,
+                sourceCode,
+                sourceLabel,
+                summary,
+                curationEntryPresent: options.curationEntryPresent,
+            };
+        }
         static parseNumericIdentityOrNull(value) {
             if (typeof value === 'number' && Number.isInteger(value) && Number.isFinite(value)) {
                 return value;
@@ -218,6 +268,10 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
                 }
                 nodeId = _a.toNumberOrNull(selectorNodeId);
             }
+            const profileId = _a.toStringOrNull(profileResolution.profileId);
+            const fallbackReason = _a.toStringOrNull(profileResolution.fallbackReason);
+            const confidenceCode = _a.normalizeProfileConfidenceCode(classification?.confidence);
+            const curationEntryPresent = _a.toBooleanOrDefault(profileResolution.curationEntryPresent);
             return {
                 homeyDeviceId,
                 bridgeId,
@@ -230,17 +284,23 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
                 profile: {
                     matchBy: _a.toStringOrNull(profileResolution.matchBy),
                     matchKey: _a.toStringOrNull(profileResolution.matchKey),
-                    profileId: _a.toStringOrNull(profileResolution.profileId),
-                    fallbackReason: _a.toStringOrNull(profileResolution.fallbackReason),
+                    profileId,
+                    fallbackReason,
                     homeyClass: _a.toStringOrNull(classification?.homeyClass),
-                    confidence: _a.toStringOrNull(classification?.confidence),
+                    confidence: confidenceCode,
                     uncurated: _a.toBooleanOrDefault(classification?.uncurated, true),
                 },
+                profileAttribution: _a.buildProfileAttribution({
+                    confidenceCode,
+                    curationEntryPresent,
+                    profileId,
+                    fallbackReason,
+                }),
                 curation: {
                     loaded: _a.toBooleanOrDefault(profileResolution.curationLoaded),
                     source: _a.toStringOrNull(profileResolution.curationSource),
                     error: _a.toStringOrNull(profileResolution.curationError),
-                    entryPresent: _a.toBooleanOrDefault(profileResolution.curationEntryPresent),
+                    entryPresent: curationEntryPresent,
                     appliedActions: _a.toNumberOrNull(curationSummary?.applied) ?? 0,
                     skippedActions: _a.toNumberOrNull(curationSummary?.skipped) ?? 0,
                     errorCount: _a.toNumberOrNull(curationSummary?.errors) ?? 0,
@@ -299,6 +359,12 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
                     confidence: null,
                     uncurated: true,
                 },
+                profileAttribution: _a.buildProfileAttribution({
+                    confidenceCode: null,
+                    curationEntryPresent: false,
+                    profileId: null,
+                    fallbackReason: null,
+                }),
                 curation: {
                     loaded: this.curationRuntime.status.loaded,
                     source: this.curationRuntime.status.source,
@@ -748,6 +814,7 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
                 },
                 node: diagnosticsEntry.node,
                 profile: diagnosticsEntry.profile,
+                profileAttribution: diagnosticsEntry.profileAttribution,
                 mapping: diagnosticsEntry.mapping,
                 curation: diagnosticsEntry.curation,
                 recommendation: {

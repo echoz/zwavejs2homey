@@ -19,6 +19,19 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## Recently Completed
 
+- Latest profile-attribution contract slice (backend-first):
+  - added normalized `profileAttribution` payload to node diagnostics snapshots:
+    - `confidenceCode` / `confidenceLabel`
+    - `sourceCode` / `sourceLabel`
+    - `summary`
+    - `curationEntryPresent`
+  - wired node Device Tools to consume attribution contract directly instead of inferring confidence/source semantics in the view layer
+  - clarified adapter diagnostics rendering so compiled confidence and per-device curation are presented as independent signals
+  - added app runtime tests for:
+    - curated + curation-present attribution
+    - curated + no-curation-entry attribution
+    - profile-resolution-pending attribution
+
 - Latest node Device Tools clarity split slice:
   - split node repair diagnostics into two explicit sections:
     - `ZWJS Node` (manufacturer/product/location/status/transport context)

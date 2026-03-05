@@ -554,6 +554,10 @@ test('app diagnostics snapshot normalizes recommendation and mapping summary fie
   assert.equal(node8.recommendation.available, true);
   assert.equal(node8.recommendation.reason, 'baseline-hash-changed');
   assert.equal(node8.recommendation.currentPipelineFingerprint, 'pf-new');
+  assert.equal(node8.profileAttribution.confidenceCode, 'curated');
+  assert.equal(node8.profileAttribution.confidenceLabel, 'Curated profile match');
+  assert.equal(node8.profileAttribution.sourceCode, 'compiled+curation-override');
+  assert.equal(node8.profileAttribution.curationEntryPresent, true);
   assert.equal(node8.curation.appliedActions, 3);
   assert.equal(node8.curation.skippedActions, 1);
   assert.equal(node8.mapping.capabilityCount, 2);
@@ -652,6 +656,9 @@ test('app node device tools snapshot returns targeted diagnostics payload', asyn
   assert.equal(snapshot.schemaVersion, 'node-device-tools/v1');
   assert.equal(snapshot.device.homeyDeviceId, 'main:8');
   assert.equal(snapshot.profile.profileId, 'profile-main-8');
+  assert.equal(snapshot.profileAttribution.confidenceCode, 'curated');
+  assert.equal(snapshot.profileAttribution.sourceCode, 'compiled-only');
+  assert.equal(snapshot.profileAttribution.curationEntryPresent, false);
   assert.equal(snapshot.recommendation.suggestedAction, 'adopt-recommended-baseline');
   assert.equal(snapshot.recommendation.actionable, true);
   assert.equal(snapshot.node.manufacturerId, 29);
@@ -683,6 +690,8 @@ test('app node device tools snapshot supports profile-resolution-pending devices
 
   const snapshot = await app.getNodeDeviceToolsSnapshot({ homeyDeviceId: 'main:21' });
   assert.equal(snapshot.profile.fallbackReason, 'profile-resolution-not-ready');
+  assert.equal(snapshot.profileAttribution.sourceCode, 'unresolved');
+  assert.equal(snapshot.profileAttribution.confidenceCode, null);
   assert.equal(snapshot.recommendation.reason, 'profile-resolution-not-ready');
   assert.equal(snapshot.recommendation.actionable, false);
   assert.equal(snapshot.profileReference.currentBaselineHash, null);
