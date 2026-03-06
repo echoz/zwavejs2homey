@@ -6,17 +6,26 @@ function requireJson(relativePath) {
   return require(path.resolve(__dirname, relativePath));
 }
 
-function assertListToAddFlow(pairViews, driverId, options = {}) {
+function assertListTemplatePairFlow(pairViews, driverId, options = {}) {
   assert.ok(Array.isArray(pairViews), `${driverId}: pair must be an array`);
+  assert.ok(pairViews.length >= 1, `${driverId}: expected at least one pair view`);
 
   const listView = pairViews.find((view) => view && view.id === 'list_devices');
   assert.ok(listView, `${driverId}: missing list_devices pair view`);
   assert.equal(listView.template, 'list_devices', `${driverId}: list_devices template mismatch`);
-  assert.equal(
-    listView.navigation?.next,
-    'add_devices',
-    `${driverId}: list_devices must navigate to add_devices`,
-  );
+  if (typeof options.expectListNext === 'string') {
+    assert.equal(
+      listView.navigation?.next,
+      options.expectListNext,
+      `${driverId}: list_devices next navigation mismatch`,
+    );
+  } else {
+    assert.equal(
+      typeof listView.navigation?.next,
+      'undefined',
+      `${driverId}: list_devices should not define next navigation`,
+    );
+  }
   if (typeof options.expectSingular === 'boolean') {
     assert.equal(
       listView.options?.singular === true,
@@ -24,37 +33,16 @@ function assertListToAddFlow(pairViews, driverId, options = {}) {
       `${driverId}: list_devices singular option mismatch`,
     );
   }
-
-  const addView = pairViews.find((view) => view && view.id === 'add_devices');
-  assert.ok(addView, `${driverId}: missing add_devices pair view`);
-  assert.equal(addView.template, 'add_devices', `${driverId}: add_devices template mismatch`);
-  if (typeof options.expectAddNext === 'string') {
-    assert.equal(
-      addView.navigation?.next,
-      options.expectAddNext,
-      `${driverId}: add_devices next navigation mismatch`,
-    );
-  }
-
-  if (typeof options.expectCustomView === 'string') {
-    const customView = pairViews.find((view) => view && view.id === options.expectCustomView);
-    assert.ok(customView, `${driverId}: missing ${options.expectCustomView} pair view`);
-    assert.equal(
-      typeof customView.template,
-      'undefined',
-      `${driverId}: ${options.expectCustomView} should be a custom view without system template`,
-    );
-  }
 }
 
-test('bridge and node drivers expose a list_devices -> add_devices pair flow', () => {
+test('bridge and node drivers expose list_devices template pair flow', () => {
   const bridge = requireJson('../drivers/bridge/driver.compose.json');
   const node = requireJson('../drivers/node/driver.compose.json');
 
-  assertListToAddFlow(bridge.pair, 'bridge', {
+  assertListTemplatePairFlow(bridge.pair, 'bridge', {
     expectSingular: false,
   });
-  assertListToAddFlow(node.pair, 'node', {
+  assertListTemplatePairFlow(node.pair, 'node', {
     expectSingular: false,
   });
 });
