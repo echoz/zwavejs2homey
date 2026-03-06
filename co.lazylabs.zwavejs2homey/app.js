@@ -528,6 +528,10 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
                 },
             });
             nextClient.onEvent((event) => {
+                // Ignore events from stale clients after a reconnect swaps the active session client.
+                if (this.getDefaultBridgeSession().getZwjsClient() !== nextClient) {
+                    return;
+                }
                 this.log('zwjs event', event.type);
                 const refreshNodeId = this.getRuntimeRefreshNodeIdFromEvent(event);
                 if (refreshNodeId === undefined || this.shuttingDown) {

@@ -87,47 +87,69 @@ class FakeHomeyApp {
 }
 
 function createMockCoreModule() {
-  const mockClient = {
+  const createdClients = [];
+  const totals = {
     startCalls: 0,
     stopCalls: 0,
-    listeners: [],
-    async start() {
-      this.startCalls += 1;
-    },
-    async stop() {
-      this.stopCalls += 1;
-    },
-    getStatus() {
-      return {
-        transportConnected: true,
-        lifecycle: 'started',
-        versionReceived: true,
-        initialized: true,
-        listening: true,
-        authenticated: true,
-        serverVersion: '3.4.0',
-        adapterFamily: 'zwjs-default',
-        reconnectAttempt: 0,
-        connectedAt: '2026-03-02T12:00:00.000Z',
-        lastMessageAt: '2026-03-02T12:00:05.000Z',
-      };
-    },
-    onEvent(listener) {
-      this.listeners.push(listener);
-      return () => {
-        const index = this.listeners.indexOf(listener);
-        if (index >= 0) this.listeners.splice(index, 1);
-      };
-    },
-    emitEvent(event) {
-      for (const listener of [...this.listeners]) {
-        listener(event);
-      }
-    },
   };
+  let nextClientId = 1;
+
+  function createClient() {
+    const client = {
+      clientId: `mock-client-${nextClientId}`,
+      startCalls: 0,
+      stopCalls: 0,
+      listeners: [],
+      async start() {
+        this.startCalls += 1;
+        totals.startCalls += 1;
+      },
+      async stop() {
+        this.stopCalls += 1;
+        totals.stopCalls += 1;
+      },
+      getStatus() {
+        return {
+          transportConnected: true,
+          lifecycle: 'started',
+          versionReceived: true,
+          initialized: true,
+          listening: true,
+          authenticated: true,
+          serverVersion: '3.4.0',
+          adapterFamily: 'zwjs-default',
+          reconnectAttempt: 0,
+          connectedAt: '2026-03-02T12:00:00.000Z',
+          lastMessageAt: '2026-03-02T12:00:05.000Z',
+        };
+      },
+      onEvent(listener) {
+        this.listeners.push(listener);
+        return () => {
+          const index = this.listeners.indexOf(listener);
+          if (index >= 0) this.listeners.splice(index, 1);
+        };
+      },
+      emitEvent(event) {
+        for (const listener of [...this.listeners]) {
+          listener(event);
+        }
+      },
+    };
+    nextClientId += 1;
+    createdClients.push(client);
+    return client;
+  }
 
   return {
-    mockClient,
+    get mockClient() {
+      return createdClients[0];
+    },
+    get latestClient() {
+      return createdClients[createdClients.length - 1];
+    },
+    createdClients,
+    totals,
     module: {
       ZWJS_CONNECTION_SETTINGS_KEY: 'zwjs_connection',
       ZWJS_COMMAND_NODE_SET_VALUE: 'node.set_value',
@@ -136,7 +158,7 @@ function createMockCoreModule() {
         warnings: [],
         clientConfig: { url: 'ws://127.0.0.1:3000', auth: undefined },
       }),
-      createZwjsClient: () => mockClient,
+      createZwjsClient: () => createClient(),
     },
   };
 }
@@ -335,26 +357,27 @@ test('app does not attempt zwjs connection when zwjs_connection.url is not confi
   const { app, coreMock } = loadAppClass([]);
   await app.onInit();
 
-  assert.equal(coreMock.mockClient.startCalls, 0);
+  assert.equal(coreMock.createdClients.length, 0);
+  assert.equal(coreMock.totals.startCalls, 0);
   assert.equal(app.getZwjsClient(), undefined);
 
   await app.onUninit();
-  assert.equal(coreMock.mockClient.stopCalls, 0);
+  assert.equal(coreMock.totals.stopCalls, 0);
 });
 
 test('app starts zwjs client after zwjs_connection.url is configured at runtime', async () => {
   const { app, coreMock } = loadAppClass([]);
   await app.onInit();
-  assert.equal(coreMock.mockClient.startCalls, 0);
+  assert.equal(coreMock.totals.startCalls, 0);
 
   app.homey.settings.set('zwjs_connection', { url: 'ws://127.0.0.1:3001' });
   await flushEventQueue();
 
-  assert.equal(coreMock.mockClient.startCalls, 1);
+  assert.equal(coreMock.totals.startCalls, 1);
   assert.ok(app.getZwjsClient());
 
   await app.onUninit();
-  assert.equal(coreMock.mockClient.stopCalls, 1);
+  assert.equal(coreMock.totals.stopCalls, 1);
 });
 
 test('app exposes a default bridge session seam and keeps client lifecycle scoped to it', async () => {
@@ -366,13 +389,138 @@ test('app exposes a default bridge session seam and keeps client lifecycle scope
   assert.ok(session);
   assert.equal(session.bridgeId, 'main');
   assert.equal(session.getZwjsClient(), app.getZwjsClient());
-  assert.equal(coreMock.mockClient.startCalls, 1);
+  assert.equal(coreMock.totals.startCalls, 1);
 
   await app.onUninit();
   const sessionAfterStop = app.getBridgeSession();
   assert.ok(sessionAfterStop);
   assert.equal(sessionAfterStop.getZwjsClient(), undefined);
-  assert.equal(coreMock.mockClient.stopCalls, 1);
+  assert.equal(coreMock.totals.stopCalls, 1);
+});
+
+test('app remains stable under repeated settings churn across compiled, curation, and zwjs connection updates', async () => {
+  const nodeRefreshCalls = [];
+  const bridgeRefreshCalls = [];
+  const nodeDevices = [
+    {
+      async onRuntimeMappingsRefresh(reason) {
+        nodeRefreshCalls.push(reason);
+      },
+    },
+  ];
+  const bridgeDevices = [
+    {
+      async onRuntimeDiagnosticsRefresh(reason) {
+        bridgeRefreshCalls.push(reason);
+      },
+    },
+  ];
+
+  const { app, coreMock } = loadAppClass(nodeDevices, bridgeDevices);
+  app.homey.settings.set('zwjs_connection', { url: 'ws://127.0.0.1:3001' });
+  await app.onInit();
+
+  const cycles = 3;
+  for (let index = 0; index < cycles; index += 1) {
+    app.homey.settings.set('compiled_profiles_file', `/tmp/compiled-${index}.json`);
+    await flushEventQueue();
+    app.homey.settings.set('curation.v1', {
+      schemaVersion: 'homey-curation/v1',
+      updatedAt: `2026-03-0${index + 1}T00:00:00.000Z`,
+      entries: {},
+    });
+    await flushEventQueue();
+    app.homey.settings.set('zwjs_connection', {
+      url: `ws://127.0.0.1:${3002 + index}`,
+    });
+    await flushEventQueue();
+  }
+
+  const expectedRefreshesPerDriver = 1 + cycles * 3;
+  assert.equal(nodeRefreshCalls.length, expectedRefreshesPerDriver);
+  assert.equal(bridgeRefreshCalls.length, expectedRefreshesPerDriver);
+  assert.equal(
+    nodeRefreshCalls.filter((reason) => reason === 'compiled-profiles-updated').length,
+    cycles,
+  );
+  assert.equal(nodeRefreshCalls.filter((reason) => reason === 'curation-updated').length, cycles);
+  assert.equal(
+    nodeRefreshCalls.filter((reason) => reason === 'zwjs-connection-updated').length,
+    cycles,
+  );
+  assert.equal(
+    bridgeRefreshCalls.filter((reason) => reason === 'compiled-profiles-updated').length,
+    cycles,
+  );
+  assert.equal(bridgeRefreshCalls.filter((reason) => reason === 'curation-updated').length, cycles);
+  assert.equal(
+    bridgeRefreshCalls.filter((reason) => reason === 'zwjs-connection-updated').length,
+    cycles,
+  );
+  assert.equal(coreMock.createdClients.length, 1 + cycles);
+  assert.equal(coreMock.totals.startCalls, 1 + cycles);
+  assert.equal(coreMock.totals.stopCalls, cycles);
+  assert.equal(app.getBridgeSession()?.getZwjsClient(), coreMock.latestClient);
+
+  const lifecycleErrors = app.errors.filter((entry) =>
+    /Failed to refresh|ZWJS lifecycle operation failed/.test(String(entry.message)),
+  );
+  assert.equal(lifecycleErrors.length, 0);
+
+  await app.onUninit();
+  assert.equal(coreMock.totals.stopCalls, 1 + cycles);
+});
+
+test('app ignores stale bridge-session client events after zwjs reconnect', async () => {
+  const nodeRefreshCalls = [];
+  const bridgeRefreshCalls = [];
+  const nodeDevices = [
+    {
+      getData: () => ({ bridgeId: 'main', nodeId: 5 }),
+      async onRuntimeMappingsRefresh(reason) {
+        nodeRefreshCalls.push(reason);
+      },
+    },
+  ];
+  const bridgeDevices = [
+    {
+      async onRuntimeDiagnosticsRefresh(reason) {
+        bridgeRefreshCalls.push(reason);
+      },
+    },
+  ];
+
+  const { app, coreMock } = loadAppClass(nodeDevices, bridgeDevices);
+  app.homey.settings.set('zwjs_connection', { url: 'ws://127.0.0.1:3001' });
+  await app.onInit();
+
+  const firstClient = coreMock.latestClient;
+  app.homey.settings.set('zwjs_connection', { url: 'ws://127.0.0.1:3002' });
+  await flushEventQueue();
+  const secondClient = coreMock.latestClient;
+  assert.notEqual(secondClient, firstClient);
+  assert.equal(app.getBridgeSession()?.getZwjsClient(), secondClient);
+
+  nodeRefreshCalls.length = 0;
+  bridgeRefreshCalls.length = 0;
+
+  firstClient.emitEvent({
+    type: 'zwjs.event.node.metadata-updated',
+    event: { nodeId: 5 },
+  });
+  await flushEventQueue();
+  assert.deepEqual(nodeRefreshCalls, []);
+  assert.deepEqual(bridgeRefreshCalls, []);
+
+  secondClient.emitEvent({
+    type: 'zwjs.event.node.metadata-updated',
+    event: { nodeId: 5 },
+  });
+  await flushEventQueue();
+  assert.deepEqual(nodeRefreshCalls, ['event:zwjs.event.node.metadata-updated:node-5']);
+  assert.deepEqual(bridgeRefreshCalls, ['event:zwjs.event.node.metadata-updated:node-5']);
+
+  await app.onUninit();
 });
 
 test('app performs targeted node runtime refresh from node lifecycle events', async () => {

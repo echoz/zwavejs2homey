@@ -22,6 +22,22 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## Recently Completed
 
+- Latest Phase 5 lifecycle-churn stability slice:
+  - expanded app lifecycle harness coverage for repeated settings churn cycles:
+    - `compiled_profiles_file` updates
+    - `curation.v1` updates
+    - `zwjs_connection` reconnect updates
+  - locked deterministic refresh behavior across cycles:
+    - node runtime refresh reasons remain stable (`compiled-profiles-updated`, `curation-updated`, `zwjs-connection-updated`)
+    - bridge diagnostics refresh reasons remain stable with matching counts
+  - locked bridge-session lifecycle parity under reconnect churn:
+    - start/stop counts remain balanced
+    - active session client always points at latest reconnect client
+  - added stale-client event protection test:
+    - post-reconnect events from prior client instances are ignored
+    - only active session client events can trigger runtime refresh
+  - added stale-client runtime guard in `app.ts` to enforce this behavior in production runtime
+
 - Latest Phase 5 runtime-mapping breadth hardening slice:
   - expanded node runtime coercion coverage for additional generic verticals:
     - numeric sensor path (`measure_luminance`)
