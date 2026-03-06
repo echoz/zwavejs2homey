@@ -72,6 +72,24 @@ test('client getRecommendationActionQueue encodes includeNoAction in query', asy
   });
 });
 
+test('client getRuntimeSupportBundle encodes query options', async () => {
+  const homeyApi = createCallbackHomeyApi(({ callback }) => {
+    callback(null, createEnvelope({ kind: 'support-bundle' }));
+  });
+  const client = createRuntimeApiClient(homeyApi);
+
+  const result = await client.getRuntimeSupportBundle({
+    homeyDeviceId: 'main:8',
+    includeNoAction: false,
+  });
+  assert.equal(result.kind, 'support-bundle');
+  assert.deepEqual(homeyApi.calls[0], {
+    method: 'GET',
+    uri: '/runtime/support-bundle?homeyDeviceId=main%3A8&includeNoAction=false',
+    body: undefined,
+  });
+});
+
 test('client executeRecommendationAction validates required homeyDeviceId', async () => {
   const homeyApi = createCallbackHomeyApi(() => {
     throw new Error('should-not-call-homey-api');

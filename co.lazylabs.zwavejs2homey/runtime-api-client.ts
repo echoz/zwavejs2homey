@@ -47,6 +47,10 @@ interface HomeyApiFacade {
 export interface RuntimeApiClient {
   RuntimeApiClientError: typeof RuntimeApiClientError;
   getRuntimeDiagnostics: (options?: { homeyDeviceId?: unknown }) => Promise<unknown>;
+  getRuntimeSupportBundle: (options?: {
+    homeyDeviceId?: unknown;
+    includeNoAction?: unknown;
+  }) => Promise<unknown>;
   getRecommendationActionQueue: (options?: {
     homeyDeviceId?: unknown;
     includeNoAction?: unknown;
@@ -205,6 +209,14 @@ export function createRuntimeApiClient(homeyApi: unknown): RuntimeApiClient {
       const homeyDeviceId = normalizeOptionalString(options.homeyDeviceId, 'homeyDeviceId');
       const query = toQueryString({ homeyDeviceId });
       const response = await invokeHomeyApi(homeyApi, 'GET', `/runtime/diagnostics${query}`);
+      return parseEnvelope(response);
+    },
+
+    async getRuntimeSupportBundle(options = {}) {
+      const homeyDeviceId = normalizeOptionalString(options.homeyDeviceId, 'homeyDeviceId');
+      const includeNoAction = normalizeOptionalBoolean(options.includeNoAction, 'includeNoAction');
+      const query = toQueryString({ homeyDeviceId, includeNoAction });
+      const response = await invokeHomeyApi(homeyApi, 'GET', `/runtime/support-bundle${query}`);
       return parseEnvelope(response);
     },
 

@@ -149,6 +149,18 @@ module.exports = {
             });
         });
     },
+    async getRuntimeSupportBundle({ homey, query }) {
+        return executeRoute(async () => {
+            const app = getRuntimeApp(homey);
+            const params = normalizeObject(query, 'query');
+            const homeyDeviceId = normalizeOptionalString(params.homeyDeviceId, 'homeyDeviceId');
+            const includeNoAction = normalizeOptionalBoolean(params.includeNoAction, 'includeNoAction');
+            return app.getRuntimeSupportBundle({
+                homeyDeviceId,
+                includeNoAction: includeNoAction === true,
+            });
+        });
+    },
     async getRecommendationActionQueue({ homey, query }) {
         return executeRoute(async () => {
             const app = getRuntimeApp(homey);

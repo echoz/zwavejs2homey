@@ -42,11 +42,12 @@ test('buildSmokeRouteRequests covers all runtime routes', async () => {
     smokeDeviceId: '__smoke_invalid__',
   });
 
-  assert.equal(requests.length, 4);
+  assert.equal(requests.length, 5);
   assert.deepEqual(
     requests.map((entry) => entry.path),
     [
       '/runtime/diagnostics',
+      '/runtime/support-bundle',
       '/runtime/recommendations',
       '/runtime/recommendations/execute',
       '/runtime/recommendations/execute-batch',
@@ -54,7 +55,7 @@ test('buildSmokeRouteRequests covers all runtime routes', async () => {
   );
   assert.equal(requests[0].query.homeyDeviceId, 'main:8');
   assert.equal(requests[1].query.includeNoAction, true);
-  assert.equal(requests[2].body.homeyDeviceId, '__smoke_invalid__');
+  assert.equal(requests[3].body.homeyDeviceId, '__smoke_invalid__');
 });
 
 test('runHomeyRuntimeApiSmoke succeeds when all route envelopes validate', async () => {
@@ -90,9 +91,10 @@ test('runHomeyRuntimeApiSmoke succeeds when all route envelopes validate', async
   );
 
   assert.equal(summary.failed, 0);
-  assert.equal(summary.total, 4);
+  assert.equal(summary.total, 5);
   assert.deepEqual(calls, [
     '/runtime/diagnostics',
+    '/runtime/support-bundle',
     '/runtime/recommendations',
     '/runtime/recommendations/execute',
     '/runtime/recommendations/execute-batch',
@@ -129,7 +131,7 @@ test('runHomeyRuntimeApiSmoke fails when envelope schema is invalid', async () =
           }),
         },
       ),
-    /Runtime API smoke failed \(4\/4\)/,
+    /Runtime API smoke failed \(5\/5\)/,
   );
   assert.equal(logs.length, 1);
   assert.match(logs[0], /FAIL/);

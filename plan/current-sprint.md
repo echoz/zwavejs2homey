@@ -26,14 +26,24 @@ Kick off Phase 6 Reliability + UX delivery:
     - `tools/homey-support-bundle.mjs`
     - npm alias: `npm run homey:support-bundle -- ...`
   - bundle now captures:
-    - `GET /runtime/diagnostics`
-    - `GET /runtime/recommendations`
+    - `GET /runtime/support-bundle`
   - added share-safe redaction mode (`--redact-share`) for sensitive text fields
   - added tool regression coverage:
     - `packages/core/test/homey-support-bundle-tool.test.ts`
   - documented usage in:
     - `README.md`
     - `docs/homey-api-contract.md`
+
+- Phase 6 runtime support-bundle API slice:
+  - added canonical read-only runtime route:
+    - `GET /runtime/support-bundle`
+  - added app runtime aggregator:
+    - `getRuntimeSupportBundle({ homeyDeviceId?, includeNoAction? })`
+  - updated API client helper and smoke tool route coverage to include the support-bundle route
+  - expanded adapter/runtime test coverage:
+    - API route normalization (`test/api-routes.test.ts`)
+    - app bundle aggregation behavior (`test/app-runtime-refresh.test.ts`)
+    - runtime API client method (`test/runtime-api-client.test.ts`)
 
 - Docs/plan sync checkpoint (2026-03-06):
   - aligned phase status wording across `README.md`, `docs/architecture.md`, `plan/roadmap.md`, and sprint next-tasks

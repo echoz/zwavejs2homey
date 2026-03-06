@@ -160,6 +160,10 @@ function normalizeOptionalAction(value: unknown): RecommendationActionSelection 
 
 interface RuntimeApp {
   getNodeRuntimeDiagnostics: (options: { homeyDeviceId?: string }) => Promise<unknown>;
+  getRuntimeSupportBundle: (options: {
+    homeyDeviceId?: string;
+    includeNoAction?: boolean;
+  }) => Promise<unknown>;
   getRecommendationActionQueue: (options: {
     homeyDeviceId?: string;
     includeNoAction: boolean;
@@ -190,6 +194,19 @@ module.exports = {
       const homeyDeviceId = normalizeOptionalString(params.homeyDeviceId, 'homeyDeviceId');
       return app.getNodeRuntimeDiagnostics({
         homeyDeviceId,
+      });
+    });
+  },
+
+  async getRuntimeSupportBundle({ homey, query }: { homey: unknown; query: unknown }) {
+    return executeRoute(async () => {
+      const app = getRuntimeApp(homey);
+      const params = normalizeObject(query, 'query');
+      const homeyDeviceId = normalizeOptionalString(params.homeyDeviceId, 'homeyDeviceId');
+      const includeNoAction = normalizeOptionalBoolean(params.includeNoAction, 'includeNoAction');
+      return app.getRuntimeSupportBundle({
+        homeyDeviceId,
+        includeNoAction: includeNoAction === true,
       });
     });
   },

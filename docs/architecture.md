@@ -167,6 +167,7 @@ Partially complete / next:
   - `executeRecommendationActions(...)`
 - Homey app API route surface now exposes diagnostics/recommendation orchestration endpoints:
   - `GET /runtime/diagnostics`
+  - `GET /runtime/support-bundle`
   - `GET /runtime/recommendations`
   - `POST /runtime/recommendations/execute`
   - `POST /runtime/recommendations/execute-batch`

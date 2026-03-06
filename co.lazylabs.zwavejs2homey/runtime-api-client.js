@@ -136,6 +136,13 @@ function createRuntimeApiClient(homeyApi) {
             const response = await invokeHomeyApi(homeyApi, 'GET', `/runtime/diagnostics${query}`);
             return parseEnvelope(response);
         },
+        async getRuntimeSupportBundle(options = {}) {
+            const homeyDeviceId = normalizeOptionalString(options.homeyDeviceId, 'homeyDeviceId');
+            const includeNoAction = normalizeOptionalBoolean(options.includeNoAction, 'includeNoAction');
+            const query = toQueryString({ homeyDeviceId, includeNoAction });
+            const response = await invokeHomeyApi(homeyApi, 'GET', `/runtime/support-bundle${query}`);
+            return parseEnvelope(response);
+        },
         async getRecommendationActionQueue(options = {}) {
             const homeyDeviceId = normalizeOptionalString(options.homeyDeviceId, 'homeyDeviceId');
             const includeNoAction = normalizeOptionalBoolean(options.includeNoAction, 'includeNoAction');

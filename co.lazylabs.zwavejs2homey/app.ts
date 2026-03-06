@@ -1258,6 +1258,70 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
     };
   }
 
+  async getRuntimeSupportBundle(options?: {
+    homeyDeviceId?: string;
+    includeNoAction?: boolean;
+  }): Promise<{
+    schemaVersion: 'homey-runtime-support-bundle/v1';
+    generatedAt: string;
+    filters: {
+      homeyDeviceId: string | null;
+      includeNoAction: boolean;
+    };
+    summary: {
+      nodeCount: number;
+      recommendationTotal: number;
+      actionableRecommendations: number;
+      zwjsConnected: boolean;
+      compiledProfilesLoaded: boolean;
+      curationLoaded: boolean;
+    };
+    diagnostics: {
+      generatedAt: string;
+      bridgeId: string;
+      zwjs: ZwjsDiagnosticsStatusV1;
+      compiledProfiles: CompiledProfilesRuntimeStatus;
+      curation: HomeyCurationRuntimeStatusV1;
+      nodes: NodeRuntimeDiagnosticsEntry[];
+    };
+    recommendations: {
+      generatedAt: string;
+      total: number;
+      actionable: number;
+      items: RecommendationActionQueueItemV1[];
+    };
+  }> {
+    const homeyDeviceId = Zwavejs2HomeyApp.toStringOrNull(options?.homeyDeviceId);
+    const includeNoAction = options?.includeNoAction === true;
+
+    const diagnostics = await this.getNodeRuntimeDiagnostics({
+      homeyDeviceId: homeyDeviceId ?? undefined,
+    });
+    const recommendations = await this.getRecommendationActionQueue({
+      homeyDeviceId: homeyDeviceId ?? undefined,
+      includeNoAction,
+    });
+
+    return {
+      schemaVersion: 'homey-runtime-support-bundle/v1',
+      generatedAt: new Date().toISOString(),
+      filters: {
+        homeyDeviceId,
+        includeNoAction,
+      },
+      summary: {
+        nodeCount: diagnostics.nodes.length,
+        recommendationTotal: recommendations.total,
+        actionableRecommendations: recommendations.actionable,
+        zwjsConnected: diagnostics.zwjs.transportConnected === true,
+        compiledProfilesLoaded: diagnostics.compiledProfiles.loaded === true,
+        curationLoaded: diagnostics.curation.loaded === true,
+      },
+      diagnostics,
+      recommendations,
+    };
+  }
+
   async executeRecommendationAction(options: {
     homeyDeviceId: string;
     action?: RecommendationActionSelectionV1;

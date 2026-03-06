@@ -62,33 +62,18 @@ test('runHomeySupportBundle produces summary with route outcomes', async () => {
     { log: (line) => logs.push(line) },
     {
       nowIso: () => '2026-03-06T00:00:00.000Z',
-      invokeRouteImpl: async (_command, request) => {
-        if (request.key === 'diagnostics') {
-          return {
-            url: 'http://example.test/runtime/diagnostics',
-            status: 200,
-            envelope: {
-              schemaVersion: 'zwjs2homey-api/v1',
-              ok: true,
-              data: {
-                nodes: [{ homeyDeviceId: 'main:8' }, { homeyDeviceId: 'main:9' }],
-              },
-              error: null,
-            },
-          };
-        }
+      invokeRouteImpl: async () => {
         return {
-          url: 'http://example.test/runtime/recommendations',
+          url: 'http://example.test/runtime/support-bundle',
           status: 200,
           envelope: {
             schemaVersion: 'zwjs2homey-api/v1',
             ok: true,
             data: {
-              actionable: 1,
-              items: [
-                { homeyDeviceId: 'main:8', action: 'backfill-marker' },
-                { homeyDeviceId: 'main:9', action: 'none' },
-              ],
+              summary: {
+                nodeCount: 2,
+                actionableRecommendations: 1,
+              },
             },
             error: null,
           },
@@ -99,8 +84,8 @@ test('runHomeySupportBundle produces summary with route outcomes', async () => {
 
   assert.equal(bundle.schemaVersion, 'zwjs2homey-support-bundle/v1');
   assert.equal(bundle.generatedAt, '2026-03-06T00:00:00.000Z');
-  assert.equal(bundle.summary.routeCount, 2);
-  assert.equal(bundle.summary.routesPassed, 2);
+  assert.equal(bundle.summary.routeCount, 1);
+  assert.equal(bundle.summary.routesPassed, 1);
   assert.equal(bundle.summary.routesFailed, 0);
   assert.equal(bundle.summary.diagnosticsNodeCount, 2);
   assert.equal(bundle.summary.actionableRecommendations, 1);
@@ -149,9 +134,9 @@ test('runHomeySupportBundle supports output-file write and redaction mode', asyn
 
   assert.equal(bundle.source.baseUrl, '<redacted>');
   assert.equal(bundle.source.homeyDeviceId, '<redacted>');
-  assert.equal(bundle.routes.diagnostics.data.homeyDeviceId, '<redacted>');
-  assert.equal(bundle.routes.diagnostics.data.name, '<redacted>');
-  assert.equal(bundle.routes.diagnostics.data.location, '<redacted>');
+  assert.equal(bundle.routes.supportBundle.data.homeyDeviceId, '<redacted>');
+  assert.equal(bundle.routes.supportBundle.data.name, '<redacted>');
+  assert.equal(bundle.routes.supportBundle.data.location, '<redacted>');
   assert.equal(writes.length, 1);
   assert.equal(writes[0].filePath, '/tmp/support.json');
   assert.equal(writes[0].encoding, 'utf8');

@@ -38,6 +38,10 @@ Error responses keep the same shape:
 - `GET /runtime/diagnostics`
   - query:
     - `homeyDeviceId` (optional string)
+- `GET /runtime/support-bundle`
+  - query:
+    - `homeyDeviceId` (optional string)
+    - `includeNoAction` (optional boolean-like string: `true|false|1|0|yes|no`)
 - `GET /runtime/recommendations`
   - query:
     - `homeyDeviceId` (optional string)
@@ -63,6 +67,7 @@ Use `co.lazylabs.zwavejs2homey/runtime-api-client.js`:
   - expects `homeyApi.api(method, uri, body?, callback)` facade
 - returned methods:
   - `getRuntimeDiagnostics(options?)`
+  - `getRuntimeSupportBundle(options?)`
   - `getRecommendationActionQueue(options?)`
   - `executeRecommendationAction(options)`
   - `executeRecommendationActions(options?)`
@@ -94,7 +99,7 @@ npm run homey:runtime-api:smoke -- \
 
 Notes:
 
-- It checks all four runtime routes.
+- It checks all runtime routes.
 - It uses `--smoke-device-id` (default `__smoke_invalid__`) for execute-route calls to avoid side effects by default.
 
 ## Support Bundle Command
@@ -114,6 +119,5 @@ Notes:
 
 - This command is read-only.
 - It calls:
-  - `GET /runtime/diagnostics`
-  - `GET /runtime/recommendations`
+  - `GET /runtime/support-bundle`
 - `--redact-share` redacts sensitive text fields for safer external sharing.

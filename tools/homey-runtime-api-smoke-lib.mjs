@@ -151,6 +151,12 @@ export function buildSmokeRouteRequests(command) {
       query: readQuery,
     },
     {
+      key: 'getRuntimeSupportBundle',
+      method: 'GET',
+      path: '/runtime/support-bundle',
+      query: recommendationsQuery,
+    },
+    {
       key: 'getRecommendationActionQueue',
       method: 'GET',
       path: '/runtime/recommendations',

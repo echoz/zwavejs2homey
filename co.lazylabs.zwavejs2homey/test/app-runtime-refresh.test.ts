@@ -1156,6 +1156,47 @@ test('app recommendation action queue classifies backfill/adopt/no-action nodes'
   await app.onUninit();
 });
 
+test('app runtime support bundle aggregates diagnostics and recommendations', async () => {
+  const nodeDevices = [
+    createNodeDiagnosticsDevice({
+      id: 'main:12',
+      nodeId: 12,
+      profileResolution: {
+        profileId: 'profile-main-12',
+        recommendationBackfillNeeded: true,
+        recommendationReason: 'marker-missing-backfill',
+        recommendationProjectionVersion: '1',
+        currentBaselineHash: 'hash-12',
+        mappingDiagnostics: [],
+      },
+    }),
+    createNodeDiagnosticsDevice({
+      id: 'main:5',
+      nodeId: 5,
+      profileResolution: {
+        profileId: 'profile-main-5',
+        recommendationAvailable: false,
+        recommendationBackfillNeeded: false,
+        recommendationReason: 'baseline-hash-unchanged',
+        mappingDiagnostics: [],
+      },
+    }),
+  ];
+
+  const { app } = loadAppClass(nodeDevices);
+  await app.onInit();
+  const bundle = await app.getRuntimeSupportBundle({ includeNoAction: true });
+  assert.equal(bundle.schemaVersion, 'homey-runtime-support-bundle/v1');
+  assert.equal(bundle.summary.nodeCount, 2);
+  assert.equal(bundle.summary.recommendationTotal, 2);
+  assert.equal(bundle.summary.actionableRecommendations, 1);
+  assert.equal(bundle.summary.compiledProfilesLoaded, true);
+  assert.equal(bundle.summary.curationLoaded, true);
+  assert.equal(bundle.diagnostics.nodes.length, 2);
+  assert.equal(bundle.recommendations.items.length, 2);
+  await app.onUninit();
+});
+
 test('app can batch-backfill missing baseline markers in one settings update', async () => {
   const nodeDevices = [
     createNodeDiagnosticsDevice({

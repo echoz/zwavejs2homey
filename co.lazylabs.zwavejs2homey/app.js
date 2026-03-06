@@ -910,6 +910,35 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
                 items,
             };
         }
+        async getRuntimeSupportBundle(options) {
+            const homeyDeviceId = _a.toStringOrNull(options?.homeyDeviceId);
+            const includeNoAction = options?.includeNoAction === true;
+            const diagnostics = await this.getNodeRuntimeDiagnostics({
+                homeyDeviceId: homeyDeviceId ?? undefined,
+            });
+            const recommendations = await this.getRecommendationActionQueue({
+                homeyDeviceId: homeyDeviceId ?? undefined,
+                includeNoAction,
+            });
+            return {
+                schemaVersion: 'homey-runtime-support-bundle/v1',
+                generatedAt: new Date().toISOString(),
+                filters: {
+                    homeyDeviceId,
+                    includeNoAction,
+                },
+                summary: {
+                    nodeCount: diagnostics.nodes.length,
+                    recommendationTotal: recommendations.total,
+                    actionableRecommendations: recommendations.actionable,
+                    zwjsConnected: diagnostics.zwjs.transportConnected === true,
+                    compiledProfilesLoaded: diagnostics.compiledProfiles.loaded === true,
+                    curationLoaded: diagnostics.curation.loaded === true,
+                },
+                diagnostics,
+                recommendations,
+            };
+        }
         async executeRecommendationAction(options) {
             const requestedAction = _a.toRecommendationActionSelection(options.action);
             if (!requestedAction) {

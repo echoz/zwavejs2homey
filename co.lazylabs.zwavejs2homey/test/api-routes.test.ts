@@ -7,6 +7,7 @@ const api = require(path.resolve(__dirname, '../.homeybuild/api.js'));
 function createHomeyAppStub(overrides = {}) {
   const calls = {
     diagnostics: [],
+    supportBundle: [],
     queue: [],
     action: [],
     actions: [],
@@ -16,6 +17,10 @@ function createHomeyAppStub(overrides = {}) {
     async getNodeRuntimeDiagnostics(options) {
       calls.diagnostics.push(options);
       return { kind: 'diagnostics' };
+    },
+    async getRuntimeSupportBundle(options) {
+      calls.supportBundle.push(options);
+      return { kind: 'support-bundle' };
     },
     async getRecommendationActionQueue(options) {
       calls.queue.push(options);
@@ -71,6 +76,17 @@ test('api getRecommendationActionQueue parses includeNoAction values', async () 
   assertSuccessEnvelope(result);
   assert.equal(result.data.kind, 'queue');
   assert.deepEqual(calls.queue, [{ homeyDeviceId: 'main:8', includeNoAction: true }]);
+});
+
+test('api getRuntimeSupportBundle parses filter query options', async () => {
+  const { homey, calls } = createHomeyAppStub();
+  const result = await api.getRuntimeSupportBundle({
+    homey,
+    query: { includeNoAction: '1', homeyDeviceId: ' main:8 ' },
+  });
+  assertSuccessEnvelope(result);
+  assert.equal(result.data.kind, 'support-bundle');
+  assert.deepEqual(calls.supportBundle, [{ homeyDeviceId: 'main:8', includeNoAction: true }]);
 });
 
 test('api executeRecommendationAction returns structured error when homeyDeviceId missing', async () => {

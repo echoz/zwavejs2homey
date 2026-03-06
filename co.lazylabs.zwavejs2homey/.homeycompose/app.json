@@ -18,6 +18,10 @@
       "method": "GET",
       "path": "/runtime/diagnostics"
     },
+    "getRuntimeSupportBundle": {
+      "method": "GET",
+      "path": "/runtime/support-bundle"
+    },
     "getRecommendationActionQueue": {
       "method": "GET",
       "path": "/runtime/recommendations"

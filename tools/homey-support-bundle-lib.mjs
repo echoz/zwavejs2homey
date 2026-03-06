@@ -26,7 +26,7 @@ export function getUsageText() {
     '',
     'Options:',
     '  --token <token>           Bearer token for Authorization header',
-    '  --homey-device-id <id>    Optional node filter for diagnostics/recommendations',
+    '  --homey-device-id <id>    Optional node filter for support-bundle snapshot',
     '  --include-no-action <b>   Include non-actionable recommendations (default: true)',
     `  --timeout-ms <n>          Request timeout in milliseconds (default: ${DEFAULT_TIMEOUT_MS})`,
     '  --format <json|json-pretty|markdown>',
@@ -36,7 +36,7 @@ export function getUsageText() {
     '  --help                    Show this help',
     '',
     'Notes:',
-    '  - This command is read-only; it only calls runtime diagnostics/recommendation routes.',
+    '  - This command is read-only; it calls the runtime support-bundle route.',
     '  - No mutation routes are invoked.',
   ].join('\n');
 }
@@ -237,28 +237,19 @@ export async function invokeRuntimeRoute(command, request) {
 }
 
 export function buildSupportBundleRequests(command) {
-  const diagnosticsQuery = {};
-  if (command.homeyDeviceId) {
-    diagnosticsQuery.homeyDeviceId = command.homeyDeviceId;
-  }
-
-  const recommendationsQuery = {
-    ...diagnosticsQuery,
+  const query = {
     includeNoAction: command.includeNoAction,
   };
+  if (command.homeyDeviceId) {
+    query.homeyDeviceId = command.homeyDeviceId;
+  }
 
   return [
     {
-      key: 'diagnostics',
+      key: 'supportBundle',
       method: 'GET',
-      path: '/runtime/diagnostics',
-      query: diagnosticsQuery,
-    },
-    {
-      key: 'recommendations',
-      method: 'GET',
-      path: '/runtime/recommendations',
-      query: recommendationsQuery,
+      path: '/runtime/support-bundle',
+      query,
     },
   ];
 }
@@ -313,22 +304,32 @@ function toBundleRoutes(routeResults) {
   return byKey;
 }
 
-function getDiagnosticsNodeCount(diagnosticsRoute) {
-  const nodes = diagnosticsRoute?.data?.nodes;
-  return Array.isArray(nodes) ? nodes.length : null;
+function getDiagnosticsNodeCount(route) {
+  if (
+    route?.data &&
+    typeof route.data === 'object' &&
+    route.data.summary &&
+    typeof route.data.summary === 'object' &&
+    typeof route.data.summary.nodeCount === 'number' &&
+    Number.isInteger(route.data.summary.nodeCount)
+  ) {
+    return route.data.summary.nodeCount;
+  }
+  return null;
 }
 
-function getActionableCount(recommendationsRoute) {
+function getActionableCount(route) {
   if (
-    recommendationsRoute?.data &&
-    typeof recommendationsRoute.data.actionable === 'number' &&
-    Number.isInteger(recommendationsRoute.data.actionable)
+    route?.data &&
+    typeof route.data === 'object' &&
+    route.data.summary &&
+    typeof route.data.summary === 'object' &&
+    typeof route.data.summary.actionableRecommendations === 'number' &&
+    Number.isInteger(route.data.summary.actionableRecommendations)
   ) {
-    return recommendationsRoute.data.actionable;
+    return route.data.summary.actionableRecommendations;
   }
-  const items = recommendationsRoute?.data?.items;
-  if (!Array.isArray(items)) return null;
-  return items.filter((item) => item && item.action !== 'none').length;
+  return null;
 }
 
 function redactValue(value, key) {
@@ -436,8 +437,8 @@ export async function runHomeySupportBundle(command, logger = console, deps = {}
       routeCount,
       routesPassed,
       routesFailed,
-      diagnosticsNodeCount: getDiagnosticsNodeCount(routes.diagnostics),
-      actionableRecommendations: getActionableCount(routes.recommendations),
+      diagnosticsNodeCount: getDiagnosticsNodeCount(routes.supportBundle),
+      actionableRecommendations: getActionableCount(routes.supportBundle),
     },
     routes,
   };
