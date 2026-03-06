@@ -97,10 +97,6 @@ interface RepairSessionLike {
   setHandler: (event: string, handler: (payload?: unknown) => Promise<unknown>) => void;
 }
 
-interface PairSessionLike {
-  setHandler: (event: string, handler: (payload?: unknown) => Promise<unknown>) => void;
-}
-
 interface ImportSummaryNodeEntry {
   homeyDeviceId: string | null;
   bridgeId: string;
@@ -163,12 +159,6 @@ module.exports = class NodeDriver extends Homey.Driver {
           }))
         : [],
     });
-  }
-
-  async onPair(session: PairSessionLike) {
-    this.log('Node pair session started');
-    session.setHandler('list_devices', async () => this.onPairListDevices());
-    this.log('Node pair handler registered', { event: 'list_devices' });
   }
 
   private resolveBridgeRuntime(app: AppRuntimeAccess): {

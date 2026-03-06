@@ -26,11 +26,6 @@ module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
                     : [],
             });
         }
-        async onPair(session) {
-            this.log('Node pair session started');
-            session.setHandler('list_devices', async () => this.onPairListDevices());
-            this.log('Node pair handler registered', { event: 'list_devices' });
-        }
         resolveBridgeRuntime(app) {
             const session = app.getBridgeSession?.(pairing_1.ZWJS_DEFAULT_BRIDGE_ID);
             const bridgeId = this.normalizeStringOrNull(session?.bridgeId) ??
