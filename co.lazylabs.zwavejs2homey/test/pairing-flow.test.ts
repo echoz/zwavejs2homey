@@ -52,7 +52,7 @@ test('bridge and node drivers expose a list_devices -> add_devices pair flow', (
   const node = requireJson('../drivers/node/driver.compose.json');
 
   assertListToAddFlow(bridge.pair, 'bridge', {
-    expectSingular: true,
+    expectSingular: false,
     expectAddNext: 'next_steps',
     expectCustomView: 'next_steps',
   });
