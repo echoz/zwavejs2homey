@@ -148,12 +148,32 @@ module.exports = class NodeDriver extends Homey.Driver {
 
   async onPair(session: PairSessionLike) {
     this.log('Node pair session started');
-    session.setHandler('list_devices', async () => {
-      return await this.onPairListDevices();
-    });
-    session.setHandler('import_summary:get_status', async () => {
-      return this.loadImportSummaryStatus();
-    });
+    try {
+      session.setHandler('list_devices', async () => {
+        return await this.onPairListDevices();
+      });
+      this.log('Node pair handler registered', { event: 'list_devices' });
+    } catch (error) {
+      this.error('Failed to register node pair handler', {
+        event: 'list_devices',
+        error,
+      });
+      throw error;
+    }
+
+    try {
+      session.setHandler('import_summary:get_status', async () => {
+        return this.loadImportSummaryStatus();
+      });
+      this.log('Node pair handler registered', { event: 'import_summary:get_status' });
+    } catch (error) {
+      this.error('Failed to register node pair handler; import summary will be unavailable', {
+        event: 'import_summary:get_status',
+        error,
+      });
+    }
+
+    this.log('Node pair session ready');
   }
 
   private resolveBridgeRuntime(app: AppRuntimeAccess): {

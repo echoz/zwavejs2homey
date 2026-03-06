@@ -188,12 +188,32 @@ module.exports = class BridgeDriver extends Homey.Driver {
   }
 
   async onPair(session: PairSessionLike) {
-    session.setHandler('list_devices', async () => {
-      return this.onPairListDevices();
-    });
-    session.setHandler('next_steps:get_status', async () => {
-      return this.loadNextStepsStatus();
-    });
+    try {
+      session.setHandler('list_devices', async () => {
+        return this.onPairListDevices();
+      });
+      this.log('Bridge pair handler registered', { event: 'list_devices' });
+    } catch (error) {
+      this.error('Failed to register bridge pair handler', {
+        event: 'list_devices',
+        error,
+      });
+      throw error;
+    }
+
+    try {
+      session.setHandler('next_steps:get_status', async () => {
+        return this.loadNextStepsStatus();
+      });
+      this.log('Bridge pair handler registered', { event: 'next_steps:get_status' });
+    } catch (error) {
+      this.error('Failed to register bridge pair handler; next steps panel will be unavailable', {
+        event: 'next_steps:get_status',
+        error,
+      });
+    }
+
+    this.log('Bridge pair session ready');
   }
 
   private resolveBridgeRuntime(app: AppRuntimeAccess): {
