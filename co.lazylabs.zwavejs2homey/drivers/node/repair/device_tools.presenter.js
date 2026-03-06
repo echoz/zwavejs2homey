@@ -1,5 +1,3 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
 const recommendationReasonFallbackLabels = {
     'baseline-hash-changed': 'Compiled profile changed for this device.',
     'marker-missing-backfill': 'Profile reference metadata is missing for this curated device.',

@@ -1,5 +1,3 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
 (function attachImportSummaryPresenter(root, factory) {
     const presenter = factory();
     if (typeof module !== 'undefined' && module.exports) {

@@ -1,5 +1,3 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
 function toErrorMessage(error) {
     if (typeof error === 'string' && error.trim().length > 0)
         return error;

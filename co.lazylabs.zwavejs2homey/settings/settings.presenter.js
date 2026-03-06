@@ -1,5 +1,3 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
 (function attachSettingsPresenter(root, factory) {
     const presenter = factory();
     if (typeof module !== 'undefined' && module.exports) {
