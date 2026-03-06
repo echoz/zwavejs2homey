@@ -186,7 +186,18 @@ function runPairPresenterContract(name, presenter) {
         transportConnected: true,
         lifecycle: 'connected',
         serverVersion: '3.4.0',
+        adapterFamily: 'zwjs-default',
+        reconnectAttempt: 1,
+        versionReceived: true,
+        initialized: true,
+        listening: true,
+        authenticated: null,
       },
+      actionNeededNodes: 1,
+      backfillNeededNodes: 0,
+      compiledOnlyNodes: 1,
+      overrideNodes: 0,
+      unresolvedNodes: 0,
       importedNodeDetails: [
         {
           bridgeId: 'main',
@@ -199,6 +210,8 @@ function runPairPresenterContract(name, presenter) {
           profileHomeyClass: 'light',
           profileId: 'product-triple:29:12801:1',
           profileMatch: 'product-triple',
+          profileSource: 'Compiled profile only',
+          ruleMatch: 'Project rule match',
           recommendationAction: 'adopt-recommended-baseline',
           recommendationReason: 'compiled profile changed',
         },
@@ -215,10 +228,19 @@ function runPairPresenterContract(name, presenter) {
       label: 'Connected',
       tone: 'ok',
     });
+    if (name === 'bridge next_steps') {
+      assert.equal(statusRowValue(viewModel, 'Action Needed'), '1');
+      assert.equal(statusRowValue(viewModel, 'Compiled Only'), '1');
+      assert.equal(statusRowValue(viewModel, 'Reconnect Attempts'), '1');
+    }
 
     assert.equal(viewModel.importedRows.length, 1);
     assert.equal(viewModel.importedRows[0].nodeId, '12');
     assert.equal(viewModel.importedRows[0].profileClass, 'light');
+    if (name === 'bridge next_steps') {
+      assert.equal(viewModel.importedRows[0].profileSource, 'Compiled profile only');
+      assert.equal(viewModel.importedRows[0].ruleMatch, 'Project rule match');
+    }
     assert.equal(viewModel.importedRows[0].recommendation.label, 'Adopt Update');
     assert.equal(viewModel.importedRows[0].recommendation.tone, 'danger');
     assert.equal(viewModel.hasImportedRows, true);

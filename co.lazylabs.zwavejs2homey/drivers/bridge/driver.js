@@ -53,11 +53,29 @@ module.exports = class BridgeDriver extends homey_1.default.Driver {
             adapterFamily: typeof status?.adapterFamily === 'string' && status.adapterFamily.trim().length > 0
                 ? status.adapterFamily.trim()
                 : null,
+            versionReceived: typeof status?.versionReceived === 'boolean' ? status.versionReceived : null,
+            initialized: typeof status?.initialized === 'boolean' ? status.initialized : null,
+            listening: typeof status?.listening === 'boolean' ? status.listening : null,
+            authenticated: typeof status?.authenticated === 'boolean' ? status.authenticated : null,
+            reconnectAttempt: typeof status?.reconnectAttempt === 'number' && Number.isFinite(status.reconnectAttempt)
+                ? Math.max(0, Math.trunc(status.reconnectAttempt))
+                : null,
+            connectedAt: typeof status?.connectedAt === 'string' && status.connectedAt.trim().length > 0
+                ? status.connectedAt.trim()
+                : null,
+            lastMessageAt: typeof status?.lastMessageAt === 'string' && status.lastMessageAt.trim().length > 0
+                ? status.lastMessageAt.trim()
+                : null,
         };
         let discoveredNodes = null;
         const discoveredNodeNames = new Map();
         let importedNodes = null;
         let importedNodeDetails = [];
+        let actionNeededNodes = 0;
+        let backfillNeededNodes = 0;
+        let compiledOnlyNodes = 0;
+        let overrideNodes = 0;
+        let unresolvedNodes = 0;
         let bridgeId = runtime.bridgeId;
         const warnings = [];
         if (client?.getNodeList) {
@@ -117,6 +135,12 @@ module.exports = class BridgeDriver extends homey_1.default.Driver {
                             profileHomeyClass: this.normalizeStringOrNull(node.profile?.homeyClass),
                             profileId: this.normalizeStringOrNull(node.profile?.profileId),
                             profileMatch: this.toProfileMatchSummary(node.profile),
+                            ruleMatch: node.profileAttribution && typeof node.profileAttribution === 'object'
+                                ? this.normalizeStringOrNull(node.profileAttribution.confidenceLabel)
+                                : null,
+                            profileSource: node.profileAttribution && typeof node.profileAttribution === 'object'
+                                ? this.normalizeStringOrNull(node.profileAttribution.sourceLabel)
+                                : null,
                             recommendationAction: this.toRecommendationAction(node.recommendation),
                             recommendationReason: this.normalizeStringOrNull(node.recommendation?.reasonLabel),
                         };
@@ -133,6 +157,45 @@ module.exports = class BridgeDriver extends homey_1.default.Driver {
                         const rightId = right.homeyDeviceId ?? '';
                         return leftId.localeCompare(rightId);
                     });
+                    for (const node of diagnostics.nodes) {
+                        const recommendation = node.recommendation && typeof node.recommendation === 'object'
+                            ? node.recommendation
+                            : null;
+                        if (recommendation?.backfillNeeded === true) {
+                            actionNeededNodes += 1;
+                            backfillNeededNodes += 1;
+                        }
+                        else if (recommendation?.available === true) {
+                            actionNeededNodes += 1;
+                        }
+                        const attribution = node.profileAttribution && typeof node.profileAttribution === 'object'
+                            ? node.profileAttribution
+                            : null;
+                        let sourceCode = attribution && typeof attribution.sourceCode === 'string'
+                            ? attribution.sourceCode
+                            : null;
+                        if (!sourceCode) {
+                            const hasProfile = node.profile &&
+                                typeof node.profile === 'object' &&
+                                (this.normalizeStringOrNull(node.profile.profileId) ||
+                                    this.normalizeStringOrNull(node.profile.fallbackReason));
+                            const hasOverride = node.curation &&
+                                typeof node.curation === 'object' &&
+                                node.curation.entryPresent === true;
+                            if (hasProfile) {
+                                sourceCode = hasOverride ? 'compiled+curation-override' : 'compiled-only';
+                            }
+                            else {
+                                sourceCode = 'unresolved';
+                            }
+                        }
+                        if (sourceCode === 'compiled+curation-override')
+                            overrideNodes += 1;
+                        else if (sourceCode === 'compiled-only')
+                            compiledOnlyNodes += 1;
+                        else
+                            unresolvedNodes += 1;
+                    }
                     importedNodes = importedNodeDetails.length;
                 }
                 else {
@@ -154,6 +217,15 @@ module.exports = class BridgeDriver extends homey_1.default.Driver {
         if (!zwjs.transportConnected) {
             warnings.push('ZWJS transport is not connected; node import list may be empty.');
         }
+        if (actionNeededNodes > 0) {
+            warnings.push(`${actionNeededNodes} imported node(s) currently require runtime action.`);
+        }
+        if (unresolvedNodes > 0) {
+            warnings.push(`${unresolvedNodes} imported node(s) have unresolved profile attribution.`);
+        }
+        if (typeof zwjs.reconnectAttempt === 'number' && zwjs.reconnectAttempt > 0) {
+            warnings.push(`ZWJS reconnect attempts observed (${zwjs.reconnectAttempt}).`);
+        }
         return {
             generatedAt: new Date().toISOString(),
             bridgeId,
@@ -162,6 +234,11 @@ module.exports = class BridgeDriver extends homey_1.default.Driver {
             importedNodes,
             pendingImportNodes,
             importedNodeDetails,
+            actionNeededNodes,
+            backfillNeededNodes,
+            compiledOnlyNodes,
+            overrideNodes,
+            unresolvedNodes,
             warnings,
         };
     }
@@ -236,6 +313,13 @@ module.exports = class BridgeDriver extends homey_1.default.Driver {
                 total: diagnostics.nodes.length,
                 profileResolvedCount: 0,
                 profilePendingCount: 0,
+                profileSourceCompiledOnlyCount: 0,
+                profileSourceOverrideCount: 0,
+                profileSourceUnresolvedCount: 0,
+                confidenceCuratedCount: 0,
+                confidenceHaDerivedCount: 0,
+                confidenceGenericCount: 0,
+                confidenceUnknownCount: 0,
                 readyCount: 0,
                 failedCount: 0,
                 curationEntryCount: 0,
@@ -293,6 +377,7 @@ module.exports = class BridgeDriver extends homey_1.default.Driver {
                     confidence: node.profile.confidence ?? null,
                     uncurated: node.profile.uncurated === true,
                 };
+                const profileAttribution = this.normalizeProfileAttribution(node);
                 const skipReasons = node.mapping.skipReasons && typeof node.mapping.skipReasons === 'object'
                     ? node.mapping.skipReasons
                     : {};
@@ -319,6 +404,27 @@ module.exports = class BridgeDriver extends homey_1.default.Driver {
                     nodeSummary.profileResolvedCount += 1;
                 else
                     nodeSummary.profilePendingCount += 1;
+                if (profileAttribution.sourceCode === 'compiled+curation-override') {
+                    nodeSummary.profileSourceOverrideCount += 1;
+                }
+                else if (profileAttribution.sourceCode === 'compiled-only') {
+                    nodeSummary.profileSourceCompiledOnlyCount += 1;
+                }
+                else {
+                    nodeSummary.profileSourceUnresolvedCount += 1;
+                }
+                if (profileAttribution.confidenceCode === 'curated') {
+                    nodeSummary.confidenceCuratedCount += 1;
+                }
+                else if (profileAttribution.confidenceCode === 'ha-derived') {
+                    nodeSummary.confidenceHaDerivedCount += 1;
+                }
+                else if (profileAttribution.confidenceCode === 'generic') {
+                    nodeSummary.confidenceGenericCount += 1;
+                }
+                else {
+                    nodeSummary.confidenceUnknownCount += 1;
+                }
                 if (nodeState.ready === true)
                     nodeSummary.readyCount += 1;
                 if (nodeState.isFailed === true)
@@ -349,7 +455,7 @@ module.exports = class BridgeDriver extends homey_1.default.Driver {
                     sync,
                     curation,
                     profile,
-                    profileAttribution: this.normalizeProfileAttribution(node),
+                    profileAttribution,
                     recommendation: {
                         available: node.recommendation.available,
                         reason: node.recommendation.reason,

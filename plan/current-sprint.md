@@ -22,6 +22,23 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## Recently Completed
 
+- Bridge read-only enrichment slice:
+  - expanded bridge pair/repair runtime visibility with transport/session detail fields:
+    - `versionReceived`
+    - `initialized`
+    - `listening`
+    - `authenticated`
+    - `reconnectAttempt`
+    - `connectedAt` / `lastMessageAt`
+  - added bridge-level aggregate diagnostics for imported nodes:
+    - profile source breakdown (`compiled-only`, `compiled+override`, `unresolved`)
+    - profile confidence breakdown (`curated`, `ha-derived`, `generic`, `unknown`)
+    - action-needed/backfill counts
+    - top mapping skip-reason summary
+  - enriched bridge pairing imported-node detail rows with profile source/rule-match context
+  - added warning rollups for reconnect churn and unresolved attribution
+  - expanded presenter/harness tests to lock the new read-only diagnostics contract
+
 - Code-review remediation slice (runtime stability + lock typing):
   - hardened app diagnostics APIs to wait for node driver readiness before resolving node devices:
     - `getNodeRuntimeDiagnostics`

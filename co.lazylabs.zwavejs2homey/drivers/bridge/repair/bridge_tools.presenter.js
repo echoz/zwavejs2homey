@@ -26,6 +26,13 @@ function asTimeOrNull(value) {
         return String(value);
     return parsed.toLocaleString();
 }
+function asYesNoUnknown(value) {
+    if (value === true)
+        return 'Yes';
+    if (value === false)
+        return 'No';
+    return 'n/a';
+}
 function isMissingValue(value) {
     if (value === null || typeof value === 'undefined')
         return true;
@@ -205,6 +212,19 @@ function buildBridgeSnapshotWarnings(snapshot) {
     if (!snapshot.runtime.curation || snapshot.runtime.curation.loaded !== true) {
         warnings.push('Curation runtime is unavailable.');
     }
+    if (snapshot.runtime.zwjs.versionReceived === false) {
+        warnings.push('ZWJS server version has not been received.');
+    }
+    if (snapshot.runtime.zwjs.initialized === false) {
+        warnings.push('ZWJS runtime reports uninitialized state.');
+    }
+    const reconnectAttempt = typeof snapshot.runtime.zwjs.reconnectAttempt === 'number' &&
+        Number.isFinite(snapshot.runtime.zwjs.reconnectAttempt)
+        ? Math.max(0, Math.trunc(snapshot.runtime.zwjs.reconnectAttempt))
+        : 0;
+    if (reconnectAttempt > 0) {
+        warnings.push(`ZWJS reconnect attempts observed (${reconnectAttempt}).`);
+    }
     const actionable = Array.isArray(snapshot.nodes)
         ? snapshot.nodes.filter((node) => recommendationPriority(node) < 2).length
         : 0;
@@ -224,6 +244,19 @@ function toKvRows(rows, options) {
         value: asText(row[1]),
         valueClass: row[2] ? row[2].trim() : undefined,
     }));
+}
+function topSkipReasonsSummary(skipReasons) {
+    if (!skipReasons || typeof skipReasons !== 'object')
+        return 'None';
+    const entries = Object.entries(skipReasons)
+        .filter(([, count]) => typeof count === 'number' && count > 0)
+        .sort((left, right) => right[1] - left[1]);
+    if (entries.length === 0)
+        return 'None';
+    return entries
+        .slice(0, 3)
+        .map(([reason, count]) => `${reason}:${count}`)
+        .join(', ');
 }
 function toNodeViewRow(node) {
     const nodeLabel = node?.nodeId !== null ? `Node ${asText(node?.nodeId)}` : 'Node n/a';
@@ -397,6 +430,11 @@ function sortNodes(nodes) {
                 ],
                 ['Server Version', snapshot?.runtime?.zwjs?.serverVersion],
                 ['Adapter Family', snapshot?.runtime?.zwjs?.adapterFamily],
+                ['Version Received', asYesNoUnknown(snapshot?.runtime?.zwjs?.versionReceived)],
+                ['Initialized', asYesNoUnknown(snapshot?.runtime?.zwjs?.initialized)],
+                ['Listening', asYesNoUnknown(snapshot?.runtime?.zwjs?.listening)],
+                ['Authenticated', asYesNoUnknown(snapshot?.runtime?.zwjs?.authenticated)],
+                ['Reconnect Attempts', asText(snapshot?.runtime?.zwjs?.reconnectAttempt)],
                 ['Compiled Loaded', snapshot?.runtime?.compiledProfiles?.loaded ? 'Yes' : 'No'],
                 ['Compiled Entries', snapshot?.runtime?.compiledProfiles?.entryCount],
                 ['Curation Loaded', snapshot?.runtime?.curation?.loaded ? 'Yes' : 'No'],
@@ -423,6 +461,13 @@ function sortNodes(nodes) {
                 ['Imported Nodes', snapshot?.nodeSummary?.total],
                 ['Profile Resolved', snapshot?.nodeSummary?.profileResolvedCount],
                 ['Profile Pending', snapshot?.nodeSummary?.profilePendingCount],
+                ['Compiled Only', snapshot?.nodeSummary?.profileSourceCompiledOnlyCount],
+                ['With Override', snapshot?.nodeSummary?.profileSourceOverrideCount],
+                ['Unresolved Source', snapshot?.nodeSummary?.profileSourceUnresolvedCount],
+                ['Rule Match: Project', snapshot?.nodeSummary?.confidenceCuratedCount],
+                ['Rule Match: HA Derived', snapshot?.nodeSummary?.confidenceHaDerivedCount],
+                ['Rule Match: Generic', snapshot?.nodeSummary?.confidenceGenericCount],
+                ['Rule Match: Unknown', snapshot?.nodeSummary?.confidenceUnknownCount],
                 ['Ready Nodes', snapshot?.nodeSummary?.readyCount],
                 ['Failed Nodes', snapshot?.nodeSummary?.failedCount],
                 ['Curation Entries', snapshot?.nodeSummary?.curationEntryCount],
@@ -435,6 +480,7 @@ function sortNodes(nodes) {
                 ['Mapped Capabilities', snapshot?.nodeSummary?.capabilityCount],
                 ['Inbound Skipped', snapshot?.nodeSummary?.inboundSkipped],
                 ['Outbound Skipped', snapshot?.nodeSummary?.outboundSkipped],
+                ['Top Skip Reasons', topSkipReasonsSummary(snapshot?.nodeSummary?.skipReasons), 'mono'],
             ]),
             recommendationCodeRows,
             mappingSkipReasonRows,

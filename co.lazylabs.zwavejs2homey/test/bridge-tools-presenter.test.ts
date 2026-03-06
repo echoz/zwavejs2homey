@@ -3,6 +3,11 @@ const assert = require('node:assert/strict');
 
 const presenter = require('../drivers/bridge/repair/bridge_tools.presenter.js');
 
+function rowValue(rows, key) {
+  const row = Array.isArray(rows) ? rows.find((item) => item && item.key === key) : null;
+  return row ? row.value : undefined;
+}
+
 function createSnapshot() {
   return {
     generatedAt: '2026-03-05T00:00:00.000Z',
@@ -15,6 +20,11 @@ function createSnapshot() {
         available: true,
         transportConnected: true,
         lifecycle: 'connected',
+        versionReceived: true,
+        initialized: true,
+        listening: true,
+        authenticated: null,
+        reconnectAttempt: 2,
         serverVersion: '3.4.0',
         adapterFamily: 'zwjs-default',
         lastMessageAt: '2026-03-05T00:00:00.000Z',
@@ -39,6 +49,13 @@ function createSnapshot() {
       total: 2,
       profileResolvedCount: 2,
       profilePendingCount: 0,
+      profileSourceCompiledOnlyCount: 1,
+      profileSourceOverrideCount: 1,
+      profileSourceUnresolvedCount: 0,
+      confidenceCuratedCount: 1,
+      confidenceHaDerivedCount: 1,
+      confidenceGenericCount: 0,
+      confidenceUnknownCount: 0,
       readyCount: 2,
       failedCount: 0,
       curationEntryCount: 1,
@@ -160,7 +177,7 @@ test('bridge tools presenter builds filtered action-needed view by default', () 
 
   assert.equal(loaded.loading, false);
   assert.equal(loaded.tone, 'warn');
-  assert.match(loaded.status, /1 node\(s\) require action\./);
+  assert.match(loaded.status, /Last updated/);
 
   const vm = presenter.buildViewModel(loaded);
   assert.equal(vm.filterActionLabel, 'Action Needed (1)');
@@ -169,6 +186,11 @@ test('bridge tools presenter builds filtered action-needed view by default', () 
   assert.equal(vm.nodes[0].nodeLabel, 'Node 12');
   assert.equal(vm.nodes[0].recommendationTone, 'danger');
   assert.equal(vm.nodesMeta, 'Showing 1 of 2 imported nodes that require action.');
+  assert.equal(rowValue(vm.runtimeRows, 'Reconnect Attempts'), '2');
+  assert.equal(rowValue(vm.summaryRows, 'Compiled Only'), '1');
+  assert.equal(rowValue(vm.summaryRows, 'With Override'), '1');
+  assert.equal(rowValue(vm.summaryRows, 'Top Skip Reasons'), 'unsupported_value_type:3');
+  assert.equal(vm.status.includes('reconnect attempts observed (2).'), true);
 });
 
 test('bridge tools presenter supports filter switching to all nodes', () => {

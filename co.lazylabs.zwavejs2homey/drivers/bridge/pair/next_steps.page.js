@@ -78,7 +78,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
           <td>
             Class: ${escapeHtml(row.profileClass)}<br />
             <span class="hint">${escapeHtml(row.profileId)}</span><br />
-            <span class="hint">${escapeHtml(row.profileMatch)}</span>
+            <span class="hint">${escapeHtml(row.profileMatch)}</span><br />
+            <span class="hint">Source: ${escapeHtml(row.profileSource)}</span><br />
+            <span class="hint">Rule Match: ${escapeHtml(row.ruleMatch)}</span>
           </td>
           <td>
             <span class="${recommendationClass(row.recommendation.tone)}">${escapeHtml(row.recommendation.label)}</span><br />

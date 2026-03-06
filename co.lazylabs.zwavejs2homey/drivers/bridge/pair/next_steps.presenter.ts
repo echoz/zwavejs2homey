@@ -20,6 +20,8 @@ interface ImportedRow {
   profileClass: string;
   profileId: string;
   profileMatch: string;
+  profileSource: string;
+  ruleMatch: string;
   recommendation: RecommendationViewModel;
 }
 
@@ -36,7 +38,20 @@ interface ImportStatusRecord {
     transportConnected?: unknown;
     lifecycle?: unknown;
     serverVersion?: unknown;
+    adapterFamily?: unknown;
+    reconnectAttempt?: unknown;
+    versionReceived?: unknown;
+    initialized?: unknown;
+    listening?: unknown;
+    authenticated?: unknown;
+    connectedAt?: unknown;
+    lastMessageAt?: unknown;
   };
+  actionNeededNodes?: unknown;
+  backfillNeededNodes?: unknown;
+  compiledOnlyNodes?: unknown;
+  overrideNodes?: unknown;
+  unresolvedNodes?: unknown;
 }
 
 interface StatusRow {
@@ -166,6 +181,8 @@ interface UiRoot {
         profileClass: asText(entry.profileHomeyClass),
         profileId: asText(entry.profileId),
         profileMatch: asText(entry.profileMatch),
+        profileSource: asText(entry.profileSource),
+        ruleMatch: asText(entry.ruleMatch),
         recommendation: {
           label: recommendationLabel(entry.recommendationAction),
           tone: recommendationTone(entry.recommendationAction),
@@ -256,9 +273,36 @@ interface UiRoot {
             value: asText(status.zwjs && status.zwjs.serverVersion),
             kind: 'text',
           },
+          {
+            key: 'Adapter Family',
+            value: asText(status.zwjs && status.zwjs.adapterFamily),
+            kind: 'text',
+          },
+          {
+            key: 'Reconnect Attempts',
+            value: asText(status.zwjs && status.zwjs.reconnectAttempt),
+            kind: 'text',
+          },
+          {
+            key: 'Version Received',
+            value: asText(status.zwjs && status.zwjs.versionReceived),
+            kind: 'text',
+          },
+          { key: 'Initialized', value: asText(status.zwjs && status.zwjs.initialized), kind: 'text' },
+          { key: 'Listening', value: asText(status.zwjs && status.zwjs.listening), kind: 'text' },
+          {
+            key: 'Authenticated',
+            value: asText(status.zwjs && status.zwjs.authenticated),
+            kind: 'text',
+          },
           { key: 'Discovered Nodes', value: asText(status.discoveredNodes), kind: 'text' },
           { key: 'Imported Nodes', value: asText(status.importedNodes), kind: 'text' },
           { key: 'Pending Import', value: asText(status.pendingImportNodes), kind: 'text' },
+          { key: 'Action Needed', value: asText(status.actionNeededNodes), kind: 'text' },
+          { key: 'Backfill Needed', value: asText(status.backfillNeededNodes), kind: 'text' },
+          { key: 'Compiled Only', value: asText(status.compiledOnlyNodes), kind: 'text' },
+          { key: 'With Override', value: asText(status.overrideNodes), kind: 'text' },
+          { key: 'Unresolved Source', value: asText(status.unresolvedNodes), kind: 'text' },
           { key: 'Updated', value: toTimeText(status.generatedAt), kind: 'text' },
         ],
         warnings,

@@ -137,8 +137,15 @@ test('bridge driver pair session exposes next steps status handler', async () =>
                 return {
                   transportConnected: true,
                   lifecycle: 'connected',
+                  versionReceived: true,
+                  initialized: true,
+                  listening: true,
+                  authenticated: null,
                   serverVersion: '3.4.0',
                   adapterFamily: 'zwjs-default',
+                  reconnectAttempt: 1,
+                  connectedAt: '2026-03-05T10:00:00.000Z',
+                  lastMessageAt: '2026-03-05T10:01:00.000Z',
                 };
               },
               async getNodeList() {
@@ -205,9 +212,15 @@ test('bridge driver pair session exposes next steps status handler', async () =>
   assert.equal(status.bridgeId, 'main');
   assert.equal(status.zwjs.available, true);
   assert.equal(status.zwjs.transportConnected, true);
+  assert.equal(status.zwjs.reconnectAttempt, 1);
+  assert.equal(status.zwjs.versionReceived, true);
   assert.equal(status.discoveredNodes, 2);
   assert.equal(status.importedNodes, 1);
   assert.equal(status.pendingImportNodes, 1);
+  assert.equal(status.actionNeededNodes, 0);
+  assert.equal(status.compiledOnlyNodes, 1);
+  assert.equal(status.overrideNodes, 0);
+  assert.equal(status.unresolvedNodes, 0);
   assert.equal(Array.isArray(status.importedNodeDetails), true);
   assert.equal(status.importedNodeDetails.length, 1);
   assert.equal(status.importedNodeDetails[0]?.nodeId, 5);
@@ -215,8 +228,10 @@ test('bridge driver pair session exposes next steps status handler', async () =>
   assert.equal(status.importedNodeDetails[0]?.manufacturer, 'Leviton');
   assert.equal(status.importedNodeDetails[0]?.product, 'DZ6HD');
   assert.equal(status.importedNodeDetails[0]?.profileHomeyClass, 'light');
+  assert.equal(status.importedNodeDetails[0]?.profileSource, null);
+  assert.equal(status.importedNodeDetails[0]?.ruleMatch, null);
   assert.equal(status.importedNodeDetails[0]?.recommendationAction, 'none');
-  assert.deepEqual(status.warnings, []);
+  assert.deepEqual(status.warnings, ['ZWJS reconnect attempts observed (1).']);
 });
 
 test('bridge driver next steps status includes warnings when runtime is unavailable', async () => {
@@ -376,6 +391,13 @@ test('bridge driver repair session exposes bridge tools snapshot handlers', asyn
   assert.equal(first.nodeSummary.total, 1);
   assert.equal(first.nodeSummary.profileResolvedCount, 1);
   assert.equal(first.nodeSummary.profilePendingCount, 0);
+  assert.equal(first.nodeSummary.profileSourceOverrideCount, 1);
+  assert.equal(first.nodeSummary.profileSourceCompiledOnlyCount, 0);
+  assert.equal(first.nodeSummary.profileSourceUnresolvedCount, 0);
+  assert.equal(first.nodeSummary.confidenceCuratedCount, 1);
+  assert.equal(first.nodeSummary.confidenceHaDerivedCount, 0);
+  assert.equal(first.nodeSummary.confidenceGenericCount, 0);
+  assert.equal(first.nodeSummary.confidenceUnknownCount, 0);
   assert.equal(first.nodeSummary.readyCount, 1);
   assert.equal(first.nodeSummary.failedCount, 0);
   assert.equal(first.nodeSummary.curationEntryCount, 1);
@@ -392,6 +414,7 @@ test('bridge driver repair session exposes bridge tools snapshot handlers', asyn
   assert.equal(first.nodes[0].sync.syncReason, 'startup');
   assert.equal(first.nodes[0].mapping.capabilityCount, 2);
   assert.equal(second.runtime.zwjs.serverVersion, '3.4.0');
+  assert.equal(second.runtime.zwjs.versionReceived, true);
   assert.equal(diagnosticsCalls.length, 2);
 });
 
