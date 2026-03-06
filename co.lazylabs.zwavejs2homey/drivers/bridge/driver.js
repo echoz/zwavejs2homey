@@ -8,6 +8,20 @@ const pairing_1 = require("../../pairing");
 module.exports = class BridgeDriver extends homey_1.default.Driver {
     async onInit() {
         this.log('BridgeDriver initialized');
+        const driverPrototypeMethods = Object.getOwnPropertyNames(Object.getPrototypeOf(this)).sort();
+        const manifestPairViews = this.homey.manifest?.drivers?.find((driver) => driver && driver.id === 'bridge')?.pair ?? [];
+        this.log('BridgeDriver runtime pairing shape', {
+            hasOnPairListDevices: typeof this.onPairListDevices === 'function',
+            prototypeMethods: driverPrototypeMethods,
+            pairViews: Array.isArray(manifestPairViews)
+                ? manifestPairViews.map((view) => ({
+                    id: view?.id,
+                    template: view?.template,
+                    next: view?.navigation?.next,
+                    singular: view?.options?.singular === true,
+                }))
+                : [],
+        });
     }
     hasBridgeDeviceAlreadyPaired() {
         const existingData = this.getDevices().map((device) => device.getData());

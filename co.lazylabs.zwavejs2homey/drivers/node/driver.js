@@ -11,6 +11,20 @@ const pairing_icons_1 = require("../../pairing-icons");
 module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
         async onInit() {
             this.log('NodeDriver initialized');
+            const driverPrototypeMethods = Object.getOwnPropertyNames(Object.getPrototypeOf(this)).sort();
+            const manifestPairViews = this.homey.manifest?.drivers?.find((driver) => driver && driver.id === 'node')?.pair ?? [];
+            this.log('NodeDriver runtime pairing shape', {
+                hasOnPairListDevices: typeof this.onPairListDevices === 'function',
+                prototypeMethods: driverPrototypeMethods,
+                pairViews: Array.isArray(manifestPairViews)
+                    ? manifestPairViews.map((view) => ({
+                        id: view?.id,
+                        template: view?.template,
+                        next: view?.navigation?.next,
+                        singular: view?.options?.singular === true,
+                    }))
+                    : [],
+            });
         }
         resolveBridgeRuntime(app) {
             const session = app.getBridgeSession?.(pairing_1.ZWJS_DEFAULT_BRIDGE_ID);

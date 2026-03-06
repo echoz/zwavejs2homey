@@ -165,6 +165,25 @@ interface HomeyBridgeDeviceData {
 module.exports = class BridgeDriver extends Homey.Driver {
   async onInit() {
     this.log('BridgeDriver initialized');
+    const driverPrototypeMethods = Object.getOwnPropertyNames(
+      Object.getPrototypeOf(this) as object,
+    ).sort();
+    const manifestPairViews =
+      this.homey.manifest?.drivers?.find(
+        (driver: { id?: unknown } | undefined) => driver && driver.id === 'bridge',
+      )?.pair ?? [];
+    this.log('BridgeDriver runtime pairing shape', {
+      hasOnPairListDevices: typeof (this as unknown as { onPairListDevices?: unknown }).onPairListDevices === 'function',
+      prototypeMethods: driverPrototypeMethods,
+      pairViews: Array.isArray(manifestPairViews)
+        ? manifestPairViews.map((view) => ({
+            id: view?.id,
+            template: view?.template,
+            next: view?.navigation?.next,
+            singular: view?.options?.singular === true,
+          }))
+        : [],
+    });
   }
 
   private hasBridgeDeviceAlreadyPaired(): boolean {

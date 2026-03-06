@@ -140,6 +140,25 @@ module.exports = class NodeDriver extends Homey.Driver {
 
   async onInit() {
     this.log('NodeDriver initialized');
+    const driverPrototypeMethods = Object.getOwnPropertyNames(
+      Object.getPrototypeOf(this) as object,
+    ).sort();
+    const manifestPairViews =
+      this.homey.manifest?.drivers?.find(
+        (driver: { id?: unknown } | undefined) => driver && driver.id === 'node',
+      )?.pair ?? [];
+    this.log('NodeDriver runtime pairing shape', {
+      hasOnPairListDevices: typeof (this as unknown as { onPairListDevices?: unknown }).onPairListDevices === 'function',
+      prototypeMethods: driverPrototypeMethods,
+      pairViews: Array.isArray(manifestPairViews)
+        ? manifestPairViews.map((view) => ({
+            id: view?.id,
+            template: view?.template,
+            next: view?.navigation?.next,
+            singular: view?.options?.singular === true,
+          }))
+        : [],
+    });
   }
 
   private resolveBridgeRuntime(app: AppRuntimeAccess): {
