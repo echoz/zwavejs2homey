@@ -1,4 +1,5 @@
 (function bootstrapBridgeToolsPage(root) {
+    const PANEL_EMIT_TIMEOUT_MS = 15000;
     const maybePresenter = root?.Zwjs2HomeyUi?.bridgeToolsPresenter;
     if (!maybePresenter)
         return;
@@ -111,11 +112,26 @@
             }
         }
     }
+    async function emitWithTimeout(eventName) {
+        let timeoutHandle;
+        const timeoutPromise = new Promise((_, reject) => {
+            timeoutHandle = setTimeout(() => {
+                reject(new Error(`${eventName} timed out after ${PANEL_EMIT_TIMEOUT_MS}ms`));
+            }, PANEL_EMIT_TIMEOUT_MS);
+        });
+        try {
+            return (await Promise.race([Homey.emit(eventName), timeoutPromise]));
+        }
+        finally {
+            if (timeoutHandle)
+                clearTimeout(timeoutHandle);
+        }
+    }
     async function loadSnapshot(eventName) {
         stateRef.current = presenter.reduce(stateRef.current, { type: 'load_start' });
         render();
         try {
-            const snapshot = await Homey.emit(eventName);
+            const snapshot = await emitWithTimeout(eventName);
             stateRef.current = presenter.reduce(stateRef.current, {
                 type: 'load_success',
                 snapshot,

@@ -158,7 +158,7 @@ interface RepairSessionLike {
 }
 
 interface PairSessionLike {
-  setHandler: (event: string, handler: () => Promise<unknown>) => void;
+  setHandler: (event: string, handler: (payload?: unknown) => Promise<unknown>) => void;
 }
 
 interface HomeyBridgeDeviceData {
@@ -189,6 +189,18 @@ module.exports = class BridgeDriver extends Homey.Driver {
     }
   }
 
+  private registerTimedSessionHandler(
+    session: PairSessionLike | RepairSessionLike,
+    event: string,
+    timeoutMs: number,
+    context: string,
+    handler: (payload?: unknown) => Promise<unknown>,
+  ): void {
+    session.setHandler(event, async (payload?: unknown) => {
+      return this.withTimeout(handler(payload), timeoutMs, `${context} (${event})`);
+    });
+  }
+
   async onInit() {
     this.log('BridgeDriver initialized');
     const driverPrototypeMethods = Object.getOwnPropertyNames(
@@ -199,7 +211,9 @@ module.exports = class BridgeDriver extends Homey.Driver {
         (driver: { id?: unknown } | undefined) => driver && driver.id === 'bridge',
       )?.pair ?? [];
     this.log('BridgeDriver runtime pairing shape', {
-      hasOnPairListDevices: typeof (this as unknown as { onPairListDevices?: unknown }).onPairListDevices === 'function',
+      hasOnPairListDevices:
+        typeof (this as unknown as { onPairListDevices?: unknown }).onPairListDevices ===
+        'function',
       prototypeMethods: driverPrototypeMethods,
       pairViews: Array.isArray(manifestPairViews)
         ? manifestPairViews.map((view) => ({
@@ -214,14 +228,16 @@ module.exports = class BridgeDriver extends Homey.Driver {
 
   async onPair(session: PairSessionLike) {
     this.log('Bridge pair session started');
-    session.setHandler('list_devices', async () => {
-      this.log('Bridge pair list requested (session handler)');
-      return this.withTimeout(
-        this.onPairListDevices(),
-        BridgeDriver.PAIR_HANDLER_TIMEOUT_MS,
-        'bridge pair list',
-      );
-    });
+    this.registerTimedSessionHandler(
+      session,
+      'list_devices',
+      BridgeDriver.PAIR_HANDLER_TIMEOUT_MS,
+      'bridge pair list',
+      async () => {
+        this.log('Bridge pair list requested (session handler)');
+        return this.onPairListDevices();
+      },
+    );
     this.log('Bridge pair handler registered', {
       event: 'list_devices',
     });
@@ -848,17 +864,19 @@ module.exports = class BridgeDriver extends Homey.Driver {
       };
     };
 
-    const setTimedHandler = (event: string, handler: () => Promise<unknown>) => {
-      session.setHandler(event, async () => {
-        return this.withTimeout(
-          handler(),
-          BridgeDriver.REPAIR_HANDLER_TIMEOUT_MS,
-          `bridge repair handler (${event})`,
-        );
-      });
-    };
-
-    setTimedHandler('bridge_tools:get_snapshot', async () => loadSnapshot());
-    setTimedHandler('bridge_tools:refresh', async () => loadSnapshot());
+    this.registerTimedSessionHandler(
+      session,
+      'bridge_tools:get_snapshot',
+      BridgeDriver.REPAIR_HANDLER_TIMEOUT_MS,
+      'bridge repair handler',
+      async () => loadSnapshot(),
+    );
+    this.registerTimedSessionHandler(
+      session,
+      'bridge_tools:refresh',
+      BridgeDriver.REPAIR_HANDLER_TIMEOUT_MS,
+      'bridge repair handler',
+      async () => loadSnapshot(),
+    );
   }
 };

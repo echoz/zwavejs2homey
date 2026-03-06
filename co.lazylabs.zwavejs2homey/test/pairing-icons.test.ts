@@ -7,6 +7,7 @@ const {
   PAIR_ICON_BY_HOMEY_CLASS,
   SUPPORTED_HOMEY_PAIR_ICON_CLASSES,
   normalizeHomeyClassForPairIcon,
+  resolveDriverPairIconForHomeyClass,
   resolvePairIconForHomeyClass,
 } = require('../pairing-icons.js');
 
@@ -21,6 +22,14 @@ test('pair icon resolver normalizes homey class input and falls back to other', 
   assert.equal(resolvePairIconForHomeyClass('networkrouter'), '/pair-icons/media.svg');
   assert.equal(resolvePairIconForHomeyClass('other'), '/pair-icons/other.svg');
   assert.equal(resolvePairIconForHomeyClass('not-real'), '/pair-icons/other.svg');
+  assert.equal(
+    resolveDriverPairIconForHomeyClass('light', 'node'),
+    '/drivers/node/assets/pair-icons/light.svg',
+  );
+  assert.equal(
+    resolveDriverPairIconForHomeyClass('bridge', 'bridge'),
+    '/drivers/bridge/assets/pair-icons/bridge.svg',
+  );
 });
 
 test('pair icon mapping includes full supported class list and valid icon paths', () => {
@@ -47,11 +56,7 @@ test('pair icon assets exist under both driver asset roots', () => {
     const relativePath = iconPath.startsWith('/') ? iconPath.slice(1) : iconPath;
     for (const root of driverAssetRoots) {
       const absolutePath = path.join(root, relativePath);
-      assert.equal(
-        fs.existsSync(absolutePath),
-        true,
-        `missing pair icon asset: ${absolutePath}`,
-      );
+      assert.equal(fs.existsSync(absolutePath), true, `missing pair icon asset: ${absolutePath}`);
     }
   }
 });

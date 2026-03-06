@@ -42,10 +42,10 @@ function locationMatchesKnownZone(location, knownZoneLocationKeys) {
 function hasBridgePairDeviceFromData(existingData, expectedBridgeDeviceId = exports.ZWJS_BRIDGE_DEVICE_UNIQUE_ID) {
     return existingData.some((entry) => entry?.id === expectedBridgeDeviceId);
 }
-function createBridgePairCandidate(bridgeId = exports.ZWJS_DEFAULT_BRIDGE_ID, name = 'ZWJS Bridge') {
+function createBridgePairCandidate(bridgeId = exports.ZWJS_DEFAULT_BRIDGE_ID, name = 'ZWJS Bridge', pairIconDriverId = 'bridge') {
     return {
         name,
-        icon: (0, pairing_icons_1.resolvePairIconForHomeyClass)('bridge'),
+        icon: (0, pairing_icons_1.resolveDriverPairIconForHomeyClass)('bridge', pairIconDriverId),
         data: {
             id: `${exports.ZWJS_BRIDGE_DEVICE_KIND}-${bridgeId}`,
             kind: exports.ZWJS_BRIDGE_DEVICE_KIND,
@@ -91,13 +91,16 @@ function toInterviewStage(value) {
 }
 function buildNodePairCandidates(nodes, bridgeId, existingNodeIds, nodeKind = exports.ZWJS_NODE_DEVICE_KIND, options = {}) {
     const knownZoneLocationKeys = buildKnownZoneLocationKeys(options.knownZoneNames);
+    const pairIconDriverId = typeof options.pairIconDriverId === 'string' && options.pairIconDriverId.trim().length > 0
+        ? options.pairIconDriverId.trim()
+        : 'node';
     return nodes
         .filter((node) => Number.isInteger(node.nodeId) && node.nodeId > 1)
         .filter((node) => !existingNodeIds.has(node.nodeId))
         .sort((a, b) => a.nodeId - b.nodeId)
         .map((node) => ({
         name: formatNodePairName(node, knownZoneLocationKeys),
-        icon: (0, pairing_icons_1.resolvePairIconForHomeyClass)('other'),
+        icon: (0, pairing_icons_1.resolveDriverPairIconForHomeyClass)('other', pairIconDriverId),
         data: {
             id: `${bridgeId}:${node.nodeId}`,
             kind: nodeKind,

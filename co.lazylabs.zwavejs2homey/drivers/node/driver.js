@@ -9,12 +9,18 @@ const compiled_profiles_1 = require("../../compiled-profiles");
 const pairing_1 = require("../../pairing");
 const pairing_icons_1 = require("../../pairing-icons");
 module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
+        registerTimedSessionHandler(session, event, timeoutMs, context, handler) {
+            session.setHandler(event, async (payload) => {
+                return this.withTimeout(handler(payload), timeoutMs, `${context} (${event})`);
+            });
+        }
         async onInit() {
             this.log('NodeDriver initialized');
             const driverPrototypeMethods = Object.getOwnPropertyNames(Object.getPrototypeOf(this)).sort();
             const manifestPairViews = this.homey.manifest?.drivers?.find((driver) => driver && driver.id === 'node')?.pair ?? [];
             this.log('NodeDriver runtime pairing shape', {
-                hasOnPairListDevices: typeof this.onPairListDevices === 'function',
+                hasOnPairListDevices: typeof this.onPairListDevices ===
+                    'function',
                 prototypeMethods: driverPrototypeMethods,
                 pairViews: Array.isArray(manifestPairViews)
                     ? manifestPairViews.map((view) => ({
@@ -28,9 +34,9 @@ module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
         }
         async onPair(session) {
             this.log('Node pair session started');
-            session.setHandler('list_devices', async () => {
+            this.registerTimedSessionHandler(session, 'list_devices', _a.PAIR_HANDLER_TIMEOUT_MS, 'node pair list handler', async () => {
                 this.log('Node pair list requested (session handler)');
-                return this.withTimeout(this.onPairListDevices(), _a.PAIR_HANDLER_TIMEOUT_MS, 'node pair list handler');
+                return this.onPairListDevices();
             });
             this.log('Node pair handler registered', {
                 event: 'list_devices',
@@ -127,7 +133,8 @@ module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
                 try {
                     const diagnostics = await app.getNodeRuntimeDiagnostics();
                     if (diagnostics?.zwjs && typeof diagnostics.zwjs === 'object') {
-                        if (zwjs.versionReceived === null && typeof diagnostics.zwjs.versionReceived === 'boolean') {
+                        if (zwjs.versionReceived === null &&
+                            typeof diagnostics.zwjs.versionReceived === 'boolean') {
                             zwjs.versionReceived = diagnostics.zwjs.versionReceived;
                         }
                         if (zwjs.initialized === null && typeof diagnostics.zwjs.initialized === 'boolean') {
@@ -480,6 +487,7 @@ module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
                 }
                 const candidates = (0, pairing_1.buildNodePairCandidates)(nodes, bridgeId, existingNodeIds, undefined, {
                     knownZoneNames,
+                    pairIconDriverId: 'node',
                 });
                 latestCandidates = candidates;
                 if (app.resolveCompiledProfileEntry) {
@@ -494,7 +502,7 @@ module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
                                 if (match?.by === 'none')
                                     return;
                                 const homeyClass = (0, pairing_icons_1.normalizeHomeyClassForPairIcon)(match?.entry?.compiled?.profile?.classification?.homeyClass);
-                                candidate.icon = (0, pairing_icons_1.resolvePairIconForHomeyClass)(homeyClass);
+                                candidate.icon = (0, pairing_icons_1.resolveDriverPairIconForHomeyClass)(homeyClass, 'node');
                                 candidate.store.inferredHomeyClass = homeyClass;
                             }
                             catch (error) {
@@ -572,14 +580,9 @@ module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
                     snapshot,
                 };
             };
-            const setTimedHandler = (event, handler) => {
-                session.setHandler(event, async (payload) => {
-                    return this.withTimeout(handler(payload), _a.REPAIR_HANDLER_TIMEOUT_MS, `node repair handler (${event})`);
-                });
-            };
-            setTimedHandler('device_tools:get_snapshot', async () => loadSnapshot());
-            setTimedHandler('device_tools:refresh', async () => loadSnapshot());
-            setTimedHandler('device_tools:execute_action', async (payload) => executeAction(payload));
+            this.registerTimedSessionHandler(session, 'device_tools:get_snapshot', _a.REPAIR_HANDLER_TIMEOUT_MS, 'node repair handler', async () => loadSnapshot());
+            this.registerTimedSessionHandler(session, 'device_tools:refresh', _a.REPAIR_HANDLER_TIMEOUT_MS, 'node repair handler', async () => loadSnapshot());
+            this.registerTimedSessionHandler(session, 'device_tools:execute_action', _a.REPAIR_HANDLER_TIMEOUT_MS, 'node repair handler', async (payload) => executeAction(payload));
         }
         resolveHomeyDeviceId(device) {
             const data = device.getData();

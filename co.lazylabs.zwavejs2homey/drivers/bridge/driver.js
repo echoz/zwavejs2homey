@@ -22,12 +22,18 @@ module.exports = (_a = class BridgeDriver extends homey_1.default.Driver {
                     clearTimeout(timeoutHandle);
             }
         }
+        registerTimedSessionHandler(session, event, timeoutMs, context, handler) {
+            session.setHandler(event, async (payload) => {
+                return this.withTimeout(handler(payload), timeoutMs, `${context} (${event})`);
+            });
+        }
         async onInit() {
             this.log('BridgeDriver initialized');
             const driverPrototypeMethods = Object.getOwnPropertyNames(Object.getPrototypeOf(this)).sort();
             const manifestPairViews = this.homey.manifest?.drivers?.find((driver) => driver && driver.id === 'bridge')?.pair ?? [];
             this.log('BridgeDriver runtime pairing shape', {
-                hasOnPairListDevices: typeof this.onPairListDevices === 'function',
+                hasOnPairListDevices: typeof this.onPairListDevices ===
+                    'function',
                 prototypeMethods: driverPrototypeMethods,
                 pairViews: Array.isArray(manifestPairViews)
                     ? manifestPairViews.map((view) => ({
@@ -41,9 +47,9 @@ module.exports = (_a = class BridgeDriver extends homey_1.default.Driver {
         }
         async onPair(session) {
             this.log('Bridge pair session started');
-            session.setHandler('list_devices', async () => {
+            this.registerTimedSessionHandler(session, 'list_devices', _a.PAIR_HANDLER_TIMEOUT_MS, 'bridge pair list', async () => {
                 this.log('Bridge pair list requested (session handler)');
-                return this.withTimeout(this.onPairListDevices(), _a.PAIR_HANDLER_TIMEOUT_MS, 'bridge pair list');
+                return this.onPairListDevices();
             });
             this.log('Bridge pair handler registered', {
                 event: 'list_devices',
@@ -539,13 +545,8 @@ module.exports = (_a = class BridgeDriver extends homey_1.default.Driver {
                     nodes,
                 };
             };
-            const setTimedHandler = (event, handler) => {
-                session.setHandler(event, async () => {
-                    return this.withTimeout(handler(), _a.REPAIR_HANDLER_TIMEOUT_MS, `bridge repair handler (${event})`);
-                });
-            };
-            setTimedHandler('bridge_tools:get_snapshot', async () => loadSnapshot());
-            setTimedHandler('bridge_tools:refresh', async () => loadSnapshot());
+            this.registerTimedSessionHandler(session, 'bridge_tools:get_snapshot', _a.REPAIR_HANDLER_TIMEOUT_MS, 'bridge repair handler', async () => loadSnapshot());
+            this.registerTimedSessionHandler(session, 'bridge_tools:refresh', _a.REPAIR_HANDLER_TIMEOUT_MS, 'bridge repair handler', async () => loadSnapshot());
         }
     },
     _a.PAIR_HANDLER_TIMEOUT_MS = 5000,

@@ -1,4 +1,5 @@
 (function bootstrapDeviceToolsPage(root) {
+    const PANEL_EMIT_TIMEOUT_MS = 15000;
     const maybePresenter = root?.Zwjs2HomeyUi?.deviceToolsPresenter;
     if (!maybePresenter)
         return;
@@ -90,11 +91,26 @@
         setKv(latestActionKv, viewModel.latestActionRows);
         actionHint.textContent = viewModel.actionHint;
     }
+    async function emitWithTimeout(eventName, payload) {
+        let timeoutHandle;
+        const timeoutPromise = new Promise((_, reject) => {
+            timeoutHandle = setTimeout(() => {
+                reject(new Error(`${eventName} timed out after ${PANEL_EMIT_TIMEOUT_MS}ms`));
+            }, PANEL_EMIT_TIMEOUT_MS);
+        });
+        try {
+            return (await Promise.race([Homey.emit(eventName, payload), timeoutPromise]));
+        }
+        finally {
+            if (timeoutHandle)
+                clearTimeout(timeoutHandle);
+        }
+    }
     async function loadSnapshot(eventName) {
         stateRef.current = presenter.reduce(stateRef.current, { type: 'load_start' });
         render();
         try {
-            const snapshot = await Homey.emit(eventName);
+            const snapshot = await emitWithTimeout(eventName);
             stateRef.current = presenter.reduce(stateRef.current, {
                 type: 'load_success',
                 snapshot,
@@ -116,12 +132,12 @@
         stateRef.current = presenter.reduce(stateRef.current, { type: 'action_start' });
         render();
         try {
-            const result = await Homey.emit('device_tools:execute_action', {
+            const result = await emitWithTimeout('device_tools:execute_action', {
                 action: actionSelection,
             });
             const snapshot = result && typeof result === 'object' && result.snapshot
                 ? result.snapshot
-                : await Homey.emit('device_tools:refresh');
+                : await emitWithTimeout('device_tools:refresh');
             const actionResult = result && typeof result === 'object' && result.actionResult ? result.actionResult : null;
             const summary = presenter.describeActionResult(actionResult, snapshot);
             stateRef.current = presenter.reduce(stateRef.current, {

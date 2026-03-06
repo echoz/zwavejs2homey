@@ -17,6 +17,7 @@ interface HomeyRepairRuntime {
 declare const Homey: HomeyRepairRuntime;
 
 (function bootstrapDeviceToolsPage(root: DeviceToolsPageRoot | undefined) {
+  const PANEL_EMIT_TIMEOUT_MS = 15000;
   const maybePresenter = root?.Zwjs2HomeyUi?.deviceToolsPresenter;
   if (!maybePresenter) return;
   const presenter = maybePresenter;
@@ -126,11 +127,25 @@ declare const Homey: HomeyRepairRuntime;
     actionHint.textContent = viewModel.actionHint;
   }
 
+  async function emitWithTimeout(eventName: string, payload?: unknown): Promise<any> {
+    let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutHandle = setTimeout(() => {
+        reject(new Error(`${eventName} timed out after ${PANEL_EMIT_TIMEOUT_MS}ms`));
+      }, PANEL_EMIT_TIMEOUT_MS);
+    });
+    try {
+      return (await Promise.race([Homey.emit(eventName, payload), timeoutPromise])) as unknown;
+    } finally {
+      if (timeoutHandle) clearTimeout(timeoutHandle);
+    }
+  }
+
   async function loadSnapshot(eventName: string): Promise<void> {
     stateRef.current = presenter.reduce(stateRef.current, { type: 'load_start' });
     render();
     try {
-      const snapshot = await Homey.emit(eventName);
+      const snapshot = await emitWithTimeout(eventName);
       stateRef.current = presenter.reduce(stateRef.current, {
         type: 'load_success',
         snapshot,
@@ -152,13 +167,13 @@ declare const Homey: HomeyRepairRuntime;
     render();
 
     try {
-      const result = await Homey.emit('device_tools:execute_action', {
+      const result = await emitWithTimeout('device_tools:execute_action', {
         action: actionSelection,
       });
       const snapshot =
         result && typeof result === 'object' && result.snapshot
           ? result.snapshot
-          : await Homey.emit('device_tools:refresh');
+          : await emitWithTimeout('device_tools:refresh');
       const actionResult =
         result && typeof result === 'object' && result.actionResult ? result.actionResult : null;
       const summary = presenter.describeActionResult(actionResult, snapshot);

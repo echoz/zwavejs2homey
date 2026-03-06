@@ -74,6 +74,7 @@ interface PairHomey {
 declare const Homey: PairHomey;
 
 (function bootstrapBridgeNextStepsPage(root: UiRoot | undefined) {
+  const PANEL_EMIT_TIMEOUT_MS = 15000;
   const maybePresenter = root && root.Zwjs2HomeyUi && root.Zwjs2HomeyUi.bridgeNextStepsPresenter;
   if (!maybePresenter) return;
   const presenter: PairPresenter = maybePresenter;
@@ -215,11 +216,25 @@ declare const Homey: PairHomey;
     return 'Failed to load status.';
   }
 
+  async function emitWithTimeout(event: string): Promise<unknown> {
+    let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutHandle = setTimeout(() => {
+        reject(new Error(`${event} timed out after ${PANEL_EMIT_TIMEOUT_MS}ms`));
+      }, PANEL_EMIT_TIMEOUT_MS);
+    });
+    try {
+      return (await Promise.race([Homey.emit(event), timeoutPromise])) as unknown;
+    } finally {
+      if (timeoutHandle) clearTimeout(timeoutHandle);
+    }
+  }
+
   async function loadStatus(): Promise<void> {
     stateRef.current = presenter.reduce(stateRef.current, { type: 'load_start' });
     render();
     try {
-      const status = await Homey.emit('next_steps:get_status');
+      const status = await emitWithTimeout('next_steps:get_status');
       stateRef.current = presenter.reduce(stateRef.current, {
         type: 'load_success',
         status,

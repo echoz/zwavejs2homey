@@ -6,7 +6,10 @@ import {
   collectExistingNodeIdsFromData,
   ZWJS_DEFAULT_BRIDGE_ID,
 } from '../../pairing';
-import { normalizeHomeyClassForPairIcon, resolvePairIconForHomeyClass } from '../../pairing-icons';
+import {
+  normalizeHomeyClassForPairIcon,
+  resolveDriverPairIconForHomeyClass,
+} from '../../pairing-icons';
 
 type RecommendationActionSelection =
   | 'auto'
@@ -98,7 +101,7 @@ interface RepairSessionLike {
 }
 
 interface PairSessionLike {
-  setHandler: (event: string, handler: () => Promise<unknown>) => void;
+  setHandler: (event: string, handler: (payload?: unknown) => Promise<unknown>) => void;
 }
 
 interface ImportSummaryNodeEntry {
@@ -146,6 +149,18 @@ module.exports = class NodeDriver extends Homey.Driver {
 
   private static readonly REPAIR_HANDLER_TIMEOUT_MS = 15000;
 
+  private registerTimedSessionHandler(
+    session: PairSessionLike | RepairSessionLike,
+    event: string,
+    timeoutMs: number,
+    context: string,
+    handler: (payload?: unknown) => Promise<unknown>,
+  ): void {
+    session.setHandler(event, async (payload?: unknown) => {
+      return this.withTimeout(handler(payload), timeoutMs, `${context} (${event})`);
+    });
+  }
+
   async onInit() {
     this.log('NodeDriver initialized');
     const driverPrototypeMethods = Object.getOwnPropertyNames(
@@ -156,7 +171,9 @@ module.exports = class NodeDriver extends Homey.Driver {
         (driver: { id?: unknown } | undefined) => driver && driver.id === 'node',
       )?.pair ?? [];
     this.log('NodeDriver runtime pairing shape', {
-      hasOnPairListDevices: typeof (this as unknown as { onPairListDevices?: unknown }).onPairListDevices === 'function',
+      hasOnPairListDevices:
+        typeof (this as unknown as { onPairListDevices?: unknown }).onPairListDevices ===
+        'function',
       prototypeMethods: driverPrototypeMethods,
       pairViews: Array.isArray(manifestPairViews)
         ? manifestPairViews.map((view) => ({
@@ -171,14 +188,16 @@ module.exports = class NodeDriver extends Homey.Driver {
 
   async onPair(session: PairSessionLike) {
     this.log('Node pair session started');
-    session.setHandler('list_devices', async () => {
-      this.log('Node pair list requested (session handler)');
-      return this.withTimeout(
-        this.onPairListDevices(),
-        NodeDriver.PAIR_HANDLER_TIMEOUT_MS,
-        'node pair list handler',
-      );
-    });
+    this.registerTimedSessionHandler(
+      session,
+      'list_devices',
+      NodeDriver.PAIR_HANDLER_TIMEOUT_MS,
+      'node pair list handler',
+      async () => {
+        this.log('Node pair list requested (session handler)');
+        return this.onPairListDevices();
+      },
+    );
     this.log('Node pair handler registered', {
       event: 'list_devices',
     });
@@ -319,7 +338,10 @@ module.exports = class NodeDriver extends Homey.Driver {
       try {
         const diagnostics = await app.getNodeRuntimeDiagnostics();
         if (diagnostics?.zwjs && typeof diagnostics.zwjs === 'object') {
-          if (zwjs.versionReceived === null && typeof diagnostics.zwjs.versionReceived === 'boolean') {
+          if (
+            zwjs.versionReceived === null &&
+            typeof diagnostics.zwjs.versionReceived === 'boolean'
+          ) {
             zwjs.versionReceived = diagnostics.zwjs.versionReceived;
           }
           if (zwjs.initialized === null && typeof diagnostics.zwjs.initialized === 'boolean') {
@@ -418,7 +440,8 @@ module.exports = class NodeDriver extends Homey.Driver {
             }
 
             if (profileAttribution.confidenceCode === 'curated') confidenceCuratedNodes += 1;
-            else if (profileAttribution.confidenceCode === 'ha-derived') confidenceHaDerivedNodes += 1;
+            else if (profileAttribution.confidenceCode === 'ha-derived')
+              confidenceHaDerivedNodes += 1;
             else if (profileAttribution.confidenceCode === 'generic') confidenceGenericNodes += 1;
             else confidenceUnknownNodes += 1;
           }
@@ -734,6 +757,7 @@ module.exports = class NodeDriver extends Homey.Driver {
 
       const candidates = buildNodePairCandidates(nodes, bridgeId, existingNodeIds, undefined, {
         knownZoneNames,
+        pairIconDriverId: 'node',
       });
       latestCandidates = candidates;
       if (app.resolveCompiledProfileEntry) {
@@ -759,7 +783,7 @@ module.exports = class NodeDriver extends Homey.Driver {
                   const homeyClass = normalizeHomeyClassForPairIcon(
                     match?.entry?.compiled?.profile?.classification?.homeyClass,
                   );
-                  candidate.icon = resolvePairIconForHomeyClass(homeyClass);
+                  candidate.icon = resolveDriverPairIconForHomeyClass(homeyClass, 'node');
                   candidate.store.inferredHomeyClass = homeyClass;
                 } catch (error) {
                   this.error('Failed to infer node pairing icon', {
@@ -855,22 +879,27 @@ module.exports = class NodeDriver extends Homey.Driver {
       };
     };
 
-    const setTimedHandler = (
-      event: string,
-      handler: (payload?: unknown) => Promise<unknown>,
-    ): void => {
-      session.setHandler(event, async (payload) => {
-        return this.withTimeout(
-          handler(payload),
-          NodeDriver.REPAIR_HANDLER_TIMEOUT_MS,
-          `node repair handler (${event})`,
-        );
-      });
-    };
-
-    setTimedHandler('device_tools:get_snapshot', async () => loadSnapshot());
-    setTimedHandler('device_tools:refresh', async () => loadSnapshot());
-    setTimedHandler('device_tools:execute_action', async (payload) => executeAction(payload));
+    this.registerTimedSessionHandler(
+      session,
+      'device_tools:get_snapshot',
+      NodeDriver.REPAIR_HANDLER_TIMEOUT_MS,
+      'node repair handler',
+      async () => loadSnapshot(),
+    );
+    this.registerTimedSessionHandler(
+      session,
+      'device_tools:refresh',
+      NodeDriver.REPAIR_HANDLER_TIMEOUT_MS,
+      'node repair handler',
+      async () => loadSnapshot(),
+    );
+    this.registerTimedSessionHandler(
+      session,
+      'device_tools:execute_action',
+      NodeDriver.REPAIR_HANDLER_TIMEOUT_MS,
+      'node repair handler',
+      async (payload) => executeAction(payload),
+    );
   }
 
   private resolveHomeyDeviceId(device: Homey.Device): string | null {

@@ -16,6 +16,7 @@ interface HomeyPairRuntime {
 declare const Homey: HomeyPairRuntime;
 
 (function bootstrapBridgeToolsPage(root: BridgeToolsPageRoot | undefined) {
+  const PANEL_EMIT_TIMEOUT_MS = 15000;
   const maybePresenter = root?.Zwjs2HomeyUi?.bridgeToolsPresenter;
   if (!maybePresenter) return;
   const presenter = maybePresenter;
@@ -163,11 +164,25 @@ declare const Homey: HomeyPairRuntime;
     }
   }
 
+  async function emitWithTimeout(eventName: string): Promise<unknown> {
+    let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutHandle = setTimeout(() => {
+        reject(new Error(`${eventName} timed out after ${PANEL_EMIT_TIMEOUT_MS}ms`));
+      }, PANEL_EMIT_TIMEOUT_MS);
+    });
+    try {
+      return (await Promise.race([Homey.emit(eventName), timeoutPromise])) as unknown;
+    } finally {
+      if (timeoutHandle) clearTimeout(timeoutHandle);
+    }
+  }
+
   async function loadSnapshot(eventName: string): Promise<void> {
     stateRef.current = presenter.reduce(stateRef.current, { type: 'load_start' });
     render();
     try {
-      const snapshot = await Homey.emit(eventName);
+      const snapshot = await emitWithTimeout(eventName);
       stateRef.current = presenter.reduce(stateRef.current, {
         type: 'load_success',
         snapshot,

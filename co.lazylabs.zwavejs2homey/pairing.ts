@@ -1,5 +1,5 @@
 import type { CanonicalNodeSummary } from '@zwavejs2homey/core';
-import { resolvePairIconForHomeyClass } from './pairing-icons';
+import { resolveDriverPairIconForHomeyClass } from './pairing-icons';
 
 export const ZWJS_DEFAULT_BRIDGE_ID = 'main' as const;
 export const ZWJS_BRIDGE_DEVICE_KIND = 'zwjs-bridge' as const;
@@ -44,6 +44,7 @@ export interface NodePairCandidate {
 
 export interface NodePairingBuildOptions {
   knownZoneNames?: ReadonlyArray<string>;
+  pairIconDriverId?: string;
 }
 
 function toTrimmedString(value: unknown): string | null {
@@ -89,10 +90,11 @@ export function hasBridgePairDeviceFromData(
 export function createBridgePairCandidate(
   bridgeId = ZWJS_DEFAULT_BRIDGE_ID,
   name = 'ZWJS Bridge',
+  pairIconDriverId = 'bridge',
 ): BridgePairCandidate {
   return {
     name,
-    icon: resolvePairIconForHomeyClass('bridge'),
+    icon: resolveDriverPairIconForHomeyClass('bridge', pairIconDriverId),
     data: {
       id: `${ZWJS_BRIDGE_DEVICE_KIND}-${bridgeId}`,
       kind: ZWJS_BRIDGE_DEVICE_KIND,
@@ -153,6 +155,10 @@ export function buildNodePairCandidates(
   options: NodePairingBuildOptions = {},
 ): NodePairCandidate[] {
   const knownZoneLocationKeys = buildKnownZoneLocationKeys(options.knownZoneNames);
+  const pairIconDriverId =
+    typeof options.pairIconDriverId === 'string' && options.pairIconDriverId.trim().length > 0
+      ? options.pairIconDriverId.trim()
+      : 'node';
 
   return nodes
     .filter((node) => Number.isInteger(node.nodeId) && node.nodeId > 1)
@@ -160,7 +166,7 @@ export function buildNodePairCandidates(
     .sort((a, b) => a.nodeId - b.nodeId)
     .map((node) => ({
       name: formatNodePairName(node, knownZoneLocationKeys),
-      icon: resolvePairIconForHomeyClass('other'),
+      icon: resolveDriverPairIconForHomeyClass('other', pairIconDriverId),
       data: {
         id: `${bridgeId}:${node.nodeId}`,
         kind: nodeKind,

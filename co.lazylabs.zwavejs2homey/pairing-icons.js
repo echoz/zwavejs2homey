@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.SUPPORTED_HOMEY_PAIR_ICON_CLASSES = exports.PAIR_ICON_BY_HOMEY_CLASS = exports.PAIR_ICON_CLASS_GROUPS = exports.PAIR_ICON_PATHS = void 0;
 exports.normalizeHomeyClassForPairIcon = normalizeHomeyClassForPairIcon;
 exports.resolvePairIconForHomeyClass = resolvePairIconForHomeyClass;
+exports.resolveDriverPairIconForHomeyClass = resolveDriverPairIconForHomeyClass;
 exports.PAIR_ICON_PATHS = Object.freeze({
     other: '/pair-icons/other.svg',
     bridge: '/pair-icons/bridge.svg',
@@ -99,4 +100,9 @@ function normalizeHomeyClassForPairIcon(value) {
 function resolvePairIconForHomeyClass(value) {
     const normalizedClass = normalizeHomeyClassForPairIcon(value);
     return exports.PAIR_ICON_BY_HOMEY_CLASS[normalizedClass] ?? exports.PAIR_ICON_PATHS.other;
+}
+function resolveDriverPairIconForHomeyClass(value, driverId) {
+    const normalizedDriverId = typeof driverId === 'string' && driverId.trim().length > 0 ? driverId.trim() : 'node';
+    const iconPath = resolvePairIconForHomeyClass(value);
+    return `/drivers/${normalizedDriverId}/assets${iconPath}`;
 }

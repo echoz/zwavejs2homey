@@ -82,6 +82,7 @@ interface SettingsHomey {
 }
 
 (function bootstrapSettingsPage(root: UiRoot | undefined) {
+  const PANEL_API_TIMEOUT_MS = 15000;
   const maybePresenter = root && root.Zwjs2HomeyUi && root.Zwjs2HomeyUi.settingsPresenter;
   if (!maybePresenter) return;
   const presenter: SettingsPresenter = maybePresenter;
@@ -215,19 +216,53 @@ interface SettingsHomey {
     setStatus('Runtime diagnostics refreshed.', 'ok');
   }
 
-  function refreshDiagnostics(homey: SettingsHomey): void {
+  async function apiRequestWithTimeout(
+    homey: SettingsHomey,
+    method: string,
+    path: string,
+    body: unknown,
+    operationLabel: string,
+  ): Promise<unknown> {
+    return new Promise<unknown>((resolve, reject) => {
+      let settled = false;
+      const timeoutHandle = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        reject(new Error(`${operationLabel} timed out after ${PANEL_API_TIMEOUT_MS}ms`));
+      }, PANEL_API_TIMEOUT_MS);
+
+      try {
+        homey.api(method, path, body, (error, response) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timeoutHandle);
+          if (error) {
+            reject(error);
+            return;
+          }
+          resolve(response);
+        });
+      } catch (error) {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeoutHandle);
+        reject(error);
+      }
+    });
+  }
+
+  async function refreshDiagnostics(homey: SettingsHomey): Promise<void> {
     refreshDiagnosticsBtn.disabled = true;
     runtimeHint.textContent = 'Refreshing runtime diagnostics...';
     setStatus('Refreshing runtime diagnostics...', 'muted');
-    homey.api('GET', '/runtime/diagnostics', null, (error, response) => {
-      refreshDiagnosticsBtn.disabled = false;
-      if (error) {
-        setStatus(`Failed to load runtime diagnostics: ${error.message || String(error)}`, 'error');
-        renderRuntimeRows([]);
-        renderWarnings(['Runtime diagnostics endpoint is unavailable.']);
-        runtimeHint.textContent = 'Runtime diagnostics unavailable.';
-        return;
-      }
+    try {
+      const response = await apiRequestWithTimeout(
+        homey,
+        'GET',
+        '/runtime/diagnostics',
+        null,
+        'runtime diagnostics request',
+      );
       const parsed = presenter.parseRuntimeResponse(response);
       if (parsed.error) {
         setStatus(parsed.error, 'error');
@@ -237,19 +272,29 @@ interface SettingsHomey {
         return;
       }
       renderRuntimeDiagnostics(parsed.data || {});
-    });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setStatus(`Failed to load runtime diagnostics: ${message}`, 'error');
+      renderRuntimeRows([]);
+      renderWarnings(['Runtime diagnostics endpoint is unavailable.']);
+      runtimeHint.textContent = 'Runtime diagnostics unavailable.';
+    } finally {
+      refreshDiagnosticsBtn.disabled = false;
+    }
   }
 
-  function exportSupportBundle(homey: SettingsHomey): void {
+  async function exportSupportBundle(homey: SettingsHomey): Promise<void> {
     exportSupportBundleBtn.disabled = true;
     const redact = redactSupportBundleCheckbox.checked;
     setStatus('Building support bundle...', 'muted');
-    homey.api('GET', '/runtime/support-bundle?includeNoAction=true', null, (error, response) => {
-      exportSupportBundleBtn.disabled = false;
-      if (error) {
-        setStatus(`Failed to build support bundle: ${error.message || String(error)}`, 'error');
-        return;
-      }
+    try {
+      const response = await apiRequestWithTimeout(
+        homey,
+        'GET',
+        '/runtime/support-bundle?includeNoAction=true',
+        null,
+        'support bundle request',
+      );
       const parsed = presenter.parseSupportBundleResponse(response);
       if (parsed.error || !parsed.data) {
         setStatus(parsed.error || 'Support bundle payload is invalid.', 'error');
@@ -264,7 +309,12 @@ interface SettingsHomey {
           downloadError instanceof Error ? downloadError.message : String(downloadError);
         setStatus(`Failed to download support bundle: ${message}`, 'error');
       }
-    });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setStatus(`Failed to build support bundle: ${message}`, 'error');
+    } finally {
+      exportSupportBundleBtn.disabled = false;
+    }
   }
 
   function loadSettings(homey: SettingsHomey): void {
@@ -276,7 +326,7 @@ interface SettingsHomey {
       }
       renderLoadedSettings(raw);
       setStatus('Settings loaded.', 'ok');
-      refreshDiagnostics(homey);
+      void refreshDiagnostics(homey);
       homey.ready();
     });
   }
@@ -298,7 +348,7 @@ interface SettingsHomey {
           return;
         }
         setStatus('Saved. Connection will be reloaded automatically.', 'ok');
-        refreshDiagnostics(homey);
+        void refreshDiagnostics(homey);
       });
     });
 
@@ -314,12 +364,12 @@ interface SettingsHomey {
         }
         renderLoadedSettings(payload);
         setStatus('Reset to defaults. Connection will be reloaded automatically.', 'ok');
-        refreshDiagnostics(homey);
+        void refreshDiagnostics(homey);
       });
     });
 
     refreshDiagnosticsBtn.addEventListener('click', () => {
-      refreshDiagnostics(homey);
+      void refreshDiagnostics(homey);
     });
 
     openBridgeToolsBtn.addEventListener('click', () => {
@@ -330,7 +380,7 @@ interface SettingsHomey {
     });
 
     exportSupportBundleBtn.addEventListener('click', () => {
-      exportSupportBundle(homey);
+      void exportSupportBundle(homey);
     });
   }
 
