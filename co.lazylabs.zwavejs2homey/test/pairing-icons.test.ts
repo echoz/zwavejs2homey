@@ -24,11 +24,11 @@ test('pair icon resolver normalizes homey class input and falls back to other', 
   assert.equal(resolvePairIconForHomeyClass('not-real'), '/pair-icons/other.svg');
   assert.equal(
     resolveDriverPairIconForHomeyClass('light', 'node'),
-    '/drivers/node/assets/pair-icons/light.svg',
+    '/pair-icons/light.svg',
   );
   assert.equal(
     resolveDriverPairIconForHomeyClass('bridge', 'bridge'),
-    '/drivers/bridge/assets/pair-icons/bridge.svg',
+    '/pair-icons/bridge.svg',
   );
 });
 

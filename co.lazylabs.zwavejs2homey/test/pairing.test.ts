@@ -17,7 +17,7 @@ test('bridge pairing helpers enforce singleton identity', () => {
 
   assert.deepEqual(createBridgePairCandidate(), {
     name: 'ZWJS Bridge',
-    icon: '/drivers/bridge/assets/pair-icons/bridge.svg',
+    icon: '/pair-icons/bridge.svg',
     data: {
       id: ZWJS_BRIDGE_DEVICE_UNIQUE_ID,
       kind: 'zwjs-bridge',
@@ -62,7 +62,7 @@ test('node pair candidates are filtered, sorted and normalized', () => {
   assert.deepEqual(candidates, [
     {
       name: '[2] Kitchen Dimmer',
-      icon: '/drivers/node/assets/pair-icons/other.svg',
+      icon: '/pair-icons/other.svg',
       data: {
         id: 'main:2',
         kind: 'zwjs-node',
@@ -81,7 +81,7 @@ test('node pair candidates are filtered, sorted and normalized', () => {
     },
     {
       name: '[7] Outlet',
-      icon: '/drivers/node/assets/pair-icons/other.svg',
+      icon: '/pair-icons/other.svg',
       data: {
         id: 'main:7',
         kind: 'zwjs-node',
@@ -100,7 +100,7 @@ test('node pair candidates are filtered, sorted and normalized', () => {
     },
     {
       name: '[9] YRD226',
-      icon: '/drivers/node/assets/pair-icons/other.svg',
+      icon: '/pair-icons/other.svg',
       data: {
         id: 'main:9',
         kind: 'zwjs-node',

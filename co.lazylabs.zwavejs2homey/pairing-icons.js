@@ -102,7 +102,6 @@ function resolvePairIconForHomeyClass(value) {
     return exports.PAIR_ICON_BY_HOMEY_CLASS[normalizedClass] ?? exports.PAIR_ICON_PATHS.other;
 }
 function resolveDriverPairIconForHomeyClass(value, driverId) {
-    const normalizedDriverId = typeof driverId === 'string' && driverId.trim().length > 0 ? driverId.trim() : 'node';
-    const iconPath = resolvePairIconForHomeyClass(value);
-    return `/drivers/${normalizedDriverId}/assets${iconPath}`;
+    void driverId;
+    return resolvePairIconForHomeyClass(value);
 }
