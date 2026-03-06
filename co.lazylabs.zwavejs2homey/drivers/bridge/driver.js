@@ -28,9 +28,20 @@ module.exports = class BridgeDriver extends homey_1.default.Driver {
             return this.loadNextStepsStatus();
         });
     }
+    resolveBridgeRuntime(app) {
+        const session = app.getBridgeSession?.(pairing_1.ZWJS_DEFAULT_BRIDGE_ID);
+        const bridgeId = (typeof session?.bridgeId === 'string' && session.bridgeId.trim().length > 0
+            ? session.bridgeId.trim()
+            : undefined) ??
+            app.getBridgeId?.() ??
+            pairing_1.ZWJS_DEFAULT_BRIDGE_ID;
+        const client = session?.getZwjsClient?.() ?? app.getZwjsClient?.();
+        return { bridgeId, client };
+    }
     async loadNextStepsStatus() {
         const app = this.homey.app;
-        const client = app.getZwjsClient?.();
+        const runtime = this.resolveBridgeRuntime(app);
+        const client = runtime.client;
         const status = client?.getStatus?.();
         const zwjs = {
             available: Boolean(client),
@@ -47,7 +58,7 @@ module.exports = class BridgeDriver extends homey_1.default.Driver {
         const discoveredNodeNames = new Map();
         let importedNodes = null;
         let importedNodeDetails = [];
-        let bridgeId = pairing_1.ZWJS_DEFAULT_BRIDGE_ID;
+        let bridgeId = runtime.bridgeId;
         const warnings = [];
         if (client?.getNodeList) {
             try {
@@ -55,7 +66,9 @@ module.exports = class BridgeDriver extends homey_1.default.Driver {
                 const nodes = Array.isArray(nodeList?.nodes) ? nodeList.nodes : [];
                 discoveredNodes = nodes.filter((node) => {
                     const nodeId = node?.nodeId;
-                    if (typeof node?.name === 'string' && typeof nodeId === 'number' && Number.isInteger(nodeId)) {
+                    if (typeof node?.name === 'string' &&
+                        typeof nodeId === 'number' &&
+                        Number.isInteger(nodeId)) {
                         const trimmedName = node.name.trim();
                         if (trimmedName.length > 0) {
                             discoveredNodeNames.set(nodeId, trimmedName);
@@ -89,12 +102,14 @@ module.exports = class BridgeDriver extends homey_1.default.Driver {
                         return nodeBridgeId === bridgeId;
                     })
                         .map((node) => {
-                        const nodeId = typeof node.nodeId === 'number' && Number.isInteger(node.nodeId) ? node.nodeId : null;
+                        const nodeId = typeof node.nodeId === 'number' && Number.isInteger(node.nodeId)
+                            ? node.nodeId
+                            : null;
                         return {
                             homeyDeviceId: this.normalizeStringOrNull(node.homeyDeviceId),
                             bridgeId: this.normalizeStringOrNull(node.bridgeId) ?? bridgeId,
                             nodeId,
-                            name: nodeId !== null ? discoveredNodeNames.get(nodeId) ?? null : null,
+                            name: nodeId !== null ? (discoveredNodeNames.get(nodeId) ?? null) : null,
                             manufacturer: this.normalizeStringOrNull(node.node?.manufacturer),
                             product: this.normalizeStringOrNull(node.node?.product),
                             location: this.normalizeStringOrNull(node.node?.location),

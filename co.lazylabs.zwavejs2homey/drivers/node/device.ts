@@ -28,9 +28,14 @@ import {
   type HomeyCurationRuntimeStatusV1,
 } from '../../curation';
 
-interface AppRuntimeAccess {
+interface BridgeSessionLike {
+  bridgeId?: string;
   getZwjsClient?: () => ZwjsClient | undefined;
-  getBridgeId?: () => string;
+}
+
+interface AppRuntimeAccess {
+  getBridgeSession?: (bridgeId?: string) => BridgeSessionLike | undefined;
+  getZwjsClient?: () => ZwjsClient | undefined;
   getCompiledProfilesStatus?: () => CompiledProfilesRuntimeStatus;
   getCurationStatus?: () => HomeyCurationRuntimeStatusV1;
   resolveCompiledProfileEntry?: (
@@ -500,7 +505,8 @@ module.exports = class NodeDevice extends Homey.Device {
   private async syncRuntimeMappings(syncReason: string): Promise<void> {
     const app = this.homey.app as AppRuntimeAccess;
     const ctx = this.getNodeContext();
-    const client = app.getZwjsClient?.();
+    const session = app.getBridgeSession?.(ctx.bridgeId);
+    const client = session?.getZwjsClient?.() ?? app.getZwjsClient?.();
     const clientStatus = client?.getStatus();
     const resolverStatus = app.getCompiledProfilesStatus?.();
     const curationStatus = app.getCurationStatus?.();

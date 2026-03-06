@@ -39,6 +39,16 @@ module.exports = class BridgeDevice extends homey_1.default.Device {
     getRuntimeApp() {
         return this.homey.app;
     }
+    resolveBridgeRuntime(app) {
+        const session = app.getBridgeSession?.();
+        const bridgeId = (typeof session?.bridgeId === 'string' && session.bridgeId.trim().length > 0
+            ? session.bridgeId.trim()
+            : undefined) ??
+            app.getBridgeId?.() ??
+            'unknown';
+        const client = session?.getZwjsClient?.() ?? app.getZwjsClient?.();
+        return { bridgeId, client };
+    }
     async refreshRuntimeDiagnostics(reason) {
         const app = this.getRuntimeApp();
         const diagnostics = await app.getNodeRuntimeDiagnostics?.();
@@ -135,8 +145,9 @@ module.exports = class BridgeDevice extends homey_1.default.Device {
     }
     async onInit() {
         const app = this.getRuntimeApp();
-        const bridgeId = app.getBridgeId?.() ?? 'unknown';
-        const status = app.getZwjsClient?.()?.getStatus();
+        const runtime = this.resolveBridgeRuntime(app);
+        const bridgeId = runtime.bridgeId;
+        const status = runtime.client?.getStatus();
         this.log('BridgeDevice initialized', {
             bridgeId,
             transportConnected: status?.transportConnected === true,

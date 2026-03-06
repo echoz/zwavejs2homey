@@ -366,7 +366,8 @@ module.exports = class NodeDevice extends homey_1.default.Device {
     async syncRuntimeMappings(syncReason) {
         const app = this.homey.app;
         const ctx = this.getNodeContext();
-        const client = app.getZwjsClient?.();
+        const session = app.getBridgeSession?.(ctx.bridgeId);
+        const client = session?.getZwjsClient?.() ?? app.getZwjsClient?.();
         const clientStatus = client?.getStatus();
         const resolverStatus = app.getCompiledProfilesStatus?.();
         const curationStatus = app.getCurationStatus?.();

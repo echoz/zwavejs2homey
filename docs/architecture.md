@@ -47,7 +47,10 @@ HA source + project rules + catalog + vocabulary
 ```text
 Homey App (app.ts)
   |
-  +-- shared ZwjsClient session (@zwavejs2homey/core)
+  +-- bridge-session seam
+  |    - default session id: `main`
+  |    - owns per-bridge ZwjsClient attachment/status
+  |    - current behavior remains singleton, but runtime access is now bridge-scoped
   +-- compiled profile runtime (artifact + resolver index)
   +-- curation runtime (curation.v1 load/validate)
   |
@@ -113,6 +116,7 @@ Owns:
 
 - app lifecycle and settings orchestration
 - pairing/import model (`bridge` + `node`)
+- bridge-session ownership (`getBridgeSession(bridgeId?)`) and default-session routing
 - runtime compiled profile resolution + mapping execution
 - `curation.v1` load/validate/lower/apply integration
 - pairing UX policy:
@@ -132,6 +136,10 @@ Delivered:
 - Homey app topology is in place:
   - `bridge` singleton-like pairing
   - `node` import flow with dedupe (`bridgeId + nodeId`)
+- bridge-session abstraction is in place:
+  - app runtime now owns bridge sessions explicitly instead of relying on implicit global client state
+  - drivers/devices resolve runtime through bridge session first (`getBridgeSession`) with legacy fallbacks retained
+  - current runtime behavior is unchanged (`main` session only), but multi-bridge seams are now test-backed
 - runtime mapping kernel is live:
   - generic `value` inbound + `set_value` outbound path
   - transform-aware coercion
@@ -240,6 +248,7 @@ Near-term:
 
 1. continue Device Tools UX polish and diagnostics clarity
 2. continue capability vertical expansion with runtime + harness tests
+3. prepare session registry evolution from singleton default (`main`) to multi-bridge enrollment when pairing model changes
 
 After that:
 

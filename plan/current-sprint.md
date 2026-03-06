@@ -22,6 +22,22 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## Recently Completed
 
+- Latest Phase 5 bridge-session abstraction slice:
+  - introduced app-level bridge-session runtime seam:
+    - new module: `co.lazylabs.zwavejs2homey/bridge-session.ts`
+    - default session remains `main` (no behavior change)
+    - session now owns ZWJS client attachment/status for runtime lifecycle operations
+  - app runtime now routes connection lifecycle + diagnostics identity through the default bridge session:
+    - start/stop/reload path uses session-owned client state
+    - diagnostics/bridge ID reporting now derives from session identity
+    - new app API: `getBridgeSession(bridgeId?)`
+  - updated bridge/node drivers and devices to resolve runtime through bridge-session first, while preserving compatibility fallbacks:
+    - `getBridgeSession(...).getZwjsClient()` preferred
+    - fallback to `getZwjsClient()` / `getBridgeId()` retained
+  - added test coverage to lock session path behavior:
+    - app runtime test for session lifecycle (`test/app-runtime-refresh.test.ts`)
+    - driver harness pair/session tests using `getBridgeSession` path (`test/driver-harness.test.ts`)
+
 - Latest Phase 5 runtime fallback-policy hardening slice:
   - expanded node-device harness coverage to lock deterministic no-profile-match behavior when ZWJS is connected:
     - compiled artifact loaded + no resolver match -> `fallbackReason: no_compiled_profile_match`

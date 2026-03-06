@@ -128,23 +128,28 @@ test('bridge driver pair session exposes next steps status handler', async () =>
   const driver = new BridgeDriver();
   driver._configureHarness({
     app: {
-      getZwjsClient() {
+      getBridgeSession() {
         return {
-          getStatus() {
+          bridgeId: 'main',
+          getZwjsClient() {
             return {
-              transportConnected: true,
-              lifecycle: 'connected',
-              serverVersion: '3.4.0',
-              adapterFamily: 'zwjs-default',
-            };
-          },
-          async getNodeList() {
-            return {
-              nodes: [
-                { nodeId: 1, name: 'Controller' },
-                { nodeId: 5, name: 'Office Lamp' },
-                { nodeId: 8, name: 'Porch Sensor' },
-              ],
+              getStatus() {
+                return {
+                  transportConnected: true,
+                  lifecycle: 'connected',
+                  serverVersion: '3.4.0',
+                  adapterFamily: 'zwjs-default',
+                };
+              },
+              async getNodeList() {
+                return {
+                  nodes: [
+                    { nodeId: 1, name: 'Controller' },
+                    { nodeId: 5, name: 'Office Lamp' },
+                    { nodeId: 8, name: 'Porch Sensor' },
+                  ],
+                };
+              },
             };
           },
         };
@@ -524,25 +529,27 @@ test('node driver pair session registers list_devices and import_summary status 
   const driver = new NodeDriver();
   driver._configureHarness({
     app: {
-      getZwjsClient: () => ({
-        getStatus() {
-          return {
-            transportConnected: true,
-            lifecycle: 'connected',
-            serverVersion: '3.4.0',
-            adapterFamily: 'zwjs-default',
-          };
-        },
-        async getNodeList() {
-          return {
-            nodes: [
-              { nodeId: 1, name: 'Controller' },
-              { nodeId: 2, name: 'Desk Light' },
-            ],
-          };
-        },
+      getBridgeSession: () => ({
+        bridgeId: 'main',
+        getZwjsClient: () => ({
+          getStatus() {
+            return {
+              transportConnected: true,
+              lifecycle: 'connected',
+              serverVersion: '3.4.0',
+              adapterFamily: 'zwjs-default',
+            };
+          },
+          async getNodeList() {
+            return {
+              nodes: [
+                { nodeId: 1, name: 'Controller' },
+                { nodeId: 2, name: 'Desk Light' },
+              ],
+            };
+          },
+        }),
       }),
-      getBridgeId: () => 'main',
       async getNodeRuntimeDiagnostics() {
         return {
           bridgeId: 'main',

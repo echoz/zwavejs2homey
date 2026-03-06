@@ -5,7 +5,29 @@ import {
   ZWJS_DEFAULT_BRIDGE_ID,
 } from '../../pairing';
 
+interface BridgeSessionLike {
+  bridgeId?: string;
+  getZwjsClient?: () =>
+    | {
+        getStatus?: () => {
+          transportConnected?: boolean;
+          lifecycle?: string;
+          serverVersion?: string | null;
+          adapterFamily?: string | null;
+        };
+        getNodeList?: () => Promise<{
+          nodes?: Array<{
+            nodeId?: unknown;
+            name?: unknown;
+          }>;
+        }>;
+      }
+    | undefined;
+}
+
 interface AppRuntimeAccess {
+  getBridgeSession?: (bridgeId?: string) => BridgeSessionLike | undefined;
+  getBridgeId?: () => string;
   getZwjsClient?: () =>
     | {
         getStatus?: () => {
@@ -164,6 +186,36 @@ module.exports = class BridgeDriver extends Homey.Driver {
     });
   }
 
+  private resolveBridgeRuntime(app: AppRuntimeAccess): {
+    bridgeId: string;
+    client:
+      | {
+          getStatus?: () => {
+            transportConnected?: boolean;
+            lifecycle?: string;
+            serverVersion?: string | null;
+            adapterFamily?: string | null;
+          };
+          getNodeList?: () => Promise<{
+            nodes?: Array<{
+              nodeId?: unknown;
+              name?: unknown;
+            }>;
+          }>;
+        }
+      | undefined;
+  } {
+    const session = app.getBridgeSession?.(ZWJS_DEFAULT_BRIDGE_ID);
+    const bridgeId =
+      (typeof session?.bridgeId === 'string' && session.bridgeId.trim().length > 0
+        ? session.bridgeId.trim()
+        : undefined) ??
+      app.getBridgeId?.() ??
+      ZWJS_DEFAULT_BRIDGE_ID;
+    const client = session?.getZwjsClient?.() ?? app.getZwjsClient?.();
+    return { bridgeId, client };
+  }
+
   private async loadNextStepsStatus(): Promise<{
     generatedAt: string;
     bridgeId: string;
@@ -195,7 +247,8 @@ module.exports = class BridgeDriver extends Homey.Driver {
     warnings: string[];
   }> {
     const app = this.homey.app as AppRuntimeAccess;
-    const client = app.getZwjsClient?.();
+    const runtime = this.resolveBridgeRuntime(app);
+    const client = runtime.client;
     const status = client?.getStatus?.();
     const zwjs = {
       available: Boolean(client),
@@ -229,7 +282,7 @@ module.exports = class BridgeDriver extends Homey.Driver {
       recommendationAction: string;
       recommendationReason: string | null;
     }> = [];
-    let bridgeId: string = ZWJS_DEFAULT_BRIDGE_ID;
+    let bridgeId: string = runtime.bridgeId;
     const warnings: string[] = [];
 
     if (client?.getNodeList) {
@@ -238,7 +291,11 @@ module.exports = class BridgeDriver extends Homey.Driver {
         const nodes = Array.isArray(nodeList?.nodes) ? nodeList.nodes : [];
         discoveredNodes = nodes.filter((node) => {
           const nodeId = node?.nodeId;
-          if (typeof node?.name === 'string' && typeof nodeId === 'number' && Number.isInteger(nodeId)) {
+          if (
+            typeof node?.name === 'string' &&
+            typeof nodeId === 'number' &&
+            Number.isInteger(nodeId)
+          ) {
             const trimmedName = node.name.trim();
             if (trimmedName.length > 0) {
               discoveredNodeNames.set(nodeId, trimmedName);
@@ -273,12 +330,14 @@ module.exports = class BridgeDriver extends Homey.Driver {
             })
             .map((node) => {
               const nodeId =
-                typeof node.nodeId === 'number' && Number.isInteger(node.nodeId) ? node.nodeId : null;
+                typeof node.nodeId === 'number' && Number.isInteger(node.nodeId)
+                  ? node.nodeId
+                  : null;
               return {
                 homeyDeviceId: this.normalizeStringOrNull(node.homeyDeviceId),
                 bridgeId: this.normalizeStringOrNull(node.bridgeId) ?? bridgeId,
                 nodeId,
-                name: nodeId !== null ? discoveredNodeNames.get(nodeId) ?? null : null,
+                name: nodeId !== null ? (discoveredNodeNames.get(nodeId) ?? null) : null,
                 manufacturer: this.normalizeStringOrNull(node.node?.manufacturer),
                 product: this.normalizeStringOrNull(node.node?.product),
                 location: this.normalizeStringOrNull(node.node?.location),

@@ -22,6 +22,14 @@ module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
                 return this.loadImportSummaryStatus();
             });
         }
+        resolveBridgeRuntime(app) {
+            const session = app.getBridgeSession?.(pairing_1.ZWJS_DEFAULT_BRIDGE_ID);
+            const bridgeId = this.normalizeStringOrNull(session?.bridgeId) ??
+                app.getBridgeId?.() ??
+                pairing_1.ZWJS_DEFAULT_BRIDGE_ID;
+            const client = session?.getZwjsClient?.() ?? app.getZwjsClient?.();
+            return { bridgeId, client };
+        }
         countImportedNodeDevices(bridgeId) {
             return this.getDevices()
                 .map((device) => device.getData())
@@ -31,8 +39,9 @@ module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
         }
         async loadImportSummaryStatus() {
             const app = this.homey.app;
-            const bridgeId = app.getBridgeId?.() ?? pairing_1.ZWJS_DEFAULT_BRIDGE_ID;
-            const client = app.getZwjsClient?.();
+            const runtime = this.resolveBridgeRuntime(app);
+            const bridgeId = runtime.bridgeId;
+            const client = runtime.client;
             const status = client?.getStatus?.();
             const warnings = [];
             const zwjs = {
@@ -54,7 +63,9 @@ module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
                     const nodes = Array.isArray(nodeList?.nodes) ? nodeList.nodes : [];
                     discoveredNodes = nodes.filter((node) => {
                         const nodeId = node?.nodeId;
-                        if (typeof node?.name === 'string' && typeof nodeId === 'number' && Number.isInteger(nodeId)) {
+                        if (typeof node?.name === 'string' &&
+                            typeof nodeId === 'number' &&
+                            Number.isInteger(nodeId)) {
                             const trimmedName = node.name.trim();
                             if (trimmedName.length > 0) {
                                 discoveredNodeNames.set(nodeId, trimmedName);
@@ -88,13 +99,15 @@ module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
                             return entryBridgeId === bridgeId;
                         })
                             .map((entry) => {
-                            const nodeId = typeof entry.nodeId === 'number' && Number.isInteger(entry.nodeId) ? entry.nodeId : null;
+                            const nodeId = typeof entry.nodeId === 'number' && Number.isInteger(entry.nodeId)
+                                ? entry.nodeId
+                                : null;
                             const recommendationAction = this.toRecommendationAction(entry.recommendation);
                             return {
                                 homeyDeviceId: this.normalizeStringOrNull(entry.homeyDeviceId),
                                 bridgeId: this.normalizeStringOrNull(entry.bridgeId) ?? bridgeId,
                                 nodeId,
-                                name: nodeId !== null ? discoveredNodeNames.get(nodeId) ?? null : null,
+                                name: nodeId !== null ? (discoveredNodeNames.get(nodeId) ?? null) : null,
                                 manufacturer: this.normalizeStringOrNull(entry.node?.manufacturer),
                                 product: this.normalizeStringOrNull(entry.node?.product),
                                 location: this.normalizeStringOrNull(entry.node?.location),
@@ -263,13 +276,14 @@ module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
         }
         async onPairListDevices() {
             const app = this.homey.app;
-            const client = app.getZwjsClient?.();
+            const runtime = this.resolveBridgeRuntime(app);
+            const client = runtime.client;
             if (!client) {
                 throw new Error('ZWJS client unavailable. Configure zwjs_connection.url in app settings and connect a bridge first.');
             }
             let latestCandidates = [];
             const runPairFlow = async () => {
-                const bridgeId = app.getBridgeId?.() ?? pairing_1.ZWJS_DEFAULT_BRIDGE_ID;
+                const bridgeId = runtime.bridgeId;
                 const existingData = this.getDevices().map((device) => {
                     return device.getData();
                 });

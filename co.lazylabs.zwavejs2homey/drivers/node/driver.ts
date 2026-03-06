@@ -14,7 +14,13 @@ type RecommendationActionSelection =
   | 'adopt-recommended-baseline'
   | 'none';
 
+interface BridgeSessionLike {
+  bridgeId?: string;
+  getZwjsClient?: () => ZwjsClient | undefined;
+}
+
 interface AppRuntimeAccess {
+  getBridgeSession?: (bridgeId?: string) => BridgeSessionLike | undefined;
   getZwjsClient?: () => ZwjsClient | undefined;
   getBridgeId?: () => string;
   getNodeRuntimeDiagnostics?: (options?: { homeyDeviceId?: string }) => Promise<{
@@ -131,6 +137,19 @@ module.exports = class NodeDriver extends Homey.Driver {
     });
   }
 
+  private resolveBridgeRuntime(app: AppRuntimeAccess): {
+    bridgeId: string;
+    client: ZwjsClient | undefined;
+  } {
+    const session = app.getBridgeSession?.(ZWJS_DEFAULT_BRIDGE_ID);
+    const bridgeId =
+      this.normalizeStringOrNull(session?.bridgeId) ??
+      app.getBridgeId?.() ??
+      ZWJS_DEFAULT_BRIDGE_ID;
+    const client = session?.getZwjsClient?.() ?? app.getZwjsClient?.();
+    return { bridgeId, client };
+  }
+
   private countImportedNodeDevices(bridgeId: string): number {
     return this.getDevices()
       .map((device) => device.getData() as HomeyDeviceData | undefined)
@@ -156,8 +175,9 @@ module.exports = class NodeDriver extends Homey.Driver {
     warnings: string[];
   }> {
     const app = this.homey.app as AppRuntimeAccess;
-    const bridgeId = app.getBridgeId?.() ?? ZWJS_DEFAULT_BRIDGE_ID;
-    const client = app.getZwjsClient?.();
+    const runtime = this.resolveBridgeRuntime(app);
+    const bridgeId = runtime.bridgeId;
+    const client = runtime.client;
     const status = client?.getStatus?.();
     const warnings: string[] = [];
     const zwjs = {
@@ -182,7 +202,11 @@ module.exports = class NodeDriver extends Homey.Driver {
         const nodes = Array.isArray(nodeList?.nodes) ? nodeList.nodes : [];
         discoveredNodes = nodes.filter((node) => {
           const nodeId = node?.nodeId;
-          if (typeof node?.name === 'string' && typeof nodeId === 'number' && Number.isInteger(nodeId)) {
+          if (
+            typeof node?.name === 'string' &&
+            typeof nodeId === 'number' &&
+            Number.isInteger(nodeId)
+          ) {
             const trimmedName = node.name.trim();
             if (trimmedName.length > 0) {
               discoveredNodeNames.set(nodeId, trimmedName);
@@ -214,13 +238,16 @@ module.exports = class NodeDriver extends Homey.Driver {
               return entryBridgeId === bridgeId;
             })
             .map((entry) => {
-              const nodeId = typeof entry.nodeId === 'number' && Number.isInteger(entry.nodeId) ? entry.nodeId : null;
+              const nodeId =
+                typeof entry.nodeId === 'number' && Number.isInteger(entry.nodeId)
+                  ? entry.nodeId
+                  : null;
               const recommendationAction = this.toRecommendationAction(entry.recommendation);
               return {
                 homeyDeviceId: this.normalizeStringOrNull(entry.homeyDeviceId),
                 bridgeId: this.normalizeStringOrNull(entry.bridgeId) ?? bridgeId,
                 nodeId,
-                name: nodeId !== null ? discoveredNodeNames.get(nodeId) ?? null : null,
+                name: nodeId !== null ? (discoveredNodeNames.get(nodeId) ?? null) : null,
                 manufacturer: this.normalizeStringOrNull(entry.node?.manufacturer),
                 product: this.normalizeStringOrNull(entry.node?.product),
                 location: this.normalizeStringOrNull(entry.node?.location),
@@ -277,19 +304,29 @@ module.exports = class NodeDriver extends Homey.Driver {
     return trimmed.length > 0 ? trimmed : null;
   }
 
-  private toRecommendationAction(recommendation: {
-    available?: boolean;
-    backfillNeeded?: boolean;
-  } | null | undefined): string {
+  private toRecommendationAction(
+    recommendation:
+      | {
+          available?: boolean;
+          backfillNeeded?: boolean;
+        }
+      | null
+      | undefined,
+  ): string {
     if (recommendation?.backfillNeeded === true) return 'backfill-marker';
     if (recommendation?.available === true) return 'adopt-recommended-baseline';
     return 'none';
   }
 
-  private buildProfileMatchSummary(profile: {
-    matchBy?: string | null;
-    matchKey?: string | null;
-  } | null | undefined): string | null {
+  private buildProfileMatchSummary(
+    profile:
+      | {
+          matchBy?: string | null;
+          matchKey?: string | null;
+        }
+      | null
+      | undefined,
+  ): string | null {
     const matchBy = this.normalizeStringOrNull(profile?.matchBy);
     const matchKey = this.normalizeStringOrNull(profile?.matchKey);
     if (!matchBy && !matchKey) return null;
@@ -400,7 +437,8 @@ module.exports = class NodeDriver extends Homey.Driver {
 
   async onPairListDevices() {
     const app = this.homey.app as AppRuntimeAccess;
-    const client = app.getZwjsClient?.();
+    const runtime = this.resolveBridgeRuntime(app);
+    const client = runtime.client;
     if (!client) {
       throw new Error(
         'ZWJS client unavailable. Configure zwjs_connection.url in app settings and connect a bridge first.',
@@ -409,7 +447,7 @@ module.exports = class NodeDriver extends Homey.Driver {
 
     let latestCandidates: ReturnType<typeof buildNodePairCandidates> = [];
     const runPairFlow = async () => {
-      const bridgeId = app.getBridgeId?.() ?? ZWJS_DEFAULT_BRIDGE_ID;
+      const bridgeId = runtime.bridgeId;
       const existingData = this.getDevices().map((device) => {
         return device.getData() as HomeyDeviceData | undefined;
       });

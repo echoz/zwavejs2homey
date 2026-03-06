@@ -357,6 +357,24 @@ test('app starts zwjs client after zwjs_connection.url is configured at runtime'
   assert.equal(coreMock.mockClient.stopCalls, 1);
 });
 
+test('app exposes a default bridge session seam and keeps client lifecycle scoped to it', async () => {
+  const { app, coreMock } = loadAppClass([]);
+  app.homey.settings.set('zwjs_connection', { url: 'ws://127.0.0.1:3001' });
+
+  await app.onInit();
+  const session = app.getBridgeSession();
+  assert.ok(session);
+  assert.equal(session.bridgeId, 'main');
+  assert.equal(session.getZwjsClient(), app.getZwjsClient());
+  assert.equal(coreMock.mockClient.startCalls, 1);
+
+  await app.onUninit();
+  const sessionAfterStop = app.getBridgeSession();
+  assert.ok(sessionAfterStop);
+  assert.equal(sessionAfterStop.getZwjsClient(), undefined);
+  assert.equal(coreMock.mockClient.stopCalls, 1);
+});
+
 test('app performs targeted node runtime refresh from node lifecycle events', async () => {
   const node5Calls = [];
   const node8Calls = [];

@@ -79,6 +79,10 @@ Done so far:
 
 - locked topology (`bridge` + `node`) and pairing model
 - app-level shared ZWJS session ownership
+- explicit bridge-session seam for runtime ownership:
+  - default session id `main` remains singleton for MVP behavior parity
+  - app now exposes `getBridgeSession(bridgeId?)` and routes runtime lifecycle through session state
+  - bridge/node drivers and devices resolve session-scoped client access first, with legacy fallbacks retained
 - compiled profile runtime loader/resolver integration
 - node runtime mapping kernel with live read/write gating + diagnostics
 - runtime rebind on startup/settings/events
@@ -138,8 +142,7 @@ Done so far:
 In progress / next:
 
 1. continue broadening runtime mapping coverage with tests
-2. prepare adapter bridge-session abstraction for future multi-bridge support without changing current singleton behavior
-3. maintain pairing/settings/repair UX as MVP-frozen unless defects are reported
+2. maintain pairing/settings/repair UX as MVP-frozen unless defects are reported
 
 Exit criteria:
 

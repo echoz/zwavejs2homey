@@ -32,6 +32,7 @@ import {
   upsertCurationBaselineMarkerV1,
 } from './curation';
 import { ZWJS_DEFAULT_BRIDGE_ID } from './pairing';
+import { createBridgeSession, type BridgeSessionRuntimeState } from './bridge-session';
 
 interface ZwjsDiagnosticsStatusV1 {
   available: boolean;
@@ -202,8 +203,10 @@ interface NodeDeviceToolsSnapshotV1 {
 }
 
 module.exports = class Zwavejs2HomeyApp extends Homey.App {
-  private zwjsClient?: ZwjsClient;
-  private readonly bridgeId = ZWJS_DEFAULT_BRIDGE_ID;
+  private readonly defaultBridgeId = ZWJS_DEFAULT_BRIDGE_ID;
+  private readonly bridgeSessions = new Map<string, BridgeSessionRuntimeState>([
+    [ZWJS_DEFAULT_BRIDGE_ID, createBridgeSession(ZWJS_DEFAULT_BRIDGE_ID)],
+  ]);
   private compiledProfilesRuntime?: CompiledProfilesRuntime;
   private curationRuntime = loadCurationRuntimeFromSettings(undefined);
 
@@ -366,10 +369,23 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
     };
   }
 
+  private getOrCreateBridgeSession(bridgeId: string): BridgeSessionRuntimeState {
+    const existing = this.bridgeSessions.get(bridgeId);
+    if (existing) return existing;
+    const session = createBridgeSession(bridgeId);
+    this.bridgeSessions.set(bridgeId, session);
+    return session;
+  }
+
+  private getDefaultBridgeSession(): BridgeSessionRuntimeState {
+    return this.getOrCreateBridgeSession(this.defaultBridgeId);
+  }
+
   private normalizeZwjsDiagnosticsStatus(): ZwjsDiagnosticsStatusV1 {
-    const status = this.zwjsClient?.getStatus();
+    const session = this.getDefaultBridgeSession();
+    const status = session.getZwjsStatus();
     return {
-      available: Boolean(this.zwjsClient),
+      available: Boolean(session.getZwjsClient()),
       transportConnected: status?.transportConnected === true,
       lifecycle: status?.lifecycle ?? 'stopped',
       versionReceived: typeof status?.versionReceived === 'boolean' ? status.versionReceived : null,
@@ -689,10 +705,12 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
   }
 
   private async stopZwjsClient(reason: string): Promise<void> {
-    if (!this.zwjsClient) return;
+    const session = this.getDefaultBridgeSession();
+    const client = session.getZwjsClient();
+    if (!client) return;
     this.log(`Stopping ZWJS client (${reason})`);
-    await this.zwjsClient.stop();
-    this.zwjsClient = undefined;
+    await client.stop();
+    session.setZwjsClient(undefined);
   }
 
   private static hasConfiguredZwjsUrl(rawSettings: unknown): boolean {
@@ -724,6 +742,7 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
   }
 
   private async startZwjsClient(reason: string): Promise<void> {
+    const session = this.getDefaultBridgeSession();
     const rawConnectionSettings = this.homey.settings.get(ZWJS_CONNECTION_SETTINGS_KEY);
     if (!Zwavejs2HomeyApp.hasConfiguredZwjsUrl(rawConnectionSettings)) {
       this.log(
@@ -771,8 +790,8 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
       });
     });
     await nextClient.start();
-    this.zwjsClient = nextClient;
-    this.log('zwjs status', this.zwjsClient.getStatus());
+    session.setZwjsClient(nextClient);
+    this.log('zwjs status', session.getZwjsStatus());
   }
 
   private async loadCompiledProfilesRuntime(reason: string): Promise<void> {
@@ -908,7 +927,7 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
         if (!data || typeof data.nodeId !== 'number' || data.nodeId !== nodeId) {
           continue;
         }
-        if (data.bridgeId && data.bridgeId !== this.bridgeId) {
+        if (data.bridgeId && data.bridgeId !== this.getDefaultBridgeSession().bridgeId) {
           continue;
         }
         if (typeof device.onRuntimeMappingsRefresh === 'function') {
@@ -1022,11 +1041,16 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
   }
 
   getZwjsClient(): ZwjsClient | undefined {
-    return this.zwjsClient;
+    return this.getDefaultBridgeSession().getZwjsClient();
   }
 
   getBridgeId(): string {
-    return this.bridgeId;
+    return this.getDefaultBridgeSession().bridgeId;
+  }
+
+  getBridgeSession(bridgeId?: string): BridgeSessionRuntimeState | undefined {
+    const normalizedBridgeId = Zwavejs2HomeyApp.toStringOrNull(bridgeId) ?? this.defaultBridgeId;
+    return this.bridgeSessions.get(normalizedBridgeId);
   }
 
   getCompiledProfilesStatus(): CompiledProfilesRuntimeStatus {
@@ -1109,7 +1133,7 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
 
     return {
       generatedAt: new Date().toISOString(),
-      bridgeId: this.bridgeId,
+      bridgeId: this.getDefaultBridgeSession().bridgeId,
       zwjs: this.normalizeZwjsDiagnosticsStatus(),
       compiledProfiles: this.getCompiledProfilesStatus(),
       curation: this.getCurationStatus(),

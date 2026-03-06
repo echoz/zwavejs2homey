@@ -1,7 +1,13 @@
 import Homey from 'homey';
 import type { ZwjsClient } from '@zwavejs2homey/core';
 
+interface BridgeSessionLike {
+  bridgeId?: string;
+  getZwjsClient?: () => ZwjsClient | undefined;
+}
+
 interface AppRuntimeAccess {
+  getBridgeSession?: (bridgeId?: string) => BridgeSessionLike | undefined;
   getZwjsClient?: () => ZwjsClient | undefined;
   getBridgeId?: () => string;
   getNodeRuntimeDiagnostics?: (options?: { homeyDeviceId?: string }) => Promise<{
@@ -93,6 +99,21 @@ module.exports = class BridgeDevice extends Homey.Device {
 
   private getRuntimeApp(): AppRuntimeAccess {
     return this.homey.app as AppRuntimeAccess;
+  }
+
+  private resolveBridgeRuntime(app: AppRuntimeAccess): {
+    bridgeId: string;
+    client: ZwjsClient | undefined;
+  } {
+    const session = app.getBridgeSession?.();
+    const bridgeId =
+      (typeof session?.bridgeId === 'string' && session.bridgeId.trim().length > 0
+        ? session.bridgeId.trim()
+        : undefined) ??
+      app.getBridgeId?.() ??
+      'unknown';
+    const client = session?.getZwjsClient?.() ?? app.getZwjsClient?.();
+    return { bridgeId, client };
   }
 
   private async refreshRuntimeDiagnostics(reason: string): Promise<void> {
@@ -200,8 +221,9 @@ module.exports = class BridgeDevice extends Homey.Device {
 
   async onInit() {
     const app = this.getRuntimeApp();
-    const bridgeId = app.getBridgeId?.() ?? 'unknown';
-    const status = app.getZwjsClient?.()?.getStatus();
+    const runtime = this.resolveBridgeRuntime(app);
+    const bridgeId = runtime.bridgeId;
+    const status = runtime.client?.getStatus();
     this.log('BridgeDevice initialized', {
       bridgeId,
       transportConnected: status?.transportConnected === true,
