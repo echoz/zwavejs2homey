@@ -207,3 +207,33 @@ test('device tools presenter explains safe fallback behavior for unmatched profi
     'Compiled-only policy: no profile match; safe fallback (class other, no mappings).',
   );
 });
+
+test('device tools presenter infers compiled-only policy for legacy snapshots without attribution', () => {
+  const loaded = presenter.reduce(presenter.createInitialState(), {
+    type: 'load_success',
+    snapshot: createSnapshot({
+      profileAttribution: null,
+      profile: {
+        homeyClass: 'light',
+        profileId: 'product-triple:29:12801:1',
+        matchBy: 'product-triple',
+        matchKey: '29:12801:1',
+        fallbackReason: null,
+        uncurated: false,
+        confidence: 'curated',
+      },
+      recommendation: {
+        actionable: false,
+        suggestedAction: 'none',
+        reason: 'none',
+        reasonLabel: 'No recommendation is available.',
+      },
+    }),
+  });
+
+  const viewModel = presenter.buildViewModel(loaded);
+  assert.equal(
+    rowValue(viewModel.adapterRows, 'Inference Policy'),
+    'Compiled-only policy: resolved from compiled profile; no runtime generic inference.',
+  );
+});

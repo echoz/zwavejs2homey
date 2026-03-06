@@ -22,6 +22,15 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## Recently Completed
 
+- Phase 5 closure-gate code-review pass:
+  - ran full adapter code-review pass focused on pairing/runtime/diagnostics paths
+  - fixed legacy snapshot inference-policy classification in node Device Tools:
+    - compiled-only policy now resolves correctly even when `profileAttribution` is absent
+  - added presenter regression coverage for legacy no-attribution snapshots
+  - hard-gate verification:
+    - `npm --prefix co.lazylabs.zwavejs2homey test` passed
+    - `homey app validate` passed at publish level
+
 - Phase 5 runtime-mapping coverage gate slice:
   - tightened bundled-artifact runtime-mapping guardrails:
     - every runtime vertical capability in the bundled artifact must have an explicit mapping-policy entry

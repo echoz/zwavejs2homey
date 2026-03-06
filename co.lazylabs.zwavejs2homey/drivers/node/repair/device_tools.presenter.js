@@ -112,19 +112,28 @@ function describeInferencePolicy(profile, profileAttribution) {
     const fallbackReason = profile && typeof profile.fallbackReason === 'string'
         ? profile.fallbackReason.trim().toLowerCase()
         : '';
+    const profileId = profile && typeof profile.profileId === 'string' ? profile.profileId.trim() : '';
     const sourceCode = profileAttribution && typeof profileAttribution.sourceCode === 'string'
         ? profileAttribution.sourceCode.trim().toLowerCase()
         : '';
     const sourceLabel = profileAttribution && typeof profileAttribution.sourceLabel === 'string'
         ? profileAttribution.sourceLabel.trim().toLowerCase()
         : '';
+    const curationEntryPresent = profileAttribution && typeof profileAttribution.curationEntryPresent === 'boolean'
+        ? profileAttribution.curationEntryPresent
+        : null;
+    const hasResolvedProfileSignal = profileId.length > 0 || fallbackReason.length > 0;
     const effectiveSourceCode = sourceCode.length > 0
         ? sourceCode
         : sourceLabel.includes('compiled profile + device override')
             ? 'compiled+curation-override'
             : sourceLabel.includes('compiled profile only')
                 ? 'compiled-only'
-                : '';
+                : hasResolvedProfileSignal
+                    ? curationEntryPresent === true
+                        ? 'compiled+curation-override'
+                        : 'compiled-only'
+                    : '';
     if (fallbackReason === 'no_compiled_profile_match') {
         return 'Compiled-only policy: no profile match; safe fallback (class other, no mappings).';
     }
