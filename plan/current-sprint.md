@@ -2,25 +2,28 @@
 
 ## Goal
 
-Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
+Kick off Phase 6 Reliability + UX delivery:
 
+- preserve Phase 5 stability while advancing reliability hardening and UX clarity
 - keep runtime mapping/capability behavior deterministic and test-backed
-- improve bridge/node read-only operational visibility from live ZWJS data
-- keep pairing flow understandable within Homey system-template constraints
+- improve operator visibility into bridge/node diagnostics without adding runtime ambiguity
 - keep compiler/TUI artifacts and adapter runtime behavior aligned
 
 ## In Progress
 
-- Phase 5 Homey adapter stabilization and runtime-delivery pass:
-  - pairing/settings/repair UX is now MVP-frozen (changes are defect-driven only)
-  - next focus is runtime/adaptor feature delivery:
-    - broaden runtime mapping coverage with tests
-    - lock adapter generic-inference policy for no-profile-match behavior
-    - prepare bridge-session abstraction for future multi-bridge support
-  - keep docs/ADRs/roadmap synchronized as priorities shift from UX polish to runtime behavior
+- Phase 6 reliability + UX pass:
+  - keep pairing/settings/repair UX defect-driven (MVP-frozen baseline)
+  - expand reliability gates that prevent runtime mapping policy drift
+  - continue diagnostics clarity improvements that reduce operator ambiguity
+  - keep docs/ADRs/roadmap synchronized as priorities move from MVP closure to reliability/UX hardening
   - preserve strict package boundaries (`core`/`compiler`/`tui`/Homey app)
 
 ## Recently Completed
+
+- Phase-transition sync slice:
+  - closed Phase 5 in roadmap after closure-gate review and publish-level validation pass
+  - opened Phase 6 as active with reliability + UX focus
+  - aligned sprint goal/in-progress sections to Phase 6 priorities
 
 - Phase 5 closure-gate code-review pass:
   - ran full adapter code-review pass focused on pairing/runtime/diagnostics paths

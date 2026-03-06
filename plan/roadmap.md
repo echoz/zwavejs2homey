@@ -1,14 +1,14 @@
 # Roadmap
 
-## Snapshot (2026-03-02)
+## Snapshot (2026-03-06)
 
 ```text
 Phase 1  Foundation                  [DONE]
 Phase 2  ZwjsClient core             [DONE*]
 Phase 3  Homey compiler              [DONE*]
 Phase 4  TUI explorer/curation       [DONE]
-Phase 5  Homey adapter MVP           [ACTIVE]
-Phase 6  Reliability + UX            [NEXT]
+Phase 5  Homey adapter MVP           [DONE]
+Phase 6  Reliability + UX            [ACTIVE]
 
 * remaining deferred items are environment-dependent follow-ups
 ```
@@ -73,7 +73,7 @@ Done:
 - scaffold authoring/editing with typed vocabulary-backed inputs
 - convergence refactors to shared presenter cores
 
-## Phase 5 — Homey Adapter MVP (Active)
+## Phase 5 — Homey Adapter MVP (Done)
 
 Done so far:
 
@@ -147,10 +147,11 @@ Done so far:
   - pinned linked-package runtime/toolchain deps in app package (`ws`, `typescript`, `@types/ws`) so `homey app run` preprocess `npm ls --only=prod` succeeds with local `file:` links
   - added root `postinstall` to install nested Homey app dependencies automatically
 
-In progress / next:
+Completion notes:
 
-1. continue broadening runtime mapping coverage with tests
-2. maintain pairing/settings/repair UX as MVP-frozen unless defects are reported
+1. closure-gate code review completed for pairing/runtime/diagnostics paths
+2. hard gates passing: `npm --prefix co.lazylabs.zwavejs2homey test`, `homey app validate` (publish level)
+3. pairing and repair UX are now defect-driven only for MVP scope
 
 Exit criteria:
 
@@ -158,14 +159,15 @@ Exit criteria:
 - curation diagnostics are actionable for operators/users
 - stable runtime behavior under app restart/settings reload/node event churn
 
-## Phase 6 — Reliability + UX (Next)
+## Phase 6 — Reliability + UX (Active)
 
-Planned:
+Active focus:
 
 1. iterate on Homey settings/diagnostics UX for profile + curation state
-2. support/log bundle workflows
-3. non-production protocol validation runs (deferred Phase 2 items)
-4. optional deeper custom Homey pairing layouts where system templates remain too constrained
+2. continue reliability hardening and drift-proofing gates for runtime mapping/policy
+3. support/log bundle workflows
+4. non-production protocol validation runs (deferred Phase 2 items)
+5. optional deeper custom Homey pairing layouts where system templates remain too constrained
 
 ## Active Risks
 
