@@ -179,18 +179,33 @@ module.exports = class BridgeDriver extends Homey.Driver {
   }
 
   async onPairListDevices() {
-    if (this.hasBridgeDeviceAlreadyPaired()) {
-      this.log('Bridge device already paired, returning empty pair list');
-      return [];
-    }
+    this.log('Bridge pair list requested');
+    try {
+      if (this.hasBridgeDeviceAlreadyPaired()) {
+        this.log('Bridge device already paired, returning empty pair list');
+        return [];
+      }
 
-    return [createBridgePairCandidate()];
+      return [createBridgePairCandidate()];
+    } catch (error) {
+      this.error('Bridge pair list generation failed; returning fallback candidate', { error });
+      return [createBridgePairCandidate()];
+    }
   }
 
   async onPair(session: PairSessionLike) {
     try {
       session.setHandler('list_devices', async () => {
-        return this.onPairListDevices();
+        try {
+          const candidates = await this.onPairListDevices();
+          this.log('Bridge pair list response ready', {
+            candidates: Array.isArray(candidates) ? candidates.length : 0,
+          });
+          return candidates;
+        } catch (error) {
+          this.error('Bridge pair list handler failed; returning empty list', { error });
+          return [];
+        }
       });
       this.log('Bridge pair handler registered', { event: 'list_devices' });
     } catch (error) {

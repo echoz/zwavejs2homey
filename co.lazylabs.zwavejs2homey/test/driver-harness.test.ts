@@ -234,6 +234,25 @@ test('bridge driver pair session exposes next steps status handler', async () =>
   assert.deepEqual(status.warnings, ['ZWJS reconnect attempts observed (1).']);
 });
 
+test('bridge pair list handler returns empty list when candidate generation fails', async () => {
+  const driver = new BridgeDriver();
+  driver._configureHarness({ devices: [] });
+  driver.onPairListDevices = async () => {
+    throw new Error('pair list failed');
+  };
+
+  const handlers = new Map();
+  const session = {
+    setHandler(event, handler) {
+      handlers.set(event, handler);
+    },
+  };
+
+  await driver.onPair(session);
+  const candidates = await handlers.get('list_devices')();
+  assert.deepEqual(candidates, []);
+});
+
 test('bridge driver next steps status includes warnings when runtime is unavailable', async () => {
   const driver = new BridgeDriver();
   driver._configureHarness({
@@ -657,6 +676,28 @@ test('node driver pair session registers list_devices and import_summary status 
   assert.equal(summary.importedNodeDetails[0]?.ruleMatch, 'Unknown rule match level');
   assert.equal(summary.importedNodeDetails[0]?.fallbackReason, null);
   assert.equal(summary.importedNodeDetails[0]?.recommendationAction, 'none');
+});
+
+test('node pair list handler returns empty list when candidate generation fails', async () => {
+  const driver = new NodeDriver();
+  driver._configureHarness({
+    app: {},
+    devices: [],
+  });
+  driver.onPairListDevices = async () => {
+    throw new Error('pair list failed');
+  };
+
+  const handlers = new Map();
+  const session = {
+    setHandler(event, handler) {
+      handlers.set(event, handler);
+    },
+  };
+
+  await driver.onPair(session);
+  const candidates = await handlers.get('list_devices')();
+  assert.deepEqual(candidates, []);
 });
 
 test('node driver import_summary status includes warnings when zwjs is unavailable', async () => {

@@ -150,7 +150,16 @@ module.exports = class NodeDriver extends Homey.Driver {
     this.log('Node pair session started');
     try {
       session.setHandler('list_devices', async () => {
-        return await this.onPairListDevices();
+        try {
+          const candidates = await this.onPairListDevices();
+          this.log('Node pair list response ready', {
+            candidates: Array.isArray(candidates) ? candidates.length : 0,
+          });
+          return candidates;
+        } catch (error) {
+          this.error('Node pair list handler failed; returning empty list', { error });
+          return [];
+        }
       });
       this.log('Node pair handler registered', { event: 'list_devices' });
     } catch (error) {
