@@ -74,6 +74,20 @@ module.exports = (_a = class BridgeDriver extends homey_1.default.Driver {
                 throw error;
             }
             try {
+                session.setHandler('showView', async (viewId) => {
+                    const resolvedViewId = typeof viewId === 'string' && viewId.trim().length > 0 ? viewId.trim() : 'unknown';
+                    this.log('Bridge pair view shown', { viewId: resolvedViewId });
+                    return null;
+                });
+                this.log('Bridge pair handler registered', { event: 'showView' });
+            }
+            catch (error) {
+                this.error('Failed to register bridge pair handler; view transition tracing unavailable', {
+                    event: 'showView',
+                    error,
+                });
+            }
+            try {
                 session.setHandler('next_steps:get_status', async () => {
                     return this.loadNextStepsStatus();
                 });
@@ -86,6 +100,18 @@ module.exports = (_a = class BridgeDriver extends homey_1.default.Driver {
                 });
             }
             this.log('Bridge pair session ready');
+            if (typeof session.showView === 'function') {
+                try {
+                    await session.showView('list_devices');
+                    this.log('Bridge pair requested initial view', { viewId: 'list_devices' });
+                }
+                catch (error) {
+                    this.error('Failed to request initial bridge pair view', {
+                        viewId: 'list_devices',
+                        error,
+                    });
+                }
+            }
         }
         resolveBridgeRuntime(app) {
             const session = app.getBridgeSession?.(pairing_1.ZWJS_DEFAULT_BRIDGE_ID);
