@@ -2,6 +2,9 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.extractCapabilityRuntimeVerticals = extractCapabilityRuntimeVerticals;
 exports.extractValueResultPayload = extractValueResultPayload;
+exports.getSupportedInboundTransformRefs = getSupportedInboundTransformRefs;
+exports.getSupportedOutboundTransformRefs = getSupportedOutboundTransformRefs;
+exports.getSpecializedCapabilityCoercions = getSpecializedCapabilityCoercions;
 exports.coerceCapabilityInboundValue = coerceCapabilityInboundValue;
 exports.coerceCapabilityOutboundValue = coerceCapabilityOutboundValue;
 exports.selectorMatchesNodeValueUpdatedEvent = selectorMatchesNodeValueUpdatedEvent;
@@ -237,6 +240,16 @@ const INBOUND_TRANSFORMERS = {
 const OUTBOUND_TRANSFORMERS = {
     homey_dim_to_zwave_level_0_99: coerceDimOutboundTransform,
 };
+const SPECIALIZED_CAPABILITY_COERCIONS = new Set(['locked']);
+function getSupportedInboundTransformRefs() {
+    return Object.keys(INBOUND_TRANSFORMERS).sort();
+}
+function getSupportedOutboundTransformRefs() {
+    return Object.keys(OUTBOUND_TRANSFORMERS).sort();
+}
+function getSpecializedCapabilityCoercions() {
+    return [...SPECIALIZED_CAPABILITY_COERCIONS].sort();
+}
 function coerceCapabilityInboundValue(capabilityId, value, transformRef, valueTypeHint) {
     const normalizedTransformRef = normalizeComparableValue(transformRef);
     if (normalizedTransformRef) {
@@ -245,7 +258,7 @@ function coerceCapabilityInboundValue(capabilityId, value, transformRef, valueTy
             return transform(value);
         }
     }
-    if (capabilityId === 'locked') {
+    if (SPECIALIZED_CAPABILITY_COERCIONS.has(capabilityId)) {
         const lockedValue = coerceLockedValue(value);
         if (lockedValue !== undefined)
             return lockedValue;
@@ -270,7 +283,7 @@ function coerceCapabilityOutboundValue(capabilityId, value, transformRef, valueT
             return transform(value);
         }
     }
-    if (capabilityId === 'locked') {
+    if (SPECIALIZED_CAPABILITY_COERCIONS.has(capabilityId)) {
         const lockedValue = coerceLockedOutboundValue(value, valueTypeHint);
         if (lockedValue !== undefined)
             return lockedValue;

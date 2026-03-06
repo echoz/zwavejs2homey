@@ -3,6 +3,11 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { assertCompiledHomeyProfilesArtifactV1 } = require('@zwavejs2homey/compiler');
+const {
+  getSpecializedCapabilityCoercions,
+  getSupportedInboundTransformRefs,
+  getSupportedOutboundTransformRefs,
+} = require('../node-runtime.js');
 
 const APP_ROOT = path.resolve(__dirname, '..');
 const REPO_ROOT = path.resolve(APP_ROOT, '..');
@@ -13,6 +18,41 @@ const BUNDLED_ARTIFACT_FILE = path.join(
   'compiled-homey-profiles.v1.json',
 );
 const RULE_MANIFEST_FILE = path.join(REPO_ROOT, 'rules', 'manifest.json');
+
+const RUNTIME_MAPPING_COVERAGE_POLICY = {
+  onoff: {
+    coercionMode: 'generic',
+    coverageRef: 'test/node-device-harness.test.ts:onoff + dim verticals',
+  },
+  dim: {
+    coercionMode: 'specialized',
+    coverageRef: 'test/node-device-harness.test.ts:onoff + dim verticals',
+  },
+  windowcoverings_set: {
+    coercionMode: 'specialized',
+    coverageRef: 'test/node-device-harness.test.ts:windowcoverings_set runtime mapping',
+  },
+  measure_power: {
+    coercionMode: 'generic',
+    coverageRef: 'test/node-device-harness.test.ts:measure_battery/meter_power/enum_select/locked',
+  },
+  meter_power: {
+    coercionMode: 'generic',
+    coverageRef: 'test/node-device-harness.test.ts:measure_battery/meter_power/enum_select/locked',
+  },
+  measure_battery: {
+    coercionMode: 'generic',
+    coverageRef: 'test/node-device-harness.test.ts:measure_battery/meter_power/enum_select/locked',
+  },
+  enum_select: {
+    coercionMode: 'generic',
+    coverageRef: 'test/node-device-harness.test.ts:measure_battery/meter_power/enum_select/locked',
+  },
+  locked: {
+    coercionMode: 'specialized',
+    coverageRef: 'test/node-device-harness.test.ts:measure_battery/meter_power/enum_select/locked',
+  },
+};
 
 function readJsonFile(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
@@ -81,8 +121,8 @@ function collectAbsolutePathStrings(value, pointer = '$', output = []) {
   return output;
 }
 
-function readRuntimeVerticalCapabilitiesFromArtifact(artifact) {
-  const capabilityIds = new Set();
+function readRuntimeVerticalCoverageFromArtifact(artifact) {
+  const capabilityCoverage = new Map();
   for (const entry of artifact.entries) {
     const profile = entry?.compiled?.profile;
     const capabilities = Array.isArray(profile?.capabilities) ? profile.capabilities : [];
@@ -94,11 +134,31 @@ function readRuntimeVerticalCapabilitiesFromArtifact(artifact) {
       const inboundKind = capability.inboundMapping?.kind;
       const outboundKind = capability.outboundMapping?.kind;
       if (inboundKind === 'value' || outboundKind === 'set_value') {
-        capabilityIds.add(capabilityId);
+        if (!capabilityCoverage.has(capabilityId)) {
+          capabilityCoverage.set(capabilityId, {
+            inboundTransformRefs: new Set(),
+            outboundTransformRefs: new Set(),
+          });
+        }
+        const details = capabilityCoverage.get(capabilityId);
+        if (
+          inboundKind === 'value' &&
+          typeof capability.inboundMapping?.transformRef === 'string' &&
+          capability.inboundMapping.transformRef.trim().length > 0
+        ) {
+          details.inboundTransformRefs.add(capability.inboundMapping.transformRef.trim());
+        }
+        if (
+          outboundKind === 'set_value' &&
+          typeof capability.outboundMapping?.transformRef === 'string' &&
+          capability.outboundMapping.transformRef.trim().length > 0
+        ) {
+          details.outboundTransformRefs.add(capability.outboundMapping.transformRef.trim());
+        }
       }
     }
   }
-  return capabilityIds;
+  return capabilityCoverage;
 }
 
 test('bundled compiled profiles artifact is valid and non-empty', () => {
@@ -135,34 +195,96 @@ test('bundled compiled profiles artifact does not include machine-specific absol
   );
 });
 
-test('bundled runtime vertical capabilities are all covered by node-runtime harness tests', () => {
+test('bundled runtime vertical capabilities are explicitly policy-registered', () => {
   const artifact = readJsonFile(BUNDLED_ARTIFACT_FILE);
   assertCompiledHomeyProfilesArtifactV1(artifact);
 
-  const runtimeVerticalCapabilities = readRuntimeVerticalCapabilitiesFromArtifact(artifact);
-  const coveredCapabilities = new Set([
-    'onoff',
-    'dim',
-    'windowcoverings_set',
-    'measure_power',
-    'meter_power',
-    'measure_battery',
-    'enum_select',
-    'locked',
-    'target_temperature',
-    'alarm_contact',
-    'measure_humidity',
-    'thermostat_mode',
-    'measure_luminance',
-    'alarm_motion',
-  ]);
-  const missingCoverage = [...runtimeVerticalCapabilities]
-    .filter((capabilityId) => !coveredCapabilities.has(capabilityId))
+  const runtimeVerticalCoverage = readRuntimeVerticalCoverageFromArtifact(artifact);
+  const runtimeVerticalCapabilities = [...runtimeVerticalCoverage.keys()].sort();
+  const policyCapabilities = Object.keys(RUNTIME_MAPPING_COVERAGE_POLICY).sort();
+
+  const missingPolicy = runtimeVerticalCapabilities
+    .filter(
+      (capabilityId) =>
+        !Object.prototype.hasOwnProperty.call(RUNTIME_MAPPING_COVERAGE_POLICY, capabilityId),
+    )
+    .sort();
+  const stalePolicy = policyCapabilities
+    .filter((capabilityId) => !runtimeVerticalCoverage.has(capabilityId))
     .sort();
 
   assert.deepEqual(
-    missingCoverage,
+    missingPolicy,
     [],
-    `runtime verticals missing harness coverage: ${missingCoverage.join(', ')}`,
+    `runtime verticals missing explicit mapping policy entries: ${missingPolicy.join(', ')}`,
+  );
+  assert.deepEqual(
+    stalePolicy,
+    [],
+    `runtime mapping policy contains stale entries not present in bundled artifact: ${stalePolicy.join(', ')}`,
+  );
+});
+
+test('bundled runtime vertical transform refs are supported by node-runtime', () => {
+  const artifact = readJsonFile(BUNDLED_ARTIFACT_FILE);
+  assertCompiledHomeyProfilesArtifactV1(artifact);
+
+  const runtimeVerticalCoverage = readRuntimeVerticalCoverageFromArtifact(artifact);
+  const supportedInboundTransformRefs = new Set(getSupportedInboundTransformRefs());
+  const supportedOutboundTransformRefs = new Set(getSupportedOutboundTransformRefs());
+
+  const unknownInboundTransformRefs = [];
+  const unknownOutboundTransformRefs = [];
+  for (const [capabilityId, details] of runtimeVerticalCoverage.entries()) {
+    for (const transformRef of details.inboundTransformRefs) {
+      if (!supportedInboundTransformRefs.has(transformRef)) {
+        unknownInboundTransformRefs.push(`${capabilityId}:${transformRef}`);
+      }
+    }
+    for (const transformRef of details.outboundTransformRefs) {
+      if (!supportedOutboundTransformRefs.has(transformRef)) {
+        unknownOutboundTransformRefs.push(`${capabilityId}:${transformRef}`);
+      }
+    }
+  }
+
+  assert.deepEqual(
+    unknownInboundTransformRefs.sort(),
+    [],
+    `unsupported inbound transform refs in bundled artifact: ${unknownInboundTransformRefs.join(', ')}`,
+  );
+  assert.deepEqual(
+    unknownOutboundTransformRefs.sort(),
+    [],
+    `unsupported outbound transform refs in bundled artifact: ${unknownOutboundTransformRefs.join(', ')}`,
+  );
+});
+
+test('bundled runtime vertical coercion modes align with explicit policy', () => {
+  const artifact = readJsonFile(BUNDLED_ARTIFACT_FILE);
+  assertCompiledHomeyProfilesArtifactV1(artifact);
+
+  const runtimeVerticalCoverage = readRuntimeVerticalCoverageFromArtifact(artifact);
+  const specializedCapabilities = new Set(getSpecializedCapabilityCoercions());
+  const modeMismatch = [];
+
+  for (const [capabilityId, details] of runtimeVerticalCoverage.entries()) {
+    const policy = RUNTIME_MAPPING_COVERAGE_POLICY[capabilityId];
+    if (!policy) continue;
+    const transformSpecialized =
+      details.inboundTransformRefs.size > 0 || details.outboundTransformRefs.size > 0;
+    const specialized = transformSpecialized || specializedCapabilities.has(capabilityId);
+    const observedMode = specialized ? 'specialized' : 'generic';
+    if (policy.coercionMode !== observedMode) {
+      modeMismatch.push(
+        `${capabilityId}: policy=${policy.coercionMode}, observed=${observedMode}, coverage=${policy.coverageRef}`,
+      );
+    }
+  }
+
+  assert.deepEqual(
+    modeMismatch,
+    [],
+    `runtime mapping policy coercion modes are out of sync: ${modeMismatch.join(' | ')}`,
   );
 });

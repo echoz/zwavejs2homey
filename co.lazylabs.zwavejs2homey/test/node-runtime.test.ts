@@ -5,8 +5,17 @@ const {
   extractValueResultPayload,
   coerceCapabilityInboundValue,
   coerceCapabilityOutboundValue,
+  getSpecializedCapabilityCoercions,
+  getSupportedInboundTransformRefs,
+  getSupportedOutboundTransformRefs,
   selectorMatchesNodeValueUpdatedEvent,
 } = require('../node-runtime.js');
+
+test('node-runtime publishes supported transform refs and specialized coercion ids', () => {
+  assert.deepEqual(getSupportedInboundTransformRefs(), ['zwave_level_0_99_to_homey_dim']);
+  assert.deepEqual(getSupportedOutboundTransformRefs(), ['homey_dim_to_zwave_level_0_99']);
+  assert.deepEqual(getSpecializedCapabilityCoercions(), ['locked']);
+});
 
 test('extractCapabilityRuntimeVerticals returns value/set_value runtime-compatible mappings', () => {
   const slices = extractCapabilityRuntimeVerticals({

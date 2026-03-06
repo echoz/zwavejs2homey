@@ -253,6 +253,20 @@ const OUTBOUND_TRANSFORMERS: Record<
   homey_dim_to_zwave_level_0_99: coerceDimOutboundTransform,
 };
 
+const SPECIALIZED_CAPABILITY_COERCIONS = new Set(['locked']);
+
+export function getSupportedInboundTransformRefs(): string[] {
+  return Object.keys(INBOUND_TRANSFORMERS).sort();
+}
+
+export function getSupportedOutboundTransformRefs(): string[] {
+  return Object.keys(OUTBOUND_TRANSFORMERS).sort();
+}
+
+export function getSpecializedCapabilityCoercions(): string[] {
+  return [...SPECIALIZED_CAPABILITY_COERCIONS].sort();
+}
+
 export function coerceCapabilityInboundValue(
   capabilityId: string,
   value: unknown,
@@ -267,7 +281,7 @@ export function coerceCapabilityInboundValue(
     }
   }
 
-  if (capabilityId === 'locked') {
+  if (SPECIALIZED_CAPABILITY_COERCIONS.has(capabilityId)) {
     const lockedValue = coerceLockedValue(value);
     if (lockedValue !== undefined) return lockedValue;
   }
@@ -299,7 +313,7 @@ export function coerceCapabilityOutboundValue(
     }
   }
 
-  if (capabilityId === 'locked') {
+  if (SPECIALIZED_CAPABILITY_COERCIONS.has(capabilityId)) {
     const lockedValue = coerceLockedOutboundValue(value, valueTypeHint);
     if (lockedValue !== undefined) return lockedValue;
   }

@@ -22,6 +22,18 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## Recently Completed
 
+- Phase 5 runtime-mapping coverage gate slice:
+  - tightened bundled-artifact runtime-mapping guardrails:
+    - every runtime vertical capability in the bundled artifact must have an explicit mapping-policy entry
+    - stale policy entries (not present in artifact) now fail the gate
+  - added transform compatibility gate:
+    - inbound/outbound transform refs found in artifact must be supported by `node-runtime`
+  - added coercion-mode parity gate:
+    - artifact-observed runtime behavior (`generic` vs `specialized`) must match explicit policy declarations
+  - exposed runtime-mapping support metadata from `node-runtime`:
+    - supported inbound/outbound transform refs
+    - specialized capability coercions
+
 - Phase 5 generic-inference policy clarity slice:
   - locked operator-facing messaging around the runtime policy:
     - compiled-profile resolution only
