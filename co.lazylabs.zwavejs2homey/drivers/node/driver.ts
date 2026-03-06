@@ -131,6 +131,7 @@ interface HomeyZonesManagerLike {
 
 module.exports = class NodeDriver extends Homey.Driver {
   private static readonly PAIR_FLOW_TIMEOUT_MS = 12000;
+  private static readonly PAIR_LIST_REQUEST_WATCHDOG_MS = 5000;
 
   private static readonly PAIR_NODE_LIST_TIMEOUT_MS = 8000;
 
@@ -147,9 +148,33 @@ module.exports = class NodeDriver extends Homey.Driver {
   }
 
   async onPair(session: PairSessionLike) {
-    this.log('Node pair session started');
+    const manifestPairViews =
+      this.homey.manifest?.drivers?.find(
+        (driver: { id?: unknown } | undefined) => driver && driver.id === 'node',
+      )?.pair ?? [];
+    this.log('Node pair session started', {
+      pairViews: Array.isArray(manifestPairViews)
+        ? manifestPairViews.map((view) => ({
+            id: view?.id,
+            template: view?.template,
+            next: view?.navigation?.next,
+            singular: view?.options?.singular === true,
+          }))
+        : [],
+    });
+
+    let listDevicesRequested = false;
+    const listRequestWatchdog = setTimeout(() => {
+      if (listDevicesRequested) return;
+      this.error('Node pair watchdog: Homey did not request list_devices in time', {
+        timeoutMs: NodeDriver.PAIR_LIST_REQUEST_WATCHDOG_MS,
+      });
+    }, NodeDriver.PAIR_LIST_REQUEST_WATCHDOG_MS);
+
     try {
       session.setHandler('list_devices', async () => {
+        listDevicesRequested = true;
+        clearTimeout(listRequestWatchdog);
         try {
           const candidates = await this.onPairListDevices();
           this.log('Node pair list response ready', {

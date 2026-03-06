@@ -167,6 +167,8 @@ interface HomeyBridgeDeviceData {
 }
 
 module.exports = class BridgeDriver extends Homey.Driver {
+  private static readonly PAIR_LIST_REQUEST_WATCHDOG_MS = 5000;
+
   async onInit() {
     this.log('BridgeDriver initialized');
   }
@@ -194,8 +196,33 @@ module.exports = class BridgeDriver extends Homey.Driver {
   }
 
   async onPair(session: PairSessionLike) {
+    const manifestPairViews =
+      this.homey.manifest?.drivers?.find(
+        (driver: { id?: unknown } | undefined) => driver && driver.id === 'bridge',
+      )?.pair ?? [];
+    this.log('Bridge pair session started', {
+      pairViews: Array.isArray(manifestPairViews)
+        ? manifestPairViews.map((view) => ({
+            id: view?.id,
+            template: view?.template,
+            next: view?.navigation?.next,
+            singular: view?.options?.singular === true,
+          }))
+        : [],
+    });
+
+    let listDevicesRequested = false;
+    const listRequestWatchdog = setTimeout(() => {
+      if (listDevicesRequested) return;
+      this.error('Bridge pair watchdog: Homey did not request list_devices in time', {
+        timeoutMs: BridgeDriver.PAIR_LIST_REQUEST_WATCHDOG_MS,
+      });
+    }, BridgeDriver.PAIR_LIST_REQUEST_WATCHDOG_MS);
+
     try {
       session.setHandler('list_devices', async () => {
+        listDevicesRequested = true;
+        clearTimeout(listRequestWatchdog);
         try {
           const candidates = await this.onPairListDevices();
           this.log('Bridge pair list response ready', {
