@@ -559,8 +559,15 @@ test('node driver pair session registers list_devices and import_summary status 
             return {
               transportConnected: true,
               lifecycle: 'connected',
+              versionReceived: true,
+              initialized: true,
+              listening: true,
+              authenticated: null,
               serverVersion: '3.4.0',
               adapterFamily: 'zwjs-default',
+              reconnectAttempt: 0,
+              connectedAt: '2026-03-05T10:00:00.000Z',
+              lastMessageAt: '2026-03-05T10:00:30.000Z',
             };
           },
           async getNodeList() {
@@ -624,6 +631,22 @@ test('node driver pair session registers list_devices and import_summary status 
   assert.equal(summary.discoveredNodes, 1);
   assert.equal(summary.importedNodes, 1);
   assert.equal(summary.pendingImportNodes, 0);
+  assert.equal(summary.zwjs.versionReceived, true);
+  assert.equal(summary.zwjs.initialized, true);
+  assert.equal(summary.zwjs.listening, true);
+  assert.equal(summary.zwjs.authenticated, null);
+  assert.equal(summary.zwjs.reconnectAttempt, 0);
+  assert.equal(summary.zwjs.connectedAt, '2026-03-05T10:00:00.000Z');
+  assert.equal(summary.zwjs.lastMessageAt, '2026-03-05T10:00:30.000Z');
+  assert.equal(summary.actionNeededNodes, 0);
+  assert.equal(summary.backfillNeededNodes, 0);
+  assert.equal(summary.compiledOnlyNodes, 1);
+  assert.equal(summary.overrideNodes, 0);
+  assert.equal(summary.unresolvedNodes, 0);
+  assert.equal(summary.confidenceCuratedNodes, 0);
+  assert.equal(summary.confidenceHaDerivedNodes, 0);
+  assert.equal(summary.confidenceGenericNodes, 0);
+  assert.equal(summary.confidenceUnknownNodes, 1);
   assert.deepEqual(summary.warnings, []);
   assert.equal(Array.isArray(summary.importedNodeDetails), true);
   assert.equal(summary.importedNodeDetails.length, 1);
@@ -632,6 +655,9 @@ test('node driver pair session registers list_devices and import_summary status 
   assert.equal(summary.importedNodeDetails[0]?.manufacturer, 'Leviton');
   assert.equal(summary.importedNodeDetails[0]?.product, 'DZ6HD');
   assert.equal(summary.importedNodeDetails[0]?.profileHomeyClass, 'light');
+  assert.equal(summary.importedNodeDetails[0]?.profileSource, 'Compiled profile only');
+  assert.equal(summary.importedNodeDetails[0]?.ruleMatch, 'Unknown rule match level');
+  assert.equal(summary.importedNodeDetails[0]?.fallbackReason, null);
   assert.equal(summary.importedNodeDetails[0]?.recommendationAction, 'none');
 });
 
@@ -657,6 +683,12 @@ test('node driver import_summary status includes warnings when zwjs is unavailab
   assert.equal(summary.importedNodes, 0);
   assert.equal(summary.pendingImportNodes, null);
   assert.equal(summary.zwjs.available, false);
+  assert.equal(summary.actionNeededNodes, 0);
+  assert.equal(summary.backfillNeededNodes, 0);
+  assert.equal(summary.compiledOnlyNodes, 0);
+  assert.equal(summary.overrideNodes, 0);
+  assert.equal(summary.unresolvedNodes, 0);
+  assert.equal(summary.confidenceUnknownNodes, 0);
   assert.deepEqual(summary.importedNodeDetails, []);
   assert.equal(Array.isArray(summary.warnings), true);
   assert.equal(summary.warnings.length >= 1, true);

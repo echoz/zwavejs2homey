@@ -94,6 +94,11 @@ Done so far:
 - bridge read-only diagnostics enrichment:
   - expanded runtime session/transport facts on pairing/repair surfaces
   - added profile source + confidence breakdown aggregates and skip-reason rollups for imported nodes
+- node read-only diagnostics enrichment:
+  - expanded node import-summary session/transport facts and profile attribution detail rows
+  - added action-needed and profile attribution aggregate counters for node import diagnostics
+- pairing UX polish within Homey template limits:
+  - dynamic bridge/node follow-up guidance in pairing summary views based on runtime state
 - bridge-device non-UI runtime API forwarding for diagnostics/recommendation queue/action execution
 - Homey app API routes for diagnostics/recommendation execution (settings/custom-view ready)
 - stable API response envelope for diagnostics/recommendation routes (`schemaVersion`, `ok`, `data`, `error`)

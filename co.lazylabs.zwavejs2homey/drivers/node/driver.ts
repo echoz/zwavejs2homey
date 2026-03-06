@@ -25,6 +25,15 @@ interface AppRuntimeAccess {
   getBridgeId?: () => string;
   getNodeRuntimeDiagnostics?: (options?: { homeyDeviceId?: string }) => Promise<{
     bridgeId: string;
+    zwjs?: {
+      versionReceived?: boolean | null;
+      initialized?: boolean | null;
+      listening?: boolean | null;
+      authenticated?: boolean | null;
+      reconnectAttempt?: number | null;
+      connectedAt?: string | null;
+      lastMessageAt?: string | null;
+    };
     nodes: Array<{
       homeyDeviceId: string | null;
       nodeId: number | null;
@@ -42,6 +51,14 @@ interface AppRuntimeAccess {
         profileId?: string | null;
         matchBy?: string | null;
         matchKey?: string | null;
+        confidence?: string | null;
+        fallbackReason?: string | null;
+      };
+      profileAttribution?: {
+        confidenceCode?: string | null;
+        confidenceLabel?: string;
+        sourceCode?: string;
+        sourceLabel?: string;
       };
       recommendation?: {
         available?: boolean;
@@ -96,6 +113,9 @@ interface ImportSummaryNodeEntry {
   profileHomeyClass: string | null;
   profileId: string | null;
   profileMatch: string | null;
+  profileSource: string | null;
+  ruleMatch: string | null;
+  fallbackReason: string | null;
   recommendationAction: string;
   recommendationReason: string | null;
 }
@@ -167,11 +187,27 @@ module.exports = class NodeDriver extends Homey.Driver {
       lifecycle: string;
       serverVersion: string | null;
       adapterFamily: string | null;
+      versionReceived: boolean | null;
+      initialized: boolean | null;
+      listening: boolean | null;
+      authenticated: boolean | null;
+      reconnectAttempt: number | null;
+      connectedAt: string | null;
+      lastMessageAt: string | null;
     };
     discoveredNodes: number | null;
     importedNodes: number;
     pendingImportNodes: number | null;
     importedNodeDetails: ImportSummaryNodeEntry[];
+    actionNeededNodes: number;
+    backfillNeededNodes: number;
+    compiledOnlyNodes: number;
+    overrideNodes: number;
+    unresolvedNodes: number;
+    confidenceCuratedNodes: number;
+    confidenceHaDerivedNodes: number;
+    confidenceGenericNodes: number;
+    confidenceUnknownNodes: number;
     warnings: string[];
   }> {
     const app = this.homey.app as AppRuntimeAccess;
@@ -191,6 +227,22 @@ module.exports = class NodeDriver extends Homey.Driver {
       adapterFamily:
         typeof status?.adapterFamily === 'string' && status.adapterFamily.trim().length > 0
           ? status.adapterFamily.trim()
+          : null,
+      versionReceived: typeof status?.versionReceived === 'boolean' ? status.versionReceived : null,
+      initialized: typeof status?.initialized === 'boolean' ? status.initialized : null,
+      listening: typeof status?.listening === 'boolean' ? status.listening : null,
+      authenticated: typeof status?.authenticated === 'boolean' ? status.authenticated : null,
+      reconnectAttempt:
+        typeof status?.reconnectAttempt === 'number' && Number.isFinite(status.reconnectAttempt)
+          ? Math.max(0, Math.trunc(status.reconnectAttempt))
+          : null,
+      connectedAt:
+        typeof status?.connectedAt === 'string' && status.connectedAt.trim().length > 0
+          ? status.connectedAt.trim()
+          : null,
+      lastMessageAt:
+        typeof status?.lastMessageAt === 'string' && status.lastMessageAt.trim().length > 0
+          ? status.lastMessageAt.trim()
           : null,
     };
     const discoveredNodeNames = new Map<number, string>();
@@ -227,9 +279,53 @@ module.exports = class NodeDriver extends Homey.Driver {
 
     let importedNodeDetails: ImportSummaryNodeEntry[] = [];
     let importedNodes = this.countImportedNodeDevices(bridgeId);
+    let actionNeededNodes = 0;
+    let backfillNeededNodes = 0;
+    let compiledOnlyNodes = 0;
+    let overrideNodes = 0;
+    let unresolvedNodes = 0;
+    let confidenceCuratedNodes = 0;
+    let confidenceHaDerivedNodes = 0;
+    let confidenceGenericNodes = 0;
+    let confidenceUnknownNodes = 0;
     if (app.getNodeRuntimeDiagnostics) {
       try {
         const diagnostics = await app.getNodeRuntimeDiagnostics();
+        if (diagnostics?.zwjs && typeof diagnostics.zwjs === 'object') {
+          if (zwjs.versionReceived === null && typeof diagnostics.zwjs.versionReceived === 'boolean') {
+            zwjs.versionReceived = diagnostics.zwjs.versionReceived;
+          }
+          if (zwjs.initialized === null && typeof diagnostics.zwjs.initialized === 'boolean') {
+            zwjs.initialized = diagnostics.zwjs.initialized;
+          }
+          if (zwjs.listening === null && typeof diagnostics.zwjs.listening === 'boolean') {
+            zwjs.listening = diagnostics.zwjs.listening;
+          }
+          if (zwjs.authenticated === null && typeof diagnostics.zwjs.authenticated === 'boolean') {
+            zwjs.authenticated = diagnostics.zwjs.authenticated;
+          }
+          if (
+            zwjs.reconnectAttempt === null &&
+            typeof diagnostics.zwjs.reconnectAttempt === 'number' &&
+            Number.isFinite(diagnostics.zwjs.reconnectAttempt)
+          ) {
+            zwjs.reconnectAttempt = Math.max(0, Math.trunc(diagnostics.zwjs.reconnectAttempt));
+          }
+          if (
+            zwjs.connectedAt === null &&
+            typeof diagnostics.zwjs.connectedAt === 'string' &&
+            diagnostics.zwjs.connectedAt.trim().length > 0
+          ) {
+            zwjs.connectedAt = diagnostics.zwjs.connectedAt.trim();
+          }
+          if (
+            zwjs.lastMessageAt === null &&
+            typeof diagnostics.zwjs.lastMessageAt === 'string' &&
+            diagnostics.zwjs.lastMessageAt.trim().length > 0
+          ) {
+            zwjs.lastMessageAt = diagnostics.zwjs.lastMessageAt.trim();
+          }
+        }
         if (Array.isArray(diagnostics.nodes)) {
           importedNodeDetails = diagnostics.nodes
             .filter((entry) => {
@@ -243,6 +339,7 @@ module.exports = class NodeDriver extends Homey.Driver {
                   ? entry.nodeId
                   : null;
               const recommendationAction = this.toRecommendationAction(entry.recommendation);
+              const profileAttribution = this.normalizeProfileAttribution(entry);
               return {
                 homeyDeviceId: this.normalizeStringOrNull(entry.homeyDeviceId),
                 bridgeId: this.normalizeStringOrNull(entry.bridgeId) ?? bridgeId,
@@ -255,6 +352,9 @@ module.exports = class NodeDriver extends Homey.Driver {
                 profileHomeyClass: this.normalizeStringOrNull(entry.profile?.homeyClass),
                 profileId: this.normalizeStringOrNull(entry.profile?.profileId),
                 profileMatch: this.buildProfileMatchSummary(entry.profile),
+                profileSource: profileAttribution.sourceLabel,
+                ruleMatch: profileAttribution.confidenceLabel,
+                fallbackReason: this.normalizeStringOrNull(entry.profile?.fallbackReason),
                 recommendationAction,
                 recommendationReason: this.normalizeStringOrNull(entry.recommendation?.reasonLabel),
               };
@@ -269,6 +369,32 @@ module.exports = class NodeDriver extends Homey.Driver {
               const rightId = right.homeyDeviceId ?? '';
               return leftId.localeCompare(rightId);
             });
+          for (const entry of diagnostics.nodes) {
+            const recommendation =
+              entry.recommendation && typeof entry.recommendation === 'object'
+                ? entry.recommendation
+                : null;
+            if (recommendation?.backfillNeeded === true) {
+              actionNeededNodes += 1;
+              backfillNeededNodes += 1;
+            } else if (recommendation?.available === true) {
+              actionNeededNodes += 1;
+            }
+
+            const profileAttribution = this.normalizeProfileAttribution(entry);
+            if (profileAttribution.sourceCode === 'compiled+curation-override') {
+              overrideNodes += 1;
+            } else if (profileAttribution.sourceCode === 'compiled-only') {
+              compiledOnlyNodes += 1;
+            } else {
+              unresolvedNodes += 1;
+            }
+
+            if (profileAttribution.confidenceCode === 'curated') confidenceCuratedNodes += 1;
+            else if (profileAttribution.confidenceCode === 'ha-derived') confidenceHaDerivedNodes += 1;
+            else if (profileAttribution.confidenceCode === 'generic') confidenceGenericNodes += 1;
+            else confidenceUnknownNodes += 1;
+          }
           importedNodes = importedNodeDetails.length;
         }
       } catch (error) {
@@ -285,6 +411,15 @@ module.exports = class NodeDriver extends Homey.Driver {
     if (!zwjs.transportConnected) {
       warnings.push('ZWJS transport is not connected; discovery/import counts may be stale.');
     }
+    if (actionNeededNodes > 0) {
+      warnings.push(`${actionNeededNodes} imported node(s) currently require runtime action.`);
+    }
+    if (unresolvedNodes > 0) {
+      warnings.push(`${unresolvedNodes} imported node(s) have unresolved profile attribution.`);
+    }
+    if (typeof zwjs.reconnectAttempt === 'number' && zwjs.reconnectAttempt > 0) {
+      warnings.push(`ZWJS reconnect attempts observed (${zwjs.reconnectAttempt}).`);
+    }
 
     return {
       generatedAt: new Date().toISOString(),
@@ -294,6 +429,15 @@ module.exports = class NodeDriver extends Homey.Driver {
       importedNodes,
       pendingImportNodes,
       importedNodeDetails,
+      actionNeededNodes,
+      backfillNeededNodes,
+      compiledOnlyNodes,
+      overrideNodes,
+      unresolvedNodes,
+      confidenceCuratedNodes,
+      confidenceHaDerivedNodes,
+      confidenceGenericNodes,
+      confidenceUnknownNodes,
       warnings,
     };
   }
@@ -331,6 +475,81 @@ module.exports = class NodeDriver extends Homey.Driver {
     const matchKey = this.normalizeStringOrNull(profile?.matchKey);
     if (!matchBy && !matchKey) return null;
     return `${matchBy ?? 'n/a'} / ${matchKey ?? 'n/a'}`;
+  }
+
+  private describeProfileConfidenceLabel(confidence: unknown): string {
+    const normalized = typeof confidence === 'string' ? confidence.trim().toLowerCase() : '';
+    if (normalized === 'curated') return 'Project rule match';
+    if (normalized === 'ha-derived') return 'Home Assistant-derived rule match';
+    if (normalized === 'generic') return 'Generic fallback rule';
+    return 'Unknown rule match level';
+  }
+
+  private normalizeProfileAttribution(entry: {
+    profileAttribution?: {
+      confidenceCode?: string | null;
+      confidenceLabel?: string;
+      sourceCode?: string;
+      sourceLabel?: string;
+    };
+    profile?: {
+      profileId?: string | null;
+      fallbackReason?: string | null;
+      confidence?: string | null;
+    };
+    curation?: {
+      entryPresent?: boolean;
+    };
+  }): {
+    confidenceCode: string | null;
+    confidenceLabel: string;
+    sourceCode: string;
+    sourceLabel: string;
+  } {
+    if (entry.profileAttribution && typeof entry.profileAttribution === 'object') {
+      const confidenceCode = this.normalizeStringOrNull(entry.profileAttribution.confidenceCode);
+      const confidenceLabel =
+        this.normalizeStringOrNull(entry.profileAttribution.confidenceLabel) ??
+        this.describeProfileConfidenceLabel(confidenceCode);
+      const sourceCode =
+        this.normalizeStringOrNull(entry.profileAttribution.sourceCode) ?? 'unresolved';
+      const sourceLabel =
+        this.normalizeStringOrNull(entry.profileAttribution.sourceLabel) ??
+        (sourceCode === 'compiled+curation-override'
+          ? 'Compiled profile + device override'
+          : sourceCode === 'compiled-only'
+            ? 'Compiled profile only'
+            : 'Profile resolution pending');
+      return {
+        confidenceCode,
+        confidenceLabel,
+        sourceCode,
+        sourceLabel,
+      };
+    }
+
+    const confidenceCode = this.normalizeStringOrNull(entry.profile?.confidence);
+    const confidenceLabel = this.describeProfileConfidenceLabel(confidenceCode);
+    const hasProfile =
+      Boolean(this.normalizeStringOrNull(entry.profile?.profileId)) ||
+      Boolean(this.normalizeStringOrNull(entry.profile?.fallbackReason));
+    const sourceCode = hasProfile
+      ? entry.curation?.entryPresent
+        ? 'compiled+curation-override'
+        : 'compiled-only'
+      : 'unresolved';
+    const sourceLabel =
+      sourceCode === 'compiled+curation-override'
+        ? 'Compiled profile + device override'
+        : sourceCode === 'compiled-only'
+          ? 'Compiled profile only'
+          : 'Profile resolution pending';
+    return {
+      confidenceCode,
+      confidenceLabel,
+      sourceCode,
+      sourceLabel,
+    };
   }
 
   private async withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {

@@ -82,6 +82,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
             profileClass: asText(entry.profileHomeyClass),
             profileId: asText(entry.profileId),
             profileMatch: asText(entry.profileMatch),
+            profileSource: asText(entry.profileSource),
+            ruleMatch: asText(entry.ruleMatch),
+            fallbackReason: asText(entry.fallbackReason),
             recommendation: {
                 label: recommendationLabel(entry.recommendationAction),
                 tone: recommendationTone(entry.recommendationAction),
@@ -137,6 +140,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
                 refreshDisabled: state.loading,
                 statusRows: [],
                 warnings: [],
+                guidanceTitle: 'Waiting for import status',
+                guidanceSteps: ['Use Refresh Status to retry once runtime diagnostics are available.'],
                 importedRows: [],
                 importedMeta: 'Waiting for import summary…',
                 importedEmpty: 'No nodes imported yet for this bridge.',
@@ -152,8 +157,47 @@ Object.defineProperty(exports, "__esModule", { value: true });
         const importedCount = typeof status.importedNodes === 'number' && status.importedNodes >= 0
             ? status.importedNodes
             : importedRows.length;
+        const pendingCount = typeof status.pendingImportNodes === 'number' && status.pendingImportNodes >= 0
+            ? status.pendingImportNodes
+            : null;
+        const actionNeededCount = typeof status.actionNeededNodes === 'number' && status.actionNeededNodes >= 0
+            ? status.actionNeededNodes
+            : 0;
+        const unresolvedCount = typeof status.unresolvedNodes === 'number' && status.unresolvedNodes >= 0
+            ? status.unresolvedNodes
+            : 0;
         const bridgeLabel = asText(status.bridgeId);
         const hasImportedRows = importedRows.length > 0;
+        const guidanceSteps = [];
+        let guidanceTitle = 'Import follow-up';
+        if (!status.zwjs || status.zwjs.available !== true) {
+            guidanceTitle = 'Bridge configuration required';
+            guidanceSteps.push('Open app Settings and set zwjs_connection.url.');
+            guidanceSteps.push('Return and press Refresh Status.');
+        }
+        else if (status.zwjs.transportConnected !== true) {
+            guidanceTitle = 'Bridge is disconnected';
+            guidanceSteps.push('Confirm zwave-js-server is running and reachable.');
+            guidanceSteps.push('Press Refresh Status when bridge connectivity recovers.');
+        }
+        else {
+            if (pendingCount !== null && pendingCount > 0) {
+                guidanceSteps.push(`Import remaining ${pendingCount} node(s) from Add Device -> ZWJS Node.`);
+            }
+            else if (status.discoveredNodes === 0) {
+                guidanceSteps.push('No discoverable nodes reported yet from ZWJS.');
+            }
+            else {
+                guidanceSteps.push('All discovered nodes are currently imported.');
+            }
+            if (actionNeededCount > 0) {
+                guidanceSteps.push(`Open Bridge Tools to review ${actionNeededCount} runtime recommendation(s).`);
+            }
+            if (unresolvedCount > 0) {
+                guidanceSteps.push(`Review ${unresolvedCount} node(s) with unresolved profile attribution in Bridge Tools.`);
+            }
+        }
+        guidanceSteps.push('Press Done when finished with this pairing step.');
         return {
             refreshDisabled: state.loading,
             statusRows: [
@@ -166,12 +210,49 @@ Object.defineProperty(exports, "__esModule", { value: true });
                     value: asText(status.zwjs && status.zwjs.serverVersion),
                     kind: 'text',
                 },
+                {
+                    key: 'Adapter Family',
+                    value: asText(status.zwjs && status.zwjs.adapterFamily),
+                    kind: 'text',
+                },
+                {
+                    key: 'Reconnect Attempts',
+                    value: asText(status.zwjs && status.zwjs.reconnectAttempt),
+                    kind: 'text',
+                },
+                {
+                    key: 'Version Received',
+                    value: asText(status.zwjs && status.zwjs.versionReceived),
+                    kind: 'text',
+                },
+                { key: 'Initialized', value: asText(status.zwjs && status.zwjs.initialized), kind: 'text' },
+                { key: 'Listening', value: asText(status.zwjs && status.zwjs.listening), kind: 'text' },
+                {
+                    key: 'Authenticated',
+                    value: asText(status.zwjs && status.zwjs.authenticated),
+                    kind: 'text',
+                },
                 { key: 'Discovered Nodes', value: asText(status.discoveredNodes), kind: 'text' },
                 { key: 'Imported Nodes', value: asText(status.importedNodes), kind: 'text' },
                 { key: 'Pending Import', value: asText(status.pendingImportNodes), kind: 'text' },
+                { key: 'Action Needed', value: asText(status.actionNeededNodes), kind: 'text' },
+                { key: 'Backfill Needed', value: asText(status.backfillNeededNodes), kind: 'text' },
+                { key: 'Compiled Only', value: asText(status.compiledOnlyNodes), kind: 'text' },
+                { key: 'With Override', value: asText(status.overrideNodes), kind: 'text' },
+                { key: 'Unresolved Source', value: asText(status.unresolvedNodes), kind: 'text' },
+                { key: 'Rule Match: Project', value: asText(status.confidenceCuratedNodes), kind: 'text' },
+                {
+                    key: 'Rule Match: HA Derived',
+                    value: asText(status.confidenceHaDerivedNodes),
+                    kind: 'text',
+                },
+                { key: 'Rule Match: Generic', value: asText(status.confidenceGenericNodes), kind: 'text' },
+                { key: 'Rule Match: Unknown', value: asText(status.confidenceUnknownNodes), kind: 'text' },
                 { key: 'Updated', value: toTimeText(status.generatedAt), kind: 'text' },
             ],
             warnings,
+            guidanceTitle,
+            guidanceSteps,
             importedRows,
             importedMeta: hasImportedRows
                 ? `Showing ${importedRows.length} imported node(s) on bridge ${bridgeLabel}.`

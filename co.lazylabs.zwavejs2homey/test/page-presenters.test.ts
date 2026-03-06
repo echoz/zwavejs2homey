@@ -198,6 +198,10 @@ function runPairPresenterContract(name, presenter) {
       compiledOnlyNodes: 1,
       overrideNodes: 0,
       unresolvedNodes: 0,
+      confidenceCuratedNodes: 1,
+      confidenceHaDerivedNodes: 0,
+      confidenceGenericNodes: 0,
+      confidenceUnknownNodes: 0,
       importedNodeDetails: [
         {
           bridgeId: 'main',
@@ -212,6 +216,7 @@ function runPairPresenterContract(name, presenter) {
           profileMatch: 'product-triple',
           profileSource: 'Compiled profile only',
           ruleMatch: 'Project rule match',
+          fallbackReason: null,
           recommendationAction: 'adopt-recommended-baseline',
           recommendationReason: 'compiled profile changed',
         },
@@ -228,21 +233,26 @@ function runPairPresenterContract(name, presenter) {
       label: 'Connected',
       tone: 'ok',
     });
-    if (name === 'bridge next_steps') {
-      assert.equal(statusRowValue(viewModel, 'Action Needed'), '1');
-      assert.equal(statusRowValue(viewModel, 'Compiled Only'), '1');
-      assert.equal(statusRowValue(viewModel, 'Reconnect Attempts'), '1');
+    assert.equal(statusRowValue(viewModel, 'Action Needed'), '1');
+    assert.equal(statusRowValue(viewModel, 'Compiled Only'), '1');
+    assert.equal(statusRowValue(viewModel, 'Reconnect Attempts'), '1');
+    if (name === 'node import_summary') {
+      assert.equal(statusRowValue(viewModel, 'Rule Match: Project'), '1');
     }
 
     assert.equal(viewModel.importedRows.length, 1);
     assert.equal(viewModel.importedRows[0].nodeId, '12');
     assert.equal(viewModel.importedRows[0].profileClass, 'light');
-    if (name === 'bridge next_steps') {
-      assert.equal(viewModel.importedRows[0].profileSource, 'Compiled profile only');
-      assert.equal(viewModel.importedRows[0].ruleMatch, 'Project rule match');
+    assert.equal(viewModel.importedRows[0].profileSource, 'Compiled profile only');
+    assert.equal(viewModel.importedRows[0].ruleMatch, 'Project rule match');
+    if (name === 'node import_summary') {
+      assert.equal(viewModel.importedRows[0].fallbackReason, 'n/a');
     }
     assert.equal(viewModel.importedRows[0].recommendation.label, 'Adopt Update');
     assert.equal(viewModel.importedRows[0].recommendation.tone, 'danger');
+    assert.equal(Array.isArray(viewModel.guidanceSteps), true);
+    assert.equal(viewModel.guidanceSteps.length > 0, true);
+    assert.equal(typeof viewModel.guidanceTitle, 'string');
     assert.equal(viewModel.hasImportedRows, true);
     assert.match(viewModel.importedMeta, /Showing 1 imported node\(s\) on bridge main\./);
     assert.match(viewModel.statusLine, /Status loaded at /);

@@ -76,6 +76,8 @@ interface PresenterViewModel {
   refreshDisabled: boolean;
   statusRows: StatusRow[];
   warnings: string[];
+  guidanceTitle: string;
+  guidanceSteps: string[];
   importedRows: ImportedRow[];
   importedMeta: string;
   importedEmpty: string;
@@ -241,6 +243,8 @@ interface UiRoot {
           refreshDisabled: state.loading,
           statusRows: [],
           warnings: [],
+          guidanceTitle: 'Waiting for bridge status',
+          guidanceSteps: ['Use Refresh Status to retry once bridge runtime is available.'],
           importedRows: [],
           importedMeta: 'Waiting for bridge runtime summary…',
           importedEmpty: 'No nodes imported yet for this bridge.',
@@ -258,8 +262,50 @@ interface UiRoot {
         typeof status.importedNodes === 'number' && status.importedNodes >= 0
           ? status.importedNodes
           : importedRows.length;
+      const pendingCount =
+        typeof status.pendingImportNodes === 'number' && status.pendingImportNodes >= 0
+          ? status.pendingImportNodes
+          : null;
+      const actionNeededCount =
+        typeof status.actionNeededNodes === 'number' && status.actionNeededNodes >= 0
+          ? status.actionNeededNodes
+          : 0;
+      const unresolvedCount =
+        typeof status.unresolvedNodes === 'number' && status.unresolvedNodes >= 0
+          ? status.unresolvedNodes
+          : 0;
       const bridgeLabel = asText(status.bridgeId);
       const hasImportedRows = importedRows.length > 0;
+      const guidanceSteps: string[] = [];
+      let guidanceTitle = 'Pairing follow-up';
+      if (!status.zwjs || status.zwjs.available !== true) {
+        guidanceTitle = 'Bridge configuration required';
+        guidanceSteps.push('Open app Settings and set zwjs_connection.url.');
+        guidanceSteps.push('Return and press Refresh Status.');
+      } else if (status.zwjs.transportConnected !== true) {
+        guidanceTitle = 'Bridge is disconnected';
+        guidanceSteps.push('Confirm zwave-js-server is running and reachable.');
+        guidanceSteps.push('Press Refresh Status when bridge connectivity recovers.');
+      } else {
+        if (pendingCount !== null && pendingCount > 0) {
+          guidanceSteps.push(`Import remaining ${pendingCount} node(s) from the ZWJS Node driver.`);
+        } else if (status.discoveredNodes === 0) {
+          guidanceSteps.push('No discoverable nodes reported yet from ZWJS.');
+        } else {
+          guidanceSteps.push('All discovered nodes are currently imported.');
+        }
+        if (actionNeededCount > 0) {
+          guidanceSteps.push(
+            `Open Bridge Tools to review ${actionNeededCount} runtime recommendation(s).`,
+          );
+        }
+        if (unresolvedCount > 0) {
+          guidanceSteps.push(
+            `Review ${unresolvedCount} node(s) with unresolved profile attribution in Bridge Tools.`,
+          );
+        }
+      }
+      guidanceSteps.push('Press Done when finished with this pairing step.');
 
       return {
         refreshDisabled: state.loading,
@@ -306,6 +352,8 @@ interface UiRoot {
           { key: 'Updated', value: toTimeText(status.generatedAt), kind: 'text' },
         ],
         warnings,
+        guidanceTitle,
+        guidanceSteps,
         importedRows,
         importedMeta: hasImportedRows
           ? `Showing ${importedRows.length} imported node(s) on bridge ${bridgeLabel}.`

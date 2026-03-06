@@ -22,6 +22,36 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## Recently Completed
 
+- Node read-only enrichment slice:
+  - expanded node import-summary runtime visibility with transport/session detail fields:
+    - `versionReceived`
+    - `initialized`
+    - `listening`
+    - `authenticated`
+    - `reconnectAttempt`
+    - `connectedAt` / `lastMessageAt`
+  - added node import aggregate diagnostics for imported devices:
+    - action-needed/backfill counts
+    - profile source breakdown (`compiled-only`, `compiled+override`, `unresolved`)
+    - profile confidence breakdown (`curated`, `ha-derived`, `generic`, `unknown`)
+  - enriched node import detail rows with:
+    - profile source
+    - rule-match label
+    - fallback reason
+  - added warning rollups for reconnect churn and unresolved profile attribution
+  - expanded harness/presenter tests to lock the enriched node import-summary diagnostics contract
+
+- Pairing UX polish slice (template-safe):
+  - added dynamic “follow-up guidance” sections to both pairing custom views:
+    - bridge `next_steps`
+    - node `import_summary`
+  - guidance now adapts to runtime state:
+    - bridge unavailable/disconnected
+    - pending imports
+    - action-needed recommendations
+    - unresolved profile attribution
+  - preserved Homey template pairing constraints (`list_devices -> add_devices -> custom summary`) while improving operator clarity
+
 - Bridge read-only enrichment slice:
   - expanded bridge pair/repair runtime visibility with transport/session detail fields:
     - `versionReceived`
@@ -1475,16 +1505,10 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## Next Tasks
 
-1. Bridge/read-only enrichment:
-   - surface more actionable bridge diagnostics and runtime facts from ZWJS session state in Homey-facing surfaces.
-2. Node/read-only enrichment:
-   - flesh out node detail metadata (resolved profile, classification/mapping diagnostics, key identity fields) without broadening write paths.
-3. Pairing UX polish within template limits:
-   - keep `list_devices -> add_devices` flow clear and add stronger post-bridge guidance for node import.
-4. Generic inference policy checkpoint:
+1. Generic inference policy checkpoint:
    - keep compile-time generic layer (`project-generic`) active;
    - explicitly decide whether/when adapter runtime generic inference (beyond compiled artifact resolution + safe no-match fallback) should be introduced.
-5. Keep compiler/TUI maintenance pass active for regressions found during adapter integration.
+2. Keep compiler/TUI maintenance pass active for regressions found during adapter integration.
 
 Note:
 

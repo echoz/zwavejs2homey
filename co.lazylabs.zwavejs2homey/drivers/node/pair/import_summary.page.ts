@@ -20,6 +20,9 @@ interface ImportedRow {
   profileClass: string;
   profileId: string;
   profileMatch: string;
+  profileSource: string;
+  ruleMatch: string;
+  fallbackReason: string;
   recommendation: RecommendationViewModel;
 }
 
@@ -39,6 +42,8 @@ interface PresenterViewModel {
   refreshDisabled: boolean;
   statusRows: StatusRow[];
   warnings: string[];
+  guidanceTitle: string;
+  guidanceSteps: string[];
   importedRows: ImportedRow[];
   importedMeta: string;
   importedEmpty: string;
@@ -93,6 +98,8 @@ declare const Homey: PairHomey;
   const importedTableBody = mustElement<HTMLElement>('imported-table-body');
   const importedEmpty = mustElement<HTMLElement>('imported-empty');
   const importedMeta = mustElement<HTMLElement>('imported-meta');
+  const guidanceTitle = mustElement<HTMLElement>('guidance-title');
+  const guidanceList = mustElement<HTMLElement>('guidance-list');
   const refreshBtn = mustElement<HTMLButtonElement>('refresh-btn');
   const doneBtn = mustElement<HTMLButtonElement>('done-btn');
 
@@ -153,7 +160,10 @@ declare const Homey: PairHomey;
           <td>
             Class: ${escapeHtml(row.profileClass)}<br />
             <span class="hint">${escapeHtml(row.profileId)}</span><br />
-            <span class="hint">${escapeHtml(row.profileMatch)}</span>
+            <span class="hint">${escapeHtml(row.profileMatch)}</span><br />
+            <span class="hint">Source: ${escapeHtml(row.profileSource)}</span><br />
+            <span class="hint">Rule Match: ${escapeHtml(row.ruleMatch)}</span><br />
+            <span class="hint">Fallback: ${escapeHtml(row.fallbackReason)}</span>
           </td>
           <td>
             <span class="${recommendationClass(row.recommendation.tone)}">${escapeHtml(
@@ -177,11 +187,21 @@ declare const Homey: PairHomey;
     warningsEl.innerHTML = items.map((item) => `<li>${escapeHtml(item)}</li>`).join('');
   }
 
+  function renderGuidance(title: string, steps: string[]): void {
+    guidanceTitle.textContent = title;
+    if (!Array.isArray(steps) || steps.length === 0) {
+      guidanceList.innerHTML = '<li>Press Done to close this pairing step.</li>';
+      return;
+    }
+    guidanceList.innerHTML = steps.map((step) => `<li>${escapeHtml(step)}</li>`).join('');
+  }
+
   function render(): void {
     const viewModel = presenter.buildViewModel(stateRef.current);
     refreshBtn.disabled = viewModel.refreshDisabled === true;
     renderStatusRows(viewModel.statusRows);
     renderWarnings(viewModel.warnings);
+    renderGuidance(viewModel.guidanceTitle, viewModel.guidanceSteps);
     importedMeta.textContent = viewModel.importedMeta;
     importedEmpty.textContent = viewModel.importedEmpty;
     renderImportedRows(viewModel.importedRows);
