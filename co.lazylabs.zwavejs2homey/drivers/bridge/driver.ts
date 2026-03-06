@@ -157,6 +157,10 @@ interface RepairSessionLike {
   setHandler: (event: string, handler: (payload?: unknown) => Promise<unknown>) => void;
 }
 
+interface PairSessionLike {
+  setHandler: (event: string, handler: (payload?: unknown) => Promise<unknown>) => void;
+}
+
 interface HomeyBridgeDeviceData {
   id?: string;
   bridgeId?: string;
@@ -210,6 +214,12 @@ module.exports = class BridgeDriver extends Homey.Driver {
       this.error('Bridge pair list generation failed; returning fallback candidate', { error });
       return [createBridgePairCandidate()];
     }
+  }
+
+  async onPair(session: PairSessionLike) {
+    this.log('Bridge pair session started');
+    session.setHandler('list_devices', async () => this.onPairListDevices());
+    this.log('Bridge pair handler registered', { event: 'list_devices' });
   }
 
   private resolveBridgeRuntime(app: AppRuntimeAccess): {

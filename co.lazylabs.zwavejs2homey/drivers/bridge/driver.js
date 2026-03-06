@@ -45,6 +45,11 @@ module.exports = class BridgeDriver extends homey_1.default.Driver {
             return [(0, pairing_1.createBridgePairCandidate)()];
         }
     }
+    async onPair(session) {
+        this.log('Bridge pair session started');
+        session.setHandler('list_devices', async () => this.onPairListDevices());
+        this.log('Bridge pair handler registered', { event: 'list_devices' });
+    }
     resolveBridgeRuntime(app) {
         const session = app.getBridgeSession?.(pairing_1.ZWJS_DEFAULT_BRIDGE_ID);
         const bridgeId = (typeof session?.bridgeId === 'string' && session.bridgeId.trim().length > 0
