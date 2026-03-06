@@ -75,7 +75,7 @@ The helper unwraps success envelopes and throws `RuntimeApiClientError` for:
 
 ## Guard Rail
 
-`co.lazylabs.zwavejs2homey/test/api-manifest-parity.test.js` enforces API parity between:
+`co.lazylabs.zwavejs2homey/test/api-manifest-parity.test.ts` enforces API parity between:
 
 - `.homeycompose/app.json`
 - generated `app.json`

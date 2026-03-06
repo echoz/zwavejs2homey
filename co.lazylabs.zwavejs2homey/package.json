@@ -5,7 +5,7 @@
   "scripts": {
     "build": "tsc && node scripts/sync-runtime-js.mjs",
     "lint": "eslint --ext .js,.ts --ignore-path .gitignore --ignore-pattern '**/test/**' .",
-    "test": "npm run build && node --test test/*.test.js"
+    "test": "npm run build && node --experimental-strip-types --test test/*.test.ts"
   },
   "dependencies": {
     "@zwavejs2homey/compiler": "file:vendor/compiler",

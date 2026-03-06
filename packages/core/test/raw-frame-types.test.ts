@@ -8,7 +8,7 @@ const {
   isZwjsResultErrorFrame,
   isZwjsEventFrame,
 } = require('../dist/protocol/raw-frame-types.js');
-const { loadFixture } = require('./fixtures/_load-fixture.js');
+const { loadFixture } = require('./fixtures/_load-fixture.ts');
 
 test('recognizes version frame', () => {
   assert.equal(isZwjsVersionFrame(loadFixture('zwjs-server', 'version.frame.json')), true);

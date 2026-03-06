@@ -6,7 +6,7 @@ const {
   isZwjsNodeValueMetadataDuration,
   isZwjsNodeValueMetadataResult,
 } = require('../dist/protocol/value-metadata-guards.js');
-const { loadFixture } = require('./fixtures/_load-fixture.js');
+const { loadFixture } = require('./fixtures/_load-fixture.ts');
 
 test('recognizes observed rich metadata result shape', () => {
   const fixture = loadFixture(

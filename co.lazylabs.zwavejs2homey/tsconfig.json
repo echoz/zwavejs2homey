@@ -5,5 +5,5 @@
     "lib": ["ES2021", "DOM"],
     "outDir": ".homeybuild/"
   },
-  "exclude": [".homeybuild", "node_modules"]
+  "exclude": [".homeybuild", "node_modules", "test", "scripts"]
 }

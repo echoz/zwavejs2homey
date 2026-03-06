@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const { DefaultZwjsFamilyNormalizer } = require('../dist/protocol/normalizers/family-default.js');
-const { loadFixture } = require('./fixtures/_load-fixture.js');
+const { loadFixture } = require('./fixtures/_load-fixture.ts');
 
 const normalizer = new DefaultZwjsFamilyNormalizer();
 

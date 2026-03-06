@@ -15,7 +15,7 @@ const {
   extractZwjsNodeValue,
   hasZwjsNodeValue,
 } = require('../dist/protocol/value-result-guards.js');
-const { loadFixture } = require('./fixtures/_load-fixture.js');
+const { loadFixture } = require('./fixtures/_load-fixture.ts');
 
 test('recognizes object envelopes and rejects arrays/null', () => {
   assert.equal(isZwjsNodeValueEnvelopeResult({ value: false }), true);

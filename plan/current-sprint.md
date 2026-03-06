@@ -22,12 +22,24 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## Recently Completed
 
+- Latest repo-wide static-typing migration slice:
+  - migrated all first-party test suites from `.js` to `.ts`:
+    - `co.lazylabs.zwavejs2homey/test/*.test.ts`
+    - `packages/core/test/*.test.ts`
+    - `packages/compiler/test/*.test.ts`
+    - `packages/tui/test/*.test.ts`
+  - updated test runners to execute TypeScript tests directly via `node --experimental-strip-types --test ...`
+  - added TypeScript source mirrors for root tooling under `tools-ts/*.ts` while retaining operational `.mjs` tool entrypoints
+  - added TypeScript mirror for Homey runtime sync script:
+    - `co.lazylabs.zwavejs2homey/scripts/sync-runtime-js.mts`
+  - added app TS config exclusions for `test/` and `scripts/` so runtime builds remain deterministic
+
 - Latest node repair presenter-view TypeScript migration slice:
   - migrated `drivers/node/repair/device_tools.html` inline logic into dedicated TS modules:
     - `drivers/node/repair/device_tools.presenter.ts`
     - `drivers/node/repair/device_tools.page.ts`
   - page now loads compiled presenter/page JS entrypoints instead of embedding inline script logic
-  - added presenter behavioral coverage in `test/node-device-tools-presenter.test.js` for:
+  - added presenter behavioral coverage in `test/node-device-tools-presenter.test.ts` for:
     - actionable recommendation state (adopt path)
     - warning-state rendering for disconnected transport
     - action-state-changed summary messaging
@@ -40,7 +52,7 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
     - `drivers/bridge/repair/bridge_tools.presenter.ts`
     - `drivers/bridge/repair/bridge_tools.page.ts`
   - page now uses thin DOM/event wiring in view layer with state/reduction/view-model logic in presenter layer
-  - added presenter behavioral tests in `test/bridge-tools-presenter.test.js` for:
+  - added presenter behavioral tests in `test/bridge-tools-presenter.test.ts` for:
     - action-needed default filtering
     - filter switching to all nodes
     - load-error handling and empty-state behavior
@@ -82,7 +94,7 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
     - `settings/settings.presenter.js`
     - `settings/settings.page.js`
   - custom pages now use thin page controllers for DOM wiring and keep decision logic in presenters
-  - added presenter-focused unit coverage in `test/page-presenters.test.js` for:
+  - added presenter-focused unit coverage in `test/page-presenters.test.ts` for:
     - settings normalization/validation/runtime-diagnostics view-model behavior
     - bridge/node pairing presenter state transitions and imported-row view-model output
 
@@ -391,7 +403,7 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
     - `list_devices -> add_devices` navigation
     - explicit `add_devices` template view
   - added guard test to keep flow shape stable:
-    - `co.lazylabs.zwavejs2homey/test/pairing-flow.test.js`
+    - `co.lazylabs.zwavejs2homey/test/pairing-flow.test.ts`
 
 - Latest Phase 5 runtime-mapping diagnostics edge-case slice:
   - added enum-like mapping diagnostics harness coverage for `thermostat_mode`
@@ -399,7 +411,7 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
   - validated unknown outbound writeability falls back to metadata check and reports deterministic diagnostics (`outbound_target_writeability_unknown`)
   - validated no inbound read / no outbound listener behavior under those gates
   - file:
-    - `co.lazylabs.zwavejs2homey/test/node-device-harness.test.js`
+    - `co.lazylabs.zwavejs2homey/test/node-device-harness.test.ts`
 
 - Latest Phase 5 runtime-mapping coverage broadening slice:
   - added generic mixed numeric/string runtime-mapping validation (`measure_humidity`, `thermostat_mode`) without capability-specific adapter branches
@@ -410,8 +422,8 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
     - value-updated event refresh path
     - outbound-gating behavior for inbound-only numeric capabilities
   - files:
-    - `co.lazylabs.zwavejs2homey/test/node-runtime.test.js`
-    - `co.lazylabs.zwavejs2homey/test/node-device-harness.test.js`
+    - `co.lazylabs.zwavejs2homey/test/node-runtime.test.ts`
+    - `co.lazylabs.zwavejs2homey/test/node-device-harness.test.ts`
 
 - Latest Phase 5 Device Tools diagnostics-clarity slice:
   - recommendation panel now shows both human label and raw reason code for runtime state
@@ -449,8 +461,8 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
     - outbound write
     - value-updated event refresh path
   - files:
-    - `co.lazylabs.zwavejs2homey/test/node-runtime.test.js`
-    - `co.lazylabs.zwavejs2homey/test/node-device-harness.test.js`
+    - `co.lazylabs.zwavejs2homey/test/node-runtime.test.ts`
+    - `co.lazylabs.zwavejs2homey/test/node-device-harness.test.ts`
 
 - Latest Phase 5 node Device Tools host/UX hardening slice:
   - canonical custom-view host path is now `co.lazylabs.zwavejs2homey/drivers/node/repair/device_tools.html`
@@ -490,18 +502,18 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
   - added first custom Device Tools view scaffold:
     - `co.lazylabs.zwavejs2homey/drivers/node/repair/device_tools.html`
   - expanded harness/runtime coverage:
-    - `co.lazylabs.zwavejs2homey/test/driver-harness.test.js`
-    - `co.lazylabs.zwavejs2homey/test/app-runtime-refresh.test.js`
+    - `co.lazylabs.zwavejs2homey/test/driver-harness.test.ts`
+    - `co.lazylabs.zwavejs2homey/test/app-runtime-refresh.test.ts`
 
 - Latest Phase 5 runtime API smoke-tool slice:
   - added `tools/homey-runtime-api-smoke.mjs` + `tools/homey-runtime-api-smoke-lib.mjs`
   - smoke now validates all runtime routes against a live Homey app endpoint and checks envelope/HTTP health
   - added `npm run homey:runtime-api:smoke` entrypoint
-  - added tool regression coverage in `packages/core/test/homey-runtime-api-smoke-tool.test.js`
+  - added tool regression coverage in `packages/core/test/homey-runtime-api-smoke-tool.test.ts`
   - documented usage in `docs/homey-api-contract.md` and `README.md`
 
 - Latest Phase 5 API manifest parity-guard slice:
-  - added `co.lazylabs.zwavejs2homey/test/api-manifest-parity.test.js`
+  - added `co.lazylabs.zwavejs2homey/test/api-manifest-parity.test.ts`
   - guard now enforces:
     - `.homeycompose/app.json` and generated `app.json` API parity
     - route key parity between manifest entries and `api.js` exports
@@ -510,7 +522,7 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 - Latest Phase 5 API client-contract slice:
   - added `co.lazylabs.zwavejs2homey/runtime-api-client.js` for settings/custom-view route consumption
   - helper now normalizes inputs, invokes Homey API routes, validates envelopes, and raises typed route/client errors
-  - added `co.lazylabs.zwavejs2homey/test/runtime-api-client.test.js` coverage for callback/promise invocation, forwarding, and envelope/error handling
+  - added `co.lazylabs.zwavejs2homey/test/runtime-api-client.test.ts` coverage for callback/promise invocation, forwarding, and envelope/error handling
   - added route contract reference doc: `docs/homey-api-contract.md`
 
 - Latest Phase 5 API response-contract slice:
@@ -571,7 +583,7 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
   - expanded app + driver harness tests for refresh orchestration and bridge-device diagnostics persistence
 
 - Latest Phase 5 driver-harness test slice:
-  - added new Homey driver/device harness tests in `co.lazylabs.zwavejs2homey/test/driver-harness.test.js`
+  - added new Homey driver/device harness tests in `co.lazylabs.zwavejs2homey/test/driver-harness.test.ts`
   - covered bridge singleton pairing semantics in `drivers/bridge/driver.ts`
   - covered node pairing error/filter behavior in `drivers/node/driver.ts`
   - covered bridge-device runtime status logging contract in `drivers/bridge/device.ts`
@@ -608,7 +620,7 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
   - added repo-level hardcoding policy guard tooling (`tools/hardcoding-policy-guard*.mjs`)
   - guard scans runtime source roots for protected Homey class/capability literals and fails outside approved policy modules
   - integrated `npm run policy:guard` into root `npm run check`
-  - added regression tests for parser strictness and violation/pass detection (`packages/core/test/hardcoding-policy-guard-tool.test.js`)
+  - added regression tests for parser strictness and violation/pass detection (`packages/core/test/hardcoding-policy-guard-tool.test.ts`)
 
 - Latest hardcoding audit pass:
   - completed repo-wide scan for capability/class mapping hardcoding patterns outside policy modules
@@ -625,7 +637,7 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
   - refactored HA importer output/conflict decisions to shared policy tables:
     - moved platform -> (`homeyClass`, `driverTemplateId`, `capabilityId`) mapping into `packages/compiler/src/importers/ha/platform-output-policy.ts`
     - replaced inline switch/ternary logic in extraction + translation paths with `resolveHaPlatformOutput` / `resolveHaCapabilityConflict`
-  - added dedicated regression coverage (`packages/compiler/test/ha-platform-output-policy.test.js`)
+  - added dedicated regression coverage (`packages/compiler/test/ha-platform-output-policy.test.ts`)
 
 - Latest TUI hardcoding-cleanup slice:
   - extracted value semantics/scoring policy constants into `packages/tui/src/view/value-semantics-policy.ts`
@@ -648,8 +660,8 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
     - added `locked` contract (inbound CC98/CC118, outbound CC118 with boolean coercion)
   - kept unknown capability IDs outbound-disabled by default (inbound-only primitive pass-through remains)
   - expanded regression coverage:
-    - runtime extraction/coercion tests for new contracts (`test/node-runtime.test.js`)
-    - headless harness test for `windowcoverings_set` outbound write path (`test/node-device-harness.test.js`)
+    - runtime extraction/coercion tests for new contracts (`test/node-runtime.test.ts`)
+    - headless harness test for `windowcoverings_set` outbound write path (`test/node-device-harness.test.ts`)
 
 - Latest Phase 5 slice:
   - added targeted node runtime rebind dispatch from ZWJS node lifecycle events in app runtime:
@@ -692,8 +704,8 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
     - added shape + contract guards to runtime slice extraction (malformed selector/target skipped; `onoff`/`dim` command-class constraints enforced)
   - preserved existing event-driven inbound sync path (`zwjs.event.node.value-updated`) and outbound `node.set_value` writes for compatible mappings
   - extended tests:
-    - runtime helper coverage for generic extraction/coercion (`co.lazylabs.zwavejs2homey/test/node-runtime.test.js`)
-    - headless harness coverage for generic non-specialized mapping execution (`co.lazylabs.zwavejs2homey/test/node-device-harness.test.js`)
+    - runtime helper coverage for generic extraction/coercion (`co.lazylabs.zwavejs2homey/test/node-runtime.test.ts`)
+    - headless harness coverage for generic non-specialized mapping execution (`co.lazylabs.zwavejs2homey/test/node-device-harness.test.ts`)
 
 - Latest Phase 5 slice:
   - implemented first compiled-profile-backed runtime capability vertical set for node devices (`onoff` + `dim`)
@@ -704,21 +716,21 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
     - inbound live updates consume `zwjs.event.node.value-updated`
     - `dim` uses transform refs for 0..99 <-> 0..1 scaling (`zwave_level_0_99_to_homey_dim`, `homey_dim_to_zwave_level_0_99`)
   - app/runtime command ownership for `node.set_value` is now core-defined (`ZwjsClient.setNodeValue`, `ZWJS_COMMAND_NODE_SET_VALUE`) rather than adapter-local command strings
-  - added node-runtime helper regression tests for both verticals (`co.lazylabs.zwavejs2homey/test/node-runtime.test.js`)
+  - added node-runtime helper regression tests for both verticals (`co.lazylabs.zwavejs2homey/test/node-runtime.test.ts`)
 
 - Latest Phase 5 slice:
   - added compiled-profile runtime module (`co.lazylabs.zwavejs2homey/compiled-profiles.js`) with artifact path resolution, schema validation, resolver index build, and degraded-status reporting
   - app startup now loads compiled profiles into a shared in-memory resolver runtime; `compiled_profiles_file` settings changes trigger explicit reload
   - node device init now fetches node identity (`manufacturerId/productType/productId`) from ZWJS node state, resolves through shared resolver runtime, and persists match/fallback metadata in device store
   - no-match behavior now explicitly records minimal safe fallback classification (`homeyClass=other`, `confidence=generic`, `uncurated=true`) with reason codes (`no_compiled_profile_match` / artifact unavailable variants)
-  - added runtime helper regression tests in `co.lazylabs.zwavejs2homey/test/compiled-profiles.test.js`
+  - added runtime helper regression tests in `co.lazylabs.zwavejs2homey/test/compiled-profiles.test.ts`
 
 - Latest Phase 5 slice:
   - implemented Homey driver scaffolds in `co.lazylabs.zwavejs2homey/drivers/bridge` and `co.lazylabs.zwavejs2homey/drivers/node`
   - bridge pairing now enforces singleton behavior via stable `device.data.id` and returns one `ZWJS Bridge` candidate only when unpaired
   - node pairing now imports live ZWJS nodes via shared app session, excludes controller node (`nodeId = 1`), dedupes by `bridgeId + nodeId`, and stores lightweight metadata
   - app runtime now exposes shared accessors (`getZwjsClient()`, `getBridgeId()`) used by both drivers/devices
-  - extracted pairing logic into `co.lazylabs.zwavejs2homey/pairing.ts` with regression coverage in `co.lazylabs.zwavejs2homey/test/pairing.test.js`
+  - extracted pairing logic into `co.lazylabs.zwavejs2homey/pairing.ts` with regression coverage in `co.lazylabs.zwavejs2homey/test/pairing.test.ts`
 
 - Latest Phase 5 decision sync:
   - locked Homey MVP runtime topology to two drivers:
@@ -757,7 +769,7 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 - Latest convergence slice (Section 7.2):
   - extracted shared signature workflow core into `packages/tui/src/presenter/signature-workflow-core.ts`
   - rewired both `ExplorerPresenter` and `RulesPresenter` to delegate signature selection + inspect/validate/simulate/scaffold flows
-  - added focused regression tests for default-manifest wiring and scaffold homey-class inference in `packages/tui/test/signature-workflow-core.test.js`
+  - added focused regression tests for default-manifest wiring and scaffold homey-class inference in `packages/tui/test/signature-workflow-core.test.ts`
 
 - Latest convergence slice (Section 7.3):
   - introduced mode adapters in `packages/tui/src/app.ts` for shell and panel shared workflows
@@ -769,12 +781,12 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
     - `buildCompiledProfileResolverIndexV1`
     - `resolveCompiledProfileEntryFromIndexV1` / `resolveCompiledProfileEntryFromArtifactV1`
     - `toCompiledProfileResolverSelector` / `compiledProfileProductTripleKey`
-  - added compiler regression coverage for resolver precedence, duplicate-key behavior, selector normalization, and helper parity (`packages/compiler/test/compiled-profile-resolver.test.js`)
+  - added compiler regression coverage for resolver precedence, duplicate-key behavior, selector normalization, and helper parity (`packages/compiler/test/compiled-profile-resolver.test.ts`)
   - rewired `compiler:inspect-live --compiled-file` to use the shared compiler resolver API (single source of matching semantics for tooling + upcoming adapter integration)
 
 - Latest Phase 5 slice:
   - added settings-backed ZWJS connection config resolution in `packages/core/src/zwjs-connection-config.ts`
-  - added core regression coverage for defaults/settings/auth/url validation (`packages/core/test/zwjs-connection-config.test.js`)
+  - added core regression coverage for defaults/settings/auth/url validation (`packages/core/test/zwjs-connection-config.test.ts`)
   - hardened Homey app bootstrap lifecycle to reload ZWJS client on `zwjs_connection` settings changes and stop cleanly on app uninit (`co.lazylabs.zwavejs2homey/app.ts`)
 
 1. Completed Phase 2 HA import foundation:
@@ -1192,7 +1204,7 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 89. Completed Section 4A cutover part 1 (`compiler:simulate` rename):
     - added new `compiler:simulate` CLI command and renamed loop library/wrapper to `homey-compile-simulate*.mjs`
     - removed `compiler:loop` npm script and loop tool files
-    - migrated loop-tool regression coverage to `homey-compile-simulate-tool.test.js`
+    - migrated loop-tool regression coverage to `homey-compile-simulate-tool.test.ts`
     - simplified `compiler:simulate` to explicit-signature mode only (`--signature` required)
     - updated simulate parser/runtime tests and readme/architecture notes to match signature-only simulate behavior
 90. Completed Section 4B tests/docs/help migration:

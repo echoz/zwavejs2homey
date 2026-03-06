@@ -6,7 +6,7 @@ const {
   isZwjsDefinedValueId,
   extractZwjsDefinedValueIds,
 } = require('../dist/protocol/value-id-guards.js');
-const { loadFixture } = require('./fixtures/_load-fixture.js');
+const { loadFixture } = require('./fixtures/_load-fixture.ts');
 
 test('recognizes valid ZwjsValueId and rejects invalid shapes', () => {
   assert.equal(isZwjsValueId({ commandClass: 37, property: 'currentValue', endpoint: 0 }), true);

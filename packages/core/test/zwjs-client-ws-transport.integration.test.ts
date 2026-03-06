@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const { WebSocketServer } = require('ws');
 
 const { ZwjsClientImpl } = require('../dist/client/zwjs-client.js');
-const { loadFixture } = require('./fixtures/_load-fixture.js');
+const { loadFixture } = require('./fixtures/_load-fixture.ts');
 
 function makeServer() {
   const wss = new WebSocketServer({ host: '127.0.0.1', port: 0 });

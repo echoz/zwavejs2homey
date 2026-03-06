@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 
 const { DefaultZwjsFamilyNormalizer } = require('../dist/protocol/normalizers/family-default.js');
 const { FallbackNormalizer } = require('../dist/protocol/normalizers/fallback.js');
-const { loadFixture } = require('./fixtures/_load-fixture.js');
+const { loadFixture } = require('./fixtures/_load-fixture.ts');
 
 test('default normalizer exposes successful result via requestResponse', () => {
   const n = new DefaultZwjsFamilyNormalizer();

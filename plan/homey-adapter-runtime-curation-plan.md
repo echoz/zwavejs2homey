@@ -49,7 +49,7 @@ Design and implement a Homey adapter-owned runtime curation system that applies 
     - `co.lazylabs.zwavejs2homey/runtime-api-client.js`
     - contract doc: `docs/homey-api-contract.md`
   - API manifest parity guard now exists:
-    - `test/api-manifest-parity.test.js`
+    - `test/api-manifest-parity.test.ts`
     - enforces route parity + canonical runtime route definitions
   - live runtime API smoke tooling now exists:
     - `tools/homey-runtime-api-smoke.mjs`
