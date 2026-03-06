@@ -268,7 +268,7 @@ test('coerceCapability inbound/outbound uses transform refs and generic pass-thr
     ),
     1,
   );
-  assert.equal(coerceCapabilityInboundValue('locked', { value: 1 }), 1);
+  assert.equal(coerceCapabilityInboundValue('locked', { value: 1 }), true);
   assert.equal(coerceCapabilityInboundValue('measure_power', { value: 44.2 }), 44.2);
   assert.equal(
     coerceCapabilityInboundValue('target_temperature', { value: '21.75' }, undefined, 'number'),
@@ -298,7 +298,8 @@ test('coerceCapability inbound/outbound uses transform refs and generic pass-thr
     coerceCapabilityInboundValue('enum_select', { value: 'secured' }, undefined, 'string'),
     'secured',
   );
-  assert.equal(coerceCapabilityInboundValue('locked', { value: 'secured' }), 'secured');
+  assert.equal(coerceCapabilityInboundValue('locked', { value: 'secured' }), true);
+  assert.equal(coerceCapabilityInboundValue('locked', { value: 'unsecured' }), false);
   assert.equal(
     coerceCapabilityInboundValue('alarm_motion', { value: 255 }, undefined, 'boolean'),
     true,
@@ -316,6 +317,8 @@ test('coerceCapability inbound/outbound uses transform refs and generic pass-thr
     50,
   );
   assert.equal(coerceCapabilityOutboundValue('locked', true), true);
+  assert.equal(coerceCapabilityOutboundValue('locked', true, undefined, 'string'), 'secured');
+  assert.equal(coerceCapabilityOutboundValue('locked', false, undefined, 'string'), 'unsecured');
   assert.equal(coerceCapabilityOutboundValue('measure_power', 13.4), 13.4);
   assert.equal(
     coerceCapabilityOutboundValue('target_temperature', '22.5', undefined, 'number'),

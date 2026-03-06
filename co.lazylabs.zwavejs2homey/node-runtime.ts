@@ -215,6 +215,30 @@ function coerceNumericOutboundFallback(value: unknown): number | undefined {
   return Math.round(clamp(numeric, 0, 99));
 }
 
+function coerceLockedValue(value: unknown): boolean | undefined {
+  const booleanValue = normalizeBooleanValue(value);
+  if (booleanValue !== undefined) return booleanValue;
+
+  const payload = extractValueResultPayload(value);
+  if (typeof payload !== 'string') return undefined;
+  const normalized = payload.trim().toLowerCase();
+  if (normalized.length === 0) return undefined;
+  if (normalized.includes('unsecured') || normalized.includes('unlocked')) return false;
+  if (normalized.includes('secured') || normalized.includes('locked')) return true;
+  return undefined;
+}
+
+function coerceLockedOutboundValue(
+  value: unknown,
+  valueTypeHint?: string,
+): PrimitiveCapabilityValue | undefined {
+  const booleanValue = coerceLockedValue(value);
+  if (booleanValue === undefined) return undefined;
+  const normalizedType = normalizeComparableValue(valueTypeHint)?.toLowerCase();
+  if (normalizedType === 'string') return booleanValue ? 'secured' : 'unsecured';
+  return booleanValue;
+}
+
 const INBOUND_TRANSFORMERS: Record<
   string,
   (value: unknown) => PrimitiveCapabilityValue | undefined
@@ -230,7 +254,7 @@ const OUTBOUND_TRANSFORMERS: Record<
 };
 
 export function coerceCapabilityInboundValue(
-  _capabilityId: string,
+  capabilityId: string,
   value: unknown,
   transformRef?: string,
   valueTypeHint?: string,
@@ -241,6 +265,11 @@ export function coerceCapabilityInboundValue(
     if (transform) {
       return transform(value);
     }
+  }
+
+  if (capabilityId === 'locked') {
+    const lockedValue = coerceLockedValue(value);
+    if (lockedValue !== undefined) return lockedValue;
   }
 
   const typedValue = coerceByValueType(value, valueTypeHint);
@@ -257,7 +286,7 @@ export function coerceCapabilityInboundValue(
 }
 
 export function coerceCapabilityOutboundValue(
-  _capabilityId: string,
+  capabilityId: string,
   value: unknown,
   transformRef?: string,
   valueTypeHint?: string,
@@ -268,6 +297,11 @@ export function coerceCapabilityOutboundValue(
     if (transform) {
       return transform(value);
     }
+  }
+
+  if (capabilityId === 'locked') {
+    const lockedValue = coerceLockedOutboundValue(value, valueTypeHint);
+    if (lockedValue !== undefined) return lockedValue;
   }
 
   const typedValue = coerceByValueType(value, valueTypeHint);

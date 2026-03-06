@@ -320,6 +320,27 @@ test('app waits for node and bridge drivers before startup refresh', async () =>
   await app.onUninit();
 });
 
+test('app diagnostics wait for node driver readiness without throwing', async () => {
+  const nodeDevices = [
+    createNodeDiagnosticsDevice({
+      id: 'main:5',
+      nodeId: 5,
+      profileResolution: {
+        profileId: 'profile-main-5',
+        recommendationAvailable: false,
+        mappingDiagnostics: [],
+      },
+    }),
+  ];
+  const { app } = loadAppClass(nodeDevices);
+  app.homey.drivers = new FakeDelayedDriversManager(nodeDevices, [], { node: 2 });
+
+  const snapshot = await app.getNodeRuntimeDiagnostics();
+  assert.equal(snapshot.nodes.length, 1);
+  assert.equal(snapshot.nodes[0].homeyDeviceId, 'main:5');
+  assert.equal(snapshot.nodes[0].nodeId, 5);
+});
+
 test('app refreshes bridge runtime diagnostics on startup and settings changes', async () => {
   const bridgeRefreshCalls = [];
   const bridgeDevices = [
@@ -378,6 +399,35 @@ test('app starts zwjs client after zwjs_connection.url is configured at runtime'
 
   await app.onUninit();
   assert.equal(coreMock.totals.stopCalls, 1);
+});
+
+test('app reconnect continues after stop failure and swaps bridge-session client', async () => {
+  const { app, coreMock } = loadAppClass([]);
+  app.homey.settings.set('zwjs_connection', { url: 'ws://127.0.0.1:3001' });
+  await app.onInit();
+
+  const firstClient = coreMock.latestClient;
+  firstClient.stop = async function stopWithFailure() {
+    this.stopCalls += 1;
+    coreMock.totals.stopCalls += 1;
+    throw new Error('simulated stop failure');
+  };
+
+  app.homey.settings.set('zwjs_connection', { url: 'ws://127.0.0.1:3002' });
+  await flushEventQueue();
+
+  assert.equal(coreMock.createdClients.length, 2);
+  assert.equal(coreMock.totals.startCalls, 2);
+  assert.equal(coreMock.totals.stopCalls, 1);
+  assert.notEqual(coreMock.latestClient, firstClient);
+  assert.equal(app.getBridgeSession()?.getZwjsClient(), coreMock.latestClient);
+  assert.equal(
+    app.errors.some((entry) => entry.message === 'Failed to stop ZWJS client'),
+    true,
+  );
+
+  await app.onUninit();
+  assert.equal(coreMock.totals.stopCalls, 2);
 });
 
 test('app exposes a default bridge session seam and keeps client lifecycle scoped to it', async () => {

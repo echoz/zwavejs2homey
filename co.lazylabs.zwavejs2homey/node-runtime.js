@@ -206,19 +206,49 @@ function coerceNumericOutboundFallback(value) {
         return Math.round(numeric);
     return Math.round(clamp(numeric, 0, 99));
 }
+function coerceLockedValue(value) {
+    const booleanValue = normalizeBooleanValue(value);
+    if (booleanValue !== undefined)
+        return booleanValue;
+    const payload = extractValueResultPayload(value);
+    if (typeof payload !== 'string')
+        return undefined;
+    const normalized = payload.trim().toLowerCase();
+    if (normalized.length === 0)
+        return undefined;
+    if (normalized.includes('unsecured') || normalized.includes('unlocked'))
+        return false;
+    if (normalized.includes('secured') || normalized.includes('locked'))
+        return true;
+    return undefined;
+}
+function coerceLockedOutboundValue(value, valueTypeHint) {
+    const booleanValue = coerceLockedValue(value);
+    if (booleanValue === undefined)
+        return undefined;
+    const normalizedType = normalizeComparableValue(valueTypeHint)?.toLowerCase();
+    if (normalizedType === 'string')
+        return booleanValue ? 'secured' : 'unsecured';
+    return booleanValue;
+}
 const INBOUND_TRANSFORMERS = {
     zwave_level_0_99_to_homey_dim: coerceDimInboundTransform,
 };
 const OUTBOUND_TRANSFORMERS = {
     homey_dim_to_zwave_level_0_99: coerceDimOutboundTransform,
 };
-function coerceCapabilityInboundValue(_capabilityId, value, transformRef, valueTypeHint) {
+function coerceCapabilityInboundValue(capabilityId, value, transformRef, valueTypeHint) {
     const normalizedTransformRef = normalizeComparableValue(transformRef);
     if (normalizedTransformRef) {
         const transform = INBOUND_TRANSFORMERS[normalizedTransformRef];
         if (transform) {
             return transform(value);
         }
+    }
+    if (capabilityId === 'locked') {
+        const lockedValue = coerceLockedValue(value);
+        if (lockedValue !== undefined)
+            return lockedValue;
     }
     const typedValue = coerceByValueType(value, valueTypeHint);
     if (typedValue !== undefined)
@@ -232,13 +262,18 @@ function coerceCapabilityInboundValue(_capabilityId, value, transformRef, valueT
     }
     return payload;
 }
-function coerceCapabilityOutboundValue(_capabilityId, value, transformRef, valueTypeHint) {
+function coerceCapabilityOutboundValue(capabilityId, value, transformRef, valueTypeHint) {
     const normalizedTransformRef = normalizeComparableValue(transformRef);
     if (normalizedTransformRef) {
         const transform = OUTBOUND_TRANSFORMERS[normalizedTransformRef];
         if (transform) {
             return transform(value);
         }
+    }
+    if (capabilityId === 'locked') {
+        const lockedValue = coerceLockedOutboundValue(value, valueTypeHint);
+        if (lockedValue !== undefined)
+            return lockedValue;
     }
     const typedValue = coerceByValueType(value, valueTypeHint);
     if (typedValue !== undefined)

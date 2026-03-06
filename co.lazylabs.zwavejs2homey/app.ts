@@ -650,8 +650,11 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
     };
   }
 
-  private getNodeDriverDevices(): RuntimeNodeDeviceLike[] {
-    const nodeDriver = this.homey.drivers.getDriver('node');
+  private async getNodeDriverDevices(reason: string): Promise<RuntimeNodeDeviceLike[]> {
+    const nodeDriver = await this.getDriverWhenReady<{
+      getDevices: () => RuntimeNodeDeviceLike[];
+    }>('node', reason);
+    if (!nodeDriver) return [];
     return nodeDriver.getDevices() as RuntimeNodeDeviceLike[];
   }
 
@@ -709,8 +712,12 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
     const client = session.getZwjsClient();
     if (!client) return;
     this.log(`Stopping ZWJS client (${reason})`);
-    await client.stop();
     session.setZwjsClient(undefined);
+    try {
+      await client.stop();
+    } catch (error) {
+      this.error('Failed to stop ZWJS client', { reason, error });
+    }
   }
 
   private static hasConfiguredZwjsUrl(rawSettings: unknown): boolean {
@@ -1101,7 +1108,7 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
     curation: HomeyCurationRuntimeStatusV1;
     nodes: NodeRuntimeDiagnosticsEntry[];
   }> {
-    const devices = this.getNodeDriverDevices();
+    const devices = await this.getNodeDriverDevices('getNodeRuntimeDiagnostics');
     const filterHomeyDeviceId = Zwavejs2HomeyApp.toStringOrNull(options?.homeyDeviceId);
     const nodeDiagnostics: NodeRuntimeDiagnosticsEntry[] = [];
 
@@ -1153,7 +1160,7 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
       throw new Error('Invalid homeyDeviceId for node device tools snapshot');
     }
 
-    const devices = this.getNodeDriverDevices();
+    const devices = await this.getNodeDriverDevices('getNodeDeviceToolsSnapshot');
     const device = this.findNodeDeviceByHomeyDeviceId(homeyDeviceId, devices);
     if (!device) {
       throw new Error(`Node device not found for homeyDeviceId: ${homeyDeviceId}`);

@@ -22,6 +22,21 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## Recently Completed
 
+- Code-review remediation slice (runtime stability + lock typing):
+  - hardened app diagnostics APIs to wait for node driver readiness before resolving node devices:
+    - `getNodeRuntimeDiagnostics`
+    - `getNodeDeviceToolsSnapshot`
+  - hardened reconnect behavior when stop fails:
+    - bridge-session client is detached before stop attempt
+    - stop failures are logged and reconnect start still proceeds
+  - hardened lock capability coercion semantics:
+    - inbound `locked` now coerces lock-mode strings (`secured`/`unsecured`) to boolean
+    - outbound `locked` supports boolean default and string targets (`secured`/`unsecured`) when needed
+  - added tests for:
+    - diagnostics readiness with delayed node driver initialization
+    - reconnect path continuing after stop failure
+    - lock coercion behavior in runtime and node-device harness
+
 - Latest Phase 5 lifecycle-churn stability slice:
   - expanded app lifecycle harness coverage for repeated settings churn cycles:
     - `compiled_profiles_file` updates

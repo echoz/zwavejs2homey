@@ -2133,7 +2133,7 @@ test('node device harness supports remaining compiled artifact inbound-only vert
   assert.equal(device._getCapabilityValue('measure_battery'), 88);
   assert.equal(device._getCapabilityValue('meter_power'), 12.5);
   assert.equal(device._getCapabilityValue('enum_select'), 'secured');
-  assert.equal(device._getCapabilityValue('locked'), 'secured');
+  assert.equal(device._getCapabilityValue('locked'), true);
   assert.equal(client.callLog.setNodeValue.length, 0);
   assert.equal(client.getListenerCount(), 4);
 
@@ -2165,7 +2165,7 @@ test('node device harness supports remaining compiled artifact inbound-only vert
   await Promise.resolve();
   assert.equal(device._getCapabilityValue('meter_power'), 13.2);
   assert.equal(device._getCapabilityValue('enum_select'), 'unsecured');
-  assert.equal(device._getCapabilityValue('locked'), 'unsecured');
+  assert.equal(device._getCapabilityValue('locked'), false);
 
   const profileResolution = device._getStoreValue('profileResolution');
   assert.equal(profileResolution?.mappingDiagnostics?.length, 4);

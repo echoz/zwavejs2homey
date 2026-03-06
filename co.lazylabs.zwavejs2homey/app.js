@@ -421,8 +421,10 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
                 },
             };
         }
-        getNodeDriverDevices() {
-            const nodeDriver = this.homey.drivers.getDriver('node');
+        async getNodeDriverDevices(reason) {
+            const nodeDriver = await this.getDriverWhenReady('node', reason);
+            if (!nodeDriver)
+                return [];
             return nodeDriver.getDevices();
         }
         findNodeDeviceByHomeyDeviceId(homeyDeviceId, devices) {
@@ -472,8 +474,13 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
             if (!client)
                 return;
             this.log(`Stopping ZWJS client (${reason})`);
-            await client.stop();
             session.setZwjsClient(undefined);
+            try {
+                await client.stop();
+            }
+            catch (error) {
+                this.error('Failed to stop ZWJS client', { reason, error });
+            }
         }
         static hasConfiguredZwjsUrl(rawSettings) {
             if (typeof rawSettings === 'string') {
@@ -773,7 +780,7 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
             return (0, curation_1.resolveCurationEntryFromRuntime)(this.curationRuntime, homeyDeviceId);
         }
         async getNodeRuntimeDiagnostics(options) {
-            const devices = this.getNodeDriverDevices();
+            const devices = await this.getNodeDriverDevices('getNodeRuntimeDiagnostics');
             const filterHomeyDeviceId = _a.toStringOrNull(options?.homeyDeviceId);
             const nodeDiagnostics = [];
             for (const device of devices) {
@@ -819,7 +826,7 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
             if (!homeyDeviceId) {
                 throw new Error('Invalid homeyDeviceId for node device tools snapshot');
             }
-            const devices = this.getNodeDriverDevices();
+            const devices = await this.getNodeDriverDevices('getNodeDeviceToolsSnapshot');
             const device = this.findNodeDeviceByHomeyDeviceId(homeyDeviceId, devices);
             if (!device) {
                 throw new Error(`Node device not found for homeyDeviceId: ${homeyDeviceId}`);
