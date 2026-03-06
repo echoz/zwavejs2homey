@@ -1,6 +1,6 @@
 # ADR 0006: Homey Adapter Runtime Rule Order (v1)
 
-- Status: Accepted
+- Status: Superseded by ADR 0023
 - Date: 2026-02-27
 
 ## Context

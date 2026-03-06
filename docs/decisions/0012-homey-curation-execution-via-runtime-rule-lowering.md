@@ -1,6 +1,6 @@
 # ADR 0012: Homey Curation Executes via Override-to-Rule Lowering
 
-- Status: Accepted
+- Status: Accepted (amended by ADR 0023 for runtime generic-inference freeze)
 - Date: 2026-02-27
 
 ## Context
@@ -18,9 +18,7 @@ In v1:
 
 - persisted curation remains materialized override state
 - adapter lowers overrides into an in-memory runtime curation rule bundle
-- adapter executes rules using the rules engine with deterministic runtime order:
-  - generic runtime rules first
-  - lowered curation rules second (curation wins)
+- adapter executes lowered curation rules deterministically over the compiled-profile baseline
 - lowered rules are derived execution artifacts and are not persisted as the source of truth
 
 Lowering and execution requirements:
@@ -35,7 +33,7 @@ Target selection for curation entries is defined in `docs/decisions/0013-homey-d
 
 Positive:
 
-- one execution model for generic inference and curation
+- one execution model for adapter curation actions
 - simple persistence model for Homey UI/editing
 - clear boundary between authoring shape and execution shape
 

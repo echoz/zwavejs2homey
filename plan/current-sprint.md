@@ -1558,12 +1558,16 @@ Kick off Phase 6 Reliability + UX delivery:
     - documented that focus remains on Homey adapter delivery until a safe non-production validation setup is available
     - synced capability matrix + roadmap + parity roadmap language to reflect “deferred, environment-dependent” status
 
+112. Closed generic inference policy checkpoint:
+
+
+    - accepted ADR 0023 to lock v1 runtime policy to compiled-profile-first + curation-only
+    - marked ADR 0006 as superseded and aligned decision index wording
+    - synced rules/curation planning docs to remove stale “runtime generic inference first” flow wording
+
 ## Next Tasks
 
-1. Generic inference policy checkpoint:
-   - keep compile-time generic layer (`project-generic`) active;
-   - explicitly decide whether/when adapter runtime generic inference (beyond compiled artifact resolution + safe no-match fallback) should be introduced.
-2. Keep compiler/TUI maintenance pass active for regressions found during adapter integration.
+1. Keep compiler/TUI maintenance pass active for regressions found during adapter integration.
 
 Note:
 

@@ -81,7 +81,6 @@ Related ADRs:
 
 - `docs/decisions/0002-compiler-adapter-boundary.md`
 - `docs/decisions/0004-generic-fallback-ownership.md`
-- `docs/decisions/0006-homey-adapter-runtime-rule-order.md`
 - `docs/decisions/0007-product-and-curation-single-target-bundles.md`
 - `docs/decisions/0010-homey-adapter-curation-storage-v1.md`
 - `docs/decisions/0011-homey-curation-model-v1-materialized-overrides.md`
@@ -91,6 +90,7 @@ Related ADRs:
 - `docs/decisions/0015-homey-baseline-hash-canonical-projection-v1.md`
 - `docs/decisions/0016-homey-curation-v1-storage-schema.md`
 - `docs/decisions/0017-homey-mvp-driver-topology-and-pairing-model.md`
+- `docs/decisions/0023-homey-runtime-generic-inference-freeze-v1.md`
 
 Compiler remains responsible for:
 
@@ -172,9 +172,8 @@ Apply curation to compiled profiles (not raw Z-Wave facts).
 Runtime flow:
 
 1. Load compiled profile
-2. Apply adapter generic inference (`fill`-oriented cleanup)
-3. Apply curation overrides/rules (final authority)
-4. Execute final profile
+2. Apply curation overrides/rules (final authority)
+3. Execute final profile
 
 ### Targeting (device selection)
 
@@ -361,7 +360,7 @@ Optional later:
 4. Load matching curation overrides from Homey storage by `homeyDeviceId`
 5. Validate curation schema
 6. Lower overrides -> runtime curation rules
-7. Execute rules engine in runtime order (generic first, curation second)
+7. Execute runtime curation rules over compiled profile baseline
 8. Use resulting runtime profile for:
 
 - inbound updates (ZWJS -> Homey)

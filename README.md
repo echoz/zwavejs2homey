@@ -223,6 +223,7 @@ Canonical artifacts:
 - Compiler owns compile-time profile generation and diagnostics.
 - Homey app owns runtime curation persistence/application semantics.
 - Runtime curation is `curation.v1` in Homey settings.
+- Current runtime policy is compiled-profile-first plus device-instance curation; runtime generic inference expansion is intentionally frozen for v1.
 - Compile-time layers are manifest-owned; runtime-only rules are out of compiler scope.
 
 See `docs/decisions/` for locked ADRs.

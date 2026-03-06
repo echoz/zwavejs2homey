@@ -90,7 +90,8 @@ Runtime/Homey-adapter behavior:
 
 - non-manifest rules are considered adapter/runtime policy artifacts
 - compiler does not assume or apply those runtime-only rules
-- v1 adapter runtime order is generic inference first, then curation (curation wins)
+- current adapter runtime policy is compiled-profile-first plus device-instance curation
+- adapter runtime generic inference expansion is explicitly frozen in v1 (see ADR 0023)
 
 ## Matchers
 

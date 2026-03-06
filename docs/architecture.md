@@ -144,6 +144,9 @@ Delivered:
   - generic `value` inbound + `set_value` outbound path
   - transform-aware coercion
   - live read/write gating and mapping diagnostics
+- runtime generic inference expansion is explicitly frozen in v1:
+  - adapter runtime remains compiled-profile-first plus instance curation
+  - no additional runtime generic-inference layer is applied today
 - curation baseline is live:
   - strict `curation.v1` validation
   - deterministic lowering + apply helper
