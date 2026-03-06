@@ -181,6 +181,20 @@
         color: var(--muted);
         font-size: 12px;
       }
+
+      .inline-option {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .inline-option input[type='checkbox'] {
+        width: auto;
+        padding: 0;
+      }
     </style>
   </head>
   <body>
@@ -220,6 +234,11 @@
           <button id="refreshDiagnosticsBtn" type="button">Refresh Diagnostics</button>
           <button id="openBridgeToolsBtn" type="button">Open Bridge Tools</button>
         </div>
+        <button id="exportSupportBundleBtn" type="button">Export Support Bundle</button>
+        <label class="inline-option" for="redactSupportBundle">
+          <input id="redactSupportBundle" type="checkbox" checked />
+          Redact support bundle for sharing
+        </label>
       </section>
     </div>
 

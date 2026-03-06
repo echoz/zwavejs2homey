@@ -177,6 +177,7 @@ Delivered in Phase 6 so far:
 
 - runtime support-bundle workflow CLI (`homey:support-bundle`) for read-only diagnostics/recommendation capture
 - canonical runtime support-bundle API route (`GET /runtime/support-bundle`) with app/client/smoke coverage
+- settings UI support-bundle export action with optional redaction toggle
 - optional `--redact-share` mode for safer external issue/report sharing
 - generic inference policy checkpoint closed:
   - runtime generic inference remains frozen in v1

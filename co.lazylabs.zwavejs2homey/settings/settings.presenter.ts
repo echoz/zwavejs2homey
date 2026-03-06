@@ -72,6 +72,22 @@ type RuntimeParseResult =
       error: string;
     };
 
+type SupportBundleParseResult =
+  | {
+      data: Record<string, unknown>;
+      error?: undefined;
+    }
+  | {
+      data?: undefined;
+      error: string;
+    };
+
+interface SupportBundleExportResult {
+  fileName: string;
+  content: string;
+  redacted: boolean;
+}
+
 interface RuntimeStatusRow {
   key: string;
   value: string | ConnectionPill;
@@ -87,6 +103,7 @@ interface RuntimeViewModel {
 
 interface SettingsPresenter {
   DEFAULT_URL: string;
+  DEFAULT_SUPPORT_BUNDLE_FILE_NAME: string;
   normalizeLoadedSettings: (raw: unknown) => LoadedSettings;
   validateSettingsInput: (input: {
     url?: unknown;
@@ -94,6 +111,11 @@ interface SettingsPresenter {
     token?: unknown;
   }) => ValidateSettingsResult;
   parseRuntimeResponse: (response: unknown) => RuntimeParseResult;
+  parseSupportBundleResponse: (response: unknown) => SupportBundleParseResult;
+  buildSupportBundleExport: (
+    input: Record<string, unknown>,
+    options?: { redact?: boolean },
+  ) => SupportBundleExportResult;
   buildRuntimeViewModel: (data: RuntimeData) => RuntimeViewModel;
 }
 
@@ -119,6 +141,18 @@ interface UiRoot {
       : ({} as UiRoot),
   function createPresenter() {
     const DEFAULT_URL = 'ws://127.0.0.1:3000';
+    const DEFAULT_SUPPORT_BUNDLE_FILE_NAME = 'zwjs2homey-support-bundle.json';
+    const REDACTED_VALUE = '<redacted>';
+    const REDACTED_STRING_KEYS = new Set([
+      'baseUrl',
+      'homeyDeviceId',
+      'location',
+      'name',
+      'token',
+      'url',
+      'zone',
+      'zoneName',
+    ]);
 
     function asText(value: unknown): string {
       if (value === null || typeof value === 'undefined' || value === '') return 'n/a';
@@ -224,6 +258,80 @@ interface UiRoot {
       return { error: 'Runtime diagnostics response is missing expected fields.' };
     }
 
+    function parseSupportBundleResponse(response: unknown): SupportBundleParseResult {
+      if (!response || typeof response !== 'object') {
+        return { error: 'Support bundle response is invalid.' };
+      }
+      const envelope = response as RuntimeResponseEnvelope;
+      if (envelope.ok === true && envelope.data && typeof envelope.data === 'object') {
+        return { data: envelope.data as Record<string, unknown> };
+      }
+      if (envelope.ok === false && envelope.error && typeof envelope.error === 'object') {
+        return {
+          error:
+            typeof envelope.error.message === 'string'
+              ? envelope.error.message
+              : 'Support bundle is unavailable.',
+        };
+      }
+      return { error: 'Support bundle response is missing expected fields.' };
+    }
+
+    function toSafeFileSegment(value: string): string {
+      const trimmed = value.trim();
+      if (trimmed.length === 0) return 'unknown';
+      const sanitized = trimmed.replace(/[^0-9A-Za-z._-]+/g, '_').replace(/^_+|_+$/g, '');
+      return sanitized.length > 0 ? sanitized : 'unknown';
+    }
+
+    function supportBundleFileName(bundle: Record<string, unknown>): string {
+      const generatedAt =
+        bundle && typeof bundle.generatedAt === 'string' ? bundle.generatedAt.trim() : '';
+      if (!generatedAt) {
+        return DEFAULT_SUPPORT_BUNDLE_FILE_NAME;
+      }
+      const parsed = new Date(generatedAt);
+      if (Number.isNaN(parsed.getTime())) {
+        return DEFAULT_SUPPORT_BUNDLE_FILE_NAME;
+      }
+      const iso = parsed.toISOString();
+      const datePart = toSafeFileSegment(iso.slice(0, 10).replace(/-/g, ''));
+      const timePart = toSafeFileSegment(iso.slice(11, 19).replace(/:/g, ''));
+      return `zwjs2homey-support-bundle-${datePart}-${timePart}.json`;
+    }
+
+    function redactSupportBundleValue(value: unknown, key: string | null): unknown {
+      if (Array.isArray(value)) {
+        return value.map((entry) => redactSupportBundleValue(entry, key));
+      }
+      if (value && typeof value === 'object') {
+        const output: Record<string, unknown> = {};
+        for (const [entryKey, entryValue] of Object.entries(value as Record<string, unknown>)) {
+          output[entryKey] = redactSupportBundleValue(entryValue, entryKey);
+        }
+        return output;
+      }
+      if (typeof value === 'string' && key && REDACTED_STRING_KEYS.has(key)) {
+        return REDACTED_VALUE;
+      }
+      return value;
+    }
+
+    function buildSupportBundleExport(
+      input: Record<string, unknown>,
+      options?: { redact?: boolean },
+    ): SupportBundleExportResult {
+      const redacted = options?.redact === true;
+      const bundle = redacted
+        ? (redactSupportBundleValue(input, null) as Record<string, unknown>)
+        : input;
+      return {
+        fileName: supportBundleFileName(bundle),
+        content: JSON.stringify(bundle, null, 2),
+        redacted,
+      };
+    }
+
     function toRuntimeNodes(data: RuntimeData): RuntimeNode[] {
       return Array.isArray(data.nodes) ? (data.nodes as RuntimeNode[]) : [];
     }
@@ -315,9 +423,12 @@ interface UiRoot {
 
     return {
       DEFAULT_URL,
+      DEFAULT_SUPPORT_BUNDLE_FILE_NAME,
       normalizeLoadedSettings,
       validateSettingsInput,
       parseRuntimeResponse,
+      parseSupportBundleResponse,
+      buildSupportBundleExport,
       buildRuntimeViewModel,
     };
   },

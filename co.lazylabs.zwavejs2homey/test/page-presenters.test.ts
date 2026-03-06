@@ -153,6 +153,56 @@ test('settings presenter parses runtime diagnostics and builds warning-aware vie
   assert.equal(viewModel.runtimeHint, '2 imported node(s) need attention in Bridge Tools.');
 });
 
+test('settings presenter parses and exports support bundles with optional redaction', () => {
+  assert.deepEqual(
+    settingsPresenter.parseSupportBundleResponse({
+      ok: true,
+      data: { schemaVersion: 'homey-runtime-support-bundle/v1' },
+    }),
+    {
+      data: { schemaVersion: 'homey-runtime-support-bundle/v1' },
+    },
+  );
+  assert.equal(
+    settingsPresenter.parseSupportBundleResponse({ ok: false, error: { message: 'bundle-failed' } })
+      .error,
+    'bundle-failed',
+  );
+  assert.equal(
+    settingsPresenter.parseSupportBundleResponse({ ok: false }).error,
+    'Support bundle response is missing expected fields.',
+  );
+
+  const bundle = {
+    generatedAt: '2026-03-06T18:30:48.000Z',
+    source: {
+      baseUrl: 'http://homey/api/app/co.lazylabs.zwavejs2homey',
+      homeyDeviceId: 'main:12',
+    },
+    diagnostics: {
+      node: {
+        name: 'Kitchen Dimmer',
+        location: 'Kitchen',
+      },
+    },
+  };
+
+  const rawExport = settingsPresenter.buildSupportBundleExport(bundle, { redact: false });
+  assert.equal(rawExport.redacted, false);
+  assert.equal(rawExport.fileName, 'zwjs2homey-support-bundle-20260306-183048.json');
+  const rawPayload = JSON.parse(rawExport.content);
+  assert.equal(rawPayload.source.baseUrl, 'http://homey/api/app/co.lazylabs.zwavejs2homey');
+  assert.equal(rawPayload.diagnostics.node.name, 'Kitchen Dimmer');
+
+  const redactedExport = settingsPresenter.buildSupportBundleExport(bundle, { redact: true });
+  assert.equal(redactedExport.redacted, true);
+  const redactedPayload = JSON.parse(redactedExport.content);
+  assert.equal(redactedPayload.source.baseUrl, '<redacted>');
+  assert.equal(redactedPayload.source.homeyDeviceId, '<redacted>');
+  assert.equal(redactedPayload.diagnostics.node.name, '<redacted>');
+  assert.equal(redactedPayload.diagnostics.node.location, '<redacted>');
+});
+
 function runPairPresenterContract(name, presenter) {
   test(`${name} presenter transitions load state and builds imported node table rows`, () => {
     const initial = presenter.createInitialState();

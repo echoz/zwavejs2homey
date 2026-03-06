@@ -45,6 +45,12 @@ Kick off Phase 6 Reliability + UX delivery:
     - app bundle aggregation behavior (`test/app-runtime-refresh.test.ts`)
     - runtime API client method (`test/runtime-api-client.test.ts`)
 
+- Phase 6 settings support-bundle export UX slice:
+  - settings diagnostics panel now exposes `Export Support Bundle`
+  - export flow calls `GET /runtime/support-bundle?includeNoAction=true`
+  - export supports in-UI redaction toggle before download
+  - presenter coverage expanded for support-bundle parsing/export behavior (`test/page-presenters.test.ts`)
+
 - Docs/plan sync checkpoint (2026-03-06):
   - aligned phase status wording across `README.md`, `docs/architecture.md`, `plan/roadmap.md`, and sprint next-tasks
   - made Phase 6 scope explicit:

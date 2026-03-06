@@ -23,6 +23,8 @@
     const warnings = mustElement('warnings');
     const refreshDiagnosticsBtn = mustElement('refreshDiagnosticsBtn');
     const openBridgeToolsBtn = mustElement('openBridgeToolsBtn');
+    const exportSupportBundleBtn = mustElement('exportSupportBundleBtn');
+    const redactSupportBundleCheckbox = mustElement('redactSupportBundle');
     function escapeHtml(value) {
         return String(value)
             .replace(/&/g, '&amp;')
@@ -35,6 +37,28 @@
         status.textContent = message;
         status.classList.remove('ok', 'warn', 'error', 'muted');
         status.classList.add(tone);
+    }
+    function downloadTextFile(fileName, content) {
+        const payload = content ?? '';
+        if (typeof Blob !== 'undefined' && typeof URL !== 'undefined' && URL.createObjectURL) {
+            const blob = new Blob([payload], { type: 'application/json;charset=utf-8' });
+            const blobUrl = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = fileName || presenter.DEFAULT_SUPPORT_BUNDLE_FILE_NAME;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 0);
+            return;
+        }
+        const encoded = encodeURIComponent(payload);
+        const fallbackLink = document.createElement('a');
+        fallbackLink.href = `data:application/json;charset=utf-8,${encoded}`;
+        fallbackLink.download = fileName || presenter.DEFAULT_SUPPORT_BUNDLE_FILE_NAME;
+        document.body.appendChild(fallbackLink);
+        fallbackLink.click();
+        document.body.removeChild(fallbackLink);
     }
     function updateTokenVisibility() {
         const needsToken = authTypeSelect.value === 'bearer';
@@ -115,6 +139,32 @@
             renderRuntimeDiagnostics(parsed.data || {});
         });
     }
+    function exportSupportBundle(homey) {
+        exportSupportBundleBtn.disabled = true;
+        const redact = redactSupportBundleCheckbox.checked;
+        setStatus('Building support bundle...', 'muted');
+        homey.api('GET', '/runtime/support-bundle?includeNoAction=true', null, (error, response) => {
+            exportSupportBundleBtn.disabled = false;
+            if (error) {
+                setStatus(`Failed to build support bundle: ${error.message || String(error)}`, 'error');
+                return;
+            }
+            const parsed = presenter.parseSupportBundleResponse(response);
+            if (parsed.error || !parsed.data) {
+                setStatus(parsed.error || 'Support bundle payload is invalid.', 'error');
+                return;
+            }
+            const bundle = presenter.buildSupportBundleExport(parsed.data, { redact });
+            try {
+                downloadTextFile(bundle.fileName, bundle.content);
+                setStatus(`Support bundle downloaded (${bundle.redacted ? 'redacted' : 'raw'}).`, 'ok');
+            }
+            catch (downloadError) {
+                const message = downloadError instanceof Error ? downloadError.message : String(downloadError);
+                setStatus(`Failed to download support bundle: ${message}`, 'error');
+            }
+        });
+    }
     function loadSettings(homey) {
         homey.get(SETTINGS_KEY, (error, raw) => {
             if (error) {
@@ -167,6 +217,9 @@
         });
         openBridgeToolsBtn.addEventListener('click', () => {
             setStatus('Open Devices -> ZWJS Bridge -> Repair to access Bridge Tools diagnostics.', 'muted');
+        });
+        exportSupportBundleBtn.addEventListener('click', () => {
+            exportSupportBundle(homey);
         });
     }
     function onHomeyReady(homey) {

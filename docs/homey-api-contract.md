@@ -42,6 +42,8 @@ Error responses keep the same shape:
   - query:
     - `homeyDeviceId` (optional string)
     - `includeNoAction` (optional boolean-like string: `true|false|1|0|yes|no`)
+  - used by:
+    - settings UI "Export Support Bundle" action
 - `GET /runtime/recommendations`
   - query:
     - `homeyDeviceId` (optional string)
