@@ -99,8 +99,6 @@ interface RepairSessionLike {
 
 interface PairSessionLike {
   setHandler: (event: string, handler: (payload?: unknown) => Promise<unknown>) => void;
-  showView?: (viewId: string) => Promise<void>;
-  nextView?: () => Promise<void>;
 }
 
 interface ImportSummaryNodeEntry {
@@ -133,7 +131,6 @@ interface HomeyZonesManagerLike {
 
 module.exports = class NodeDriver extends Homey.Driver {
   private static readonly PAIR_FLOW_TIMEOUT_MS = 12000;
-  private static readonly PAIR_LIST_REQUEST_WATCHDOG_MS = 5000;
 
   private static readonly PAIR_NODE_LIST_TIMEOUT_MS = 8000;
 
@@ -165,53 +162,6 @@ module.exports = class NodeDriver extends Homey.Driver {
         : [],
     });
 
-    let listDevicesRequested = false;
-    const listRequestWatchdog = setTimeout(() => {
-      if (listDevicesRequested) return;
-      this.error('Node pair watchdog: Homey did not request list_devices in time', {
-        timeoutMs: NodeDriver.PAIR_LIST_REQUEST_WATCHDOG_MS,
-      });
-    }, NodeDriver.PAIR_LIST_REQUEST_WATCHDOG_MS);
-
-    try {
-      session.setHandler('list_devices', async () => {
-        listDevicesRequested = true;
-        clearTimeout(listRequestWatchdog);
-        try {
-          const candidates = await this.onPairListDevices();
-          this.log('Node pair list response ready', {
-            candidates: Array.isArray(candidates) ? candidates.length : 0,
-          });
-          return candidates;
-        } catch (error) {
-          this.error('Node pair list handler failed; returning empty list', { error });
-          return [];
-        }
-      });
-      this.log('Node pair handler registered', { event: 'list_devices' });
-    } catch (error) {
-      this.error('Failed to register node pair handler', {
-        event: 'list_devices',
-        error,
-      });
-      throw error;
-    }
-
-    try {
-      session.setHandler('showView', async (viewId) => {
-        const resolvedViewId =
-          typeof viewId === 'string' && viewId.trim().length > 0 ? viewId.trim() : 'unknown';
-        this.log('Node pair view shown', { viewId: resolvedViewId });
-        return null;
-      });
-      this.log('Node pair handler registered', { event: 'showView' });
-    } catch (error) {
-      this.error('Failed to register node pair handler; view transition tracing unavailable', {
-        event: 'showView',
-        error,
-      });
-    }
-
     try {
       session.setHandler('import_summary:get_status', async () => {
         return this.loadImportSummaryStatus();
@@ -225,36 +175,6 @@ module.exports = class NodeDriver extends Homey.Driver {
     }
 
     this.log('Node pair session ready');
-
-    const pairHandlerNames = Object.getOwnPropertyNames(session)
-      .filter((name) => typeof (session as unknown as Record<string, unknown>)[name] === 'function')
-      .sort();
-    this.log('Node pair session capabilities', {
-      hasShowView: typeof session.showView === 'function',
-      hasNextView: typeof session.nextView === 'function',
-      handlerNames: pairHandlerNames,
-    });
-
-    if (typeof session.showView === 'function') {
-      try {
-        await session.showView('list_devices');
-        this.log('Node pair requested initial view', { viewId: 'list_devices' });
-      } catch (error) {
-        this.error('Failed to request initial node pair view', {
-          viewId: 'list_devices',
-          error,
-        });
-      }
-    }
-
-    if (typeof session.nextView === 'function') {
-      try {
-        await session.nextView();
-        this.log('Node pair requested next view transition');
-      } catch (error) {
-        this.error('Failed to request node pair next view transition', { error });
-      }
-    }
   }
 
   private resolveBridgeRuntime(app: AppRuntimeAccess): {
