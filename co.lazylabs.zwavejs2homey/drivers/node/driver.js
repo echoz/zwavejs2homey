@@ -84,6 +84,14 @@ module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
                 });
             }
             this.log('Node pair session ready');
+            const pairHandlerNames = Object.getOwnPropertyNames(session)
+                .filter((name) => typeof session[name] === 'function')
+                .sort();
+            this.log('Node pair session capabilities', {
+                hasShowView: typeof session.showView === 'function',
+                hasNextView: typeof session.nextView === 'function',
+                handlerNames: pairHandlerNames,
+            });
             if (typeof session.showView === 'function') {
                 try {
                     await session.showView('list_devices');
@@ -94,6 +102,15 @@ module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
                         viewId: 'list_devices',
                         error,
                     });
+                }
+            }
+            if (typeof session.nextView === 'function') {
+                try {
+                    await session.nextView();
+                    this.log('Node pair requested next view transition');
+                }
+                catch (error) {
+                    this.error('Failed to request node pair next view transition', { error });
                 }
             }
         }

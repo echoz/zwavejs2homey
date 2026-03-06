@@ -160,6 +160,7 @@ interface RepairSessionLike {
 interface PairSessionLike {
   setHandler: (event: string, handler: (payload?: unknown) => Promise<unknown>) => void;
   showView?: (viewId: string) => Promise<void>;
+  nextView?: () => Promise<void>;
 }
 
 interface HomeyBridgeDeviceData {
@@ -273,6 +274,15 @@ module.exports = class BridgeDriver extends Homey.Driver {
 
     this.log('Bridge pair session ready');
 
+    const pairHandlerNames = Object.getOwnPropertyNames(session)
+      .filter((name) => typeof (session as unknown as Record<string, unknown>)[name] === 'function')
+      .sort();
+    this.log('Bridge pair session capabilities', {
+      hasShowView: typeof session.showView === 'function',
+      hasNextView: typeof session.nextView === 'function',
+      handlerNames: pairHandlerNames,
+    });
+
     if (typeof session.showView === 'function') {
       try {
         await session.showView('list_devices');
@@ -282,6 +292,15 @@ module.exports = class BridgeDriver extends Homey.Driver {
           viewId: 'list_devices',
           error,
         });
+      }
+    }
+
+    if (typeof session.nextView === 'function') {
+      try {
+        await session.nextView();
+        this.log('Bridge pair requested next view transition');
+      } catch (error) {
+        this.error('Failed to request bridge pair next view transition', { error });
       }
     }
   }
