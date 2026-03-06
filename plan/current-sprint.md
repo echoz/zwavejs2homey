@@ -22,6 +22,19 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## Recently Completed
 
+- Latest node repair presenter-view TypeScript migration slice:
+  - migrated `drivers/node/repair/device_tools.html` inline logic into dedicated TS modules:
+    - `drivers/node/repair/device_tools.presenter.ts`
+    - `drivers/node/repair/device_tools.page.ts`
+  - page now loads compiled presenter/page JS entrypoints instead of embedding inline script logic
+  - added presenter behavioral coverage in `test/node-device-tools-presenter.test.js` for:
+    - actionable recommendation state (adopt path)
+    - warning-state rendering for disconnected transport
+    - action-state-changed summary messaging
+  - validated runtime TS migration scope:
+    - no remaining inline scripts in Homey custom HTML pages
+    - no remaining non-test hand-authored runtime `.js` files without a `.ts` source peer
+
 - Latest bridge repair presenter-view slice:
   - migrated `drivers/bridge/repair/bridge_tools.html` inline repair logic into dedicated TypeScript modules:
     - `drivers/bridge/repair/bridge_tools.presenter.ts`
