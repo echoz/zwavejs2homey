@@ -246,15 +246,18 @@ Primary gate: `npm run check`
 
 Near-term:
 
-1. continue Device Tools UX polish and diagnostics clarity
-2. continue capability vertical expansion with runtime + harness tests
+1. close Phase 6 reliability + UX scope:
+   - settings/pairing/repair diagnostics clarity
+   - runtime mapping drift-proofing gates
+   - support/log bundle workflow
+2. keep pairing/settings flows defect-driven while preserving MVP template constraints
 3. prepare session registry evolution from singleton default (`main`) to multi-bridge enrollment when pairing model changes
 
 After that:
 
-1. support/log bundle workflows
+1. per-node capability expansion and broader runtime vertical coverage
 2. non-production parity validation for deferred protocol domains
-3. custom pairing views for richer bridge/node onboarding UX beyond system template constraints
+3. deeper custom pairing views for richer bridge/node onboarding UX beyond system template constraints
 
 ## Key ADRs
 

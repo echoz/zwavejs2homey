@@ -15,10 +15,17 @@ Kick off Phase 6 Reliability + UX delivery:
   - keep pairing/settings/repair UX defect-driven (MVP-frozen baseline)
   - expand reliability gates that prevent runtime mapping policy drift
   - continue diagnostics clarity improvements that reduce operator ambiguity
+  - add support/log bundle workflow for operator troubleshooting handoffs
   - keep docs/ADRs/roadmap synchronized as priorities move from MVP closure to reliability/UX hardening
   - preserve strict package boundaries (`core`/`compiler`/`tui`/Homey app)
 
 ## Recently Completed
+
+- Docs/plan sync checkpoint (2026-03-06):
+  - aligned phase status wording across `README.md`, `docs/architecture.md`, `plan/roadmap.md`, and sprint next-tasks
+  - made Phase 6 scope explicit:
+    - support/log bundle workflow is in-scope
+    - per-node capability expansion is tracked for the next phase
 
 - Phase-transition sync slice:
   - closed Phase 5 in roadmap after closure-gate review and publish-level validation pass
@@ -1539,10 +1546,13 @@ Kick off Phase 6 Reliability + UX delivery:
 
 ## Next Tasks
 
-1. Generic inference policy checkpoint:
+1. Support/log bundle workflow slice:
+   - add a stable operator-facing support-bundle flow for runtime diagnostics export/share;
+   - keep output deterministic and safe for issue reports.
+2. Generic inference policy checkpoint:
    - keep compile-time generic layer (`project-generic`) active;
    - explicitly decide whether/when adapter runtime generic inference (beyond compiled artifact resolution + safe no-match fallback) should be introduced.
-2. Keep compiler/TUI maintenance pass active for regressions found during adapter integration.
+3. Keep compiler/TUI maintenance pass active for regressions found during adapter integration.
 
 Note:
 

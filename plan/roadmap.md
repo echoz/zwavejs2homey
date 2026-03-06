@@ -169,6 +169,10 @@ Active focus:
 4. non-production protocol validation runs (deferred Phase 2 items)
 5. optional deeper custom Homey pairing layouts where system templates remain too constrained
 
+Not in Phase 6 scope:
+
+- per-node capability expansion beyond the current mapped vertical set (tracked for the next phase)
+
 ## Active Risks
 
 - recommendation workflow semantics may need refinement during real UX integration
