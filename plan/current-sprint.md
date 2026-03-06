@@ -1565,9 +1565,16 @@ Kick off Phase 6 Reliability + UX delivery:
     - marked ADR 0006 as superseded and aligned decision index wording
     - synced rules/curation planning docs to remove stale “runtime generic inference first” flow wording
 
+113. Compiler/TUI maintenance pass checkpoint:
+
+
+    - ran compiler package suite (`npm run test -w @zwavejs2homey/compiler`) with full pass
+    - ran TUI package suite (`npm run test -w @zwavejs2homey/tui`) with full pass
+    - no adapter-integration regression follow-ups required from this checkpoint
+
 ## Next Tasks
 
-1. Keep compiler/TUI maintenance pass active for regressions found during adapter integration.
+1. Continue Phase 6 reliability + UX slices on Homey adapter surfaces (pairing/settings/repair defects + diagnostics clarity).
 
 Note:
 
