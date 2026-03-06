@@ -22,6 +22,19 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## Recently Completed
 
+- Latest Phase 5 runtime fallback-policy hardening slice:
+  - expanded node-device harness coverage to lock deterministic no-profile-match behavior when ZWJS is connected:
+    - compiled artifact loaded + no resolver match -> `fallbackReason: no_compiled_profile_match`
+    - compiled artifact unavailable + no resolver match -> `fallbackReason: compiled_profile_artifact_unavailable`
+  - assertions now explicitly lock adapter no-match classification contract:
+    - `homeyClass: other`
+    - `confidence: generic`
+    - `uncurated: true`
+  - assertions also lock no-match runtime side effects:
+    - no capability listeners are registered
+    - no inbound/outbound mapping calls are executed
+    - `mappingDiagnostics` remains empty
+
 - Latest repo-wide static-typing migration slice:
   - migrated all first-party test suites from `.js` to `.ts`:
     - `co.lazylabs.zwavejs2homey/test/*.test.ts`

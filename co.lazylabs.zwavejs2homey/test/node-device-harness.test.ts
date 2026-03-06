@@ -976,6 +976,115 @@ test('node device harness records explicit fallback when zwjs client is unavaila
   assert.equal(device._getErrors().length, 0);
 });
 
+test('node device harness keeps no-match fallback deterministic when compiled profiles are loaded', async () => {
+  const client = createMockZwjsClient({
+    nodeStateResult: {
+      success: true,
+      result: {
+        state: {
+          manufacturerId: '0x010f',
+          productType: '0x1802',
+          productId: '0x2001',
+          manufacturer: 'Fibaro',
+          product: 'Wall Plug',
+        },
+      },
+    },
+    definedValueIdsResult: {
+      success: true,
+      result: [
+        {
+          commandClass: 37,
+          endpoint: 0,
+          property: 'currentValue',
+          readable: true,
+        },
+      ],
+    },
+  });
+
+  const app = {
+    getZwjsClient: () => client,
+    getCompiledProfilesStatus: () => createRuntimeStatus({ loaded: true }),
+    resolveCompiledProfileEntry: () => ({ by: 'none' }),
+  };
+
+  const device = new NodeDevice();
+  device._configureHarness({
+    app,
+    data: { bridgeId: 'main', nodeId: 44 },
+    capabilities: ['onoff'],
+  });
+
+  await device.onInit();
+
+  const profileResolution = device._getStoreValue('profileResolution');
+  assert.equal(profileResolution?.matchBy, 'none');
+  assert.equal(profileResolution?.profileId, null);
+  assert.equal(profileResolution?.classification?.homeyClass, 'other');
+  assert.equal(profileResolution?.classification?.confidence, 'generic');
+  assert.equal(profileResolution?.classification?.uncurated, true);
+  assert.equal(profileResolution?.fallbackReason, 'no_compiled_profile_match');
+  assert.equal(profileResolution?.verticalSliceApplied, false);
+  assert.deepEqual(profileResolution?.mappingDiagnostics, []);
+  assert.equal(profileResolution?.recommendationAvailable, false);
+  assert.equal(profileResolution?.curationEntryPresent, false);
+
+  assert.equal(client.callLog.getNodeState.length, 1);
+  assert.equal(client.callLog.getNodeDefinedValueIds.length, 1);
+  assert.equal(client.callLog.getNodeValue.length, 0);
+  assert.equal(client.callLog.setNodeValue.length, 0);
+  assert.equal(client.getListenerCount(), 0);
+});
+
+test('node device harness reports artifact-unavailable fallback when resolver artifact is not loaded', async () => {
+  const client = createMockZwjsClient({
+    nodeStateResult: {
+      success: true,
+      result: {
+        state: {
+          manufacturerId: '0x010f',
+          productType: '0x1802',
+          productId: '0x2001',
+        },
+      },
+    },
+  });
+
+  const app = {
+    getZwjsClient: () => client,
+    getCompiledProfilesStatus: () =>
+      createRuntimeStatus({
+        loaded: false,
+        entryCount: 0,
+        errorMessage: 'compiled-homey-profiles.v1.json is missing',
+      }),
+    resolveCompiledProfileEntry: () => ({ by: 'none' }),
+  };
+
+  const device = new NodeDevice();
+  device._configureHarness({
+    app,
+    data: { bridgeId: 'main', nodeId: 45 },
+    capabilities: ['onoff'],
+  });
+
+  await device.onInit();
+
+  const profileResolution = device._getStoreValue('profileResolution');
+  assert.equal(profileResolution?.matchBy, 'none');
+  assert.equal(profileResolution?.profileId, null);
+  assert.equal(profileResolution?.classification?.homeyClass, 'other');
+  assert.equal(profileResolution?.classification?.confidence, 'generic');
+  assert.equal(profileResolution?.classification?.uncurated, true);
+  assert.equal(profileResolution?.fallbackReason, 'compiled_profile_artifact_unavailable');
+  assert.equal(profileResolution?.resolverLoaded, false);
+  assert.equal(profileResolution?.resolverError, 'compiled-homey-profiles.v1.json is missing');
+  assert.equal(profileResolution?.verticalSliceApplied, false);
+  assert.deepEqual(profileResolution?.mappingDiagnostics, []);
+  assert.equal(client.getListenerCount(), 0);
+});
+
 test('node device harness applies generic inbound mapping and gates outbound writes by value availability', async () => {
   const measurePowerSelector = {
     commandClass: 50,

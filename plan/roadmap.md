@@ -125,6 +125,10 @@ Done so far:
   - added generic mixed numeric/string vertical harness coverage (`measure_humidity`, `thermostat_mode`)
   - added enum-like mapping diagnostics edge-case coverage (`thermostat_mode` unreadable inbound + unknown outbound writeability)
   - validated inbound/outbound/event update flows remain capability-agnostic
+- adapter no-profile-match policy locked in harness coverage:
+  - compiled resolver loaded + no match -> deterministic `no_compiled_profile_match` fallback
+  - compiled resolver unavailable + no match -> deterministic `compiled_profile_artifact_unavailable` fallback
+  - both no-match paths lock classification fallback contract (`other` + `generic` + `uncurated`) and no mapping/listener side effects
 - Homey CLI workspace/prod-dependency compatibility hardening:
   - removed Homey app package from root npm workspace membership
   - switched root Homey-targeted scripts to `npm --prefix` invocation
@@ -134,11 +138,8 @@ Done so far:
 In progress / next:
 
 1. continue broadening runtime mapping coverage with tests
-2. lock/confirm generic inference policy for adapter runtime:
-   - compile-time generic layer remains active in compiler artifacts
-   - adapter runtime currently uses compiled resolution + safe no-match fallback; broader runtime generic inference remains a deliberate follow-up decision
-3. prepare adapter bridge-session abstraction for future multi-bridge support without changing current singleton behavior
-4. maintain pairing/settings/repair UX as MVP-frozen unless defects are reported
+2. prepare adapter bridge-session abstraction for future multi-bridge support without changing current singleton behavior
+3. maintain pairing/settings/repair UX as MVP-frozen unless defects are reported
 
 Exit criteria:
 
