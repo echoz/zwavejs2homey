@@ -14,11 +14,7 @@ test('driver session handlers are registered through timed helper', () => {
 
   for (const relativePath of driverFiles) {
     const source = readFile(relativePath);
-    assert.doesNotMatch(
-      source,
-      /\basync\s+onPair\s*\(/,
-      `${relativePath}: list/add template flows must not define custom onPair`,
-    );
+    assert.match(source, /\basync\s+onPair\s*\(/, `${relativePath}: expected custom onPair`);
     const helperMatches = source.match(/registerTimedSessionHandler\s*\(/g) ?? [];
     assert.ok(helperMatches.length >= 2, `${relativePath}: expected timed session helper usage`);
 

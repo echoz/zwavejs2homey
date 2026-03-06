@@ -157,12 +157,19 @@ interface RepairSessionLike {
   setHandler: (event: string, handler: (payload?: unknown) => Promise<unknown>) => void;
 }
 
+interface PairSessionLike {
+  setHandler: (event: string, handler: (payload?: unknown) => Promise<unknown>) => void;
+  emit: (event: string, payload: unknown) => Promise<unknown>;
+}
+
 interface HomeyBridgeDeviceData {
   id?: string;
   bridgeId?: string;
 }
 
 module.exports = class BridgeDriver extends Homey.Driver {
+  private static readonly PAIR_HANDLER_TIMEOUT_MS = 5000;
+
   private static readonly REPAIR_HANDLER_TIMEOUT_MS = 15000;
 
   private async withTimeout<T>(
@@ -184,7 +191,7 @@ module.exports = class BridgeDriver extends Homey.Driver {
   }
 
   private registerTimedSessionHandler(
-    session: RepairSessionLike,
+    session: PairSessionLike | RepairSessionLike,
     event: string,
     timeoutMs: number,
     context: string,
@@ -192,6 +199,38 @@ module.exports = class BridgeDriver extends Homey.Driver {
   ): void {
     session.setHandler(event, async (payload?: unknown) => {
       return this.withTimeout(handler(payload), timeoutMs, `${context} (${event})`);
+    });
+  }
+
+  async onPair(session: PairSessionLike) {
+    this.log('Bridge pair session started');
+    this.registerTimedSessionHandler(
+      session,
+      'list_devices',
+      BridgeDriver.PAIR_HANDLER_TIMEOUT_MS,
+      'bridge pair list',
+      async () => {
+        this.log('Bridge pair list requested (session handler)');
+        return this.onPairListDevices();
+      },
+    );
+    this.log('Bridge pair handler registered', {
+      event: 'list_devices',
+    });
+
+    // Proactively publish candidates for runtimes that do not eagerly call list_devices.
+    void this.withTimeout(
+      (async () => {
+        const candidates = await this.onPairListDevices();
+        await session.emit('list_devices', candidates);
+        this.log('Bridge pair preloaded list_devices candidates', {
+          candidates: Array.isArray(candidates) ? candidates.length : 0,
+        });
+      })(),
+      BridgeDriver.PAIR_HANDLER_TIMEOUT_MS,
+      'bridge pair preload list_devices',
+    ).catch((error) => {
+      this.error('Bridge pair preload failed', { error });
     });
   }
 

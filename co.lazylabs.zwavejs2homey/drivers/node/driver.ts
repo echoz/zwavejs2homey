@@ -100,6 +100,11 @@ interface RepairSessionLike {
   setHandler: (event: string, handler: (payload?: unknown) => Promise<unknown>) => void;
 }
 
+interface PairSessionLike {
+  setHandler: (event: string, handler: (payload?: unknown) => Promise<unknown>) => void;
+  emit: (event: string, payload: unknown) => Promise<unknown>;
+}
+
 interface ImportSummaryNodeEntry {
   homeyDeviceId: string | null;
   bridgeId: string;
@@ -141,10 +146,12 @@ module.exports = class NodeDriver extends Homey.Driver {
 
   private static readonly PAIR_ICON_INFERENCE_TIMEOUT_MS = 7000;
 
+  private static readonly PAIR_HANDLER_TIMEOUT_MS = 15000;
+
   private static readonly REPAIR_HANDLER_TIMEOUT_MS = 15000;
 
   private registerTimedSessionHandler(
-    session: RepairSessionLike,
+    session: PairSessionLike | RepairSessionLike,
     event: string,
     timeoutMs: number,
     context: string,
@@ -152,6 +159,36 @@ module.exports = class NodeDriver extends Homey.Driver {
   ): void {
     session.setHandler(event, async (payload?: unknown) => {
       return this.withTimeout(handler(payload), timeoutMs, `${context} (${event})`);
+    });
+  }
+
+  async onPair(session: PairSessionLike) {
+    this.log('Node pair session started');
+    this.registerTimedSessionHandler(
+      session,
+      'list_devices',
+      NodeDriver.PAIR_HANDLER_TIMEOUT_MS,
+      'node pair list',
+      async () => {
+        this.log('Node pair list requested (session handler)');
+        return this.onPairListDevices();
+      },
+    );
+    this.log('Node pair handler registered', { event: 'list_devices' });
+
+    // Proactively publish candidates for runtimes that do not eagerly call list_devices.
+    void this.withTimeout(
+      (async () => {
+        const candidates = await this.onPairListDevices();
+        await session.emit('list_devices', candidates);
+        this.log('Node pair preloaded list_devices candidates', {
+          candidates: Array.isArray(candidates) ? candidates.length : 0,
+        });
+      })(),
+      NodeDriver.PAIR_HANDLER_TIMEOUT_MS,
+      'node pair preload list_devices',
+    ).catch((error) => {
+      this.error('Node pair preload failed', { error });
     });
   }
 

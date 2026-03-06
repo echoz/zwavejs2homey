@@ -6,9 +6,8 @@ function requireJson(relativePath) {
   return require(path.resolve(__dirname, relativePath));
 }
 
-function assertListTemplatePairFlow(pairViews, driverId, options = {}) {
+function assertListToAddFlow(pairViews, driverId, options = {}) {
   assert.ok(Array.isArray(pairViews), `${driverId}: pair must be an array`);
-  assert.ok(pairViews.length >= 1, `${driverId}: expected at least one pair view`);
 
   const listView = pairViews.find((view) => view && view.id === 'list_devices');
   assert.ok(listView, `${driverId}: missing list_devices pair view`);
@@ -21,9 +20,9 @@ function assertListTemplatePairFlow(pairViews, driverId, options = {}) {
     );
   } else {
     assert.equal(
-      typeof listView.navigation?.next,
-      'undefined',
-      `${driverId}: list_devices should not define next navigation`,
+      listView.navigation?.next,
+      'add_devices',
+      `${driverId}: list_devices must navigate to add_devices`,
     );
   }
   if (typeof options.expectSingular === 'boolean') {
@@ -35,14 +34,14 @@ function assertListTemplatePairFlow(pairViews, driverId, options = {}) {
   }
 }
 
-test('bridge and node drivers expose list_devices template pair flow', () => {
+test('bridge and node drivers expose a list_devices -> add_devices pair flow', () => {
   const bridge = requireJson('../drivers/bridge/driver.compose.json');
   const node = requireJson('../drivers/node/driver.compose.json');
 
-  assertListTemplatePairFlow(bridge.pair, 'bridge', {
+  assertListToAddFlow(bridge.pair, 'bridge', {
     expectSingular: false,
   });
-  assertListTemplatePairFlow(node.pair, 'node', {
+  assertListToAddFlow(node.pair, 'node', {
     expectSingular: false,
   });
 });

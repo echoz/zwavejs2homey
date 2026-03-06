@@ -14,6 +14,24 @@ module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
                 return this.withTimeout(handler(payload), timeoutMs, `${context} (${event})`);
             });
         }
+        async onPair(session) {
+            this.log('Node pair session started');
+            this.registerTimedSessionHandler(session, 'list_devices', _a.PAIR_HANDLER_TIMEOUT_MS, 'node pair list', async () => {
+                this.log('Node pair list requested (session handler)');
+                return this.onPairListDevices();
+            });
+            this.log('Node pair handler registered', { event: 'list_devices' });
+            // Proactively publish candidates for runtimes that do not eagerly call list_devices.
+            void this.withTimeout((async () => {
+                const candidates = await this.onPairListDevices();
+                await session.emit('list_devices', candidates);
+                this.log('Node pair preloaded list_devices candidates', {
+                    candidates: Array.isArray(candidates) ? candidates.length : 0,
+                });
+            })(), _a.PAIR_HANDLER_TIMEOUT_MS, 'node pair preload list_devices').catch((error) => {
+                this.error('Node pair preload failed', { error });
+            });
+        }
         async onInit() {
             this.log('NodeDriver initialized');
             const driverPrototypeMethods = Object.getOwnPropertyNames(Object.getPrototypeOf(this)).sort();
@@ -609,5 +627,6 @@ module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
     _a.PAIR_NODE_STATE_TIMEOUT_MS = 1000,
     _a.PAIR_ICON_INFERENCE_CONCURRENCY = 6,
     _a.PAIR_ICON_INFERENCE_TIMEOUT_MS = 7000,
+    _a.PAIR_HANDLER_TIMEOUT_MS = 15000,
     _a.REPAIR_HANDLER_TIMEOUT_MS = 15000,
     _a);
