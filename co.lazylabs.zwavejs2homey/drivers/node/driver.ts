@@ -97,6 +97,10 @@ interface RepairSessionLike {
   setHandler: (event: string, handler: (payload?: unknown) => Promise<unknown>) => void;
 }
 
+interface PairSessionLike {
+  setHandler: (event: string, handler: () => Promise<unknown>) => void;
+}
+
 interface ImportSummaryNodeEntry {
   homeyDeviceId: string | null;
   bridgeId: string;
@@ -138,6 +142,10 @@ module.exports = class NodeDriver extends Homey.Driver {
 
   private static readonly PAIR_ICON_INFERENCE_TIMEOUT_MS = 7000;
 
+  private static readonly PAIR_HANDLER_TIMEOUT_MS = 15000;
+
+  private static readonly REPAIR_HANDLER_TIMEOUT_MS = 15000;
+
   async onInit() {
     this.log('NodeDriver initialized');
     const driverPrototypeMethods = Object.getOwnPropertyNames(
@@ -158,6 +166,21 @@ module.exports = class NodeDriver extends Homey.Driver {
             singular: view?.options?.singular === true,
           }))
         : [],
+    });
+  }
+
+  async onPair(session: PairSessionLike) {
+    this.log('Node pair session started');
+    session.setHandler('list_devices', async () => {
+      this.log('Node pair list requested (session handler)');
+      return this.withTimeout(
+        this.onPairListDevices(),
+        NodeDriver.PAIR_HANDLER_TIMEOUT_MS,
+        'node pair list handler',
+      );
+    });
+    this.log('Node pair handler registered', {
+      event: 'list_devices',
     });
   }
 
@@ -832,9 +855,22 @@ module.exports = class NodeDriver extends Homey.Driver {
       };
     };
 
-    session.setHandler('device_tools:get_snapshot', async () => loadSnapshot());
-    session.setHandler('device_tools:refresh', async () => loadSnapshot());
-    session.setHandler('device_tools:execute_action', async (payload) => executeAction(payload));
+    const setTimedHandler = (
+      event: string,
+      handler: (payload?: unknown) => Promise<unknown>,
+    ): void => {
+      session.setHandler(event, async (payload) => {
+        return this.withTimeout(
+          handler(payload),
+          NodeDriver.REPAIR_HANDLER_TIMEOUT_MS,
+          `node repair handler (${event})`,
+        );
+      });
+    };
+
+    setTimedHandler('device_tools:get_snapshot', async () => loadSnapshot());
+    setTimedHandler('device_tools:refresh', async () => loadSnapshot());
+    setTimedHandler('device_tools:execute_action', async (payload) => executeAction(payload));
   }
 
   private resolveHomeyDeviceId(device: Homey.Device): string | null {

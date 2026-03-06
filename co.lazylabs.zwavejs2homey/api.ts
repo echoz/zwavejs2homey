@@ -9,6 +9,7 @@ type RecommendationActionSelection = (typeof ACTION_SELECTIONS extends Set<infer
   string;
 
 const API_SCHEMA_VERSION = 'zwjs2homey-api/v1';
+const ROUTE_TIMEOUT_MS = 15000;
 
 class ApiRouteError extends Error {
   public readonly code: string;
@@ -73,9 +74,32 @@ function createErrorResponse(error: unknown): {
   };
 }
 
-async function executeRoute(handler: () => Promise<unknown>): Promise<unknown> {
+async function withRouteTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  routeName: string,
+): Promise<T> {
+  let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutHandle = setTimeout(() => {
+      reject(
+        new ApiRouteError(
+          'route-timeout',
+          `${routeName} timed out after ${timeoutMs}ms. Check app logs for runtime stalls.`,
+        ),
+      );
+    }, timeoutMs);
+  });
   try {
-    const data = await handler();
+    return (await Promise.race([promise, timeoutPromise])) as T;
+  } finally {
+    if (timeoutHandle) clearTimeout(timeoutHandle);
+  }
+}
+
+async function executeRoute(routeName: string, handler: () => Promise<unknown>): Promise<unknown> {
+  try {
+    const data = await withRouteTimeout(handler(), ROUTE_TIMEOUT_MS, routeName);
     return createSuccessResponse(data);
   } catch (error) {
     return createErrorResponse(error);
@@ -188,7 +212,7 @@ function getRuntimeApp(homey: unknown): RuntimeApp {
 
 module.exports = {
   async getRuntimeDiagnostics({ homey, query }: { homey: unknown; query: unknown }) {
-    return executeRoute(async () => {
+    return executeRoute('getRuntimeDiagnostics', async () => {
       const app = getRuntimeApp(homey);
       const params = normalizeObject(query, 'query');
       const homeyDeviceId = normalizeOptionalString(params.homeyDeviceId, 'homeyDeviceId');
@@ -199,7 +223,7 @@ module.exports = {
   },
 
   async getRuntimeSupportBundle({ homey, query }: { homey: unknown; query: unknown }) {
-    return executeRoute(async () => {
+    return executeRoute('getRuntimeSupportBundle', async () => {
       const app = getRuntimeApp(homey);
       const params = normalizeObject(query, 'query');
       const homeyDeviceId = normalizeOptionalString(params.homeyDeviceId, 'homeyDeviceId');
@@ -212,7 +236,7 @@ module.exports = {
   },
 
   async getRecommendationActionQueue({ homey, query }: { homey: unknown; query: unknown }) {
-    return executeRoute(async () => {
+    return executeRoute('getRecommendationActionQueue', async () => {
       const app = getRuntimeApp(homey);
       const params = normalizeObject(query, 'query');
       const homeyDeviceId = normalizeOptionalString(params.homeyDeviceId, 'homeyDeviceId');
@@ -225,7 +249,7 @@ module.exports = {
   },
 
   async executeRecommendationAction({ homey, body }: { homey: unknown; body: unknown }) {
-    return executeRoute(async () => {
+    return executeRoute('executeRecommendationAction', async () => {
       const app = getRuntimeApp(homey);
       const payload = normalizeObject(body, 'body');
       if (typeof payload.homeyDeviceId === 'undefined' || payload.homeyDeviceId === null) {
@@ -248,7 +272,7 @@ module.exports = {
   },
 
   async executeRecommendationActions({ homey, body }: { homey: unknown; body: unknown }) {
-    return executeRoute(async () => {
+    return executeRoute('executeRecommendationActions', async () => {
       const app = getRuntimeApp(homey);
       const payload = normalizeObject(body, 'body');
       const homeyDeviceId = normalizeOptionalString(payload.homeyDeviceId, 'homeyDeviceId');

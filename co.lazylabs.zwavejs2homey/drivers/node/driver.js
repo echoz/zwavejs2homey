@@ -26,6 +26,16 @@ module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
                     : [],
             });
         }
+        async onPair(session) {
+            this.log('Node pair session started');
+            session.setHandler('list_devices', async () => {
+                this.log('Node pair list requested (session handler)');
+                return this.withTimeout(this.onPairListDevices(), _a.PAIR_HANDLER_TIMEOUT_MS, 'node pair list handler');
+            });
+            this.log('Node pair handler registered', {
+                event: 'list_devices',
+            });
+        }
         resolveBridgeRuntime(app) {
             const session = app.getBridgeSession?.(pairing_1.ZWJS_DEFAULT_BRIDGE_ID);
             const bridgeId = this.normalizeStringOrNull(session?.bridgeId) ??
@@ -562,9 +572,14 @@ module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
                     snapshot,
                 };
             };
-            session.setHandler('device_tools:get_snapshot', async () => loadSnapshot());
-            session.setHandler('device_tools:refresh', async () => loadSnapshot());
-            session.setHandler('device_tools:execute_action', async (payload) => executeAction(payload));
+            const setTimedHandler = (event, handler) => {
+                session.setHandler(event, async (payload) => {
+                    return this.withTimeout(handler(payload), _a.REPAIR_HANDLER_TIMEOUT_MS, `node repair handler (${event})`);
+                });
+            };
+            setTimedHandler('device_tools:get_snapshot', async () => loadSnapshot());
+            setTimedHandler('device_tools:refresh', async () => loadSnapshot());
+            setTimedHandler('device_tools:execute_action', async (payload) => executeAction(payload));
         }
         resolveHomeyDeviceId(device) {
             const data = device.getData();
@@ -601,4 +616,6 @@ module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
     _a.PAIR_NODE_STATE_TIMEOUT_MS = 1000,
     _a.PAIR_ICON_INFERENCE_CONCURRENCY = 6,
     _a.PAIR_ICON_INFERENCE_TIMEOUT_MS = 7000,
+    _a.PAIR_HANDLER_TIMEOUT_MS = 15000,
+    _a.REPAIR_HANDLER_TIMEOUT_MS = 15000,
     _a);

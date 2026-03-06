@@ -148,3 +148,30 @@ test('api returns runtime-error envelope on unexpected app failures', async () =
   assertErrorEnvelope(result, /runtime-error/);
   assert.match(result.error.message, /diagnostics exploded/);
 });
+
+test('api returns route-timeout envelope when handler does not resolve', async () => {
+  const { homey } = createHomeyAppStub({
+    async getNodeRuntimeDiagnostics() {
+      return new Promise(() => {});
+    },
+  });
+
+  const originalSetTimeout = global.setTimeout;
+  const originalClearTimeout = global.clearTimeout;
+  global.setTimeout = ((callback, _delay, ...args) => {
+    if (typeof callback === 'function') {
+      callback(...args);
+    }
+    return 0;
+  }) as typeof global.setTimeout;
+  global.clearTimeout = (() => {}) as typeof global.clearTimeout;
+
+  try {
+    const result = await api.getRuntimeDiagnostics({ homey, query: {} });
+    assertErrorEnvelope(result, /route-timeout/);
+    assert.match(result.error.message, /timed out/i);
+  } finally {
+    global.setTimeout = originalSetTimeout;
+    global.clearTimeout = originalClearTimeout;
+  }
+});

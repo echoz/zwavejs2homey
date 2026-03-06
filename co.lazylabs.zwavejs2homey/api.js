@@ -7,6 +7,7 @@ const ACTION_SELECTIONS = new Set([
     'none',
 ]);
 const API_SCHEMA_VERSION = 'zwjs2homey-api/v1';
+const ROUTE_TIMEOUT_MS = 15000;
 class ApiRouteError extends Error {
     constructor(code, message, details) {
         super(message);
@@ -48,9 +49,24 @@ function createErrorResponse(error) {
         },
     };
 }
-async function executeRoute(handler) {
+async function withRouteTimeout(promise, timeoutMs, routeName) {
+    let timeoutHandle;
+    const timeoutPromise = new Promise((_, reject) => {
+        timeoutHandle = setTimeout(() => {
+            reject(new ApiRouteError('route-timeout', `${routeName} timed out after ${timeoutMs}ms. Check app logs for runtime stalls.`));
+        }, timeoutMs);
+    });
     try {
-        const data = await handler();
+        return (await Promise.race([promise, timeoutPromise]));
+    }
+    finally {
+        if (timeoutHandle)
+            clearTimeout(timeoutHandle);
+    }
+}
+async function executeRoute(routeName, handler) {
+    try {
+        const data = await withRouteTimeout(handler(), ROUTE_TIMEOUT_MS, routeName);
         return createSuccessResponse(data);
     }
     catch (error) {
@@ -140,7 +156,7 @@ function getRuntimeApp(homey) {
 }
 module.exports = {
     async getRuntimeDiagnostics({ homey, query }) {
-        return executeRoute(async () => {
+        return executeRoute('getRuntimeDiagnostics', async () => {
             const app = getRuntimeApp(homey);
             const params = normalizeObject(query, 'query');
             const homeyDeviceId = normalizeOptionalString(params.homeyDeviceId, 'homeyDeviceId');
@@ -150,7 +166,7 @@ module.exports = {
         });
     },
     async getRuntimeSupportBundle({ homey, query }) {
-        return executeRoute(async () => {
+        return executeRoute('getRuntimeSupportBundle', async () => {
             const app = getRuntimeApp(homey);
             const params = normalizeObject(query, 'query');
             const homeyDeviceId = normalizeOptionalString(params.homeyDeviceId, 'homeyDeviceId');
@@ -162,7 +178,7 @@ module.exports = {
         });
     },
     async getRecommendationActionQueue({ homey, query }) {
-        return executeRoute(async () => {
+        return executeRoute('getRecommendationActionQueue', async () => {
             const app = getRuntimeApp(homey);
             const params = normalizeObject(query, 'query');
             const homeyDeviceId = normalizeOptionalString(params.homeyDeviceId, 'homeyDeviceId');
@@ -174,7 +190,7 @@ module.exports = {
         });
     },
     async executeRecommendationAction({ homey, body }) {
-        return executeRoute(async () => {
+        return executeRoute('executeRecommendationAction', async () => {
             const app = getRuntimeApp(homey);
             const payload = normalizeObject(body, 'body');
             if (typeof payload.homeyDeviceId === 'undefined' || payload.homeyDeviceId === null) {
@@ -192,7 +208,7 @@ module.exports = {
         });
     },
     async executeRecommendationActions({ homey, body }) {
-        return executeRoute(async () => {
+        return executeRoute('executeRecommendationActions', async () => {
             const app = getRuntimeApp(homey);
             const payload = normalizeObject(body, 'body');
             const homeyDeviceId = normalizeOptionalString(payload.homeyDeviceId, 'homeyDeviceId');

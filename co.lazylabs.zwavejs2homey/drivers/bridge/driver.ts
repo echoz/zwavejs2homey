@@ -157,12 +157,38 @@ interface RepairSessionLike {
   setHandler: (event: string, handler: (payload?: unknown) => Promise<unknown>) => void;
 }
 
+interface PairSessionLike {
+  setHandler: (event: string, handler: () => Promise<unknown>) => void;
+}
+
 interface HomeyBridgeDeviceData {
   id?: string;
   bridgeId?: string;
 }
 
 module.exports = class BridgeDriver extends Homey.Driver {
+  private static readonly PAIR_HANDLER_TIMEOUT_MS = 5000;
+
+  private static readonly REPAIR_HANDLER_TIMEOUT_MS = 15000;
+
+  private async withTimeout<T>(
+    promise: Promise<T>,
+    timeoutMs: number,
+    context: string,
+  ): Promise<T> {
+    let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutHandle = setTimeout(() => {
+        reject(new Error(`${context} timed out after ${timeoutMs}ms`));
+      }, timeoutMs);
+    });
+    try {
+      return (await Promise.race([promise, timeoutPromise])) as T;
+    } finally {
+      if (timeoutHandle) clearTimeout(timeoutHandle);
+    }
+  }
+
   async onInit() {
     this.log('BridgeDriver initialized');
     const driverPrototypeMethods = Object.getOwnPropertyNames(
@@ -183,6 +209,21 @@ module.exports = class BridgeDriver extends Homey.Driver {
             singular: view?.options?.singular === true,
           }))
         : [],
+    });
+  }
+
+  async onPair(session: PairSessionLike) {
+    this.log('Bridge pair session started');
+    session.setHandler('list_devices', async () => {
+      this.log('Bridge pair list requested (session handler)');
+      return this.withTimeout(
+        this.onPairListDevices(),
+        BridgeDriver.PAIR_HANDLER_TIMEOUT_MS,
+        'bridge pair list',
+      );
+    });
+    this.log('Bridge pair handler registered', {
+      event: 'list_devices',
     });
   }
 
@@ -807,7 +848,17 @@ module.exports = class BridgeDriver extends Homey.Driver {
       };
     };
 
-    session.setHandler('bridge_tools:get_snapshot', async () => loadSnapshot());
-    session.setHandler('bridge_tools:refresh', async () => loadSnapshot());
+    const setTimedHandler = (event: string, handler: () => Promise<unknown>) => {
+      session.setHandler(event, async () => {
+        return this.withTimeout(
+          handler(),
+          BridgeDriver.REPAIR_HANDLER_TIMEOUT_MS,
+          `bridge repair handler (${event})`,
+        );
+      });
+    };
+
+    setTimedHandler('bridge_tools:get_snapshot', async () => loadSnapshot());
+    setTimedHandler('bridge_tools:refresh', async () => loadSnapshot());
   }
 };

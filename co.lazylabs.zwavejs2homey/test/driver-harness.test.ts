@@ -110,6 +110,24 @@ test('bridge driver returns singleton pair candidate when bridge is unpaired', a
   assert.equal(candidates[0]?.data?.kind, 'zwjs-bridge');
 });
 
+test('bridge driver pair session registers list_devices handler that returns candidates', async () => {
+  const driver = new BridgeDriver();
+  driver._configureHarness({ devices: [] });
+  const handlers = new Map();
+  await driver.onPair({
+    setHandler(event, handler) {
+      handlers.set(event, handler);
+    },
+  });
+
+  assert.equal(typeof handlers.get('list_devices'), 'function');
+  const listDevices = handlers.get('list_devices');
+  const candidates = await listDevices();
+  assert.equal(Array.isArray(candidates), true);
+  assert.equal(candidates.length, 1);
+  assert.equal(candidates[0]?.data?.id, 'zwjs-bridge-main');
+});
+
 test('bridge driver returns no candidates when singleton bridge already exists', async () => {
   const driver = new BridgeDriver();
   driver._configureHarness({
@@ -538,6 +556,49 @@ test('node driver returns an empty pair list when zwjs client is unavailable', a
 
   const candidates = await driver.onPairListDevices();
   assert.deepEqual(candidates, []);
+});
+
+test('node driver pair session registers list_devices handler', async () => {
+  const driver = new NodeDriver();
+  const handlers = new Map();
+  driver._configureHarness({
+    app: {
+      getBridgeSession() {
+        return {
+          bridgeId: 'main',
+          getZwjsClient() {
+            return {
+              async getNodeList() {
+                return {
+                  nodes: [
+                    { nodeId: 1, name: 'Controller' },
+                    { nodeId: 12, name: 'Dimmer' },
+                  ],
+                };
+              },
+              async getNodeState() {
+                return { success: false, result: null };
+              },
+            };
+          },
+        };
+      },
+    },
+    devices: [],
+  });
+
+  await driver.onPair({
+    setHandler(event, handler) {
+      handlers.set(event, handler);
+    },
+  });
+
+  assert.equal(typeof handlers.get('list_devices'), 'function');
+  const listDevices = handlers.get('list_devices');
+  const candidates = await listDevices();
+  assert.equal(Array.isArray(candidates), true);
+  assert.equal(candidates.length, 1);
+  assert.equal(candidates[0]?.data?.nodeId, 12);
 });
 
 test('node driver import summary status aggregates runtime diagnostics', async () => {
