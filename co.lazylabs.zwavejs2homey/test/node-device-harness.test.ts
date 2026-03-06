@@ -693,6 +693,86 @@ function createMotionOnlyProfileMatch() {
   };
 }
 
+function createBatteryMeterLockProfileMatch() {
+  return {
+    by: 'product-triple',
+    key: '1003:2003:3005',
+    entry: {
+      device: {
+        deviceKey: 'main:48',
+        nodeId: 48,
+        manufacturerId: 1003,
+        productType: 2003,
+        productId: 3005,
+      },
+      compiled: {
+        profile: {
+          profileId: 'profile-main-48',
+          match: {},
+          classification: {
+            homeyClass: 'lock',
+            confidence: 'curated',
+            uncurated: false,
+          },
+          capabilities: [
+            {
+              capabilityId: 'measure_battery',
+              inboundMapping: {
+                kind: 'value',
+                selector: {
+                  commandClass: 128,
+                  endpoint: 0,
+                  property: 'level',
+                },
+              },
+            },
+            {
+              capabilityId: 'meter_power',
+              inboundMapping: {
+                kind: 'value',
+                selector: {
+                  commandClass: 50,
+                  endpoint: 0,
+                  property: 'value',
+                  propertyKey: 65537,
+                },
+              },
+            },
+            {
+              capabilityId: 'enum_select',
+              inboundMapping: {
+                kind: 'value',
+                selector: {
+                  commandClass: 98,
+                  endpoint: 0,
+                  property: 'currentMode',
+                },
+              },
+            },
+            {
+              capabilityId: 'locked',
+              inboundMapping: {
+                kind: 'value',
+                selector: {
+                  commandClass: 98,
+                  endpoint: 0,
+                  property: 'currentMode',
+                },
+              },
+            },
+          ],
+          provenance: {
+            layer: 'project-product',
+            ruleId: 'example-battery-meter-lock-profile',
+            action: 'replace',
+          },
+        },
+        report: {},
+      },
+    },
+  };
+}
+
 function createCurationEntryForMain5() {
   return {
     targetDevice: {
@@ -1961,6 +2041,140 @@ test('node device harness records writeability-unknown diagnostics for binary al
     profileResolution?.mappingDiagnostics?.[0]?.outbound?.reason,
     'outbound_target_writeability_unknown',
   );
+});
+
+test('node device harness supports remaining compiled artifact inbound-only verticals', async () => {
+  const batterySelector = {
+    commandClass: 128,
+    endpoint: 0,
+    property: 'level',
+  };
+  const meterPowerSelector = {
+    commandClass: 50,
+    endpoint: 0,
+    property: 'value',
+    propertyKey: 65537,
+  };
+  const lockModeSelector = {
+    commandClass: 98,
+    endpoint: 0,
+    property: 'currentMode',
+  };
+
+  const nodeValueResultsBySelector = new Map();
+  nodeValueResultsBySelector.set(selectorKey(batterySelector), {
+    success: true,
+    result: { value: '88' },
+  });
+  nodeValueResultsBySelector.set(selectorKey(meterPowerSelector), {
+    success: true,
+    result: { value: '12.5' },
+  });
+  nodeValueResultsBySelector.set(selectorKey(lockModeSelector), {
+    success: true,
+    result: { value: 'secured' },
+  });
+
+  const client = createMockZwjsClient({
+    nodeStateResult: {
+      success: true,
+      result: {
+        state: {
+          manufacturerId: '1003',
+          productType: '2003',
+          productId: '3005',
+        },
+      },
+    },
+    nodeValueResultsBySelector,
+    definedValueIdsResult: {
+      success: true,
+      result: [
+        {
+          commandClass: 128,
+          endpoint: 0,
+          property: 'level',
+          readable: true,
+          type: 'number',
+        },
+        {
+          commandClass: 50,
+          endpoint: 0,
+          property: 'value',
+          propertyKey: 65537,
+          readable: true,
+          type: 'number',
+        },
+        {
+          commandClass: 98,
+          endpoint: 0,
+          property: 'currentMode',
+          readable: true,
+          type: 'string',
+        },
+      ],
+    },
+  });
+
+  const app = {
+    getZwjsClient: () => client,
+    getCompiledProfilesStatus: () => createRuntimeStatus(),
+    resolveCompiledProfileEntry: () => createBatteryMeterLockProfileMatch(),
+  };
+
+  const device = new NodeDevice();
+  device._configureHarness({
+    app,
+    data: { bridgeId: 'main', nodeId: 48 },
+    capabilities: ['measure_battery', 'meter_power', 'enum_select', 'locked'],
+  });
+
+  await device.onInit();
+  assert.equal(device._getCapabilityValue('measure_battery'), 88);
+  assert.equal(device._getCapabilityValue('meter_power'), 12.5);
+  assert.equal(device._getCapabilityValue('enum_select'), 'secured');
+  assert.equal(device._getCapabilityValue('locked'), 'secured');
+  assert.equal(client.callLog.setNodeValue.length, 0);
+  assert.equal(client.getListenerCount(), 4);
+
+  client.emitEvent({
+    type: 'zwjs.event.node.value-updated',
+    event: {
+      nodeId: 48,
+      args: {
+        commandClass: 50,
+        endpoint: 0,
+        propertyName: 'value',
+        propertyKeyName: '65537',
+        newValue: '13.2',
+      },
+    },
+  });
+  client.emitEvent({
+    type: 'zwjs.event.node.value-updated',
+    event: {
+      nodeId: 48,
+      args: {
+        commandClass: 98,
+        endpoint: 0,
+        propertyName: 'currentMode',
+        newValue: 'unsecured',
+      },
+    },
+  });
+  await Promise.resolve();
+  assert.equal(device._getCapabilityValue('meter_power'), 13.2);
+  assert.equal(device._getCapabilityValue('enum_select'), 'unsecured');
+  assert.equal(device._getCapabilityValue('locked'), 'unsecured');
+
+  const profileResolution = device._getStoreValue('profileResolution');
+  assert.equal(profileResolution?.mappingDiagnostics?.length, 4);
+  for (const diagnostic of profileResolution?.mappingDiagnostics ?? []) {
+    assert.equal(diagnostic.inbound.enabled, true);
+    assert.equal(diagnostic.outbound.configured, false);
+    assert.equal(diagnostic.outbound.enabled, false);
+    assert.equal(diagnostic.outbound.reason, null);
+  }
 });
 
 test('node device harness records enum-like mapping diagnostics for unreadable inbound and unknown outbound writeability', async () => {

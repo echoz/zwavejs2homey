@@ -26,6 +26,11 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
   - expanded node runtime coercion coverage for additional generic verticals:
     - numeric sensor path (`measure_luminance`)
     - binary alarm path (`alarm_motion`)
+    - remaining current compiled-artifact verticals:
+      - `measure_battery`
+      - `meter_power`
+      - `enum_select`
+      - `locked`
   - expanded node-device harness coverage with end-to-end runtime mapping behavior for those verticals:
     - inbound read + value-updated event refresh
     - outbound write path validation
@@ -34,6 +39,7 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
     - metadata without `writeable` hint now emits `outbound_target_writeability_unknown`
     - outbound listener remains disabled while inbound/event path stays active
   - added selector compatibility coverage for numeric property identifiers in node value-updated matching
+  - added bundled-artifact coverage guard to keep runtime vertical coverage complete as compiled capabilities evolve
 
 - Latest Phase 5 bridge-session abstraction slice:
   - introduced app-level bridge-session runtime seam:

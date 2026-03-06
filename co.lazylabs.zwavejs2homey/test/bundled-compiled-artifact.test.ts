@@ -81,6 +81,26 @@ function collectAbsolutePathStrings(value, pointer = '$', output = []) {
   return output;
 }
 
+function readRuntimeVerticalCapabilitiesFromArtifact(artifact) {
+  const capabilityIds = new Set();
+  for (const entry of artifact.entries) {
+    const profile = entry?.compiled?.profile;
+    const capabilities = Array.isArray(profile?.capabilities) ? profile.capabilities : [];
+    for (const capability of capabilities) {
+      if (!capability || typeof capability !== 'object') continue;
+      const capabilityId =
+        typeof capability.capabilityId === 'string' ? capability.capabilityId.trim() : '';
+      if (!capabilityId) continue;
+      const inboundKind = capability.inboundMapping?.kind;
+      const outboundKind = capability.outboundMapping?.kind;
+      if (inboundKind === 'value' || outboundKind === 'set_value') {
+        capabilityIds.add(capabilityId);
+      }
+    }
+  }
+  return capabilityIds;
+}
+
 test('bundled compiled profiles artifact is valid and non-empty', () => {
   const artifact = readJsonFile(BUNDLED_ARTIFACT_FILE);
   assertCompiledHomeyProfilesArtifactV1(artifact);
@@ -112,5 +132,37 @@ test('bundled compiled profiles artifact does not include machine-specific absol
       .slice(0, 5)
       .map((entry) => `${entry.pointer}=${entry.value}`)
       .join(', ')}`,
+  );
+});
+
+test('bundled runtime vertical capabilities are all covered by node-runtime harness tests', () => {
+  const artifact = readJsonFile(BUNDLED_ARTIFACT_FILE);
+  assertCompiledHomeyProfilesArtifactV1(artifact);
+
+  const runtimeVerticalCapabilities = readRuntimeVerticalCapabilitiesFromArtifact(artifact);
+  const coveredCapabilities = new Set([
+    'onoff',
+    'dim',
+    'windowcoverings_set',
+    'measure_power',
+    'meter_power',
+    'measure_battery',
+    'enum_select',
+    'locked',
+    'target_temperature',
+    'alarm_contact',
+    'measure_humidity',
+    'thermostat_mode',
+    'measure_luminance',
+    'alarm_motion',
+  ]);
+  const missingCoverage = [...runtimeVerticalCapabilities]
+    .filter((capabilityId) => !coveredCapabilities.has(capabilityId))
+    .sort();
+
+  assert.deepEqual(
+    missingCoverage,
+    [],
+    `runtime verticals missing harness coverage: ${missingCoverage.join(', ')}`,
   );
 });

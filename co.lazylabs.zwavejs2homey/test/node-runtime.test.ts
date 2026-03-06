@@ -287,6 +287,19 @@ test('coerceCapability inbound/outbound uses transform refs and generic pass-thr
     123.4,
   );
   assert.equal(
+    coerceCapabilityInboundValue('measure_battery', { value: '88' }, undefined, 'number'),
+    88,
+  );
+  assert.equal(
+    coerceCapabilityInboundValue('meter_power', { value: '12.5' }, undefined, 'number'),
+    12.5,
+  );
+  assert.equal(
+    coerceCapabilityInboundValue('enum_select', { value: 'secured' }, undefined, 'string'),
+    'secured',
+  );
+  assert.equal(coerceCapabilityInboundValue('locked', { value: 'secured' }), 'secured');
+  assert.equal(
     coerceCapabilityInboundValue('alarm_motion', { value: 255 }, undefined, 'boolean'),
     true,
   );
@@ -316,6 +329,11 @@ test('coerceCapability inbound/outbound uses transform refs and generic pass-thr
   assert.equal(
     coerceCapabilityOutboundValue('measure_luminance', '98.6', undefined, 'number'),
     98.6,
+  );
+  assert.equal(coerceCapabilityOutboundValue('meter_power', '13.2', undefined, 'number'), 13.2);
+  assert.equal(
+    coerceCapabilityOutboundValue('enum_select', { value: 'unsecured' }, undefined, 'string'),
+    'unsecured',
   );
   assert.equal(coerceCapabilityOutboundValue('alarm_motion', 'off', undefined, 'boolean'), false);
   assert.equal(coerceCapabilityOutboundValue('measure_power', { invalid: true }), undefined);
