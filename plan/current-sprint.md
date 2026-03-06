@@ -21,6 +21,20 @@ Kick off Phase 6 Reliability + UX delivery:
 
 ## Recently Completed
 
+- Phase 6 support/log bundle workflow slice:
+  - added read-only support bundle CLI:
+    - `tools/homey-support-bundle.mjs`
+    - npm alias: `npm run homey:support-bundle -- ...`
+  - bundle now captures:
+    - `GET /runtime/diagnostics`
+    - `GET /runtime/recommendations`
+  - added share-safe redaction mode (`--redact-share`) for sensitive text fields
+  - added tool regression coverage:
+    - `packages/core/test/homey-support-bundle-tool.test.ts`
+  - documented usage in:
+    - `README.md`
+    - `docs/homey-api-contract.md`
+
 - Docs/plan sync checkpoint (2026-03-06):
   - aligned phase status wording across `README.md`, `docs/architecture.md`, `plan/roadmap.md`, and sprint next-tasks
   - made Phase 6 scope explicit:
@@ -1546,13 +1560,10 @@ Kick off Phase 6 Reliability + UX delivery:
 
 ## Next Tasks
 
-1. Support/log bundle workflow slice:
-   - add a stable operator-facing support-bundle flow for runtime diagnostics export/share;
-   - keep output deterministic and safe for issue reports.
-2. Generic inference policy checkpoint:
+1. Generic inference policy checkpoint:
    - keep compile-time generic layer (`project-generic`) active;
    - explicitly decide whether/when adapter runtime generic inference (beyond compiled artifact resolution + safe no-match fallback) should be introduced.
-3. Keep compiler/TUI maintenance pass active for regressions found during adapter integration.
+2. Keep compiler/TUI maintenance pass active for regressions found during adapter integration.
 
 Note:
 

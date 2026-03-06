@@ -175,6 +175,10 @@ Partially complete / next:
 - runtime API smoke tool now exists for live app route reachability/envelope checks:
   - `tools/homey-runtime-api-smoke.mjs`
   - npm alias: `npm run homey:runtime-api:smoke -- ...`
+- support bundle CLI now exists for read-only diagnostics/recommendation capture:
+  - `tools/homey-support-bundle.mjs`
+  - npm alias: `npm run homey:support-bundle -- ...`
+  - optional share redaction via `--redact-share`
 - a runtime API client helper now exists for settings/custom-view consumers:
   - `co.lazylabs.zwavejs2homey/runtime-api-client.js`
   - contract reference: `docs/homey-api-contract.md`

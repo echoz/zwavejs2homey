@@ -193,6 +193,17 @@ Smoke-test Homey runtime API routes:
 npm run homey:runtime-api:smoke -- --base-url http://HOMEY/api/app/co.lazylabs.zwavejs2homey --token <token>
 ```
 
+Generate a support bundle (read-only diagnostics + recommendations snapshot):
+
+```bash
+npm run homey:support-bundle -- \
+  --base-url http://HOMEY/api/app/co.lazylabs.zwavejs2homey \
+  --token <token> \
+  --format markdown \
+  --output-file /tmp/zwjs2homey-support.md \
+  --redact-share
+```
+
 ## Rules and Artifacts
 
 Canonical compile-time inputs:

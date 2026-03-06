@@ -173,6 +173,11 @@ Not in Phase 6 scope:
 
 - per-node capability expansion beyond the current mapped vertical set (tracked for the next phase)
 
+Delivered in Phase 6 so far:
+
+- runtime support-bundle workflow CLI (`homey:support-bundle`) for read-only diagnostics/recommendation capture
+- optional `--redact-share` mode for safer external issue/report sharing
+
 ## Active Risks
 
 - recommendation workflow semantics may need refinement during real UX integration

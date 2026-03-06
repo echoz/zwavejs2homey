@@ -96,3 +96,24 @@ Notes:
 
 - It checks all four runtime routes.
 - It uses `--smoke-device-id` (default `__smoke_invalid__`) for execute-route calls to avoid side effects by default.
+
+## Support Bundle Command
+
+Use the support bundle command to capture a shareable snapshot of diagnostics + recommendation routes:
+
+```bash
+npm run homey:support-bundle -- \
+  --base-url http://HOMEY/api/app/co.lazylabs.zwavejs2homey \
+  --token <homey-token> \
+  --format markdown \
+  --output-file /tmp/zwjs2homey-support.md \
+  --redact-share
+```
+
+Notes:
+
+- This command is read-only.
+- It calls:
+  - `GET /runtime/diagnostics`
+  - `GET /runtime/recommendations`
+- `--redact-share` redacts sensitive text fields for safer external sharing.
