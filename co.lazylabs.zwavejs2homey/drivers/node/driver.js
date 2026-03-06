@@ -14,6 +14,15 @@ module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
                 return this.withTimeout(handler(payload), timeoutMs, `${context} (${event})`);
             });
         }
+        toSerializablePairPayload(value, context) {
+            try {
+                return JSON.parse(JSON.stringify(value));
+            }
+            catch (error) {
+                this.error('Failed to serialize pairing payload', { context, error });
+                throw error;
+            }
+        }
         async onPair(session) {
             this.log('Node pair session started');
             this.registerTimedSessionHandler(session, 'list_devices', _a.PAIR_HANDLER_TIMEOUT_MS, 'node pair list', async () => {
@@ -537,7 +546,12 @@ module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
                     candidates: candidates.length,
                     knownZones: knownZoneNames.length,
                 });
-                return candidates;
+                const payload = candidates.map((candidate) => ({
+                    name: candidate.name,
+                    data: candidate.data,
+                    store: candidate.store,
+                }));
+                return this.toSerializablePairPayload(payload, 'node:onPairListDevices');
             };
             try {
                 return await this.withTimeout(runPairFlow(), _a.PAIR_FLOW_TIMEOUT_MS, 'node pairing flow');

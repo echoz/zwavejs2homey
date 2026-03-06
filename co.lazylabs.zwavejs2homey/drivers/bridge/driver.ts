@@ -202,6 +202,15 @@ module.exports = class BridgeDriver extends Homey.Driver {
     });
   }
 
+  private toSerializablePairPayload<T>(value: T, context: string): T {
+    try {
+      return JSON.parse(JSON.stringify(value)) as T;
+    } catch (error) {
+      this.error('Failed to serialize pairing payload', { context, error });
+      throw error;
+    }
+  }
+
   async onPair(session: PairSessionLike) {
     this.log('Bridge pair session started');
     this.registerTimedSessionHandler(
@@ -274,14 +283,28 @@ module.exports = class BridgeDriver extends Homey.Driver {
         return [];
       }
 
-      const candidates = [createBridgePairCandidate()];
+      const candidate = createBridgePairCandidate();
+      // Keep bridge template payload minimal to avoid list view runtime quirks.
+      const candidates = [
+        {
+          name: candidate.name,
+          data: candidate.data,
+        },
+      ];
+      const payload = this.toSerializablePairPayload(candidates, 'bridge:onPairListDevices');
       this.log('Bridge pair list response ready (onPairListDevices hook)', {
-        candidates: candidates.length,
+        candidates: payload.length,
       });
-      return candidates;
+      return payload;
     } catch (error) {
       this.error('Bridge pair list generation failed; returning fallback candidate', { error });
-      return [createBridgePairCandidate()];
+      const candidate = createBridgePairCandidate();
+      return [
+        {
+          name: candidate.name,
+          data: candidate.data,
+        },
+      ];
     }
   }
 

@@ -162,6 +162,15 @@ module.exports = class NodeDriver extends Homey.Driver {
     });
   }
 
+  private toSerializablePairPayload<T>(value: T, context: string): T {
+    try {
+      return JSON.parse(JSON.stringify(value)) as T;
+    } catch (error) {
+      this.error('Failed to serialize pairing payload', { context, error });
+      throw error;
+    }
+  }
+
   async onPair(session: PairSessionLike) {
     this.log('Node pair session started');
     this.registerTimedSessionHandler(
@@ -830,7 +839,12 @@ module.exports = class NodeDriver extends Homey.Driver {
         candidates: candidates.length,
         knownZones: knownZoneNames.length,
       });
-      return candidates;
+      const payload = candidates.map((candidate) => ({
+        name: candidate.name,
+        data: candidate.data,
+        store: candidate.store,
+      }));
+      return this.toSerializablePairPayload(payload, 'node:onPairListDevices');
     };
 
     try {
