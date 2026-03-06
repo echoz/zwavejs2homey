@@ -97,10 +97,6 @@ interface RepairSessionLike {
   setHandler: (event: string, handler: (payload?: unknown) => Promise<unknown>) => void;
 }
 
-interface PairSessionLike {
-  setHandler: (event: string, handler: (payload?: unknown) => Promise<unknown>) => void;
-}
-
 interface ImportSummaryNodeEntry {
   homeyDeviceId: string | null;
   bridgeId: string;
@@ -144,37 +140,6 @@ module.exports = class NodeDriver extends Homey.Driver {
 
   async onInit() {
     this.log('NodeDriver initialized');
-  }
-
-  async onPair(session: PairSessionLike) {
-    const manifestPairViews =
-      this.homey.manifest?.drivers?.find(
-        (driver: { id?: unknown } | undefined) => driver && driver.id === 'node',
-      )?.pair ?? [];
-    this.log('Node pair session started', {
-      pairViews: Array.isArray(manifestPairViews)
-        ? manifestPairViews.map((view) => ({
-            id: view?.id,
-            template: view?.template,
-            next: view?.navigation?.next,
-            singular: view?.options?.singular === true,
-          }))
-        : [],
-    });
-
-    try {
-      session.setHandler('import_summary:get_status', async () => {
-        return this.loadImportSummaryStatus();
-      });
-      this.log('Node pair handler registered', { event: 'import_summary:get_status' });
-    } catch (error) {
-      this.error('Failed to register node pair handler; import summary will be unavailable', {
-        event: 'import_summary:get_status',
-        error,
-      });
-    }
-
-    this.log('Node pair session ready');
   }
 
   private resolveBridgeRuntime(app: AppRuntimeAccess): {

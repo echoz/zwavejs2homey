@@ -12,32 +12,6 @@ module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
         async onInit() {
             this.log('NodeDriver initialized');
         }
-        async onPair(session) {
-            const manifestPairViews = this.homey.manifest?.drivers?.find((driver) => driver && driver.id === 'node')?.pair ?? [];
-            this.log('Node pair session started', {
-                pairViews: Array.isArray(manifestPairViews)
-                    ? manifestPairViews.map((view) => ({
-                        id: view?.id,
-                        template: view?.template,
-                        next: view?.navigation?.next,
-                        singular: view?.options?.singular === true,
-                    }))
-                    : [],
-            });
-            try {
-                session.setHandler('import_summary:get_status', async () => {
-                    return this.loadImportSummaryStatus();
-                });
-                this.log('Node pair handler registered', { event: 'import_summary:get_status' });
-            }
-            catch (error) {
-                this.error('Failed to register node pair handler; import summary will be unavailable', {
-                    event: 'import_summary:get_status',
-                    error,
-                });
-            }
-            this.log('Node pair session ready');
-        }
         resolveBridgeRuntime(app) {
             const session = app.getBridgeSession?.(pairing_1.ZWJS_DEFAULT_BRIDGE_ID);
             const bridgeId = this.normalizeStringOrNull(session?.bridgeId) ??

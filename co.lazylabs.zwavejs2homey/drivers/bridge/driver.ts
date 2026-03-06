@@ -157,10 +157,6 @@ interface RepairSessionLike {
   setHandler: (event: string, handler: (payload?: unknown) => Promise<unknown>) => void;
 }
 
-interface PairSessionLike {
-  setHandler: (event: string, handler: (payload?: unknown) => Promise<unknown>) => void;
-}
-
 interface HomeyBridgeDeviceData {
   id?: string;
   bridgeId?: string;
@@ -195,37 +191,6 @@ module.exports = class BridgeDriver extends Homey.Driver {
       this.error('Bridge pair list generation failed; returning fallback candidate', { error });
       return [createBridgePairCandidate()];
     }
-  }
-
-  async onPair(session: PairSessionLike) {
-    const manifestPairViews =
-      this.homey.manifest?.drivers?.find(
-        (driver: { id?: unknown } | undefined) => driver && driver.id === 'bridge',
-      )?.pair ?? [];
-    this.log('Bridge pair session started', {
-      pairViews: Array.isArray(manifestPairViews)
-        ? manifestPairViews.map((view) => ({
-            id: view?.id,
-            template: view?.template,
-            next: view?.navigation?.next,
-            singular: view?.options?.singular === true,
-          }))
-        : [],
-    });
-
-    try {
-      session.setHandler('next_steps:get_status', async () => {
-        return this.loadNextStepsStatus();
-      });
-      this.log('Bridge pair handler registered', { event: 'next_steps:get_status' });
-    } catch (error) {
-      this.error('Failed to register bridge pair handler; next steps panel will be unavailable', {
-        event: 'next_steps:get_status',
-        error,
-      });
-    }
-
-    this.log('Bridge pair session ready');
   }
 
   private resolveBridgeRuntime(app: AppRuntimeAccess): {

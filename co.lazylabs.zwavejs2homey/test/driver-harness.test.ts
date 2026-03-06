@@ -124,7 +124,7 @@ test('bridge driver returns no candidates when singleton bridge already exists',
   assert.deepEqual(candidates, []);
 });
 
-test('bridge driver pair session exposes next steps status handler', async () => {
+test('bridge driver next steps status aggregates runtime diagnostics', async () => {
   const driver = new BridgeDriver();
   driver._configureHarness({
     app: {
@@ -194,18 +194,8 @@ test('bridge driver pair session exposes next steps status handler', async () =>
     devices: [],
   });
 
-  const handlers = new Map();
-  const session = {
-    setHandler(event, handler) {
-      handlers.set(event, handler);
-    },
-  };
-
-  await driver.onPair(session);
-  assert.equal(typeof handlers.get('list_devices'), 'undefined');
-  assert.equal(typeof handlers.get('next_steps:get_status'), 'function');
   const candidates = await driver.onPairListDevices();
-  const status = await handlers.get('next_steps:get_status')();
+  const status = await driver.loadNextStepsStatus();
   assert.equal(Array.isArray(candidates), true);
   assert.equal(candidates.length, 1);
   assert.equal(candidates[0]?.data?.id, 'zwjs-bridge-main');
@@ -253,15 +243,7 @@ test('bridge driver next steps status includes warnings when runtime is unavaila
     devices: [],
   });
 
-  const handlers = new Map();
-  const session = {
-    setHandler(event, handler) {
-      handlers.set(event, handler);
-    },
-  };
-
-  await driver.onPair(session);
-  const status = await handlers.get('next_steps:get_status')();
+  const status = await driver.loadNextStepsStatus();
   assert.equal(status.zwjs.available, false);
   assert.equal(status.discoveredNodes, null);
   assert.equal(status.importedNodes, null);
@@ -558,7 +540,7 @@ test('node driver returns an empty pair list when zwjs client is unavailable', a
   assert.deepEqual(candidates, []);
 });
 
-test('node driver pair session registers import_summary status handler', async () => {
+test('node driver import summary status aggregates runtime diagnostics', async () => {
   const driver = new NodeDriver();
   driver._configureHarness({
     app: {
@@ -623,18 +605,8 @@ test('node driver pair session registers import_summary status handler', async (
     devices: [],
   });
 
-  const handlers = new Map();
-  const session = {
-    setHandler(event, handler) {
-      handlers.set(event, handler);
-    },
-  };
-
-  await driver.onPair(session);
-  assert.equal(typeof handlers.get('list_devices'), 'undefined');
-  assert.equal(typeof handlers.get('import_summary:get_status'), 'function');
   const candidates = await driver.onPairListDevices();
-  const summary = await handlers.get('import_summary:get_status')();
+  const summary = await driver.loadImportSummaryStatus();
   assert.equal(Array.isArray(candidates), true);
   assert.equal(candidates.length, 1);
   assert.equal(candidates[0]?.data?.nodeId, 2);
@@ -680,15 +652,7 @@ test('node driver import_summary status includes warnings when zwjs is unavailab
     devices: [],
   });
 
-  const handlers = new Map();
-  const session = {
-    setHandler(event, handler) {
-      handlers.set(event, handler);
-    },
-  };
-
-  await driver.onPair(session);
-  const summary = await handlers.get('import_summary:get_status')();
+  const summary = await driver.loadImportSummaryStatus();
   assert.equal(summary.discoveredNodes, null);
   assert.equal(summary.importedNodes, 0);
   assert.equal(summary.pendingImportNodes, null);

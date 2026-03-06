@@ -53,12 +53,8 @@ test('bridge and node drivers expose a list_devices -> add_devices pair flow', (
 
   assertListToAddFlow(bridge.pair, 'bridge', {
     expectSingular: false,
-    expectAddNext: 'next_steps',
-    expectCustomView: 'next_steps',
   });
   assertListToAddFlow(node.pair, 'node', {
     expectSingular: false,
-    expectAddNext: 'import_summary',
-    expectCustomView: 'import_summary',
   });
 });

@@ -31,32 +31,6 @@ module.exports = class BridgeDriver extends homey_1.default.Driver {
             return [(0, pairing_1.createBridgePairCandidate)()];
         }
     }
-    async onPair(session) {
-        const manifestPairViews = this.homey.manifest?.drivers?.find((driver) => driver && driver.id === 'bridge')?.pair ?? [];
-        this.log('Bridge pair session started', {
-            pairViews: Array.isArray(manifestPairViews)
-                ? manifestPairViews.map((view) => ({
-                    id: view?.id,
-                    template: view?.template,
-                    next: view?.navigation?.next,
-                    singular: view?.options?.singular === true,
-                }))
-                : [],
-        });
-        try {
-            session.setHandler('next_steps:get_status', async () => {
-                return this.loadNextStepsStatus();
-            });
-            this.log('Bridge pair handler registered', { event: 'next_steps:get_status' });
-        }
-        catch (error) {
-            this.error('Failed to register bridge pair handler; next steps panel will be unavailable', {
-                event: 'next_steps:get_status',
-                error,
-            });
-        }
-        this.log('Bridge pair session ready');
-    }
     resolveBridgeRuntime(app) {
         const session = app.getBridgeSession?.(pairing_1.ZWJS_DEFAULT_BRIDGE_ID);
         const bridgeId = (typeof session?.bridgeId === 'string' && session.bridgeId.trim().length > 0

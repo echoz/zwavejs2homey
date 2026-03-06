@@ -66,13 +66,7 @@
         },
         {
           "id": "add_devices",
-          "template": "add_devices",
-          "navigation": {
-            "next": "next_steps"
-          }
-        },
-        {
-          "id": "next_steps"
+          "template": "add_devices"
         }
       ],
       "repair": [
@@ -107,13 +101,7 @@
         },
         {
           "id": "add_devices",
-          "template": "add_devices",
-          "navigation": {
-            "next": "import_summary"
-          }
-        },
-        {
-          "id": "import_summary"
+          "template": "add_devices"
         }
       ],
       "repair": [
