@@ -283,6 +283,14 @@ test('coerceCapability inbound/outbound uses transform refs and generic pass-thr
     'heat',
   );
   assert.equal(
+    coerceCapabilityInboundValue('measure_luminance', { value: '123.4' }, undefined, 'number'),
+    123.4,
+  );
+  assert.equal(
+    coerceCapabilityInboundValue('alarm_motion', { value: 255 }, undefined, 'boolean'),
+    true,
+  );
+  assert.equal(
     coerceCapabilityInboundValue('measure_power', { value: { nested: true } }),
     undefined,
   );
@@ -305,7 +313,16 @@ test('coerceCapability inbound/outbound uses transform refs and generic pass-thr
     coerceCapabilityOutboundValue('thermostat_mode', { value: 'cool' }, undefined, 'string'),
     'cool',
   );
+  assert.equal(
+    coerceCapabilityOutboundValue('measure_luminance', '98.6', undefined, 'number'),
+    98.6,
+  );
+  assert.equal(coerceCapabilityOutboundValue('alarm_motion', 'off', undefined, 'boolean'), false);
   assert.equal(coerceCapabilityOutboundValue('measure_power', { invalid: true }), undefined);
+  assert.equal(
+    coerceCapabilityOutboundValue('measure_luminance', { invalid: true }, undefined, 'number'),
+    undefined,
+  );
 });
 
 test('selectorMatchesNodeValueUpdatedEvent matches compatible selector payloads', () => {
@@ -351,6 +368,22 @@ test('selectorMatchesNodeValueUpdatedEvent matches compatible selector payloads'
           propertyName: 'value',
           propertyKeyName: '1',
           newValue: 22.5,
+        },
+      },
+    ),
+    true,
+  );
+
+  assert.equal(
+    selectorMatchesNodeValueUpdatedEvent(
+      { commandClass: 49, endpoint: 0, property: 1 },
+      {
+        nodeId: 5,
+        args: {
+          commandClass: 49,
+          endpoint: 0,
+          propertyName: '1',
+          newValue: '98.6',
         },
       },
     ),

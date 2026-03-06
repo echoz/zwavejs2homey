@@ -566,6 +566,133 @@ function createEnumModeProfileMatch() {
   };
 }
 
+function createLuminanceAndMotionProfileMatch() {
+  return {
+    by: 'product-triple',
+    key: '1002:2002:3003',
+    entry: {
+      device: {
+        deviceKey: 'main:46',
+        nodeId: 46,
+        manufacturerId: 1002,
+        productType: 2002,
+        productId: 3003,
+      },
+      compiled: {
+        profile: {
+          profileId: 'profile-main-46',
+          match: {},
+          classification: {
+            homeyClass: 'sensor',
+            confidence: 'curated',
+            uncurated: false,
+          },
+          capabilities: [
+            {
+              capabilityId: 'measure_luminance',
+              inboundMapping: {
+                kind: 'value',
+                selector: {
+                  commandClass: 49,
+                  endpoint: 0,
+                  property: 'Illuminance',
+                },
+              },
+              outboundMapping: {
+                kind: 'set_value',
+                target: {
+                  commandClass: 49,
+                  endpoint: 0,
+                  property: 'Illuminance',
+                },
+              },
+            },
+            {
+              capabilityId: 'alarm_motion',
+              inboundMapping: {
+                kind: 'value',
+                selector: {
+                  commandClass: 48,
+                  endpoint: 0,
+                  property: 'state',
+                },
+              },
+              outboundMapping: {
+                kind: 'set_value',
+                target: {
+                  commandClass: 48,
+                  endpoint: 0,
+                  property: 'state',
+                },
+              },
+            },
+          ],
+          provenance: {
+            layer: 'project-product',
+            ruleId: 'example-luminance-motion-profile',
+            action: 'replace',
+          },
+        },
+        report: {},
+      },
+    },
+  };
+}
+
+function createMotionOnlyProfileMatch() {
+  return {
+    by: 'product-triple',
+    key: '1002:2002:3004',
+    entry: {
+      device: {
+        deviceKey: 'main:47',
+        nodeId: 47,
+        manufacturerId: 1002,
+        productType: 2002,
+        productId: 3004,
+      },
+      compiled: {
+        profile: {
+          profileId: 'profile-main-47',
+          match: {},
+          classification: {
+            homeyClass: 'sensor',
+            confidence: 'curated',
+            uncurated: false,
+          },
+          capabilities: [
+            {
+              capabilityId: 'alarm_motion',
+              inboundMapping: {
+                kind: 'value',
+                selector: {
+                  commandClass: 48,
+                  endpoint: 0,
+                  property: 'state',
+                },
+              },
+              outboundMapping: {
+                kind: 'set_value',
+                target: {
+                  commandClass: 48,
+                  endpoint: 0,
+                  property: 'state',
+                },
+              },
+            },
+          ],
+          provenance: {
+            layer: 'project-product',
+            ruleId: 'example-motion-profile',
+            action: 'replace',
+          },
+        },
+        report: {},
+      },
+    },
+  };
+}
+
 function createCurationEntryForMain5() {
   return {
     targetDevice: {
@@ -1630,6 +1757,210 @@ test('node device harness supports generic numeric + string verticals without ca
   assert.equal(profileResolution?.mappingDiagnostics?.[0]?.outbound?.enabled, false);
   assert.equal(profileResolution?.mappingDiagnostics?.[1]?.inbound?.enabled, true);
   assert.equal(profileResolution?.mappingDiagnostics?.[1]?.outbound?.enabled, true);
+});
+
+test('node device harness supports generic luminance + motion verticals and rejects unsupported outbound values', async () => {
+  const luminanceSelector = {
+    commandClass: 49,
+    endpoint: 0,
+    property: 'Illuminance',
+  };
+  const motionSelector = {
+    commandClass: 48,
+    endpoint: 0,
+    property: 'state',
+  };
+
+  const nodeValueResultsBySelector = new Map();
+  nodeValueResultsBySelector.set(selectorKey(luminanceSelector), {
+    success: true,
+    result: { value: '123.4' },
+  });
+  nodeValueResultsBySelector.set(selectorKey(motionSelector), {
+    success: true,
+    result: { value: 0 },
+  });
+
+  const client = createMockZwjsClient({
+    nodeStateResult: {
+      success: true,
+      result: {
+        state: {
+          manufacturerId: '1002',
+          productType: '2002',
+          productId: '3003',
+        },
+      },
+    },
+    nodeValueResultsBySelector,
+    definedValueIdsResult: {
+      success: true,
+      result: [
+        {
+          commandClass: 49,
+          endpoint: 0,
+          property: 'Illuminance',
+          readable: true,
+          writeable: true,
+          type: 'number',
+        },
+        {
+          commandClass: 48,
+          endpoint: 0,
+          property: 'state',
+          readable: true,
+          writeable: true,
+          type: 'boolean',
+        },
+      ],
+    },
+  });
+
+  const app = {
+    getZwjsClient: () => client,
+    getCompiledProfilesStatus: () => createRuntimeStatus(),
+    resolveCompiledProfileEntry: () => createLuminanceAndMotionProfileMatch(),
+  };
+
+  const device = new NodeDevice();
+  device._configureHarness({
+    app,
+    data: { bridgeId: 'main', nodeId: 46 },
+    capabilities: ['measure_luminance', 'alarm_motion'],
+  });
+
+  await device.onInit();
+  assert.equal(device._getCapabilityValue('measure_luminance'), 123.4);
+  assert.equal(device._getCapabilityValue('alarm_motion'), false);
+  assert.equal(client.getListenerCount(), 2);
+
+  await device._triggerCapabilityListener('alarm_motion', 1);
+  await assert.rejects(
+    () => device._triggerCapabilityListener('measure_luminance', { invalid: true }),
+    /measure_luminance capability value is not supported for outbound mapping/,
+  );
+  assert.deepEqual(client.callLog.setNodeValue, [
+    {
+      nodeId: 46,
+      valueId: {
+        commandClass: 48,
+        endpoint: 0,
+        property: 'state',
+      },
+      value: true,
+    },
+  ]);
+
+  client.emitEvent({
+    type: 'zwjs.event.node.value-updated',
+    event: {
+      nodeId: 46,
+      args: {
+        commandClass: 49,
+        endpoint: 0,
+        propertyName: 'Illuminance',
+        newValue: '98.6',
+      },
+    },
+  });
+  client.emitEvent({
+    type: 'zwjs.event.node.value-updated',
+    event: {
+      nodeId: 46,
+      args: {
+        commandClass: 48,
+        endpoint: 0,
+        propertyName: 'state',
+        newValue: 255,
+      },
+    },
+  });
+  await Promise.resolve();
+  assert.equal(device._getCapabilityValue('measure_luminance'), 98.6);
+  assert.equal(device._getCapabilityValue('alarm_motion'), true);
+
+  const profileResolution = device._getStoreValue('profileResolution');
+  assert.equal(profileResolution?.mappingDiagnostics?.length, 2);
+  assert.equal(profileResolution?.mappingDiagnostics?.[0]?.inbound?.enabled, true);
+  assert.equal(profileResolution?.mappingDiagnostics?.[0]?.outbound?.enabled, true);
+  assert.equal(profileResolution?.mappingDiagnostics?.[1]?.inbound?.enabled, true);
+  assert.equal(profileResolution?.mappingDiagnostics?.[1]?.outbound?.enabled, true);
+});
+
+test('node device harness records writeability-unknown diagnostics for binary alarm verticals', async () => {
+  const motionSelector = {
+    commandClass: 48,
+    endpoint: 0,
+    property: 'state',
+  };
+
+  const nodeValueResultsBySelector = new Map();
+  nodeValueResultsBySelector.set(selectorKey(motionSelector), {
+    success: true,
+    result: { value: 255 },
+  });
+
+  const client = createMockZwjsClient({
+    nodeStateResult: {
+      success: true,
+      result: {
+        state: {
+          manufacturerId: '1002',
+          productType: '2002',
+          productId: '3004',
+        },
+      },
+    },
+    nodeValueResultsBySelector,
+    definedValueIdsResult: {
+      success: true,
+      result: [
+        {
+          commandClass: 48,
+          endpoint: 0,
+          property: 'state',
+          readable: true,
+          type: 'boolean',
+        },
+      ],
+    },
+    nodeValueMetadataResultsBySelector: new Map([
+      [selectorKey(motionSelector), { success: true, result: { label: 'Motion' } }],
+    ]),
+  });
+
+  const app = {
+    getZwjsClient: () => client,
+    getCompiledProfilesStatus: () => createRuntimeStatus(),
+    resolveCompiledProfileEntry: () => createMotionOnlyProfileMatch(),
+  };
+
+  const device = new NodeDevice();
+  device._configureHarness({
+    app,
+    data: { bridgeId: 'main', nodeId: 47 },
+    capabilities: ['alarm_motion'],
+  });
+
+  await device.onInit();
+  assert.equal(device._getCapabilityValue('alarm_motion'), true);
+  assert.equal(client.callLog.getNodeValue.length, 1);
+  assert.equal(client.callLog.getNodeValueMetadata.length, 1);
+  assert.equal(client.callLog.setNodeValue.length, 0);
+  assert.equal(client.getListenerCount(), 1);
+
+  await assert.rejects(
+    () => device._triggerCapabilityListener('alarm_motion', false),
+    /Missing capability listener/,
+  );
+
+  const profileResolution = device._getStoreValue('profileResolution');
+  assert.equal(profileResolution?.mappingDiagnostics?.length, 1);
+  assert.equal(profileResolution?.mappingDiagnostics?.[0]?.inbound?.enabled, true);
+  assert.equal(
+    profileResolution?.mappingDiagnostics?.[0]?.outbound?.reason,
+    'outbound_target_writeability_unknown',
+  );
 });
 
 test('node device harness records enum-like mapping diagnostics for unreadable inbound and unknown outbound writeability', async () => {

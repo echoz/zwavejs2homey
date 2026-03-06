@@ -22,6 +22,19 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## Recently Completed
 
+- Latest Phase 5 runtime-mapping breadth hardening slice:
+  - expanded node runtime coercion coverage for additional generic verticals:
+    - numeric sensor path (`measure_luminance`)
+    - binary alarm path (`alarm_motion`)
+  - expanded node-device harness coverage with end-to-end runtime mapping behavior for those verticals:
+    - inbound read + value-updated event refresh
+    - outbound write path validation
+    - unsupported outbound value rejection semantics
+  - locked writeability-fallback diagnostics for binary alarm mappings:
+    - metadata without `writeable` hint now emits `outbound_target_writeability_unknown`
+    - outbound listener remains disabled while inbound/event path stays active
+  - added selector compatibility coverage for numeric property identifiers in node value-updated matching
+
 - Latest Phase 5 bridge-session abstraction slice:
   - introduced app-level bridge-session runtime seam:
     - new module: `co.lazylabs.zwavejs2homey/bridge-session.ts`
