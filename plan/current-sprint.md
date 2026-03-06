@@ -22,6 +22,16 @@ Complete Phase 5 Homey adapter MVP runtime and pairing-readiness:
 
 ## Recently Completed
 
+- Phase 5 generic-inference policy clarity slice:
+  - locked operator-facing messaging around the runtime policy:
+    - compiled-profile resolution only
+    - safe fallback when unmatched/unavailable (`other`, no mappings)
+    - no runtime generic-inference expansion path in adapter MVP
+  - added explicit `Inference Policy` diagnostics rows to:
+    - node Device Tools (adapter diagnostics)
+    - bridge Bridge Tools (runtime diagnostics)
+  - added presenter tests to lock this wording and avoid regressions in fallback diagnostics semantics
+
 - Node read-only enrichment slice:
   - expanded node import-summary runtime visibility with transport/session detail fields:
     - `versionReceived`

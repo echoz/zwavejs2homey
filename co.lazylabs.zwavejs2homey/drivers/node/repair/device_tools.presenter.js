@@ -108,6 +108,37 @@ function describeProfileSourceCode(sourceCode, curationEntryPresent) {
         return 'Compiled profile + device override';
     return 'Compiled profile only (no device override)';
 }
+function describeInferencePolicy(profile, profileAttribution) {
+    const fallbackReason = profile && typeof profile.fallbackReason === 'string'
+        ? profile.fallbackReason.trim().toLowerCase()
+        : '';
+    const sourceCode = profileAttribution && typeof profileAttribution.sourceCode === 'string'
+        ? profileAttribution.sourceCode.trim().toLowerCase()
+        : '';
+    const sourceLabel = profileAttribution && typeof profileAttribution.sourceLabel === 'string'
+        ? profileAttribution.sourceLabel.trim().toLowerCase()
+        : '';
+    const effectiveSourceCode = sourceCode.length > 0
+        ? sourceCode
+        : sourceLabel.includes('compiled profile + device override')
+            ? 'compiled+curation-override'
+            : sourceLabel.includes('compiled profile only')
+                ? 'compiled-only'
+                : '';
+    if (fallbackReason === 'no_compiled_profile_match') {
+        return 'Compiled-only policy: no profile match; safe fallback (class other, no mappings).';
+    }
+    if (fallbackReason === 'compiled_profile_artifact_unavailable') {
+        return 'Compiled-only policy: artifact unavailable; safe fallback (class other, no mappings).';
+    }
+    if (effectiveSourceCode === 'compiled+curation-override') {
+        return 'Compiled-only policy: resolved from compiled profile, then device override applied.';
+    }
+    if (effectiveSourceCode === 'compiled-only') {
+        return 'Compiled-only policy: resolved from compiled profile; no runtime generic inference.';
+    }
+    return 'Compiled-only policy: profile resolution pending.';
+}
 function isMissingValue(value) {
     if (value === null || typeof value === 'undefined')
         return true;
@@ -412,7 +443,8 @@ function recommendationBadge(snapshot) {
             : describeConfidence(snapshot.profile.confidence);
         const profileSourceSummary = profileAttribution
             ? toSafeText(profileAttribution.sourceLabel)
-            : describeProfileSourceCode(null, snapshot.curation && snapshot.curation.entryPresent === true);
+            : describeProfileSourceCode(snapshot.profile && snapshot.profile.sourceCode, snapshot.curation && snapshot.curation.entryPresent === true);
+        const inferencePolicySummary = describeInferencePolicy(snapshot.profile, profileAttribution);
         const curationStatusSummary = buildCurationStatusSummary(snapshot.curation);
         const overrideSummary = profileAttribution
             ? profileAttribution.curationEntryPresent === true
@@ -446,12 +478,10 @@ function recommendationBadge(snapshot) {
             : toKvRows([['Latest Action', 'No action executed in this session yet.']]);
         let actionHint = 'No action is required right now. This device is already aligned with its profile state.';
         if (canBackfill) {
-            actionHint =
-                'Profile reference metadata is missing. You can backfill marker metadata now.';
+            actionHint = 'Profile reference metadata is missing. You can backfill marker metadata now.';
         }
         else if (canAdopt) {
-            actionHint =
-                'A compiled profile update is available. You can adopt it for this device.';
+            actionHint = 'A compiled profile update is available. You can adopt it for this device.';
         }
         const statusLine = state.statusMessage
             ? state.statusMessage
@@ -483,6 +513,7 @@ function recommendationBadge(snapshot) {
                 ['Device Class', snapshot.profile.homeyClass],
                 ['Rule Match', confidenceSummary],
                 ['Profile Source', profileSourceSummary],
+                ['Inference Policy', inferencePolicySummary],
                 ['Device Override', overrideSummary],
                 ['Curation Status', curationStatusSummary.status],
                 ['Curation Summary', curationStatusSummary.summary],
@@ -516,11 +547,7 @@ function recommendationBadge(snapshot) {
                 ['Projection', snapshot.profileReference.projectionVersion],
                 ['Current Hash', snapshot.profileReference.currentBaselineHash, 'mono'],
                 ['Stored Hash', snapshot.profileReference.storedBaselineHash, 'mono'],
-                [
-                    'Current Fingerprint',
-                    snapshot.profileReference.currentPipelineFingerprint,
-                    'mono',
-                ],
+                ['Current Fingerprint', snapshot.profileReference.currentPipelineFingerprint, 'mono'],
                 ['Stored Fingerprint', snapshot.profileReference.storedPipelineFingerprint, 'mono'],
             ], { omitEmpty: true }),
             mappingSkipRows: toKvRows(mappingSkipReasonRows(snapshot.mapping.skipReasons), {

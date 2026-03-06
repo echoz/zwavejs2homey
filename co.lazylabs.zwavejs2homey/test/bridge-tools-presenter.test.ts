@@ -187,6 +187,10 @@ test('bridge tools presenter builds filtered action-needed view by default', () 
   assert.equal(vm.nodes[0].recommendationTone, 'danger');
   assert.equal(vm.nodesMeta, 'Showing 1 of 2 imported nodes that require action.');
   assert.equal(rowValue(vm.runtimeRows, 'Reconnect Attempts'), '2');
+  assert.equal(
+    rowValue(vm.runtimeRows, 'Inference Policy'),
+    'Compiled profiles only + safe fallback (no runtime generic inference)',
+  );
   assert.equal(rowValue(vm.summaryRows, 'Compiled Only'), '1');
   assert.equal(rowValue(vm.summaryRows, 'With Override'), '1');
   assert.equal(rowValue(vm.summaryRows, 'Top Skip Reasons'), 'unsupported_value_type:3');

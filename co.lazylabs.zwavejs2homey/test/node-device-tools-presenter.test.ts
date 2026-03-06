@@ -120,6 +120,10 @@ test('device tools presenter exposes actionable adopt recommendation state', () 
   assert.match(viewModel.actionHint, /compiled profile update is available/i);
   assert.equal(rowValue(viewModel.zwjsNodeRows, 'Product Triple'), '29:12801:1');
   assert.equal(rowValue(viewModel.adapterRows, 'Rule Match'), 'Project rule match');
+  assert.equal(
+    rowValue(viewModel.adapterRows, 'Inference Policy'),
+    'Compiled-only policy: resolved from compiled profile; no runtime generic inference.',
+  );
 });
 
 test('device tools presenter warns when transport is disconnected', () => {
@@ -167,4 +171,39 @@ test('device tools presenter derives action-state-changed summary from latest re
   assert.equal(summary.tone, 'warn');
   assert.match(summary.message, /action state changed/i);
   assert.match(summary.message, /no update is needed/i);
+});
+
+test('device tools presenter explains safe fallback behavior for unmatched profiles', () => {
+  const loaded = presenter.reduce(presenter.createInitialState(), {
+    type: 'load_success',
+    snapshot: createSnapshot({
+      profile: {
+        homeyClass: 'other',
+        profileId: null,
+        matchBy: 'none',
+        matchKey: null,
+        fallbackReason: 'no_compiled_profile_match',
+        uncurated: true,
+        confidence: 'generic',
+      },
+      profileAttribution: {
+        confidenceLabel: 'Generic fallback rule',
+        sourceCode: 'compiled-only',
+        sourceLabel: 'Compiled profile only',
+        curationEntryPresent: false,
+      },
+      recommendation: {
+        actionable: false,
+        suggestedAction: 'none',
+        reason: 'none',
+        reasonLabel: 'No recommendation is available.',
+      },
+    }),
+  });
+
+  const viewModel = presenter.buildViewModel(loaded);
+  assert.equal(
+    rowValue(viewModel.adapterRows, 'Inference Policy'),
+    'Compiled-only policy: no profile match; safe fallback (class other, no mappings).',
+  );
 });

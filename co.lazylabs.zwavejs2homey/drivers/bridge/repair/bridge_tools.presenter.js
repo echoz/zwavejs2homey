@@ -168,6 +168,9 @@ function runtimeStatusLabel(snapshot) {
     }
     return 'Connected (No Imported Nodes)';
 }
+function runtimeInferencePolicyLabel() {
+    return 'Compiled profiles only + safe fallback (no runtime generic inference)';
+}
 function toNonNegativeCount(value) {
     if (typeof value !== 'number' || !Number.isFinite(value))
         return 0;
@@ -421,6 +424,7 @@ function sortNodes(nodes) {
             subtitle: `Bridge ${asText(snapshot?.device?.bridgeId)} · ${asText(snapshot?.device?.homeyDeviceId)}`,
             runtimeRows: toKvRows([
                 ['Runtime Status', runtimeStatusLabel(snapshot)],
+                ['Inference Policy', runtimeInferencePolicyLabel()],
                 ['Lifecycle', snapshot?.runtime?.zwjs?.lifecycle],
                 [
                     'Transport',

@@ -178,6 +178,43 @@ function describeProfileSourceCode(sourceCode: unknown, curationEntryPresent: bo
   return 'Compiled profile only (no device override)';
 }
 
+function describeInferencePolicy(profile: any, profileAttribution: any): string {
+  const fallbackReason =
+    profile && typeof profile.fallbackReason === 'string'
+      ? profile.fallbackReason.trim().toLowerCase()
+      : '';
+  const sourceCode =
+    profileAttribution && typeof profileAttribution.sourceCode === 'string'
+      ? profileAttribution.sourceCode.trim().toLowerCase()
+      : '';
+  const sourceLabel =
+    profileAttribution && typeof profileAttribution.sourceLabel === 'string'
+      ? profileAttribution.sourceLabel.trim().toLowerCase()
+      : '';
+  const effectiveSourceCode =
+    sourceCode.length > 0
+      ? sourceCode
+      : sourceLabel.includes('compiled profile + device override')
+        ? 'compiled+curation-override'
+        : sourceLabel.includes('compiled profile only')
+          ? 'compiled-only'
+          : '';
+
+  if (fallbackReason === 'no_compiled_profile_match') {
+    return 'Compiled-only policy: no profile match; safe fallback (class other, no mappings).';
+  }
+  if (fallbackReason === 'compiled_profile_artifact_unavailable') {
+    return 'Compiled-only policy: artifact unavailable; safe fallback (class other, no mappings).';
+  }
+  if (effectiveSourceCode === 'compiled+curation-override') {
+    return 'Compiled-only policy: resolved from compiled profile, then device override applied.';
+  }
+  if (effectiveSourceCode === 'compiled-only') {
+    return 'Compiled-only policy: resolved from compiled profile; no runtime generic inference.';
+  }
+  return 'Compiled-only policy: profile resolution pending.';
+}
+
 function isMissingValue(value: unknown): boolean {
   if (value === null || typeof value === 'undefined') return true;
   if (typeof value === 'string' && value.trim().length === 0) return true;
@@ -281,7 +318,10 @@ function buildNodeSnapshotWarnings(snapshot: any): string[] {
   return warnings;
 }
 
-function toKvRows(rows: Array<[string, unknown, string?]>, options?: { omitEmpty?: boolean }): KvRow[] {
+function toKvRows(
+  rows: Array<[string, unknown, string?]>,
+  options?: { omitEmpty?: boolean },
+): KvRow[] {
   const omitEmpty = options && options.omitEmpty === true;
   const normalizedRows = omitEmpty ? rows.filter((row) => !isMissingValue(row[1])) : rows;
   if (normalizedRows.length === 0) {
@@ -511,9 +551,10 @@ function recommendationBadge(snapshot: any): { label: string; tone: 'ok' | 'warn
       const profileSourceSummary = profileAttribution
         ? toSafeText(profileAttribution.sourceLabel)
         : describeProfileSourceCode(
-            null,
+            snapshot.profile && snapshot.profile.sourceCode,
             snapshot.curation && snapshot.curation.entryPresent === true,
           );
+      const inferencePolicySummary = describeInferencePolicy(snapshot.profile, profileAttribution);
       const curationStatusSummary = buildCurationStatusSummary(snapshot.curation);
       const overrideSummary = profileAttribution
         ? profileAttribution.curationEntryPresent === true
@@ -522,7 +563,8 @@ function recommendationBadge(snapshot: any): { label: string; tone: 'ok' | 'warn
         : snapshot.curation && snapshot.curation.entryPresent === true
           ? 'Present'
           : 'None';
-      const deviceLabel = snapshot.device.nodeId !== null ? `Node ${snapshot.device.nodeId}` : 'Node';
+      const deviceLabel =
+        snapshot.device.nodeId !== null ? `Node ${snapshot.device.nodeId}` : 'Node';
       const recommendationBadgeView = recommendationBadge(snapshot);
 
       const latestActionRows =
@@ -552,11 +594,9 @@ function recommendationBadge(snapshot: any): { label: string; tone: 'ok' | 'warn
       let actionHint =
         'No action is required right now. This device is already aligned with its profile state.';
       if (canBackfill) {
-        actionHint =
-          'Profile reference metadata is missing. You can backfill marker metadata now.';
+        actionHint = 'Profile reference metadata is missing. You can backfill marker metadata now.';
       } else if (canAdopt) {
-        actionHint =
-          'A compiled profile update is available. You can adopt it for this device.';
+        actionHint = 'A compiled profile update is available. You can adopt it for this device.';
       }
 
       const statusLine = state.statusMessage
@@ -594,6 +634,7 @@ function recommendationBadge(snapshot: any): { label: string; tone: 'ok' | 'warn
             ['Device Class', snapshot.profile.homeyClass],
             ['Rule Match', confidenceSummary],
             ['Profile Source', profileSourceSummary],
+            ['Inference Policy', inferencePolicySummary],
             ['Device Override', overrideSummary],
             ['Curation Status', curationStatusSummary.status],
             ['Curation Summary', curationStatusSummary.summary],
@@ -635,11 +676,7 @@ function recommendationBadge(snapshot: any): { label: string; tone: 'ok' | 'warn
             ['Projection', snapshot.profileReference.projectionVersion],
             ['Current Hash', snapshot.profileReference.currentBaselineHash, 'mono'],
             ['Stored Hash', snapshot.profileReference.storedBaselineHash, 'mono'],
-            [
-              'Current Fingerprint',
-              snapshot.profileReference.currentPipelineFingerprint,
-              'mono',
-            ],
+            ['Current Fingerprint', snapshot.profileReference.currentPipelineFingerprint, 'mono'],
             ['Stored Fingerprint', snapshot.profileReference.storedPipelineFingerprint, 'mono'],
           ],
           { omitEmpty: true },
