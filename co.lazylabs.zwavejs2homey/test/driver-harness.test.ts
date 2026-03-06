@@ -533,7 +533,7 @@ test('bridge driver derives profile attribution when runtime payload omits it', 
   );
 });
 
-test('node driver throws a clear error when zwjs client is unavailable', async () => {
+test('node driver returns an empty pair list when zwjs client is unavailable', async () => {
   const driver = new NodeDriver();
   driver._configureHarness({
     app: {
@@ -542,10 +542,8 @@ test('node driver throws a clear error when zwjs client is unavailable', async (
     devices: [],
   });
 
-  await assert.rejects(
-    () => driver.onPairListDevices(),
-    /ZWJS client unavailable\. Configure zwjs_connection\.url in app settings and connect a bridge first\./,
-  );
+  const candidates = await driver.onPairListDevices();
+  assert.deepEqual(candidates, []);
 });
 
 test('node driver pair session registers list_devices and import_summary status handlers', async () => {

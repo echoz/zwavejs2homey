@@ -15,7 +15,6 @@ module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
         async onPair(session) {
             this.log('Node pair session started');
             session.setHandler('list_devices', async () => {
-                this.log('Node pair list requested');
                 return await this.onPairListDevices();
             });
             session.setHandler('import_summary:get_status', async () => {
@@ -428,11 +427,13 @@ module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
             return [];
         }
         async onPairListDevices() {
+            this.log('Node pair list requested');
             const app = this.homey.app;
             const runtime = this.resolveBridgeRuntime(app);
             const client = runtime.client;
             if (!client) {
-                throw new Error('ZWJS client unavailable. Configure zwjs_connection.url in app settings and connect a bridge first.');
+                this.error('Node pair list unavailable: ZWJS client is not connected. Configure zwjs_connection.url in app settings and pair a bridge first.');
+                return [];
             }
             let latestCandidates = [];
             const runPairFlow = async () => {
