@@ -32,16 +32,6 @@ module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
                     : [],
             });
         }
-        async onPair(session) {
-            this.log('Node pair session started');
-            this.registerTimedSessionHandler(session, 'list_devices', _a.PAIR_HANDLER_TIMEOUT_MS, 'node pair list handler', async () => {
-                this.log('Node pair list requested (session handler)');
-                return this.onPairListDevices();
-            });
-            this.log('Node pair handler registered', {
-                event: 'list_devices',
-            });
-        }
         resolveBridgeRuntime(app) {
             const session = app.getBridgeSession?.(pairing_1.ZWJS_DEFAULT_BRIDGE_ID);
             const bridgeId = this.normalizeStringOrNull(session?.bridgeId) ??
@@ -619,6 +609,5 @@ module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
     _a.PAIR_NODE_STATE_TIMEOUT_MS = 1000,
     _a.PAIR_ICON_INFERENCE_CONCURRENCY = 6,
     _a.PAIR_ICON_INFERENCE_TIMEOUT_MS = 7000,
-    _a.PAIR_HANDLER_TIMEOUT_MS = 15000,
     _a.REPAIR_HANDLER_TIMEOUT_MS = 15000,
     _a);

@@ -100,10 +100,6 @@ interface RepairSessionLike {
   setHandler: (event: string, handler: (payload?: unknown) => Promise<unknown>) => void;
 }
 
-interface PairSessionLike {
-  setHandler: (event: string, handler: (payload?: unknown) => Promise<unknown>) => void;
-}
-
 interface ImportSummaryNodeEntry {
   homeyDeviceId: string | null;
   bridgeId: string;
@@ -145,12 +141,10 @@ module.exports = class NodeDriver extends Homey.Driver {
 
   private static readonly PAIR_ICON_INFERENCE_TIMEOUT_MS = 7000;
 
-  private static readonly PAIR_HANDLER_TIMEOUT_MS = 15000;
-
   private static readonly REPAIR_HANDLER_TIMEOUT_MS = 15000;
 
   private registerTimedSessionHandler(
-    session: PairSessionLike | RepairSessionLike,
+    session: RepairSessionLike,
     event: string,
     timeoutMs: number,
     context: string,
@@ -183,23 +177,6 @@ module.exports = class NodeDriver extends Homey.Driver {
             singular: view?.options?.singular === true,
           }))
         : [],
-    });
-  }
-
-  async onPair(session: PairSessionLike) {
-    this.log('Node pair session started');
-    this.registerTimedSessionHandler(
-      session,
-      'list_devices',
-      NodeDriver.PAIR_HANDLER_TIMEOUT_MS,
-      'node pair list handler',
-      async () => {
-        this.log('Node pair list requested (session handler)');
-        return this.onPairListDevices();
-      },
-    );
-    this.log('Node pair handler registered', {
-      event: 'list_devices',
     });
   }
 

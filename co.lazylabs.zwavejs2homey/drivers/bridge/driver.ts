@@ -157,18 +157,12 @@ interface RepairSessionLike {
   setHandler: (event: string, handler: (payload?: unknown) => Promise<unknown>) => void;
 }
 
-interface PairSessionLike {
-  setHandler: (event: string, handler: (payload?: unknown) => Promise<unknown>) => void;
-}
-
 interface HomeyBridgeDeviceData {
   id?: string;
   bridgeId?: string;
 }
 
 module.exports = class BridgeDriver extends Homey.Driver {
-  private static readonly PAIR_HANDLER_TIMEOUT_MS = 5000;
-
   private static readonly REPAIR_HANDLER_TIMEOUT_MS = 15000;
 
   private async withTimeout<T>(
@@ -190,7 +184,7 @@ module.exports = class BridgeDriver extends Homey.Driver {
   }
 
   private registerTimedSessionHandler(
-    session: PairSessionLike | RepairSessionLike,
+    session: RepairSessionLike,
     event: string,
     timeoutMs: number,
     context: string,
@@ -223,23 +217,6 @@ module.exports = class BridgeDriver extends Homey.Driver {
             singular: view?.options?.singular === true,
           }))
         : [],
-    });
-  }
-
-  async onPair(session: PairSessionLike) {
-    this.log('Bridge pair session started');
-    this.registerTimedSessionHandler(
-      session,
-      'list_devices',
-      BridgeDriver.PAIR_HANDLER_TIMEOUT_MS,
-      'bridge pair list',
-      async () => {
-        this.log('Bridge pair list requested (session handler)');
-        return this.onPairListDevices();
-      },
-    );
-    this.log('Bridge pair handler registered', {
-      event: 'list_devices',
     });
   }
 

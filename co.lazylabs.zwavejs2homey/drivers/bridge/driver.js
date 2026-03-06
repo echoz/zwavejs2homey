@@ -45,16 +45,6 @@ module.exports = (_a = class BridgeDriver extends homey_1.default.Driver {
                     : [],
             });
         }
-        async onPair(session) {
-            this.log('Bridge pair session started');
-            this.registerTimedSessionHandler(session, 'list_devices', _a.PAIR_HANDLER_TIMEOUT_MS, 'bridge pair list', async () => {
-                this.log('Bridge pair list requested (session handler)');
-                return this.onPairListDevices();
-            });
-            this.log('Bridge pair handler registered', {
-                event: 'list_devices',
-            });
-        }
         hasBridgeDeviceAlreadyPaired() {
             const existingData = this.getDevices().map((device) => device.getData());
             return (0, pairing_1.hasBridgePairDeviceFromData)(existingData);
@@ -549,6 +539,5 @@ module.exports = (_a = class BridgeDriver extends homey_1.default.Driver {
             this.registerTimedSessionHandler(session, 'bridge_tools:refresh', _a.REPAIR_HANDLER_TIMEOUT_MS, 'bridge repair handler', async () => loadSnapshot());
         }
     },
-    _a.PAIR_HANDLER_TIMEOUT_MS = 5000,
     _a.REPAIR_HANDLER_TIMEOUT_MS = 15000,
     _a);
