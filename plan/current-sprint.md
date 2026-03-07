@@ -60,6 +60,19 @@ Close Phase 6 Reliability + UX with production-ready stability + diagnostics UX:
   - stable curated triples no longer get inflated pressure scores solely from layered-rule unmatched volume
   - added regression coverage to lock technical-reason suppression behavior
 
+- Phase 7 inspect-noise filtering slice:
+  - added `--noise-filter actionable|all` to:
+    - `compiler:inspect`
+    - `compiler:inspect-live`
+  - default mode is now `actionable`, which suppresses unmatched-only rule rows when
+    curation reasons are technical-only (`high-unmatched-ratio:*`, `suppressed-fill-actions:*`)
+  - suppression behavior is visible in human-facing output:
+    - list/summary/markdown now explicitly state when technical unmatched rows were suppressed
+  - full unmatched diagnostics remain available via `--noise-filter all`
+  - parser/behavior regressions added:
+    - `packages/core/test/homey-compile-inspect-tool.test.ts`
+    - `packages/core/test/homey-compile-inspect-live-tool.test.ts`
+
 - Bridge deletion cascade slice:
   - deleting a bridge device now triggers cascading delete attempts for node devices bound to the same `bridgeId`
   - bridge deletion still tears down bridge runtime connection/session after cascade attempts
