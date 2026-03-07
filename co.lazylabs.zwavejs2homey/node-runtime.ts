@@ -275,10 +275,18 @@ function coerceAlarmContactDoorStatusTransform(value: unknown): boolean | undefi
   return undefined;
 }
 
-function coerceAlarmGenericNotificationStateTransform(value: unknown): boolean | undefined {
+function coerceAccessControlNonzeroStateTransform(value: unknown): boolean | undefined {
   const numeric = normalizeNumericValue(value);
   if (numeric === undefined) return undefined;
   return numeric !== 0;
+}
+
+function coerceAccessControlLockStateProblemTransform(value: unknown): boolean | undefined {
+  const numeric = normalizeNumericValue(value);
+  if (numeric === undefined) return undefined;
+  if (numeric === 0) return false;
+  if (numeric === 11) return true;
+  return numeric > 0;
 }
 
 function collectNotificationTextCandidates(value: unknown): string[] {
@@ -469,8 +477,10 @@ const INBOUND_TRANSFORMERS: Record<
   zwave_level_nonzero_to_homey_onoff: coerceOnOffInboundTransform,
   zwave_battery_level_to_homey_alarm_battery: coerceAlarmBatteryInboundTransform,
   zwave_door_status_to_homey_alarm_contact: coerceAlarmContactDoorStatusTransform,
-  zwave_notification_nonzero_to_homey_alarm_generic:
-    coerceAlarmGenericNotificationStateTransform,
+  zwave_access_control_keypad_state_to_homey_alarm_generic:
+    coerceAccessControlNonzeroStateTransform,
+  zwave_access_control_lock_state_to_homey_alarm_problem:
+    coerceAccessControlLockStateProblemTransform,
   zwjs_notification_to_homey_alarm_tamper: coerceAlarmTamperNotificationTransform,
 };
 

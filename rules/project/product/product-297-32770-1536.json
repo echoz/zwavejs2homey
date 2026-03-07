@@ -125,9 +125,28 @@
               "commandClass": 113,
               "endpoint": 0,
               "property": "Access Control",
+              "propertyKey": "Keypad state"
+            },
+            "transformRef": "zwave_access_control_keypad_state_to_homey_alarm_generic"
+          },
+          "flags": {
+            "readable": true,
+            "writeable": false
+          }
+        },
+        {
+          "type": "capability",
+          "mode": "replace",
+          "capabilityId": "alarm_problem",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 113,
+              "endpoint": 0,
+              "property": "Access Control",
               "propertyKey": "Lock state"
             },
-            "transformRef": "zwave_notification_nonzero_to_homey_alarm_generic"
+            "transformRef": "zwave_access_control_lock_state_to_homey_alarm_problem"
           },
           "flags": {
             "readable": true,

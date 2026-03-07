@@ -556,6 +556,15 @@ test('root manifest product overrides curate Leviton switches and Yale locks', (
             metadata: { type: 'number', readable: true, writeable: false },
           },
           {
+            valueId: {
+              commandClass: 113,
+              endpoint: 0,
+              property: 'Access Control',
+              propertyKey: 'Keypad state',
+            },
+            metadata: { type: 'number', readable: true, writeable: false },
+          },
+          {
             valueId: { commandClass: 128, endpoint: 0, property: 'level' },
             metadata: { type: 'number', readable: true, writeable: false },
           },
@@ -570,6 +579,7 @@ test('root manifest product overrides curate Leviton switches and Yale locks', (
           'lock_mode',
           'alarm_contact',
           'alarm_generic',
+          'alarm_problem',
           'measure_battery',
           'alarm_battery',
           'alarm_tamper',
@@ -621,6 +631,9 @@ test('root manifest product overrides curate Leviton switches and Yale locks', (
       const alarmGenericCapability = result.profile.capabilities.find(
         (item) => item.capabilityId === 'alarm_generic',
       );
+      const alarmProblemCapability = result.profile.capabilities.find(
+        (item) => item.capabilityId === 'alarm_problem',
+      );
       const alarmTamperCapability = result.profile.capabilities.find(
         (item) => item.capabilityId === 'alarm_tamper',
       );
@@ -662,11 +675,22 @@ test('root manifest product overrides curate Leviton switches and Yale locks', (
         commandClass: 113,
         endpoint: 0,
         property: 'Access Control',
-        propertyKey: 'Lock state',
+        propertyKey: 'Keypad state',
       });
       assert.equal(
         alarmGenericCapability?.inboundMapping?.transformRef,
-        'zwave_notification_nonzero_to_homey_alarm_generic',
+        'zwave_access_control_keypad_state_to_homey_alarm_generic',
+      );
+      assert.equal(alarmProblemCapability?.inboundMapping?.kind, 'value');
+      assert.deepEqual(alarmProblemCapability?.inboundMapping?.selector, {
+        commandClass: 113,
+        endpoint: 0,
+        property: 'Access Control',
+        propertyKey: 'Lock state',
+      });
+      assert.equal(
+        alarmProblemCapability?.inboundMapping?.transformRef,
+        'zwave_access_control_lock_state_to_homey_alarm_problem',
       );
       assert.equal(alarmTamperCapability?.inboundMapping?.kind, 'event');
       assert.deepEqual(alarmTamperCapability?.inboundMapping?.selector, {

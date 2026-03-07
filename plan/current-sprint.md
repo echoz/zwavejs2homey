@@ -21,8 +21,10 @@ Close Phase 6 Reliability + UX with production-ready stability + diagnostics UX:
 - Phase 7 Yale lock capability expansion slice:
   - expanded curated Yale YRD226 profile (`297:32770:1536`) to include:
     - `alarm_contact` from CC98 `doorStatus` (`zwave_door_status_to_homey_alarm_contact`)
-    - `alarm_generic` from CC113 `Access Control` / `Lock state`
-      (`zwave_notification_nonzero_to_homey_alarm_generic`)
+    - `alarm_generic` from CC113 `Access Control` / `Keypad state`
+      (`zwave_access_control_keypad_state_to_homey_alarm_generic`)
+    - `alarm_problem` from CC113 `Access Control` / `Lock state`
+      (`zwave_access_control_lock_state_to_homey_alarm_problem`)
   - preserved event-driven tamper behavior while broadening lock status/read-only coverage
   - expanded compiler + runtime + bundled-policy regressions:
     - `packages/compiler/test/compile-profile-plan-from-files.test.ts`

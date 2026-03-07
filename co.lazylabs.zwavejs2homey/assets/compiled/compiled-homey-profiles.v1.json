@@ -178,8 +178,8 @@
           "suppressedActions": [],
           "summary": {
             "appliedActions": 14,
-            "unmatchedActions": 1047,
-            "totalActions": 1068,
+            "unmatchedActions": 1053,
+            "totalActions": 1074,
             "appliedProjectProductActions": 9,
             "suppressedFillActions": 15,
             "ignoredValues": 0
@@ -441,8 +441,8 @@
           "suppressedActions": [],
           "summary": {
             "appliedActions": 9,
-            "unmatchedActions": 343,
-            "totalActions": 356,
+            "unmatchedActions": 345,
+            "totalActions": 358,
             "appliedProjectProductActions": 4,
             "suppressedFillActions": 10,
             "ignoredValues": 0
@@ -732,8 +732,8 @@
           "suppressedActions": [],
           "summary": {
             "appliedActions": 5,
-            "unmatchedActions": 171,
-            "totalActions": 178,
+            "unmatchedActions": 172,
+            "totalActions": 179,
             "appliedProjectProductActions": 3,
             "suppressedFillActions": 5,
             "ignoredValues": 0
@@ -1005,8 +1005,8 @@
           "suppressedActions": [],
           "summary": {
             "appliedActions": 5,
-            "unmatchedActions": 171,
-            "totalActions": 178,
+            "unmatchedActions": 172,
+            "totalActions": 179,
             "appliedProjectProductActions": 3,
             "suppressedFillActions": 5,
             "ignoredValues": 0
@@ -1239,8 +1239,8 @@
           "suppressedActions": [],
           "summary": {
             "appliedActions": 4,
-            "unmatchedActions": 172,
-            "totalActions": 178,
+            "unmatchedActions": 173,
+            "totalActions": 179,
             "appliedProjectProductActions": 2,
             "suppressedFillActions": 5,
             "ignoredValues": 0
@@ -1473,8 +1473,8 @@
           "suppressedActions": [],
           "summary": {
             "appliedActions": 4,
-            "unmatchedActions": 172,
-            "totalActions": 178,
+            "unmatchedActions": 173,
+            "totalActions": 179,
             "appliedProjectProductActions": 2,
             "suppressedFillActions": 5,
             "ignoredValues": 0
@@ -1715,9 +1715,34 @@
                   "commandClass": 113,
                   "endpoint": 0,
                   "property": "Access Control",
+                  "propertyKey": "Keypad state"
+                },
+                "transformRef": "zwave_access_control_keypad_state_to_homey_alarm_generic"
+              },
+              "directionality": "inbound-only",
+              "flags": {
+                "readable": true,
+                "writeable": false
+              },
+              "provenance": {
+                "layer": "project-product",
+                "ruleId": "product-yale-yrd226-class-and-lock",
+                "action": "replace",
+                "sourceRef": "product-yale-yrd226-class-and-lock",
+                "reason": "cc=98,ep=0,prop=currentMode"
+              }
+            },
+            {
+              "capabilityId": "alarm_problem",
+              "inboundMapping": {
+                "kind": "value",
+                "selector": {
+                  "commandClass": 113,
+                  "endpoint": 0,
+                  "property": "Access Control",
                   "propertyKey": "Lock state"
                 },
-                "transformRef": "zwave_notification_nonzero_to_homey_alarm_generic"
+                "transformRef": "zwave_access_control_lock_state_to_homey_alarm_problem"
               },
               "directionality": "inbound-only",
               "flags": {
@@ -1890,10 +1915,10 @@
           "actions": [],
           "suppressedActions": [],
           "summary": {
-            "appliedActions": 14,
-            "unmatchedActions": 339,
-            "totalActions": 356,
-            "appliedProjectProductActions": 10,
+            "appliedActions": 15,
+            "unmatchedActions": 340,
+            "totalActions": 358,
+            "appliedProjectProductActions": 11,
             "suppressedFillActions": 6,
             "ignoredValues": 0
           },

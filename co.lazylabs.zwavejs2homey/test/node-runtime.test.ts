@@ -13,11 +13,12 @@ const {
 
 test('node-runtime publishes supported transform refs and specialized coercion ids', () => {
   assert.deepEqual(getSupportedInboundTransformRefs(), [
+    'zwave_access_control_keypad_state_to_homey_alarm_generic',
+    'zwave_access_control_lock_state_to_homey_alarm_problem',
     'zwave_battery_level_to_homey_alarm_battery',
     'zwave_door_status_to_homey_alarm_contact',
     'zwave_level_0_99_to_homey_dim',
     'zwave_level_nonzero_to_homey_onoff',
-    'zwave_notification_nonzero_to_homey_alarm_generic',
     'zwjs_notification_to_homey_alarm_tamper',
   ]);
   assert.deepEqual(getSupportedOutboundTransformRefs(), [
@@ -366,7 +367,7 @@ test('coerceCapability inbound/outbound uses transform refs and generic pass-thr
     coerceCapabilityInboundValue(
       'alarm_generic',
       { value: 11 },
-      'zwave_notification_nonzero_to_homey_alarm_generic',
+      'zwave_access_control_keypad_state_to_homey_alarm_generic',
     ),
     true,
   );
@@ -374,7 +375,23 @@ test('coerceCapability inbound/outbound uses transform refs and generic pass-thr
     coerceCapabilityInboundValue(
       'alarm_generic',
       { value: 0 },
-      'zwave_notification_nonzero_to_homey_alarm_generic',
+      'zwave_access_control_keypad_state_to_homey_alarm_generic',
+    ),
+    false,
+  );
+  assert.equal(
+    coerceCapabilityInboundValue(
+      'alarm_problem',
+      { value: 11 },
+      'zwave_access_control_lock_state_to_homey_alarm_problem',
+    ),
+    true,
+  );
+  assert.equal(
+    coerceCapabilityInboundValue(
+      'alarm_problem',
+      { value: 0 },
+      'zwave_access_control_lock_state_to_homey_alarm_problem',
     ),
     false,
   );

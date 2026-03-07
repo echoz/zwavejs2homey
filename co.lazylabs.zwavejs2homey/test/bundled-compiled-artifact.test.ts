@@ -68,6 +68,11 @@ const RUNTIME_MAPPING_COVERAGE_POLICY = {
     coverageRef:
       'test/node-device-harness.test.ts:lock + battery + meter + notification runtime verticals',
   },
+  alarm_problem: {
+    coercionMode: 'specialized',
+    coverageRef:
+      'test/node-device-harness.test.ts:lock + battery + meter + notification runtime verticals',
+  },
   enum_select: {
     coercionMode: 'specialized',
     coverageRef:
@@ -364,6 +369,7 @@ test('bundled Yale YRD226 profile includes lock + battery + contact + notificati
   assert.equal(byCapabilityId.has('alarm_battery'), true, 'expected alarm_battery capability');
   assert.equal(byCapabilityId.has('alarm_contact'), true, 'expected alarm_contact capability');
   assert.equal(byCapabilityId.has('alarm_generic'), true, 'expected alarm_generic capability');
+  assert.equal(byCapabilityId.has('alarm_problem'), true, 'expected alarm_problem capability');
   assert.equal(byCapabilityId.has('alarm_tamper'), true, 'expected alarm_tamper capability');
   assert.equal(byCapabilityId.has('measure_generic'), false, 'measure_generic should be suppressed');
 
@@ -424,11 +430,24 @@ test('bundled Yale YRD226 profile includes lock + battery + contact + notificati
     commandClass: 113,
     endpoint: 0,
     property: 'Access Control',
-    propertyKey: 'Lock state',
+    propertyKey: 'Keypad state',
   });
   assert.equal(
     alarmGeneric.inboundMapping?.transformRef,
-    'zwave_notification_nonzero_to_homey_alarm_generic',
+    'zwave_access_control_keypad_state_to_homey_alarm_generic',
+  );
+
+  const alarmProblem = byCapabilityId.get('alarm_problem');
+  assert.equal(alarmProblem.directionality, 'inbound-only');
+  assert.deepEqual(alarmProblem.inboundMapping?.selector, {
+    commandClass: 113,
+    endpoint: 0,
+    property: 'Access Control',
+    propertyKey: 'Lock state',
+  });
+  assert.equal(
+    alarmProblem.inboundMapping?.transformRef,
+    'zwave_access_control_lock_state_to_homey_alarm_problem',
   );
 
   const alarmTamper = byCapabilityId.get('alarm_tamper');
