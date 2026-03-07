@@ -242,6 +242,12 @@ function toProfileOutcomeBucket(outcome: string | undefined): 'curated' | 'ha' |
   return 'unknown';
 }
 
+const TECHNICAL_REASON_PREFIXES = ['high-unmatched-ratio:', 'suppressed-fill-actions:'] as const;
+
+function isTechnicalReason(reason: string): boolean {
+  return TECHNICAL_REASON_PREFIXES.some((prefix) => reason.startsWith(prefix));
+}
+
 function topReasonList(reasonCounts: Map<string, number>, max: number): string[] {
   return [...reasonCounts.entries()]
     .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
@@ -336,10 +342,16 @@ function buildRanking(
 
     const reasonsRaw = node.compiled?.report?.curationCandidates?.reasons;
     const reasons = Array.isArray(reasonsRaw) ? reasonsRaw : [];
+    const normalizedReasons: string[] = [];
+    let actionableReasonCount = 0;
     for (const reason of reasons) {
       const normalizedReason = trimOrUndefined(reason);
       if (!normalizedReason) continue;
+      normalizedReasons.push(normalizedReason);
       bucket.reasonCounts.set(normalizedReason, (bucket.reasonCounts.get(normalizedReason) ?? 0) + 1);
+      if (!isTechnicalReason(normalizedReason)) {
+        actionableReasonCount += 1;
+      }
     }
 
     const profileId = trimOrUndefined(node.compiled?.profile?.profileId);
@@ -360,7 +372,14 @@ function buildRanking(
     const genericScore = outcomeBucket === 'generic' ? 200 : 0;
     const unknownScore = outcomeBucket === 'unknown' ? 100 : 0;
     const reviewScore = likelyNeedsReview ? 1000 : 0;
-    const unmatchedScore = Math.min(unmatchedActions, 100);
+    const technicalOnlyReasons =
+      normalizedReasons.length > 0 && normalizedReasons.every((reason) => isTechnicalReason(reason));
+    const countUnmatchedAsPressure =
+      likelyNeedsReview ||
+      outcomeBucket !== 'curated' ||
+      actionableReasonCount > 0 ||
+      !technicalOnlyReasons;
+    const unmatchedScore = countUnmatchedAsPressure ? Math.min(unmatchedActions, 100) : 0;
     bucket.score += reviewScore + genericScore + unknownScore + unmatchedScore + 10;
   }
 

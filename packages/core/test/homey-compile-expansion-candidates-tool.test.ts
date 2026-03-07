@@ -178,3 +178,50 @@ test('runCompileExpansionCandidates supports includeStable + file output', async
   assert.equal(writes[0].encoding, 'utf8');
   assert.equal(logs[0], 'Wrote compile expansion candidates: /tmp/candidates.json');
 });
+
+test('runCompileExpansionCandidates does not treat technical-only unmatched reasons as expansion pressure', async () => {
+  const { runCompileExpansionCandidates } = await loadLib();
+  const inspectPayload = {
+    results: [
+      {
+        node: { nodeId: 9, name: 'Pendant' },
+        deviceFacts: { manufacturerId: 29, productType: 12801, productId: 1 },
+        compiled: {
+          profile: {
+            profileId: 'product-triple:29:12801:1',
+            classification: { homeyClass: 'light', confidence: 'curated' },
+          },
+          report: {
+            profileOutcome: 'curated',
+            summary: { unmatchedActions: 250 },
+            curationCandidates: {
+              likelyNeedsReview: false,
+              reasons: ['high-unmatched-ratio:0.96', 'suppressed-fill-actions:5'],
+            },
+          },
+        },
+      },
+    ],
+  };
+
+  const result = await runCompileExpansionCandidates(
+    {
+      inspectLiveFile: '/tmp/inspect-live.json',
+      top: 5,
+      includeStable: true,
+      format: 'json-pretty',
+      outputFile: undefined,
+    },
+    { log: () => {} },
+    {
+      readFileImpl: async () => JSON.stringify(inspectPayload),
+      nowIso: () => '2026-03-07T00:00:00.000Z',
+    },
+  );
+
+  assert.equal(result.ranking.length, 1);
+  assert.equal(result.ranking[0].productTriple, '29:12801:1');
+  assert.equal(result.ranking[0].suggestion, 'stable');
+  assert.equal(result.ranking[0].unmatchedActions, 250);
+  assert.equal(result.ranking[0].score, 10);
+});

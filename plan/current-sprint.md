@@ -53,6 +53,13 @@ Close Phase 6 Reliability + UX with production-ready stability + diagnostics UX:
   - added parser + ranking regression coverage:
     - `packages/core/test/homey-compile-expansion-candidates-tool.test.ts`
 
+- Phase 7 expansion-candidate scoring noise hardening:
+  - expansion ranking now treats technical-only unmatched reasons as non-pressure:
+    - `high-unmatched-ratio:*`
+    - `suppressed-fill-actions:*`
+  - stable curated triples no longer get inflated pressure scores solely from layered-rule unmatched volume
+  - added regression coverage to lock technical-reason suppression behavior
+
 - Bridge deletion cascade slice:
   - deleting a bridge device now triggers cascading delete attempts for node devices bound to the same `bridgeId`
   - bridge deletion still tears down bridge runtime connection/session after cascade attempts
