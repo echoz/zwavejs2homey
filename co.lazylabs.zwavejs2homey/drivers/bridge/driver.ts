@@ -279,14 +279,6 @@ module.exports = class BridgeDriver extends Homey.Driver {
       async (payload) => this.saveBridgeSettingsFromPairSession(session, payload),
     );
     this.log('Bridge pair handler registered', { event: 'bridge_config:save_settings' });
-    this.registerTimedSessionHandler(
-      session,
-      'next_steps:get_status',
-      BridgeDriver.PAIR_HANDLER_TIMEOUT_MS,
-      'bridge pair next steps',
-      async () => this.loadNextStepsStatus(),
-    );
-    this.log('Bridge pair handler registered', { event: 'next_steps:get_status' });
   }
 
   async onInit() {

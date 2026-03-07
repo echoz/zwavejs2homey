@@ -98,25 +98,6 @@
         }
         render();
     }
-    async function openNextPairStep() {
-        try {
-            if (typeof Homey.showView === 'function') {
-                await Promise.resolve(Homey.showView('next_steps'));
-                return;
-            }
-            if (typeof Homey.nextView === 'function') {
-                await Promise.resolve(Homey.nextView());
-            }
-        }
-        catch (error) {
-            stateRef.current = {
-                ...stateRef.current,
-                status: 'Bridge settings saved. Open ZWJS Node pairing to import nodes.',
-                error: `Unable to open next step automatically: ${error instanceof Error ? error.message : String(error)}`,
-            };
-            render();
-        }
-    }
     async function saveSettings() {
         const validation = presenter.validateInput({
             bridgeId: currentContextBridgeId(),
@@ -145,8 +126,7 @@
                 stateRef.current.context.settings.tokenConfigured =
                     validation.payload.authType === 'bearer';
             }
-            render();
-            await openNextPairStep();
+            Homey.done();
             return;
         }
         catch (error) {

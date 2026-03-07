@@ -170,9 +170,6 @@ test('bridge driver pair session registers list_devices handler', async () => {
   });
   assert.equal(Array.isArray(callbackCandidates), true);
   assert.equal(callbackCandidates.length, 1);
-  assert.equal(typeof handlers.get('next_steps:get_status'), 'function');
-  const nextStepsStatus = await handlers.get('next_steps:get_status')();
-  assert.equal(nextStepsStatus.bridgeId, 'main');
 });
 
 test('bridge driver pair session exposes bridge config context', async () => {
