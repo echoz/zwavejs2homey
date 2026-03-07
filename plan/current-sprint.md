@@ -27,6 +27,15 @@ Close Phase 6 Reliability + UX with production-ready stability + diagnostics UX:
   - added parser + ranking regression coverage:
     - `packages/core/test/homey-capability-coverage-audit-tool.test.ts`
 
+- Phase 7 capability-audit actionable focus slice:
+  - added `--focus actionable|all` to `homey:capability-audit` (default `actionable`)
+  - when runtime support-bundle diagnostics are provided:
+    - actionable focus now filters ranking to capabilities with real runtime skip signals
+    - outputs top runtime skip reasons globally and per capability row
+  - helps expansion work target observed runtime mapping pressure instead of artifact-only volume
+  - expanded regression coverage in:
+    - `packages/core/test/homey-capability-coverage-audit-tool.test.ts`
+
 - Phase 7 capability coercion expansion slice:
   - added specialized runtime handling for `measure_battery`:
     - normalizes sentinel battery values (`255 -> 1`)

@@ -10,12 +10,14 @@ const DEFAULT_ARTIFACT_FILE = path.resolve(
 const DEFAULT_TOP = 10;
 
 type AuditFormat = 'summary' | 'markdown' | 'json' | 'json-pretty' | 'json-compact';
+type AuditFocus = 'actionable' | 'all';
 
 export interface HomeyCapabilityCoverageAuditCommand {
   artifactFile: string;
   supportBundleFile?: string;
   top: number;
   format: AuditFormat;
+  focus: AuditFocus;
   outputFile?: string;
 }
 
@@ -28,12 +30,14 @@ export interface HomeyCapabilityCoverageAuditResult {
   };
   summary: {
     mode: 'artifact-frequency-only' | 'runtime-diagnostics-weighted';
+    focus: AuditFocus;
     artifactProfiles: number;
     artifactCapabilities: number;
     runtimeNodes: number;
     runtimeNodesWithKnownProfile: number;
     runtimeNodesWithSkipSignals: number;
     runtimeNodesMissingProfileInArtifact: number;
+    runtimeTopSkipReasons: Array<{ reason: string; count: number }>;
   };
   ranking: Array<{
     capabilityId: string;
@@ -41,6 +45,7 @@ export interface HomeyCapabilityCoverageAuditResult {
     artifactProfiles: number;
     runtimeNodes: number;
     runtimeSkipSignals: number;
+    runtimeTopSkipReasons: Array<{ reason: string; count: number }>;
     mode: 'artifact-frequency-only' | 'runtime-diagnostics-weighted';
   }>;
 }
@@ -55,10 +60,12 @@ interface RuntimePressureEntry {
   capabilityId: string;
   runtimeNodes: number;
   runtimeSkipSignals: number;
+  runtimeSkipReasonTotals: Map<string, number>;
 }
 
 interface RuntimePressureSummary {
   pressureByCapability: Map<string, RuntimePressureEntry>;
+  skipReasonTotals: Map<string, number>;
   nodeCount: number;
   nodesWithKnownProfile: number;
   nodesWithSkipSignals: number;
@@ -72,6 +79,7 @@ interface RuntimeSupportNodeLike {
   mapping?: {
     inboundSkipped?: unknown;
     outboundSkipped?: unknown;
+    skipReasons?: unknown;
   };
 }
 
@@ -102,6 +110,7 @@ export function getUsageText(): string {
     `  --top <n>                     Number of ranked capability rows (default: ${DEFAULT_TOP})`,
     '  --format <summary|markdown|json|json-pretty|json-compact>',
     '                                Output format (default: summary)',
+    '  --focus <actionable|all>      Ranking focus (default: actionable)',
     '  --output-file <path>          Write output to file (otherwise prints to stdout)',
     '  --help                        Show this help',
     '',
@@ -162,6 +171,14 @@ function normalizeFormat(value: unknown): AuditFormat {
   return normalized;
 }
 
+function normalizeFocus(value: unknown): AuditFocus {
+  const normalized = trimOrUndefined(value) ?? 'actionable';
+  if (normalized !== 'actionable' && normalized !== 'all') {
+    throw new Error('--focus must be one of: actionable, all');
+  }
+  return normalized;
+}
+
 function resolvePath(value: unknown, fallbackAbsolute: string): string {
   const normalized = trimOrUndefined(value);
   if (!normalized) return fallbackAbsolute;
@@ -181,12 +198,13 @@ export function parseCliArgs(argv: string[]):
       '--support-bundle-file',
       '--top',
       '--format',
+      '--focus',
       '--output-file',
     ]);
 
     for (const token of argv) {
       if (!token.startsWith('--')) continue;
-      const [flag] = token.split('=', 1);
+      const [flag] = token.split('=', 2);
       if (!knownFlags.has(flag)) {
         throw new Error(`Unknown argument: ${flag}`);
       }
@@ -195,6 +213,7 @@ export function parseCliArgs(argv: string[]):
     const flags = parseFlagMap(argv);
     const top = parsePositiveInt(flags.get('--top') ?? DEFAULT_TOP, '--top');
     const format = normalizeFormat(flags.get('--format'));
+    const focus = normalizeFocus(flags.get('--focus'));
     const artifactFile = resolvePath(flags.get('--artifact-file'), DEFAULT_ARTIFACT_FILE);
     const supportBundleValue = trimOrUndefined(flags.get('--support-bundle-file'));
     const supportBundleFile = supportBundleValue ? path.resolve(supportBundleValue) : undefined;
@@ -208,6 +227,7 @@ export function parseCliArgs(argv: string[]):
         supportBundleFile,
         top,
         format,
+        focus,
         outputFile,
       },
     };
@@ -303,6 +323,34 @@ function toNumberOrZero(value: unknown): number {
   return numeric;
 }
 
+function parseSkipReasonTotals(input: unknown): Map<string, number> {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return new Map();
+  const totals = new Map<string, number>();
+  for (const [reason, rawCount] of Object.entries(input as Record<string, unknown>)) {
+    const normalizedReason = trimOrUndefined(reason);
+    if (!normalizedReason) continue;
+    const count = toNumberOrZero(rawCount);
+    if (count <= 0) continue;
+    totals.set(normalizedReason, (totals.get(normalizedReason) ?? 0) + count);
+  }
+  return totals;
+}
+
+function addReasonTotals(target: Map<string, number>, source: Map<string, number>): void {
+  for (const [reason, count] of source.entries()) {
+    target.set(reason, (target.get(reason) ?? 0) + count);
+  }
+}
+
+function toSortedReasonRows(reasonTotals: Map<string, number>): Array<{ reason: string; count: number }> {
+  return [...reasonTotals.entries()]
+    .map(([reason, count]) => ({ reason, count }))
+    .sort((left, right) => {
+      if (left.count !== right.count) return right.count - left.count;
+      return left.reason.localeCompare(right.reason);
+    });
+}
+
 function collectRuntimePressure(
   runtimeBundle: RuntimeSupportBundleLike,
   profileCapsById: Map<string, string[]>,
@@ -311,6 +359,7 @@ function collectRuntimePressure(
     ? (runtimeBundle.diagnostics?.nodes ?? [])
     : [];
   const pressureByCapability = new Map<string, RuntimePressureEntry>();
+  const skipReasonTotals = new Map<string, number>();
   let nodesWithKnownProfile = 0;
   let nodesWithSkipSignals = 0;
   let nodesWithMissingProfile = 0;
@@ -328,9 +377,11 @@ function collectRuntimePressure(
     const inboundSkipped = toNumberOrZero(node?.mapping?.inboundSkipped);
     const outboundSkipped = toNumberOrZero(node?.mapping?.outboundSkipped);
     const skipSignals = Math.max(0, inboundSkipped + outboundSkipped);
+    const skipReasons = parseSkipReasonTotals(node?.mapping?.skipReasons);
     if (skipSignals > 0) {
       nodesWithSkipSignals += 1;
     }
+    addReasonTotals(skipReasonTotals, skipReasons);
 
     for (const capabilityId of capabilities) {
       if (!pressureByCapability.has(capabilityId)) {
@@ -338,17 +389,20 @@ function collectRuntimePressure(
           capabilityId,
           runtimeNodes: 0,
           runtimeSkipSignals: 0,
+          runtimeSkipReasonTotals: new Map<string, number>(),
         });
       }
       const row = pressureByCapability.get(capabilityId);
       if (!row) continue;
       row.runtimeNodes += 1;
       row.runtimeSkipSignals += skipSignals;
+      addReasonTotals(row.runtimeSkipReasonTotals, skipReasons);
     }
   }
 
   return {
     pressureByCapability,
+    skipReasonTotals,
     nodeCount: nodes.length,
     nodesWithKnownProfile,
     nodesWithSkipSignals,
@@ -360,6 +414,7 @@ function toRankingRows(options: {
   capabilityFrequency: Map<string, number>;
   runtimePressureByCapability: Map<string, RuntimePressureEntry>;
   top: number;
+  focus: AuditFocus;
   mode: 'artifact-frequency-only' | 'runtime-diagnostics-weighted';
 }): HomeyCapabilityCoverageAuditResult['ranking'] {
   const allCapabilityIds = new Set<string>([
@@ -373,6 +428,7 @@ function toRankingRows(options: {
       capabilityId,
       runtimeNodes: 0,
       runtimeSkipSignals: 0,
+      runtimeSkipReasonTotals: new Map<string, number>(),
     };
     const runtimeNodes = runtimePressure.runtimeNodes ?? 0;
     const runtimeSkipSignals = runtimePressure.runtimeSkipSignals ?? 0;
@@ -387,6 +443,7 @@ function toRankingRows(options: {
       artifactProfiles,
       runtimeNodes,
       runtimeSkipSignals,
+      runtimeTopSkipReasons: toSortedReasonRows(runtimePressure.runtimeSkipReasonTotals).slice(0, 3),
       mode: options.mode,
     };
   });
@@ -403,10 +460,21 @@ function toRankingRows(options: {
     return left.capabilityId.localeCompare(right.capabilityId);
   });
 
-  return rows.slice(0, options.top);
+  const focusedRows =
+    options.mode === 'runtime-diagnostics-weighted' && options.focus === 'actionable'
+      ? rows.filter((row) => row.runtimeSkipSignals > 0)
+      : rows;
+
+  return focusedRows.slice(0, options.top);
 }
 
 function formatSummary(result: HomeyCapabilityCoverageAuditResult): string {
+  const topReasonsSummary =
+    result.summary.runtimeTopSkipReasons.length === 0
+      ? '(none)'
+      : result.summary.runtimeTopSkipReasons
+          .map((row) => `${row.reason}=${row.count}`)
+          .join(', ');
   const lines = [
     'Homey Capability Coverage Audit',
     `Artifact profiles: ${result.summary.artifactProfiles}`,
@@ -416,6 +484,8 @@ function formatSummary(result: HomeyCapabilityCoverageAuditResult): string {
     `Runtime nodes with skip signals: ${result.summary.runtimeNodesWithSkipSignals}`,
     `Runtime nodes missing profile in artifact: ${result.summary.runtimeNodesMissingProfileInArtifact}`,
     `Ranking mode: ${result.summary.mode}`,
+    `Ranking focus: ${result.summary.focus}`,
+    `Top runtime skip reasons: ${topReasonsSummary}`,
     '',
     `Top ${result.ranking.length} capabilities by expansion pressure:`,
   ];
@@ -425,14 +495,24 @@ function formatSummary(result: HomeyCapabilityCoverageAuditResult): string {
   }
 
   for (const row of result.ranking) {
+    const topSkipReasons =
+      row.runtimeTopSkipReasons.length === 0
+        ? '(none)'
+        : row.runtimeTopSkipReasons.map((item) => `${item.reason}=${item.count}`).join(', ');
     lines.push(
-      `- ${row.capabilityId}: score=${row.score} artifactProfiles=${row.artifactProfiles} runtimeNodes=${row.runtimeNodes} runtimeSkipSignals=${row.runtimeSkipSignals}`,
+      `- ${row.capabilityId}: score=${row.score} artifactProfiles=${row.artifactProfiles} runtimeNodes=${row.runtimeNodes} runtimeSkipSignals=${row.runtimeSkipSignals} runtimeTopSkipReasons=${topSkipReasons}`,
     );
   }
   return lines.join('\n');
 }
 
 function formatMarkdown(result: HomeyCapabilityCoverageAuditResult): string {
+  const topReasonsSummary =
+    result.summary.runtimeTopSkipReasons.length === 0
+      ? '(none)'
+      : result.summary.runtimeTopSkipReasons
+          .map((row) => `${row.reason}=${row.count}`)
+          .join(', ');
   const lines = [
     '# Homey Capability Coverage Audit',
     '',
@@ -443,6 +523,8 @@ function formatMarkdown(result: HomeyCapabilityCoverageAuditResult): string {
     `- Runtime nodes with skip signals: ${result.summary.runtimeNodesWithSkipSignals}`,
     `- Runtime nodes missing profile in artifact: ${result.summary.runtimeNodesMissingProfileInArtifact}`,
     `- Ranking mode: ${result.summary.mode}`,
+    `- Ranking focus: ${result.summary.focus}`,
+    `- Top runtime skip reasons: ${topReasonsSummary}`,
     '',
     `## Top ${result.ranking.length} capabilities by expansion pressure`,
     '',
@@ -452,11 +534,17 @@ function formatMarkdown(result: HomeyCapabilityCoverageAuditResult): string {
     return lines.join('\n');
   }
 
-  lines.push('| Capability | Score | Artifact Profiles | Runtime Nodes | Runtime Skip Signals |');
-  lines.push('| --- | ---: | ---: | ---: | ---: |');
+  lines.push(
+    '| Capability | Score | Artifact Profiles | Runtime Nodes | Runtime Skip Signals | Top Runtime Skip Reasons |',
+  );
+  lines.push('| --- | ---: | ---: | ---: | ---: | --- |');
   for (const row of result.ranking) {
+    const topSkipReasons =
+      row.runtimeTopSkipReasons.length === 0
+        ? '(none)'
+        : row.runtimeTopSkipReasons.map((item) => `${item.reason}=${item.count}`).join(', ');
     lines.push(
-      `| \`${row.capabilityId}\` | ${row.score} | ${row.artifactProfiles} | ${row.runtimeNodes} | ${row.runtimeSkipSignals} |`,
+      `| \`${row.capabilityId}\` | ${row.score} | ${row.artifactProfiles} | ${row.runtimeNodes} | ${row.runtimeSkipSignals} | ${topSkipReasons} |`,
     );
   }
   return lines.join('\n');
@@ -500,6 +588,7 @@ export async function runHomeyCapabilityCoverageAudit(
   const writeFileImpl = deps.writeFileImpl ?? fs.writeFile;
   const nowIso = deps.nowIso ?? (() => new Date().toISOString());
   const log = io.log ?? ((line: string) => console.log(line));
+  const focus: AuditFocus = command.focus === 'all' ? 'all' : 'actionable';
 
   const artifactRaw = await readFileImpl(command.artifactFile, 'utf8');
   const artifact = parseJson(artifactRaw, command.artifactFile);
@@ -516,6 +605,7 @@ export async function runHomeyCapabilityCoverageAudit(
     ? collectRuntimePressure(runtimeBundle, artifactCoverage.profileCapsById)
     : {
         pressureByCapability: new Map<string, RuntimePressureEntry>(),
+        skipReasonTotals: new Map<string, number>(),
         nodeCount: 0,
         nodesWithKnownProfile: 0,
         nodesWithSkipSignals: 0,
@@ -527,6 +617,7 @@ export async function runHomeyCapabilityCoverageAudit(
     capabilityFrequency: artifactCoverage.capabilityFrequency,
     runtimePressureByCapability: runtimePressure.pressureByCapability,
     top: command.top,
+    focus,
     mode,
   });
 
@@ -539,12 +630,14 @@ export async function runHomeyCapabilityCoverageAudit(
     },
     summary: {
       mode,
+      focus,
       artifactProfiles: artifactCoverage.profileCount,
       artifactCapabilities: artifactCoverage.capabilityFrequency.size,
       runtimeNodes: runtimePressure.nodeCount,
       runtimeNodesWithKnownProfile: runtimePressure.nodesWithKnownProfile,
       runtimeNodesWithSkipSignals: runtimePressure.nodesWithSkipSignals,
       runtimeNodesMissingProfileInArtifact: runtimePressure.nodesWithMissingProfile,
+      runtimeTopSkipReasons: toSortedReasonRows(runtimePressure.skipReasonTotals).slice(0, 5),
     },
     ranking,
   };

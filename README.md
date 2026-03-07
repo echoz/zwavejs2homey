@@ -228,10 +228,14 @@ Run capability expansion pressure audit (compiled artifact + optional support bu
 npm run homey:capability-audit -- \
   --artifact-file co.lazylabs.zwavejs2homey/assets/compiled/compiled-homey-profiles.v1.json \
   --support-bundle-file /tmp/zwjs2homey-support.json \
+  --focus actionable \
   --top 12 \
   --format markdown \
   --output-file /tmp/zwjs2homey-capability-audit.md
 ```
+
+`--focus actionable` (default) ranks only capabilities with live runtime skip signals when a
+support bundle is provided. Use `--focus all` to include zero-signal capabilities.
 
 ## Rules and Artifacts
 
