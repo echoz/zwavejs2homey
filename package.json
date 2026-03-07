@@ -13,6 +13,7 @@
     "build:homey": "npm run compiler:build:bundled && npm run homey:vendor:sync && npm --prefix co.lazylabs.zwavejs2homey run build",
     "homey:runtime-api:smoke": "node tools/homey-runtime-api-smoke.mjs",
     "homey:support-bundle": "node tools/homey-support-bundle.mjs",
+    "homey:capability-audit": "node tools/homey-capability-coverage-audit.mjs",
     "homey:vendor:sync": "node tools/sync-homey-vendor-packages.mjs",
     "check": "npm run format:check && npm run lint && npm run policy:guard && npm run test -w @zwavejs2homey/compiler && npm run test -w @zwavejs2homey/core && npm run test -w @zwavejs2homey/tui && npm --prefix co.lazylabs.zwavejs2homey run test",
     "lint": "npm --prefix co.lazylabs.zwavejs2homey run lint",

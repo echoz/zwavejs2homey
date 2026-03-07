@@ -212,6 +212,17 @@ npm run homey:support-bundle -- \
 
 Both CLIs support optional bridge scoping via `--bridge-id <bridgeId>`.
 
+Run capability expansion pressure audit (compiled artifact + optional support bundle):
+
+```bash
+npm run homey:capability-audit -- \
+  --artifact-file co.lazylabs.zwavejs2homey/assets/compiled/compiled-homey-profiles.v1.json \
+  --support-bundle-file /tmp/zwjs2homey-support.json \
+  --top 12 \
+  --format markdown \
+  --output-file /tmp/zwjs2homey-capability-audit.md
+```
+
 ## Rules and Artifacts
 
 Canonical compile-time inputs:

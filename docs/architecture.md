@@ -282,9 +282,12 @@ Near-term:
    - runtime mapping drift-proofing gates
    - support/log bundle workflow
 2. preserve current pairing/settings reliability baseline while Phase 7 work begins
-3. shift node pairing discovery to aggregate all configured bridges by default:
+3. node pairing discovery now aggregates all configured bridges by default:
    - candidates remain bridge-attributed (`bridgeId + nodeId` identity)
-   - one-bridge discovery failures must not block healthy bridges
+   - one-bridge discovery failures do not block healthy bridges
+4. capability expansion loop is now tooling-backed:
+   - `homey:capability-audit` ranks capability expansion pressure from bundled profiles + runtime support-bundle diagnostics
+   - runtime includes specialized coercion for `measure_battery` and `enum_select` as first Phase 7 expansion slice
 
 After that:
 

@@ -11,13 +11,32 @@ Close Phase 6 Reliability + UX with production-ready stability + diagnostics UX:
 
 ## In Progress
 
-- Phase transition prep:
-  - lock Phase 6 closure state in docs/roadmap
-  - keep gates green while preparing Phase 7 kickoff (capability expansion + custom UX)
-  - pivot node pairing discovery model to aggregate across all configured bridges (instead of bridge-selector-first)
+- Phase 7 capability expansion kickoff:
+  - keep gates green while broadening runtime capability semantics
+  - prioritize capability families using artifact + runtime diagnostics correlation
   - preserve strict package boundaries (`core`/`compiler`/`tui`/Homey app)
 
 ## Recently Completed
+
+- Phase 7 capability-audit tooling slice:
+  - added `homey:capability-audit` CLI for capability expansion pressure ranking
+  - correlates bundled compiled profile capabilities with runtime support-bundle diagnostics
+  - supports both payload shapes:
+    - direct runtime support bundle (`homey-runtime-support-bundle/v1`)
+    - wrapper bundle output (`zwjs2homey-support-bundle/v1`)
+  - added parser + ranking regression coverage:
+    - `packages/core/test/homey-capability-coverage-audit-tool.test.ts`
+
+- Phase 7 capability coercion expansion slice:
+  - added specialized runtime handling for `measure_battery`:
+    - normalizes sentinel battery values (`255 -> 1`)
+    - enforces bounded integer range (`0..100`)
+  - added specialized runtime handling for `enum_select`:
+    - normalizes inbound enum values to stable strings
+    - supports outbound numeric adaptation when target type is numeric
+  - expanded node-runtime + bundled-policy coverage:
+    - `co.lazylabs.zwavejs2homey/test/node-runtime.test.ts`
+    - `co.lazylabs.zwavejs2homey/test/bundled-compiled-artifact.test.ts`
 
 - Bridge deletion cascade slice:
   - deleting a bridge device now triggers cascading delete attempts for node devices bound to the same `bridgeId`
@@ -1692,13 +1711,14 @@ Close Phase 6 Reliability + UX with production-ready stability + diagnostics UX:
 
 ## Next Tasks
 
-1. Implement node pairing aggregate discovery across all configured bridges (candidate attribution by `bridgeId`, partial-failure tolerant).
-2. Keep Homey UX surfaces stable while adding broader capability coverage.
+1. Complete capability coverage audit tooling (`compiled artifact` + runtime `support-bundle` diagnostics correlation) to rank capability expansion pressure.
+2. Expand runtime capability handling for top capability families identified by the audit while preserving existing UX contracts.
 3. Run closure gates on every slice (`npm --prefix co.lazylabs.zwavejs2homey run test`, runtime smoke/support bundle checks).
 
 Note:
 
 - Phase 4 reset sections (through Section 7.3 convergence) are complete.
+- Phase 7 multi-bridge node pairing pivot is complete (bridge-attributed aggregate candidate discovery + partial-failure tolerance).
 
 ## Risks / Unknowns
 

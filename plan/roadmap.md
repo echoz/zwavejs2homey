@@ -229,6 +229,14 @@ Primary focus:
 4. keep recommendation/diagnostics semantics stable while capability breadth grows
 5. maintain bridge-scoped runtime reliability and test gates as non-negotiable baseline
 
+Delivered in early Phase 7 slices:
+
+- node pairing discovery now aggregates candidates across all connected bridges with per-bridge attribution and partial-failure tolerance
+- added capability coverage audit CLI (`homey:capability-audit`) to correlate bundled compiled profiles with runtime support-bundle diagnostics and rank capability expansion pressure
+- expanded runtime specialized capability coercion for:
+  - `measure_battery` (Z-Wave battery sentinel normalization + bounded values)
+  - `enum_select` (stable inbound string normalization + numeric outbound adaptation when target value type is numeric)
+
 ## Active Risks
 
 - recommendation workflow semantics may need refinement during real UX integration

@@ -41,11 +41,11 @@ const RUNTIME_MAPPING_COVERAGE_POLICY = {
     coverageRef: 'test/node-device-harness.test.ts:measure_battery/meter_power/enum_select/locked',
   },
   measure_battery: {
-    coercionMode: 'generic',
+    coercionMode: 'specialized',
     coverageRef: 'test/node-device-harness.test.ts:measure_battery/meter_power/enum_select/locked',
   },
   enum_select: {
-    coercionMode: 'generic',
+    coercionMode: 'specialized',
     coverageRef: 'test/node-device-harness.test.ts:measure_battery/meter_power/enum_select/locked',
   },
   locked: {

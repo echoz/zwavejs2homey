@@ -14,7 +14,11 @@ const {
 test('node-runtime publishes supported transform refs and specialized coercion ids', () => {
   assert.deepEqual(getSupportedInboundTransformRefs(), ['zwave_level_0_99_to_homey_dim']);
   assert.deepEqual(getSupportedOutboundTransformRefs(), ['homey_dim_to_zwave_level_0_99']);
-  assert.deepEqual(getSpecializedCapabilityCoercions(), ['locked']);
+  assert.deepEqual(getSpecializedCapabilityCoercions(), [
+    'enum_select',
+    'locked',
+    'measure_battery',
+  ]);
 });
 
 test('extractCapabilityRuntimeVerticals returns value/set_value runtime-compatible mappings', () => {
@@ -300,6 +304,14 @@ test('coerceCapability inbound/outbound uses transform refs and generic pass-thr
     88,
   );
   assert.equal(
+    coerceCapabilityInboundValue('measure_battery', { value: 255 }, undefined, 'number'),
+    1,
+  );
+  assert.equal(
+    coerceCapabilityInboundValue('measure_battery', { value: 143 }, undefined, 'number'),
+    100,
+  );
+  assert.equal(
     coerceCapabilityInboundValue('meter_power', { value: '12.5' }, undefined, 'number'),
     12.5,
   );
@@ -307,6 +319,7 @@ test('coerceCapability inbound/outbound uses transform refs and generic pass-thr
     coerceCapabilityInboundValue('enum_select', { value: 'secured' }, undefined, 'string'),
     'secured',
   );
+  assert.equal(coerceCapabilityInboundValue('enum_select', { value: 3 }, undefined, 'number'), '3');
   assert.equal(coerceCapabilityInboundValue('locked', { value: 'secured' }), true);
   assert.equal(coerceCapabilityInboundValue('locked', { value: 'unsecured' }), false);
   assert.equal(
@@ -346,6 +359,15 @@ test('coerceCapability inbound/outbound uses transform refs and generic pass-thr
   assert.equal(
     coerceCapabilityOutboundValue('enum_select', { value: 'unsecured' }, undefined, 'string'),
     'unsecured',
+  );
+  assert.equal(
+    coerceCapabilityOutboundValue('enum_select', { value: '2' }, undefined, 'number'),
+    2,
+  );
+  assert.equal(coerceCapabilityOutboundValue('enum_select', 4, undefined, 'string'), '4');
+  assert.equal(
+    coerceCapabilityOutboundValue('measure_battery', { value: 140 }, undefined, 'number'),
+    100,
   );
   assert.equal(coerceCapabilityOutboundValue('alarm_motion', 'off', undefined, 'boolean'), false);
   assert.equal(coerceCapabilityOutboundValue('measure_power', { invalid: true }), undefined);

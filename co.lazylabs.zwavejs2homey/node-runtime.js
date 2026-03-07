@@ -234,13 +234,43 @@ function coerceLockedOutboundValue(value, valueTypeHint) {
         return booleanValue ? 'secured' : 'unsecured';
     return booleanValue;
 }
+function coerceMeasureBatteryValue(value) {
+    const numeric = normalizeNumericValue(value);
+    if (numeric === undefined)
+        return undefined;
+    if (numeric === 255)
+        return 1;
+    return clamp(Math.round(numeric), 0, 100);
+}
+function coerceEnumSelectInboundValue(value) {
+    const payload = extractValueResultPayload(value);
+    if (typeof payload === 'string') {
+        const normalized = payload.trim();
+        return normalized.length > 0 ? normalized : undefined;
+    }
+    if (typeof payload === 'number' && Number.isFinite(payload)) {
+        return String(payload);
+    }
+    return undefined;
+}
+function coerceEnumSelectOutboundValue(value, valueTypeHint) {
+    const selected = coerceEnumSelectInboundValue(value);
+    if (!selected)
+        return undefined;
+    const normalizedType = normalizeComparableValue(valueTypeHint)?.toLowerCase();
+    if (normalizedType === 'number') {
+        const parsed = Number(selected);
+        return Number.isFinite(parsed) ? parsed : undefined;
+    }
+    return selected;
+}
 const INBOUND_TRANSFORMERS = {
     zwave_level_0_99_to_homey_dim: coerceDimInboundTransform,
 };
 const OUTBOUND_TRANSFORMERS = {
     homey_dim_to_zwave_level_0_99: coerceDimOutboundTransform,
 };
-const SPECIALIZED_CAPABILITY_COERCIONS = new Set(['locked']);
+const SPECIALIZED_CAPABILITY_COERCIONS = new Set(['enum_select', 'locked', 'measure_battery']);
 function getSupportedInboundTransformRefs() {
     return Object.keys(INBOUND_TRANSFORMERS).sort();
 }
@@ -259,9 +289,21 @@ function coerceCapabilityInboundValue(capabilityId, value, transformRef, valueTy
         }
     }
     if (SPECIALIZED_CAPABILITY_COERCIONS.has(capabilityId)) {
-        const lockedValue = coerceLockedValue(value);
-        if (lockedValue !== undefined)
-            return lockedValue;
+        if (capabilityId === 'locked') {
+            const lockedValue = coerceLockedValue(value);
+            if (lockedValue !== undefined)
+                return lockedValue;
+        }
+        else if (capabilityId === 'measure_battery') {
+            const batteryValue = coerceMeasureBatteryValue(value);
+            if (batteryValue !== undefined)
+                return batteryValue;
+        }
+        else if (capabilityId === 'enum_select') {
+            const enumValue = coerceEnumSelectInboundValue(value);
+            if (enumValue !== undefined)
+                return enumValue;
+        }
     }
     const typedValue = coerceByValueType(value, valueTypeHint);
     if (typedValue !== undefined)
@@ -284,9 +326,21 @@ function coerceCapabilityOutboundValue(capabilityId, value, transformRef, valueT
         }
     }
     if (SPECIALIZED_CAPABILITY_COERCIONS.has(capabilityId)) {
-        const lockedValue = coerceLockedOutboundValue(value, valueTypeHint);
-        if (lockedValue !== undefined)
-            return lockedValue;
+        if (capabilityId === 'locked') {
+            const lockedValue = coerceLockedOutboundValue(value, valueTypeHint);
+            if (lockedValue !== undefined)
+                return lockedValue;
+        }
+        else if (capabilityId === 'measure_battery') {
+            const batteryValue = coerceMeasureBatteryValue(value);
+            if (batteryValue !== undefined)
+                return batteryValue;
+        }
+        else if (capabilityId === 'enum_select') {
+            const enumValue = coerceEnumSelectOutboundValue(value, valueTypeHint);
+            if (enumValue !== undefined)
+                return enumValue;
+        }
     }
     const typedValue = coerceByValueType(value, valueTypeHint);
     if (typedValue !== undefined)
