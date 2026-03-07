@@ -18,6 +18,8 @@ export interface HomeyCapabilityCoverageAuditCommand {
   top: number;
   format: AuditFormat;
   focus: AuditFocus;
+  minSkipSignals: number;
+  reasonFilter?: string;
   outputFile?: string;
 }
 
@@ -38,6 +40,11 @@ export interface HomeyCapabilityCoverageAuditResult {
     runtimeNodesWithSkipSignals: number;
     runtimeNodesMissingProfileInArtifact: number;
     runtimeTopSkipReasons: Array<{ reason: string; count: number }>;
+    runtimeFilter: {
+      minSkipSignals: number;
+      reason: string | null;
+      applied: boolean;
+    };
   };
   ranking: Array<{
     capabilityId: string;
@@ -45,6 +52,7 @@ export interface HomeyCapabilityCoverageAuditResult {
     artifactProfiles: number;
     runtimeNodes: number;
     runtimeSkipSignals: number;
+    runtimeFilterSignals: number;
     runtimeTopSkipReasons: Array<{ reason: string; count: number }>;
     mode: 'artifact-frequency-only' | 'runtime-diagnostics-weighted';
   }>;
@@ -111,6 +119,8 @@ export function getUsageText(): string {
     '  --format <summary|markdown|json|json-pretty|json-compact>',
     '                                Output format (default: summary)',
     '  --focus <actionable|all>      Ranking focus (default: actionable)',
+    '  --min-skip-signals <n>        Runtime skip-signal threshold (default: 0)',
+    '  --reason <skip-reason>        Filter runtime ranking to one skip reason',
     '  --output-file <path>          Write output to file (otherwise prints to stdout)',
     '  --help                        Show this help',
     '',
@@ -132,6 +142,24 @@ function parsePositiveInt(value: unknown, flag: string): number {
     throw new Error(`${flag} must be a positive integer`);
   }
   return parsed;
+}
+
+function parseNonNegativeInt(value: unknown, flag: string): number {
+  const parsed = Number.parseInt(String(value), 10);
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    throw new Error(`${flag} must be a non-negative integer`);
+  }
+  return parsed;
+}
+
+function hasBareFlag(argv: string[], flag: string): boolean {
+  for (let index = 0; index < argv.length; index += 1) {
+    const token = argv[index];
+    if (token !== flag) continue;
+    const next = argv[index + 1];
+    if (!next || next.startsWith('--')) return true;
+  }
+  return false;
 }
 
 function parseFlagMap(argv: string[]): Map<string, string> {
@@ -199,6 +227,8 @@ export function parseCliArgs(argv: string[]):
       '--top',
       '--format',
       '--focus',
+      '--min-skip-signals',
+      '--reason',
       '--output-file',
     ]);
 
@@ -214,6 +244,18 @@ export function parseCliArgs(argv: string[]):
     const top = parsePositiveInt(flags.get('--top') ?? DEFAULT_TOP, '--top');
     const format = normalizeFormat(flags.get('--format'));
     const focus = normalizeFocus(flags.get('--focus'));
+    const minSkipSignals = parseNonNegativeInt(
+      flags.get('--min-skip-signals') ?? '0',
+      '--min-skip-signals',
+    );
+    if (hasBareFlag(argv, '--reason')) {
+      throw new Error('--reason requires a non-empty value');
+    }
+    const reasonFilterRaw = trimOrUndefined(flags.get('--reason'));
+    const reasonFilter = reasonFilterRaw && reasonFilterRaw !== 'true' ? reasonFilterRaw : undefined;
+    if (flags.has('--reason') && !reasonFilter) {
+      throw new Error('--reason requires a non-empty value');
+    }
     const artifactFile = resolvePath(flags.get('--artifact-file'), DEFAULT_ARTIFACT_FILE);
     const supportBundleValue = trimOrUndefined(flags.get('--support-bundle-file'));
     const supportBundleFile = supportBundleValue ? path.resolve(supportBundleValue) : undefined;
@@ -228,6 +270,8 @@ export function parseCliArgs(argv: string[]):
         top,
         format,
         focus,
+        minSkipSignals,
+        reasonFilter,
         outputFile,
       },
     };
@@ -415,6 +459,8 @@ function toRankingRows(options: {
   runtimePressureByCapability: Map<string, RuntimePressureEntry>;
   top: number;
   focus: AuditFocus;
+  minSkipSignals: number;
+  reasonFilter?: string;
   mode: 'artifact-frequency-only' | 'runtime-diagnostics-weighted';
 }): HomeyCapabilityCoverageAuditResult['ranking'] {
   const allCapabilityIds = new Set<string>([
@@ -432,10 +478,14 @@ function toRankingRows(options: {
     };
     const runtimeNodes = runtimePressure.runtimeNodes ?? 0;
     const runtimeSkipSignals = runtimePressure.runtimeSkipSignals ?? 0;
+    const runtimeFilterSignals =
+      options.reasonFilter && options.reasonFilter.length > 0
+        ? (runtimePressure.runtimeSkipReasonTotals.get(options.reasonFilter) ?? 0)
+        : runtimeSkipSignals;
     const score =
       options.mode === 'artifact-frequency-only'
         ? artifactProfiles
-        : runtimeSkipSignals * 100 + runtimeNodes * 10 + artifactProfiles;
+        : runtimeFilterSignals * 100 + runtimeNodes * 10 + artifactProfiles;
 
     return {
       capabilityId,
@@ -443,6 +493,7 @@ function toRankingRows(options: {
       artifactProfiles,
       runtimeNodes,
       runtimeSkipSignals,
+      runtimeFilterSignals,
       runtimeTopSkipReasons: toSortedReasonRows(runtimePressure.runtimeSkipReasonTotals).slice(0, 3),
       mode: options.mode,
     };
@@ -460,10 +511,20 @@ function toRankingRows(options: {
     return left.capabilityId.localeCompare(right.capabilityId);
   });
 
-  const focusedRows =
-    options.mode === 'runtime-diagnostics-weighted' && options.focus === 'actionable'
-      ? rows.filter((row) => row.runtimeSkipSignals > 0)
-      : rows;
+  let focusedRows = rows;
+  if (options.mode === 'runtime-diagnostics-weighted') {
+    if (options.focus === 'actionable') {
+      focusedRows = focusedRows.filter((row) => row.runtimeSkipSignals > 0);
+    }
+    if (options.reasonFilter && options.reasonFilter.length > 0) {
+      focusedRows = focusedRows.filter((row) => row.runtimeFilterSignals > 0);
+    }
+    if (options.minSkipSignals > 0) {
+      focusedRows = focusedRows.filter(
+        (row) => row.runtimeFilterSignals >= options.minSkipSignals,
+      );
+    }
+  }
 
   return focusedRows.slice(0, options.top);
 }
@@ -485,6 +546,9 @@ function formatSummary(result: HomeyCapabilityCoverageAuditResult): string {
     `Runtime nodes missing profile in artifact: ${result.summary.runtimeNodesMissingProfileInArtifact}`,
     `Ranking mode: ${result.summary.mode}`,
     `Ranking focus: ${result.summary.focus}`,
+    `Runtime min skip signals: ${result.summary.runtimeFilter.minSkipSignals}`,
+    `Runtime reason filter: ${result.summary.runtimeFilter.reason ?? '(none)'}`,
+    `Runtime filter applied: ${result.summary.runtimeFilter.applied ? 'yes' : 'no'}`,
     `Top runtime skip reasons: ${topReasonsSummary}`,
     '',
     `Top ${result.ranking.length} capabilities by expansion pressure:`,
@@ -501,6 +565,7 @@ function formatSummary(result: HomeyCapabilityCoverageAuditResult): string {
         : row.runtimeTopSkipReasons.map((item) => `${item.reason}=${item.count}`).join(', ');
     lines.push(
       `- ${row.capabilityId}: score=${row.score} artifactProfiles=${row.artifactProfiles} runtimeNodes=${row.runtimeNodes} runtimeSkipSignals=${row.runtimeSkipSignals} runtimeTopSkipReasons=${topSkipReasons}`,
+      `  runtimeFilterSignals=${row.runtimeFilterSignals}`,
     );
   }
   return lines.join('\n');
@@ -524,6 +589,9 @@ function formatMarkdown(result: HomeyCapabilityCoverageAuditResult): string {
     `- Runtime nodes missing profile in artifact: ${result.summary.runtimeNodesMissingProfileInArtifact}`,
     `- Ranking mode: ${result.summary.mode}`,
     `- Ranking focus: ${result.summary.focus}`,
+    `- Runtime min skip signals: ${result.summary.runtimeFilter.minSkipSignals}`,
+    `- Runtime reason filter: ${result.summary.runtimeFilter.reason ?? '(none)'}`,
+    `- Runtime filter applied: ${result.summary.runtimeFilter.applied ? 'yes' : 'no'}`,
     `- Top runtime skip reasons: ${topReasonsSummary}`,
     '',
     `## Top ${result.ranking.length} capabilities by expansion pressure`,
@@ -535,16 +603,16 @@ function formatMarkdown(result: HomeyCapabilityCoverageAuditResult): string {
   }
 
   lines.push(
-    '| Capability | Score | Artifact Profiles | Runtime Nodes | Runtime Skip Signals | Top Runtime Skip Reasons |',
+    '| Capability | Score | Artifact Profiles | Runtime Nodes | Runtime Skip Signals | Runtime Filter Signals | Top Runtime Skip Reasons |',
   );
-  lines.push('| --- | ---: | ---: | ---: | ---: | --- |');
+  lines.push('| --- | ---: | ---: | ---: | ---: | ---: | --- |');
   for (const row of result.ranking) {
     const topSkipReasons =
       row.runtimeTopSkipReasons.length === 0
         ? '(none)'
         : row.runtimeTopSkipReasons.map((item) => `${item.reason}=${item.count}`).join(', ');
     lines.push(
-      `| \`${row.capabilityId}\` | ${row.score} | ${row.artifactProfiles} | ${row.runtimeNodes} | ${row.runtimeSkipSignals} | ${topSkipReasons} |`,
+      `| \`${row.capabilityId}\` | ${row.score} | ${row.artifactProfiles} | ${row.runtimeNodes} | ${row.runtimeSkipSignals} | ${row.runtimeFilterSignals} | ${topSkipReasons} |`,
     );
   }
   return lines.join('\n');
@@ -589,6 +657,10 @@ export async function runHomeyCapabilityCoverageAudit(
   const nowIso = deps.nowIso ?? (() => new Date().toISOString());
   const log = io.log ?? ((line: string) => console.log(line));
   const focus: AuditFocus = command.focus === 'all' ? 'all' : 'actionable';
+  const reasonFilter = trimOrUndefined(command.reasonFilter);
+  const minSkipSignals = Number.isFinite(command.minSkipSignals)
+    ? Math.max(0, Math.trunc(command.minSkipSignals))
+    : 0;
 
   const artifactRaw = await readFileImpl(command.artifactFile, 'utf8');
   const artifact = parseJson(artifactRaw, command.artifactFile);
@@ -618,6 +690,8 @@ export async function runHomeyCapabilityCoverageAudit(
     runtimePressureByCapability: runtimePressure.pressureByCapability,
     top: command.top,
     focus,
+    minSkipSignals,
+    reasonFilter,
     mode,
   });
 
@@ -638,6 +712,11 @@ export async function runHomeyCapabilityCoverageAudit(
       runtimeNodesWithSkipSignals: runtimePressure.nodesWithSkipSignals,
       runtimeNodesMissingProfileInArtifact: runtimePressure.nodesWithMissingProfile,
       runtimeTopSkipReasons: toSortedReasonRows(runtimePressure.skipReasonTotals).slice(0, 5),
+      runtimeFilter: {
+        minSkipSignals,
+        reason: reasonFilter ?? null,
+        applied: mode === 'runtime-diagnostics-weighted',
+      },
     },
     ranking,
   };

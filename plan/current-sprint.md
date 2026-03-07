@@ -36,6 +36,17 @@ Close Phase 6 Reliability + UX with production-ready stability + diagnostics UX:
   - expanded regression coverage in:
     - `packages/core/test/homey-capability-coverage-audit-tool.test.ts`
 
+- Phase 7 capability-audit drilldown filters slice:
+  - added runtime drilldown flags to `homey:capability-audit`:
+    - `--min-skip-signals <n>`
+    - `--reason <skip-reason>`
+  - runtime-weighted scoring/filtering now pivots on the filtered signal lane when `--reason` is set
+  - summary/markdown output now shows:
+    - active runtime filter config
+    - per-capability `runtimeFilterSignals`
+  - expanded parser + filter-behavior regressions in:
+    - `packages/core/test/homey-capability-coverage-audit-tool.test.ts`
+
 - Phase 7 capability coercion expansion slice:
   - added specialized runtime handling for `measure_battery`:
     - normalizes sentinel battery values (`255 -> 1`)

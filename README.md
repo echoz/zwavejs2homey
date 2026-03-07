@@ -229,6 +229,8 @@ npm run homey:capability-audit -- \
   --artifact-file co.lazylabs.zwavejs2homey/assets/compiled/compiled-homey-profiles.v1.json \
   --support-bundle-file /tmp/zwjs2homey-support.json \
   --focus actionable \
+  --min-skip-signals 2 \
+  --reason missing-writeable-selector \
   --top 12 \
   --format markdown \
   --output-file /tmp/zwjs2homey-capability-audit.md
@@ -236,6 +238,7 @@ npm run homey:capability-audit -- \
 
 `--focus actionable` (default) ranks only capabilities with live runtime skip signals when a
 support bundle is provided. Use `--focus all` to include zero-signal capabilities.
+Add `--min-skip-signals` and `--reason` to narrow ranking to one runtime skip-pressure lane.
 
 ## Rules and Artifacts
 
