@@ -2,123 +2,84 @@
 <html>
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Configure Bridge</title>
     <style>
-      :root {
-        color-scheme: light dark;
-        --bg: #f6f8fb;
-        --panel: #ffffff;
-        --panel-border: #d8dfec;
-        --text: #1f2937;
-        --muted: #64748b;
-        --accent: #1d4ed8;
+      * {
+        box-sizing: border-box;
       }
 
       body {
-        margin: 0;
+        margin: 0 auto;
         padding: 16px;
-        background: var(--bg);
-        color: var(--text);
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        max-inline-size: 640px;
       }
 
-      .panel {
-        background: var(--panel);
-        border: 1px solid var(--panel-border);
-        border-radius: 12px;
-        padding: 16px;
+      .bridge-meta {
+        display: grid;
+        grid-template-columns: 96px 1fr;
+        gap: 6px 12px;
+        font-size: 14px;
       }
 
-      h1 {
-        margin: 0 0 10px;
-        font-size: 18px;
+      .bridge-meta-key {
+        opacity: 0.75;
       }
 
-      .meta {
-        font-size: 12px;
-        color: var(--muted);
-        margin-bottom: 12px;
+      .bridge-meta-value {
+        overflow-wrap: anywhere;
       }
 
-      .pill {
+      .status-pill {
         display: inline-flex;
         align-items: center;
-        padding: 2px 8px;
+        inline-size: fit-content;
+        padding: 2px 10px;
         border-radius: 999px;
-        font-size: 11px;
+        font-size: 12px;
         border: 1px solid transparent;
       }
 
-      .pill.ok {
-        color: #0f766e;
-        background: rgba(15, 118, 110, 0.1);
-        border-color: rgba(15, 118, 110, 0.35);
+      .status-pill.ok {
+        color: #1d7a3f;
+        background: rgba(29, 122, 63, 0.12);
+        border-color: rgba(29, 122, 63, 0.38);
       }
 
-      .pill.warn {
-        color: #b45309;
-        background: rgba(180, 83, 9, 0.1);
-        border-color: rgba(180, 83, 9, 0.35);
+      .status-pill.warn {
+        color: #9a5a05;
+        background: rgba(154, 90, 5, 0.12);
+        border-color: rgba(154, 90, 5, 0.38);
       }
 
-      form {
+      .token-hint {
+        margin-top: 8px;
+        font-size: 12px;
+        opacity: 0.7;
+      }
+
+      .actions {
         display: grid;
+        grid-template-columns: 1fr;
         gap: 10px;
       }
 
-      label {
-        font-size: 12px;
-        color: var(--muted);
-        display: grid;
-        gap: 4px;
+      @media (min-width: 500px) {
+        .actions {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
       }
 
-      input,
-      select {
-        border: 1px solid var(--panel-border);
-        border-radius: 8px;
-        padding: 8px 10px;
-        font-size: 14px;
-        background: var(--panel);
-        color: var(--text);
+      .status-line {
+        margin-top: 16px;
+        font-size: 13px;
+        opacity: 0.85;
       }
 
-      .hint {
-        font-size: 12px;
-        color: var(--muted);
-      }
-
-      .button-group {
-        display: flex;
-        gap: 8px;
+      .error-line {
         margin-top: 8px;
-      }
-
-      .button {
-        border: 1px solid var(--accent);
-        background: transparent;
-        color: var(--accent);
-        border-radius: 10px;
-        padding: 10px 12px;
-        font-size: 14px;
-        cursor: pointer;
-      }
-
-      .button.secondary {
-        border-color: var(--panel-border);
-        color: var(--text);
-      }
-
-      .status {
-        margin-top: 10px;
-        font-size: 12px;
-        color: var(--muted);
-      }
-
-      .error {
-        margin-top: 6px;
-        font-size: 12px;
-        color: #b91c1c;
+        color: #ba1a1a;
+        font-size: 13px;
       }
 
       .disabled {
@@ -128,44 +89,70 @@
     </style>
   </head>
   <body>
-    <section class="panel">
-      <h1>Configure Bridge Connection</h1>
-      <p class="meta">
-        Bridge: <strong id="bridge-name">Bridge</strong> (<span id="bridge-id">main</span>) ·
-        <span id="pair-status"><span class="pill warn">Loading</span></span>
+    <header class="homey-header">
+      <h1 class="homey-title">Configure Bridge Connection</h1>
+      <p class="homey-subtitle">
+        Set the Z-Wave JS UI WebSocket URL and authentication for this bridge.
       </p>
+    </header>
 
-      <form id="bridge-config-form">
-        <label>
-          WebSocket URL
-          <input id="zwjs-url" type="text" placeholder="ws://192.168.1.15:3000" />
-        </label>
-
-        <label>
-          Auth Type
-          <select id="zwjs-auth-type">
-            <option value="none">None</option>
-            <option value="bearer">Bearer Token</option>
-          </select>
-        </label>
-
-        <div id="zwjs-token-wrap" hidden>
-          <label>
-            Bearer Token
-            <input id="zwjs-token" type="password" placeholder="token" />
-          </label>
-          <div id="zwjs-token-hint" class="hint"></div>
+    <form id="bridge-config-form" class="homey-form" novalidate>
+      <fieldset class="homey-form-fieldset">
+        <legend class="homey-form-legend">Bridge</legend>
+        <div class="bridge-meta">
+          <div class="bridge-meta-key">Name</div>
+          <div class="bridge-meta-value" id="bridge-name">Bridge</div>
+          <div class="bridge-meta-key">Bridge ID</div>
+          <div class="bridge-meta-value" id="bridge-id">main</div>
+          <div class="bridge-meta-key">Pairing</div>
+          <div class="bridge-meta-value" id="pair-status">
+            <span class="status-pill warn">Loading</span>
+          </div>
         </div>
-      </form>
+      </fieldset>
 
-      <div class="button-group">
-        <button id="save-btn" class="button">Save Connection</button>
-        <button id="done-btn" class="button secondary">Done</button>
+      <fieldset class="homey-form-fieldset">
+        <legend class="homey-form-legend">Connection</legend>
+        <div class="homey-form-group">
+          <label class="homey-form-label" for="zwjs-url">WebSocket URL</label>
+          <input
+            id="zwjs-url"
+            class="homey-form-input"
+            type="url"
+            placeholder="ws://192.168.1.15:3000"
+            autocomplete="off"
+          />
+        </div>
+
+        <div class="homey-form-group">
+          <label class="homey-form-label" for="zwjs-auth-type">Authentication</label>
+          <select id="zwjs-auth-type" class="homey-form-select">
+            <option value="none">None</option>
+            <option value="bearer">Bearer token</option>
+          </select>
+        </div>
+
+        <div id="zwjs-token-wrap" class="homey-form-group" hidden>
+          <label class="homey-form-label" for="zwjs-token">Bearer token</label>
+          <input
+            id="zwjs-token"
+            class="homey-form-input"
+            type="password"
+            placeholder="Paste token"
+            autocomplete="off"
+          />
+          <p id="zwjs-token-hint" class="token-hint"></p>
+        </div>
+      </fieldset>
+
+      <div class="actions">
+        <button id="save-btn" type="button" class="homey-button-primary-full">Save connection</button>
+        <button id="done-btn" type="button" class="homey-button-secondary-shadow">Done</button>
       </div>
 
-      <div id="status-line" class="status">Loading bridge context...</div>
-      <div id="error-line" class="error" hidden></div>
-    </section>
+      <p id="status-line" class="status-line">Loading bridge context...</p>
+      <p id="error-line" class="error-line" hidden></p>
+    </form>
 
     <script src="./bridge_config.presenter.js"></script>
     <script src="./bridge_config.page.js"></script>

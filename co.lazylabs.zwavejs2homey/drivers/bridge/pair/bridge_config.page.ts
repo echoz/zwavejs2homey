@@ -112,8 +112,8 @@ declare const Homey: PairHomey;
     bridgeName.textContent = viewModel.bridgeLabel;
     bridgeId.textContent = viewModel.bridgeId;
     pairStatus.innerHTML = viewModel.paired
-      ? '<span class="pill ok">Paired</span>'
-      : '<span class="pill warn">Not paired yet</span>';
+      ? '<span class="status-pill ok">Paired</span>'
+      : '<span class="status-pill warn">Not paired yet</span>';
 
     if (document.activeElement !== urlInput || !urlInput.value) {
       urlInput.value = viewModel.url;
