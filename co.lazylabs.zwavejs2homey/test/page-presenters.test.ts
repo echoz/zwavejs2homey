@@ -107,6 +107,12 @@ test('settings presenter parses runtime diagnostics and builds warning-aware vie
   const runtimeData = {
     bridgeId: 'main',
     generatedAt: '2026-03-03T12:00:00.000Z',
+    diagnosticsRefresh: {
+      lastSuccessAt: '2026-03-03T11:55:00.000Z',
+      lastFailureAt: '2026-03-03T11:54:00.000Z',
+      lastFailureReason: 'Driver Not Initialized: bridge',
+      lastReason: 'startup',
+    },
     zwjs: {
       available: true,
       transportConnected: false,
@@ -138,6 +144,10 @@ test('settings presenter parses runtime diagnostics and builds warning-aware vie
 
   const viewModel = settingsPresenter.buildRuntimeViewModel(runtimeData);
   assert.equal(rowValue(viewModel, 'Runtime Status'), 'Bridge Disconnected');
+  assert.equal(rowValue(viewModel, 'Diagnostics Refresh'), 'Failed');
+  assert.equal(rowValue(viewModel, 'Diagnostics Last Reason'), 'startup');
+  assert.notEqual(rowValue(viewModel, 'Diagnostics Last Success'), 'n/a');
+  assert.notEqual(rowValue(viewModel, 'Diagnostics Last Failure'), 'n/a');
   assert.equal(rowValue(viewModel, 'Imported Nodes'), '3');
   assert.equal(rowValue(viewModel, 'Action Needed'), '2');
   assert.equal(rowValue(viewModel, 'Profile Updates'), '1');
@@ -151,6 +161,34 @@ test('settings presenter parses runtime diagnostics and builds warning-aware vie
     'Curation runtime failed to load. Device overrides may be unavailable.',
   ]);
   assert.equal(viewModel.runtimeHint, '2 imported node(s) need attention in Bridge Tools.');
+
+  const noActionRuntimeData = {
+    bridgeId: 'main',
+    diagnosticsRefresh: {
+      lastSuccessAt: null,
+      lastFailureAt: '2026-03-03T11:54:00.000Z',
+      lastFailureReason: 'Bridge device missing onRuntimeDiagnosticsRefresh handler',
+      lastReason: 'startup',
+    },
+    zwjs: {
+      available: true,
+      transportConnected: true,
+      lifecycle: 'connected',
+      serverVersion: '1.0.0',
+    },
+    compiledProfiles: {
+      loaded: true,
+    },
+    curation: {
+      loaded: true,
+    },
+    nodes: [],
+  };
+  const noActionViewModel = settingsPresenter.buildRuntimeViewModel(noActionRuntimeData);
+  assert.equal(
+    noActionViewModel.runtimeHint,
+    'Diagnostics refresh failed: Bridge device missing onRuntimeDiagnosticsRefresh handler',
+  );
 });
 
 test('settings presenter parses and exports support bundles with optional redaction', () => {

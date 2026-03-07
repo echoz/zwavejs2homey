@@ -39,6 +39,12 @@ interface RuntimeNode {
 interface RuntimeData {
   bridgeId?: unknown;
   generatedAt?: unknown;
+  diagnosticsRefresh?: {
+    lastSuccessAt?: unknown;
+    lastFailureAt?: unknown;
+    lastFailureReason?: unknown;
+    lastReason?: unknown;
+  };
   zwjs?: {
     available?: unknown;
     transportConnected?: unknown;
@@ -372,6 +378,21 @@ interface UiRoot {
       return 'Ready, No Nodes Imported';
     }
 
+    function diagnosticsRefreshStatusLabel(data: RuntimeData): string {
+      const refresh =
+        data && typeof data === 'object' && data.diagnosticsRefresh
+          ? data.diagnosticsRefresh
+          : null;
+      if (!refresh || typeof refresh !== 'object') return 'n/a';
+      const failureReason =
+        typeof refresh.lastFailureReason === 'string' ? refresh.lastFailureReason.trim() : '';
+      if (failureReason.length > 0) return 'Failed';
+      const successAt =
+        typeof refresh.lastSuccessAt === 'string' ? refresh.lastSuccessAt.trim() : '';
+      if (successAt.length > 0) return 'Healthy';
+      return 'n/a';
+    }
+
     function buildRuntimeViewModel(data: RuntimeData): RuntimeViewModel {
       const nodes = toRuntimeNodes(data);
       const backfillNeeded = nodes.filter(
@@ -395,6 +416,26 @@ interface UiRoot {
           { key: 'ZWJS', value: connectionPill(data.zwjs), kind: 'pill' },
           { key: 'Lifecycle', value: asText(data.zwjs && data.zwjs.lifecycle), kind: 'text' },
           { key: 'ZWJS Server', value: asText(data.zwjs && data.zwjs.serverVersion), kind: 'text' },
+          {
+            key: 'Diagnostics Refresh',
+            value: diagnosticsRefreshStatusLabel(data),
+            kind: 'text',
+          },
+          {
+            key: 'Diagnostics Last Success',
+            value: formatIso(data.diagnosticsRefresh && data.diagnosticsRefresh.lastSuccessAt),
+            kind: 'text',
+          },
+          {
+            key: 'Diagnostics Last Failure',
+            value: formatIso(data.diagnosticsRefresh && data.diagnosticsRefresh.lastFailureAt),
+            kind: 'text',
+          },
+          {
+            key: 'Diagnostics Last Reason',
+            value: asText(data.diagnosticsRefresh && data.diagnosticsRefresh.lastReason),
+            kind: 'text',
+          },
           { key: 'Imported Nodes', value: asText(nodes.length), kind: 'text' },
           { key: 'Action Needed', value: asText(actionableCount), kind: 'text' },
           { key: 'Profile Updates', value: asText(updatesAvailable), kind: 'text' },
@@ -417,7 +458,10 @@ interface UiRoot {
         runtimeHint:
           actionableCount > 0
             ? `${actionableCount} imported node(s) need attention in Bridge Tools.`
-            : 'No immediate runtime actions are required.',
+            : typeof data.diagnosticsRefresh?.lastFailureReason === 'string' &&
+                data.diagnosticsRefresh.lastFailureReason.trim().length > 0
+              ? `Diagnostics refresh failed: ${data.diagnosticsRefresh.lastFailureReason.trim()}`
+              : 'No immediate runtime actions are required.',
       };
     }
 

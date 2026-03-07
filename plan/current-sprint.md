@@ -2,7 +2,7 @@
 
 ## Goal
 
-Kick off Phase 6 Reliability + UX delivery:
+Close Phase 6 Reliability + UX with production-ready stability + diagnostics UX:
 
 - preserve Phase 5 stability while advancing reliability hardening and UX clarity
 - keep runtime mapping/capability behavior deterministic and test-backed
@@ -11,12 +11,9 @@ Kick off Phase 6 Reliability + UX delivery:
 
 ## In Progress
 
-- Phase 6 reliability + UX pass:
-  - keep pairing/settings/repair UX defect-driven (MVP-frozen baseline)
-  - expand reliability gates that prevent runtime mapping policy drift
-  - continue diagnostics clarity improvements that reduce operator ambiguity
-  - add support/log bundle workflow for operator troubleshooting handoffs
-  - keep docs/ADRs/roadmap synchronized as priorities move from MVP closure to reliability/UX hardening
+- Phase transition prep:
+  - lock Phase 6 closure state in docs/roadmap
+  - keep gates green while preparing Phase 7 kickoff (capability expansion + custom UX)
   - preserve strict package boundaries (`core`/`compiler`/`tui`/Homey app)
 
 ## Recently Completed
@@ -1688,7 +1685,9 @@ Kick off Phase 6 Reliability + UX delivery:
 
 ## Next Tasks
 
-1. Continue Phase 6 reliability + UX slices on Homey adapter surfaces (pairing/settings/repair defects + diagnostics clarity).
+1. Kick off Phase 7 capability expansion slices with strict test-first/runtime-safe constraints.
+2. Keep Homey UX surfaces stable while adding broader capability coverage.
+3. Run closure gates on every slice (`npm --prefix co.lazylabs.zwavejs2homey run test`, runtime smoke/support bundle checks).
 
 Note:
 

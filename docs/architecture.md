@@ -274,18 +274,17 @@ Primary gate: `npm run check`
 
 Near-term:
 
-1. close Phase 6 reliability + UX scope:
+1. Phase 6 closure is complete:
    - settings/pairing/repair diagnostics clarity
    - runtime mapping drift-proofing gates
    - support/log bundle workflow
-2. keep pairing/settings flows defect-driven while preserving MVP template constraints
-3. add explicit node-pair bridge selection UX when multiple bridge sessions are connected
+2. preserve current pairing/settings reliability baseline while Phase 7 work begins
 
 After that:
 
 1. per-node capability expansion and broader runtime vertical coverage
-2. non-production parity validation for deferred protocol domains
-3. deeper custom pairing views for richer bridge/node onboarding UX beyond system template constraints
+2. deeper custom UX where Homey system templates are too constrained
+3. non-production parity validation for deferred protocol domains
 
 ## Key ADRs
 

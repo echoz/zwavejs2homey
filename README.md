@@ -21,9 +21,10 @@ It is built as four explicit layers:
 - Phase 3 compiler: complete for MVP goals (second catalog source adapter deferred)
 - Phase 4 TUI: complete
 - Phase 5 Homey adapter MVP: complete
-- Phase 6 reliability + UX: active (settings/pairing/repair clarity, runtime mapping guardrails, support/log bundle workflows)
+- Phase 6 reliability + UX: complete
+- Phase 7 capability expansion + custom UX: planned
 
-Per-node capability expansion is intentionally deferred until after Phase 6 closure.
+Per-node capability expansion is now the primary next-phase focus.
 
 ## Architecture At A Glance
 

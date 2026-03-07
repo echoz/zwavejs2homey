@@ -1,6 +1,6 @@
 # Roadmap
 
-## Snapshot (2026-03-06)
+## Snapshot (2026-03-07)
 
 ```text
 Phase 1  Foundation                  [DONE]
@@ -8,7 +8,8 @@ Phase 2  ZwjsClient core             [DONE*]
 Phase 3  Homey compiler              [DONE*]
 Phase 4  TUI explorer/curation       [DONE]
 Phase 5  Homey adapter MVP           [DONE]
-Phase 6  Reliability + UX            [ACTIVE]
+Phase 6  Reliability + UX            [DONE]
+Phase 7  Capability Expansion + UX   [PLANNED]
 
 * remaining deferred items are environment-dependent follow-ups
 ```
@@ -164,7 +165,7 @@ Exit criteria:
 - curation diagnostics are actionable for operators/users
 - stable runtime behavior under app restart/settings reload/node event churn
 
-## Phase 6 — Reliability + UX (Active)
+## Phase 6 — Reliability + UX (Done)
 
 Active focus:
 
@@ -211,6 +212,21 @@ Delivered in Phase 6 so far:
   - app now tracks per-bridge diagnostics refresh success/failure markers
   - `GET /runtime/bridges` and bridge-scoped diagnostics now expose refresh timestamps + last failure reason
   - settings bridge table + bridge tools surface those markers for faster triage
+
+Exit checkpoint:
+
+- settings/pairing/repair reliability slices and UX hardening landed with passing gates
+- diagnostics surfaces now include bridge-scoped telemetry, stale-response guards, panel liveness coverage, and support-bundle workflows
+- no open Phase 6 blockers remain; next work moves to capability expansion + richer UX
+
+## Phase 7 — Capability Expansion + Custom UX (Planned)
+
+Primary focus:
+
+1. expand per-node capability mapping breadth from current vertical baseline
+2. add richer custom UX where Homey system templates are too constrained
+3. keep recommendation/diagnostics semantics stable while capability breadth grows
+4. maintain bridge-scoped runtime reliability and test gates as non-negotiable baseline
 
 ## Active Risks
 
