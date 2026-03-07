@@ -17,6 +17,8 @@ test('parseCliArgs validates required and optional runtime API smoke flags', asy
     'http://127.0.0.1:1234/api/app/co.lazylabs.zwavejs2homey/',
     '--token',
     'abc123',
+    '--bridge-id',
+    'bridge-2',
     '--read-device-id',
     'main:8',
     '--smoke-device-id',
@@ -29,6 +31,7 @@ test('parseCliArgs validates required and optional runtime API smoke flags', asy
   assert.equal(parsed.ok, true);
   assert.equal(parsed.command.baseUrl, 'http://127.0.0.1:1234/api/app/co.lazylabs.zwavejs2homey');
   assert.equal(parsed.command.token, 'abc123');
+  assert.equal(parsed.command.bridgeId, 'bridge-2');
   assert.equal(parsed.command.readDeviceId, 'main:8');
   assert.equal(parsed.command.smokeDeviceId, 'main:999');
   assert.equal(parsed.command.timeoutMs, 5000);
@@ -38,6 +41,7 @@ test('parseCliArgs validates required and optional runtime API smoke flags', asy
 test('buildSmokeRouteRequests covers all runtime routes', async () => {
   const { buildSmokeRouteRequests } = await loadLib();
   const requests = buildSmokeRouteRequests({
+    bridgeId: 'bridge-2',
     readDeviceId: 'main:8',
     smokeDeviceId: '__smoke_invalid__',
   });
@@ -55,8 +59,11 @@ test('buildSmokeRouteRequests covers all runtime routes', async () => {
     ],
   );
   assert.equal(requests[1].query.homeyDeviceId, 'main:8');
+  assert.equal(requests[1].query.bridgeId, 'bridge-2');
   assert.equal(requests[2].query.includeNoAction, true);
+  assert.equal(requests[2].query.bridgeId, 'bridge-2');
   assert.equal(requests[4].body.homeyDeviceId, '__smoke_invalid__');
+  assert.equal(requests[5].body.bridgeId, 'bridge-2');
 });
 
 test('runHomeyRuntimeApiSmoke succeeds when all route envelopes validate', async () => {
@@ -68,6 +75,7 @@ test('runHomeyRuntimeApiSmoke succeeds when all route envelopes validate', async
     {
       baseUrl: 'http://127.0.0.1:1234/api/app/co.lazylabs.zwavejs2homey',
       token: undefined,
+      bridgeId: undefined,
       readDeviceId: undefined,
       smokeDeviceId: '__smoke_invalid__',
       timeoutMs: 1000,
@@ -114,6 +122,7 @@ test('runHomeyRuntimeApiSmoke fails when envelope schema is invalid', async () =
         {
           baseUrl: 'http://127.0.0.1:1234/api/app/co.lazylabs.zwavejs2homey',
           token: undefined,
+          bridgeId: undefined,
           readDeviceId: undefined,
           smokeDeviceId: '__smoke_invalid__',
           timeoutMs: 1000,

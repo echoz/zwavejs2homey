@@ -26,6 +26,7 @@ export function getUsageText() {
     '',
     'Options:',
     '  --token <token>           Bearer token for Authorization header',
+    '  --bridge-id <id>          Optional bridge filter for support-bundle snapshot',
     '  --homey-device-id <id>    Optional node filter for support-bundle snapshot',
     '  --include-no-action <b>   Include non-actionable recommendations (default: true)',
     `  --timeout-ms <n>          Request timeout in milliseconds (default: ${DEFAULT_TIMEOUT_MS})`,
@@ -90,6 +91,7 @@ export function parseCliArgs(argv) {
     const args = [...argv];
     let baseUrl;
     let token;
+    let bridgeId;
     let homeyDeviceId;
     let includeNoAction = true;
     let timeoutMs = DEFAULT_TIMEOUT_MS;
@@ -109,6 +111,11 @@ export function parseCliArgs(argv) {
       if (flag === '--token') {
         token = args.shift();
         if (!token) throw new Error('--token requires a value');
+        continue;
+      }
+      if (flag === '--bridge-id') {
+        bridgeId = args.shift();
+        if (!bridgeId) throw new Error('--bridge-id requires a value');
         continue;
       }
       if (flag === '--homey-device-id') {
@@ -152,6 +159,7 @@ export function parseCliArgs(argv) {
       command: {
         baseUrl: normalizeBaseUrl(baseUrl),
         token: trimOrUndefined(token),
+        bridgeId: trimOrUndefined(bridgeId),
         homeyDeviceId: trimOrUndefined(homeyDeviceId),
         includeNoAction,
         timeoutMs,
@@ -240,6 +248,9 @@ export function buildSupportBundleRequests(command) {
   const query = {
     includeNoAction: command.includeNoAction,
   };
+  if (command.bridgeId) {
+    query.bridgeId = command.bridgeId;
+  }
   if (command.homeyDeviceId) {
     query.homeyDeviceId = command.homeyDeviceId;
   }
@@ -369,6 +380,7 @@ export function renderSupportBundle(bundle, format) {
     lines.push('');
     lines.push(`- Generated: ${bundle.generatedAt}`);
     lines.push(`- Base URL: ${bundle.source.baseUrl}`);
+    lines.push(`- Bridge Filter: ${bundle.source.bridgeId ?? '<none>'}`);
     lines.push(`- Device Filter: ${bundle.source.homeyDeviceId ?? '<none>'}`);
     lines.push(`- Include No Action: ${bundle.source.includeNoAction ? 'yes' : 'no'}`);
     lines.push(`- Redacted: ${bundle.source.redacted ? 'yes' : 'no'}`);
@@ -428,6 +440,7 @@ export async function runHomeySupportBundle(command, logger = console, deps = {}
     generatedAt: nowIso(),
     source: {
       baseUrl: command.baseUrl,
+      bridgeId: command.bridgeId ?? null,
       homeyDeviceId: command.homeyDeviceId ?? null,
       includeNoAction: command.includeNoAction,
       timeoutMs: command.timeoutMs,

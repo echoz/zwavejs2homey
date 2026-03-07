@@ -114,6 +114,7 @@ Use the runtime smoke command to verify route reachability and envelope shape ag
 ```bash
 npm run homey:runtime-api:smoke -- \
   --base-url http://HOMEY/api/app/co.lazylabs.zwavejs2homey \
+  --bridge-id main \
   --token <homey-token> \
   --format table
 ```
@@ -130,6 +131,7 @@ Use the support bundle command to capture a shareable snapshot of diagnostics + 
 ```bash
 npm run homey:support-bundle -- \
   --base-url http://HOMEY/api/app/co.lazylabs.zwavejs2homey \
+  --bridge-id main \
   --token <homey-token> \
   --format markdown \
   --output-file /tmp/zwjs2homey-support.md \
@@ -141,4 +143,5 @@ Notes:
 - This command is read-only.
 - It calls:
   - `GET /runtime/support-bundle`
+- `--bridge-id` scopes diagnostics/support-bundle snapshots to a specific bridge.
 - `--redact-share` redacts sensitive text fields for safer external sharing.

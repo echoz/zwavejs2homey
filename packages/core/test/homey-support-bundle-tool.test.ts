@@ -20,6 +20,8 @@ test('parseCliArgs parses explicit support bundle options', async () => {
     'http://127.0.0.1:1234/api/app/co.lazylabs.zwavejs2homey/',
     '--token',
     'abc123',
+    '--bridge-id',
+    'bridge-2',
     '--homey-device-id',
     'main:8',
     '--include-no-action',
@@ -36,6 +38,7 @@ test('parseCliArgs parses explicit support bundle options', async () => {
   assert.equal(parsed.ok, true);
   assert.equal(parsed.command.baseUrl, 'http://127.0.0.1:1234/api/app/co.lazylabs.zwavejs2homey');
   assert.equal(parsed.command.token, 'abc123');
+  assert.equal(parsed.command.bridgeId, 'bridge-2');
   assert.equal(parsed.command.homeyDeviceId, 'main:8');
   assert.equal(parsed.command.includeNoAction, false);
   assert.equal(parsed.command.timeoutMs, 5000);
@@ -47,11 +50,13 @@ test('parseCliArgs parses explicit support bundle options', async () => {
 test('runHomeySupportBundle produces summary with route outcomes', async () => {
   const { runHomeySupportBundle } = await loadLib();
   const logs = [];
+  const invokeCalls = [];
 
   const bundle = await runHomeySupportBundle(
     {
       baseUrl: 'http://127.0.0.1:1234/api/app/co.lazylabs.zwavejs2homey',
       token: undefined,
+      bridgeId: undefined,
       homeyDeviceId: undefined,
       includeNoAction: true,
       timeoutMs: 1000,
@@ -62,7 +67,8 @@ test('runHomeySupportBundle produces summary with route outcomes', async () => {
     { log: (line) => logs.push(line) },
     {
       nowIso: () => '2026-03-06T00:00:00.000Z',
-      invokeRouteImpl: async () => {
+      invokeRouteImpl: async (_command, request) => {
+        invokeCalls.push(request);
         return {
           url: 'http://example.test/runtime/support-bundle',
           status: 200,
@@ -89,6 +95,8 @@ test('runHomeySupportBundle produces summary with route outcomes', async () => {
   assert.equal(bundle.summary.routesFailed, 0);
   assert.equal(bundle.summary.diagnosticsNodeCount, 2);
   assert.equal(bundle.summary.actionableRecommendations, 1);
+  assert.equal(bundle.source.bridgeId, null);
+  assert.deepEqual(invokeCalls[0].query, { includeNoAction: true });
   assert.equal(logs.length, 1);
 });
 
@@ -96,11 +104,13 @@ test('runHomeySupportBundle supports output-file write and redaction mode', asyn
   const { runHomeySupportBundle } = await loadLib();
   const writes = [];
   const logs = [];
+  const invokeCalls = [];
 
   const bundle = await runHomeySupportBundle(
     {
       baseUrl: 'http://127.0.0.1:1234/api/app/co.lazylabs.zwavejs2homey',
       token: 'secret',
+      bridgeId: 'bridge-2',
       homeyDeviceId: 'main:8',
       includeNoAction: true,
       timeoutMs: 1000,
@@ -111,21 +121,24 @@ test('runHomeySupportBundle supports output-file write and redaction mode', asyn
     { log: (line) => logs.push(line) },
     {
       nowIso: () => '2026-03-06T00:00:00.000Z',
-      invokeRouteImpl: async (_command, request) => ({
-        url: `http://example.test${request.path}`,
-        status: 200,
-        envelope: {
-          schemaVersion: 'zwjs2homey-api/v1',
-          ok: true,
-          data: {
-            homeyDeviceId: 'main:8',
-            name: 'Bedroom Lamp',
-            location: 'Bedroom',
-            nodes: [{ homeyDeviceId: 'main:8', name: 'Bedroom Lamp' }],
+      invokeRouteImpl: async (_command, request) => {
+        invokeCalls.push(request);
+        return {
+          url: `http://example.test${request.path}`,
+          status: 200,
+          envelope: {
+            schemaVersion: 'zwjs2homey-api/v1',
+            ok: true,
+            data: {
+              homeyDeviceId: 'main:8',
+              name: 'Bedroom Lamp',
+              location: 'Bedroom',
+              nodes: [{ homeyDeviceId: 'main:8', name: 'Bedroom Lamp' }],
+            },
+            error: null,
           },
-          error: null,
-        },
-      }),
+        };
+      },
       writeFileImpl: async (filePath, contents, encoding) => {
         writes.push({ filePath, contents, encoding });
       },
@@ -133,10 +146,16 @@ test('runHomeySupportBundle supports output-file write and redaction mode', asyn
   );
 
   assert.equal(bundle.source.baseUrl, '<redacted>');
+  assert.equal(bundle.source.bridgeId, 'bridge-2');
   assert.equal(bundle.source.homeyDeviceId, '<redacted>');
   assert.equal(bundle.routes.supportBundle.data.homeyDeviceId, '<redacted>');
   assert.equal(bundle.routes.supportBundle.data.name, '<redacted>');
   assert.equal(bundle.routes.supportBundle.data.location, '<redacted>');
+  assert.deepEqual(invokeCalls[0].query, {
+    includeNoAction: true,
+    bridgeId: 'bridge-2',
+    homeyDeviceId: 'main:8',
+  });
   assert.equal(writes.length, 1);
   assert.equal(writes[0].filePath, '/tmp/support.json');
   assert.equal(writes[0].encoding, 'utf8');

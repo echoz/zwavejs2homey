@@ -21,6 +21,14 @@ Kick off Phase 6 Reliability + UX delivery:
 
 ## Recently Completed
 
+- CLI bridge-scope parity slice:
+  - `homey:runtime-api:smoke` now supports optional `--bridge-id`
+  - `homey:support-bundle` now supports optional `--bridge-id`
+  - smoke/support tools now forward bridge filters to runtime routes where supported
+  - support-bundle output metadata/markdown now records the active bridge filter
+  - added parser/query regression coverage in `packages/core/test/*tool.test.ts`
+  - synced README/API contract/architecture docs for scoped CLI usage
+
 - Settings scoped-diagnostics + bridge quick-actions slice:
   - settings diagnostics now support bridge scoping via `Bridge Scope` selector (`all` or per bridge)
   - scoped requests now flow through:

@@ -12,6 +12,7 @@ export function getUsageText() {
     '',
     'Options:',
     '  --token <token>           Bearer token for Authorization header',
+    '  --bridge-id <id>          Optional bridge filter for diagnostics/support routes',
     '  --read-device-id <id>     Optional homeyDeviceId used for read routes',
     `  --smoke-device-id <id>    Device ID used for execute route smoke calls (default: ${DEFAULT_SMOKE_DEVICE_ID})`,
     `  --timeout-ms <n>          Request timeout in milliseconds (default: ${DEFAULT_TIMEOUT_MS})`,
@@ -68,6 +69,7 @@ export function parseCliArgs(argv) {
     const args = [...argv];
     let baseUrl;
     let token;
+    let bridgeId;
     let readDeviceId;
     let smokeDeviceId = DEFAULT_SMOKE_DEVICE_ID;
     let timeoutMs = DEFAULT_TIMEOUT_MS;
@@ -85,6 +87,11 @@ export function parseCliArgs(argv) {
       if (flag === '--token') {
         token = args.shift();
         if (!token) throw new Error('--token requires a value');
+        continue;
+      }
+      if (flag === '--bridge-id') {
+        bridgeId = args.shift();
+        if (!bridgeId) throw new Error('--bridge-id requires a value');
         continue;
       }
       if (flag === '--read-device-id') {
@@ -118,6 +125,7 @@ export function parseCliArgs(argv) {
       command: {
         baseUrl: normalizeBaseUrl(baseUrl),
         token: trimOrUndefined(token),
+        bridgeId: trimOrUndefined(bridgeId),
         readDeviceId: trimOrUndefined(readDeviceId),
         smokeDeviceId: trimOrUndefined(smokeDeviceId) ?? DEFAULT_SMOKE_DEVICE_ID,
         timeoutMs,
@@ -134,6 +142,9 @@ export function parseCliArgs(argv) {
 
 export function buildSmokeRouteRequests(command) {
   const readQuery = {};
+  if (command.bridgeId) {
+    readQuery.bridgeId = command.bridgeId;
+  }
   if (command.readDeviceId) {
     readQuery.homeyDeviceId = command.readDeviceId;
   }
@@ -142,6 +153,13 @@ export function buildSmokeRouteRequests(command) {
     ...readQuery,
     includeNoAction: true,
   };
+  const executeBatchBody = {
+    homeyDeviceId: command.smokeDeviceId,
+    includeNoAction: true,
+  };
+  if (command.bridgeId) {
+    executeBatchBody.bridgeId = command.bridgeId;
+  }
 
   return [
     {
@@ -181,10 +199,7 @@ export function buildSmokeRouteRequests(command) {
       key: 'executeRecommendationActions',
       method: 'POST',
       path: '/runtime/recommendations/execute-batch',
-      body: {
-        homeyDeviceId: command.smokeDeviceId,
-        includeNoAction: true,
-      },
+      body: executeBatchBody,
     },
   ];
 }
