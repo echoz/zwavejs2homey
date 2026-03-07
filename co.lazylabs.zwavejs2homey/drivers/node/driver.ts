@@ -102,7 +102,6 @@ interface RepairSessionLike {
 
 interface PairSessionLike {
   setHandler: (event: string, handler: (payload?: unknown) => Promise<unknown>) => void;
-  emit: (event: string, payload: unknown) => Promise<unknown>;
 }
 
 interface ImportSummaryNodeEntry {
@@ -157,8 +156,23 @@ module.exports = class NodeDriver extends Homey.Driver {
     context: string,
     handler: (payload?: unknown) => Promise<unknown>,
   ): void {
-    session.setHandler(event, async (payload?: unknown) => {
-      return this.withTimeout(handler(payload), timeoutMs, `${context} (${event})`);
+    session.setHandler(event, async (...args: unknown[]) => {
+      const payload = args[0];
+      const maybeCallback = args[1];
+      const run = () => this.withTimeout(handler(payload), timeoutMs, `${context} (${event})`);
+
+      if (typeof maybeCallback === 'function') {
+        const callback = maybeCallback as (error: unknown, result?: unknown) => void;
+        try {
+          const result = await run();
+          callback(null, result);
+        } catch (error) {
+          callback(error);
+        }
+        return;
+      }
+
+      return run();
     });
   }
 
@@ -184,21 +198,6 @@ module.exports = class NodeDriver extends Homey.Driver {
       },
     );
     this.log('Node pair handler registered', { event: 'list_devices' });
-
-    // Proactively publish candidates for runtimes that do not eagerly call list_devices.
-    void this.withTimeout(
-      (async () => {
-        const candidates = await this.onPairListDevices();
-        await session.emit('list_devices', candidates);
-        this.log('Node pair preloaded list_devices candidates', {
-          candidates: Array.isArray(candidates) ? candidates.length : 0,
-        });
-      })(),
-      NodeDriver.PAIR_HANDLER_TIMEOUT_MS,
-      'node pair preload list_devices',
-    ).catch((error) => {
-      this.error('Node pair preload failed', { error });
-    });
   }
 
   async onInit() {

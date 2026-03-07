@@ -23,8 +23,22 @@ module.exports = (_a = class BridgeDriver extends homey_1.default.Driver {
             }
         }
         registerTimedSessionHandler(session, event, timeoutMs, context, handler) {
-            session.setHandler(event, async (payload) => {
-                return this.withTimeout(handler(payload), timeoutMs, `${context} (${event})`);
+            session.setHandler(event, async (...args) => {
+                const payload = args[0];
+                const maybeCallback = args[1];
+                const run = () => this.withTimeout(handler(payload), timeoutMs, `${context} (${event})`);
+                if (typeof maybeCallback === 'function') {
+                    const callback = maybeCallback;
+                    try {
+                        const result = await run();
+                        callback(null, result);
+                    }
+                    catch (error) {
+                        callback(error);
+                    }
+                    return;
+                }
+                return run();
             });
         }
         toSerializablePairPayload(value, context) {
@@ -42,19 +56,7 @@ module.exports = (_a = class BridgeDriver extends homey_1.default.Driver {
                 this.log('Bridge pair list requested (session handler)');
                 return this.onPairListDevices();
             });
-            this.log('Bridge pair handler registered', {
-                event: 'list_devices',
-            });
-            // Proactively publish candidates for runtimes that do not eagerly call list_devices.
-            void this.withTimeout((async () => {
-                const candidates = await this.onPairListDevices();
-                await session.emit('list_devices', candidates);
-                this.log('Bridge pair preloaded list_devices candidates', {
-                    candidates: Array.isArray(candidates) ? candidates.length : 0,
-                });
-            })(), _a.PAIR_HANDLER_TIMEOUT_MS, 'bridge pair preload list_devices').catch((error) => {
-                this.error('Bridge pair preload failed', { error });
-            });
+            this.log('Bridge pair handler registered', { event: 'list_devices' });
         }
         async onInit() {
             this.log('BridgeDriver initialized');

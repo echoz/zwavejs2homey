@@ -159,7 +159,6 @@ interface RepairSessionLike {
 
 interface PairSessionLike {
   setHandler: (event: string, handler: (payload?: unknown) => Promise<unknown>) => void;
-  emit: (event: string, payload: unknown) => Promise<unknown>;
 }
 
 interface HomeyBridgeDeviceData {
@@ -197,8 +196,23 @@ module.exports = class BridgeDriver extends Homey.Driver {
     context: string,
     handler: (payload?: unknown) => Promise<unknown>,
   ): void {
-    session.setHandler(event, async (payload?: unknown) => {
-      return this.withTimeout(handler(payload), timeoutMs, `${context} (${event})`);
+    session.setHandler(event, async (...args: unknown[]) => {
+      const payload = args[0];
+      const maybeCallback = args[1];
+      const run = () => this.withTimeout(handler(payload), timeoutMs, `${context} (${event})`);
+
+      if (typeof maybeCallback === 'function') {
+        const callback = maybeCallback as (error: unknown, result?: unknown) => void;
+        try {
+          const result = await run();
+          callback(null, result);
+        } catch (error) {
+          callback(error);
+        }
+        return;
+      }
+
+      return run();
     });
   }
 
@@ -223,24 +237,7 @@ module.exports = class BridgeDriver extends Homey.Driver {
         return this.onPairListDevices();
       },
     );
-    this.log('Bridge pair handler registered', {
-      event: 'list_devices',
-    });
-
-    // Proactively publish candidates for runtimes that do not eagerly call list_devices.
-    void this.withTimeout(
-      (async () => {
-        const candidates = await this.onPairListDevices();
-        await session.emit('list_devices', candidates);
-        this.log('Bridge pair preloaded list_devices candidates', {
-          candidates: Array.isArray(candidates) ? candidates.length : 0,
-        });
-      })(),
-      BridgeDriver.PAIR_HANDLER_TIMEOUT_MS,
-      'bridge pair preload list_devices',
-    ).catch((error) => {
-      this.error('Bridge pair preload failed', { error });
-    });
+    this.log('Bridge pair handler registered', { event: 'list_devices' });
   }
 
   async onInit() {

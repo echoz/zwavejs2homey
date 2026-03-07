@@ -24,5 +24,11 @@ test('driver session handlers are registered through timed helper', () => {
       1,
       `${relativePath}: raw session.setHandler should only exist inside timed helper`,
     );
+
+    assert.doesNotMatch(
+      source,
+      /\bsession\.emit\s*\(\s*['"]list_devices['"]/,
+      `${relativePath}: do not emit list_devices directly from driver`,
+    );
   }
 });

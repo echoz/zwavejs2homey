@@ -118,15 +118,21 @@ test('bridge driver pair session registers list_devices handler', async () => {
     setHandler(event, handler) {
       handlers.set(event, handler);
     },
-    async emit() {
-      return undefined;
-    },
   });
 
   assert.equal(typeof handlers.get('list_devices'), 'function');
   const candidates = await handlers.get('list_devices')();
   assert.equal(Array.isArray(candidates), true);
   assert.equal(candidates.length, 1);
+
+  const callbackCandidates = await new Promise((resolve, reject) => {
+    handlers.get('list_devices')(undefined, (error, result) => {
+      if (error) return reject(error);
+      resolve(result);
+    });
+  });
+  assert.equal(Array.isArray(callbackCandidates), true);
+  assert.equal(callbackCandidates.length, 1);
 });
 
 test('bridge driver returns no candidates when singleton bridge already exists', async () => {
@@ -591,9 +597,6 @@ test('node driver pair session registers list_devices handler', async () => {
     setHandler(event, handler) {
       handlers.set(event, handler);
     },
-    async emit() {
-      return undefined;
-    },
   });
 
   assert.equal(typeof handlers.get('list_devices'), 'function');
@@ -601,6 +604,16 @@ test('node driver pair session registers list_devices handler', async () => {
   assert.equal(Array.isArray(candidates), true);
   assert.equal(candidates.length, 1);
   assert.equal(candidates[0]?.data?.nodeId, 12);
+
+  const callbackCandidates = await new Promise((resolve, reject) => {
+    handlers.get('list_devices')(undefined, (error, result) => {
+      if (error) return reject(error);
+      resolve(result);
+    });
+  });
+  assert.equal(Array.isArray(callbackCandidates), true);
+  assert.equal(callbackCandidates.length, 1);
+  assert.equal(callbackCandidates[0]?.data?.nodeId, 12);
 });
 
 test('node driver import summary status aggregates runtime diagnostics', async () => {
