@@ -547,6 +547,15 @@ test('root manifest product overrides curate Leviton switches and Yale locks', (
             metadata: { type: 'string', readable: true, writeable: false },
           },
           {
+            valueId: {
+              commandClass: 113,
+              endpoint: 0,
+              property: 'Access Control',
+              propertyKey: 'Lock state',
+            },
+            metadata: { type: 'number', readable: true, writeable: false },
+          },
+          {
             valueId: { commandClass: 128, endpoint: 0, property: 'level' },
             metadata: { type: 'number', readable: true, writeable: false },
           },
@@ -560,6 +569,7 @@ test('root manifest product overrides curate Leviton switches and Yale locks', (
           'enum_select',
           'lock_mode',
           'alarm_contact',
+          'alarm_generic',
           'measure_battery',
           'alarm_battery',
           'alarm_tamper',
@@ -608,6 +618,9 @@ test('root manifest product overrides curate Leviton switches and Yale locks', (
       const alarmContactCapability = result.profile.capabilities.find(
         (item) => item.capabilityId === 'alarm_contact',
       );
+      const alarmGenericCapability = result.profile.capabilities.find(
+        (item) => item.capabilityId === 'alarm_generic',
+      );
       const alarmTamperCapability = result.profile.capabilities.find(
         (item) => item.capabilityId === 'alarm_tamper',
       );
@@ -643,6 +656,17 @@ test('root manifest product overrides curate Leviton switches and Yale locks', (
       assert.equal(
         alarmContactCapability?.inboundMapping?.transformRef,
         'zwave_door_status_to_homey_alarm_contact',
+      );
+      assert.equal(alarmGenericCapability?.inboundMapping?.kind, 'value');
+      assert.deepEqual(alarmGenericCapability?.inboundMapping?.selector, {
+        commandClass: 113,
+        endpoint: 0,
+        property: 'Access Control',
+        propertyKey: 'Lock state',
+      });
+      assert.equal(
+        alarmGenericCapability?.inboundMapping?.transformRef,
+        'zwave_notification_nonzero_to_homey_alarm_generic',
       );
       assert.equal(alarmTamperCapability?.inboundMapping?.kind, 'event');
       assert.deepEqual(alarmTamperCapability?.inboundMapping?.selector, {

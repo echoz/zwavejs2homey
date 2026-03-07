@@ -17,6 +17,7 @@ test('node-runtime publishes supported transform refs and specialized coercion i
     'zwave_door_status_to_homey_alarm_contact',
     'zwave_level_0_99_to_homey_dim',
     'zwave_level_nonzero_to_homey_onoff',
+    'zwave_notification_nonzero_to_homey_alarm_generic',
     'zwjs_notification_to_homey_alarm_tamper',
   ]);
   assert.deepEqual(getSupportedOutboundTransformRefs(), [
@@ -358,6 +359,22 @@ test('coerceCapability inbound/outbound uses transform refs and generic pass-thr
       'alarm_contact',
       { value: 'closed' },
       'zwave_door_status_to_homey_alarm_contact',
+    ),
+    false,
+  );
+  assert.equal(
+    coerceCapabilityInboundValue(
+      'alarm_generic',
+      { value: 11 },
+      'zwave_notification_nonzero_to_homey_alarm_generic',
+    ),
+    true,
+  );
+  assert.equal(
+    coerceCapabilityInboundValue(
+      'alarm_generic',
+      { value: 0 },
+      'zwave_notification_nonzero_to_homey_alarm_generic',
     ),
     false,
   );

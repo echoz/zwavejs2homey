@@ -178,8 +178,8 @@
           "suppressedActions": [],
           "summary": {
             "appliedActions": 14,
-            "unmatchedActions": 1041,
-            "totalActions": 1062,
+            "unmatchedActions": 1047,
+            "totalActions": 1068,
             "appliedProjectProductActions": 9,
             "suppressedFillActions": 15,
             "ignoredValues": 0
@@ -441,8 +441,8 @@
           "suppressedActions": [],
           "summary": {
             "appliedActions": 9,
-            "unmatchedActions": 341,
-            "totalActions": 354,
+            "unmatchedActions": 343,
+            "totalActions": 356,
             "appliedProjectProductActions": 4,
             "suppressedFillActions": 10,
             "ignoredValues": 0
@@ -732,8 +732,8 @@
           "suppressedActions": [],
           "summary": {
             "appliedActions": 5,
-            "unmatchedActions": 170,
-            "totalActions": 177,
+            "unmatchedActions": 171,
+            "totalActions": 178,
             "appliedProjectProductActions": 3,
             "suppressedFillActions": 5,
             "ignoredValues": 0
@@ -1005,8 +1005,8 @@
           "suppressedActions": [],
           "summary": {
             "appliedActions": 5,
-            "unmatchedActions": 170,
-            "totalActions": 177,
+            "unmatchedActions": 171,
+            "totalActions": 178,
             "appliedProjectProductActions": 3,
             "suppressedFillActions": 5,
             "ignoredValues": 0
@@ -1239,8 +1239,8 @@
           "suppressedActions": [],
           "summary": {
             "appliedActions": 4,
-            "unmatchedActions": 171,
-            "totalActions": 177,
+            "unmatchedActions": 172,
+            "totalActions": 178,
             "appliedProjectProductActions": 2,
             "suppressedFillActions": 5,
             "ignoredValues": 0
@@ -1473,8 +1473,8 @@
           "suppressedActions": [],
           "summary": {
             "appliedActions": 4,
-            "unmatchedActions": 171,
-            "totalActions": 177,
+            "unmatchedActions": 172,
+            "totalActions": 178,
             "appliedProjectProductActions": 2,
             "suppressedFillActions": 5,
             "ignoredValues": 0
@@ -1708,6 +1708,31 @@
               }
             },
             {
+              "capabilityId": "alarm_generic",
+              "inboundMapping": {
+                "kind": "value",
+                "selector": {
+                  "commandClass": 113,
+                  "endpoint": 0,
+                  "property": "Access Control",
+                  "propertyKey": "Lock state"
+                },
+                "transformRef": "zwave_notification_nonzero_to_homey_alarm_generic"
+              },
+              "directionality": "inbound-only",
+              "flags": {
+                "readable": true,
+                "writeable": false
+              },
+              "provenance": {
+                "layer": "project-product",
+                "ruleId": "product-yale-yrd226-class-and-lock",
+                "action": "replace",
+                "sourceRef": "product-yale-yrd226-class-and-lock",
+                "reason": "cc=98,ep=0,prop=currentMode"
+              }
+            },
+            {
               "capabilityId": "alarm_tamper",
               "inboundMapping": {
                 "kind": "event",
@@ -1865,10 +1890,10 @@
           "actions": [],
           "suppressedActions": [],
           "summary": {
-            "appliedActions": 13,
-            "unmatchedActions": 338,
-            "totalActions": 354,
-            "appliedProjectProductActions": 9,
+            "appliedActions": 14,
+            "unmatchedActions": 339,
+            "totalActions": 356,
+            "appliedProjectProductActions": 10,
             "suppressedFillActions": 6,
             "ignoredValues": 0
           },
