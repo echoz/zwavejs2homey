@@ -15,10 +15,13 @@ test('node-runtime publishes supported transform refs and specialized coercion i
   assert.deepEqual(getSupportedInboundTransformRefs(), [
     'zwave_access_control_keypad_state_to_homey_alarm_generic',
     'zwave_access_control_lock_state_to_homey_alarm_problem',
+    'zwave_access_control_lock_state_to_homey_alarm_stuck',
     'zwave_battery_level_to_homey_alarm_battery',
     'zwave_door_status_to_homey_alarm_contact',
+    'zwave_door_status_to_homey_alarm_open',
     'zwave_level_0_99_to_homey_dim',
     'zwave_level_nonzero_to_homey_onoff',
+    'zwave_power_status_nonzero_to_homey_alarm_power',
     'zwjs_notification_to_homey_alarm_tamper',
   ]);
   assert.deepEqual(getSupportedOutboundTransformRefs(), [
@@ -392,6 +395,54 @@ test('coerceCapability inbound/outbound uses transform refs and generic pass-thr
       'alarm_problem',
       { value: 0 },
       'zwave_access_control_lock_state_to_homey_alarm_problem',
+    ),
+    false,
+  );
+  assert.equal(
+    coerceCapabilityInboundValue(
+      'alarm_stuck',
+      { value: 11 },
+      'zwave_access_control_lock_state_to_homey_alarm_stuck',
+    ),
+    true,
+  );
+  assert.equal(
+    coerceCapabilityInboundValue(
+      'alarm_stuck',
+      { value: 1 },
+      'zwave_access_control_lock_state_to_homey_alarm_stuck',
+    ),
+    false,
+  );
+  assert.equal(
+    coerceCapabilityInboundValue(
+      'alarm_open',
+      { value: 'open' },
+      'zwave_door_status_to_homey_alarm_open',
+    ),
+    true,
+  );
+  assert.equal(
+    coerceCapabilityInboundValue(
+      'alarm_open',
+      { value: 'closed' },
+      'zwave_door_status_to_homey_alarm_open',
+    ),
+    false,
+  );
+  assert.equal(
+    coerceCapabilityInboundValue(
+      'alarm_power',
+      { value: 1 },
+      'zwave_power_status_nonzero_to_homey_alarm_power',
+    ),
+    true,
+  );
+  assert.equal(
+    coerceCapabilityInboundValue(
+      'alarm_power',
+      { value: 0 },
+      'zwave_power_status_nonzero_to_homey_alarm_power',
     ),
     false,
   );

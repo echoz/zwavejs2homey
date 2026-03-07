@@ -281,6 +281,18 @@ function coerceAccessControlLockStateProblemTransform(value) {
         return true;
     return numeric > 0;
 }
+function coerceAccessControlLockStateStuckTransform(value) {
+    const numeric = normalizeNumericValue(value);
+    if (numeric === undefined)
+        return undefined;
+    return numeric === 11;
+}
+function coercePowerStatusAlarmTransform(value) {
+    const numeric = normalizeNumericValue(value);
+    if (numeric === undefined)
+        return undefined;
+    return numeric !== 0;
+}
 function collectNotificationTextCandidates(value) {
     const candidates = [];
     const visited = new Set();
@@ -462,8 +474,11 @@ const INBOUND_TRANSFORMERS = {
     zwave_level_nonzero_to_homey_onoff: coerceOnOffInboundTransform,
     zwave_battery_level_to_homey_alarm_battery: coerceAlarmBatteryInboundTransform,
     zwave_door_status_to_homey_alarm_contact: coerceAlarmContactDoorStatusTransform,
+    zwave_door_status_to_homey_alarm_open: coerceAlarmContactDoorStatusTransform,
     zwave_access_control_keypad_state_to_homey_alarm_generic: coerceAccessControlNonzeroStateTransform,
     zwave_access_control_lock_state_to_homey_alarm_problem: coerceAccessControlLockStateProblemTransform,
+    zwave_access_control_lock_state_to_homey_alarm_stuck: coerceAccessControlLockStateStuckTransform,
+    zwave_power_status_nonzero_to_homey_alarm_power: coercePowerStatusAlarmTransform,
     zwjs_notification_to_homey_alarm_tamper: coerceAlarmTamperNotificationTransform,
 };
 const OUTBOUND_TRANSFORMERS = {

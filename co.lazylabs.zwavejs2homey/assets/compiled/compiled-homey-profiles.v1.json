@@ -178,8 +178,8 @@
           "suppressedActions": [],
           "summary": {
             "appliedActions": 14,
-            "unmatchedActions": 1053,
-            "totalActions": 1074,
+            "unmatchedActions": 1071,
+            "totalActions": 1092,
             "appliedProjectProductActions": 9,
             "suppressedFillActions": 15,
             "ignoredValues": 0
@@ -441,8 +441,8 @@
           "suppressedActions": [],
           "summary": {
             "appliedActions": 9,
-            "unmatchedActions": 345,
-            "totalActions": 358,
+            "unmatchedActions": 351,
+            "totalActions": 364,
             "appliedProjectProductActions": 4,
             "suppressedFillActions": 10,
             "ignoredValues": 0
@@ -732,8 +732,8 @@
           "suppressedActions": [],
           "summary": {
             "appliedActions": 5,
-            "unmatchedActions": 172,
-            "totalActions": 179,
+            "unmatchedActions": 175,
+            "totalActions": 182,
             "appliedProjectProductActions": 3,
             "suppressedFillActions": 5,
             "ignoredValues": 0
@@ -1005,8 +1005,8 @@
           "suppressedActions": [],
           "summary": {
             "appliedActions": 5,
-            "unmatchedActions": 172,
-            "totalActions": 179,
+            "unmatchedActions": 175,
+            "totalActions": 182,
             "appliedProjectProductActions": 3,
             "suppressedFillActions": 5,
             "ignoredValues": 0
@@ -1239,8 +1239,8 @@
           "suppressedActions": [],
           "summary": {
             "appliedActions": 4,
-            "unmatchedActions": 173,
-            "totalActions": 179,
+            "unmatchedActions": 176,
+            "totalActions": 182,
             "appliedProjectProductActions": 2,
             "suppressedFillActions": 5,
             "ignoredValues": 0
@@ -1473,8 +1473,8 @@
           "suppressedActions": [],
           "summary": {
             "appliedActions": 4,
-            "unmatchedActions": 173,
-            "totalActions": 179,
+            "unmatchedActions": 176,
+            "totalActions": 182,
             "appliedProjectProductActions": 2,
             "suppressedFillActions": 5,
             "ignoredValues": 0
@@ -1733,6 +1733,55 @@
               }
             },
             {
+              "capabilityId": "alarm_open",
+              "inboundMapping": {
+                "kind": "value",
+                "selector": {
+                  "commandClass": 98,
+                  "endpoint": 0,
+                  "property": "doorStatus"
+                },
+                "transformRef": "zwave_door_status_to_homey_alarm_open"
+              },
+              "directionality": "inbound-only",
+              "flags": {
+                "readable": true,
+                "writeable": false
+              },
+              "provenance": {
+                "layer": "project-product",
+                "ruleId": "product-yale-yrd226-class-and-lock",
+                "action": "replace",
+                "sourceRef": "product-yale-yrd226-class-and-lock",
+                "reason": "cc=98,ep=0,prop=currentMode"
+              }
+            },
+            {
+              "capabilityId": "alarm_power",
+              "inboundMapping": {
+                "kind": "value",
+                "selector": {
+                  "commandClass": 113,
+                  "endpoint": 0,
+                  "property": "Power Management",
+                  "propertyKey": "Power status"
+                },
+                "transformRef": "zwave_power_status_nonzero_to_homey_alarm_power"
+              },
+              "directionality": "inbound-only",
+              "flags": {
+                "readable": true,
+                "writeable": false
+              },
+              "provenance": {
+                "layer": "project-product",
+                "ruleId": "product-yale-yrd226-class-and-lock",
+                "action": "replace",
+                "sourceRef": "product-yale-yrd226-class-and-lock",
+                "reason": "cc=98,ep=0,prop=currentMode"
+              }
+            },
+            {
               "capabilityId": "alarm_problem",
               "inboundMapping": {
                 "kind": "value",
@@ -1743,6 +1792,31 @@
                   "propertyKey": "Lock state"
                 },
                 "transformRef": "zwave_access_control_lock_state_to_homey_alarm_problem"
+              },
+              "directionality": "inbound-only",
+              "flags": {
+                "readable": true,
+                "writeable": false
+              },
+              "provenance": {
+                "layer": "project-product",
+                "ruleId": "product-yale-yrd226-class-and-lock",
+                "action": "replace",
+                "sourceRef": "product-yale-yrd226-class-and-lock",
+                "reason": "cc=98,ep=0,prop=currentMode"
+              }
+            },
+            {
+              "capabilityId": "alarm_stuck",
+              "inboundMapping": {
+                "kind": "value",
+                "selector": {
+                  "commandClass": 113,
+                  "endpoint": 0,
+                  "property": "Access Control",
+                  "propertyKey": "Lock state"
+                },
+                "transformRef": "zwave_access_control_lock_state_to_homey_alarm_stuck"
               },
               "directionality": "inbound-only",
               "flags": {
@@ -1915,10 +1989,10 @@
           "actions": [],
           "suppressedActions": [],
           "summary": {
-            "appliedActions": 15,
-            "unmatchedActions": 340,
-            "totalActions": 358,
-            "appliedProjectProductActions": 11,
+            "appliedActions": 18,
+            "unmatchedActions": 343,
+            "totalActions": 364,
+            "appliedProjectProductActions": 14,
             "suppressedFillActions": 6,
             "ignoredValues": 0
           },
@@ -1940,7 +2014,7 @@
             "likelyNeedsReview": false,
             "reasons": [
               "suppressed-fill-actions:6",
-              "high-unmatched-ratio:0.95"
+              "high-unmatched-ratio:0.94"
             ]
           },
           "diagnosticDeviceKey": "product-triple:297-32770-1536"

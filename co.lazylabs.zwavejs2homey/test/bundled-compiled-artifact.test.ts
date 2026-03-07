@@ -63,12 +63,27 @@ const RUNTIME_MAPPING_COVERAGE_POLICY = {
     coverageRef:
       'test/node-device-harness.test.ts:lock + battery + meter + notification runtime verticals',
   },
+  alarm_open: {
+    coercionMode: 'specialized',
+    coverageRef:
+      'test/node-device-harness.test.ts:lock + battery + meter + notification runtime verticals',
+  },
   alarm_generic: {
     coercionMode: 'specialized',
     coverageRef:
       'test/node-device-harness.test.ts:lock + battery + meter + notification runtime verticals',
   },
   alarm_problem: {
+    coercionMode: 'specialized',
+    coverageRef:
+      'test/node-device-harness.test.ts:lock + battery + meter + notification runtime verticals',
+  },
+  alarm_stuck: {
+    coercionMode: 'specialized',
+    coverageRef:
+      'test/node-device-harness.test.ts:lock + battery + meter + notification runtime verticals',
+  },
+  alarm_power: {
     coercionMode: 'specialized',
     coverageRef:
       'test/node-device-harness.test.ts:lock + battery + meter + notification runtime verticals',
@@ -347,7 +362,7 @@ test('bundled runtime vertical coercion modes align with explicit policy', () =>
   );
 });
 
-test('bundled Yale YRD226 profile includes lock + battery + contact + notification verticals', () => {
+test('bundled Yale YRD226 profile includes lock + alarm + notification verticals', () => {
   const artifact = readJsonFile(BUNDLED_ARTIFACT_FILE);
   assertCompiledHomeyProfilesArtifactV1(artifact);
 
@@ -368,8 +383,11 @@ test('bundled Yale YRD226 profile includes lock + battery + contact + notificati
   assert.equal(byCapabilityId.has('measure_battery'), true, 'expected measure_battery capability');
   assert.equal(byCapabilityId.has('alarm_battery'), true, 'expected alarm_battery capability');
   assert.equal(byCapabilityId.has('alarm_contact'), true, 'expected alarm_contact capability');
+  assert.equal(byCapabilityId.has('alarm_open'), true, 'expected alarm_open capability');
   assert.equal(byCapabilityId.has('alarm_generic'), true, 'expected alarm_generic capability');
   assert.equal(byCapabilityId.has('alarm_problem'), true, 'expected alarm_problem capability');
+  assert.equal(byCapabilityId.has('alarm_stuck'), true, 'expected alarm_stuck capability');
+  assert.equal(byCapabilityId.has('alarm_power'), true, 'expected alarm_power capability');
   assert.equal(byCapabilityId.has('alarm_tamper'), true, 'expected alarm_tamper capability');
   assert.equal(byCapabilityId.has('measure_generic'), false, 'measure_generic should be suppressed');
 
@@ -424,6 +442,15 @@ test('bundled Yale YRD226 profile includes lock + battery + contact + notificati
     'zwave_door_status_to_homey_alarm_contact',
   );
 
+  const alarmOpen = byCapabilityId.get('alarm_open');
+  assert.equal(alarmOpen.directionality, 'inbound-only');
+  assert.deepEqual(alarmOpen.inboundMapping?.selector, {
+    commandClass: 98,
+    endpoint: 0,
+    property: 'doorStatus',
+  });
+  assert.equal(alarmOpen.inboundMapping?.transformRef, 'zwave_door_status_to_homey_alarm_open');
+
   const alarmGeneric = byCapabilityId.get('alarm_generic');
   assert.equal(alarmGeneric.directionality, 'inbound-only');
   assert.deepEqual(alarmGeneric.inboundMapping?.selector, {
@@ -448,6 +475,32 @@ test('bundled Yale YRD226 profile includes lock + battery + contact + notificati
   assert.equal(
     alarmProblem.inboundMapping?.transformRef,
     'zwave_access_control_lock_state_to_homey_alarm_problem',
+  );
+
+  const alarmStuck = byCapabilityId.get('alarm_stuck');
+  assert.equal(alarmStuck.directionality, 'inbound-only');
+  assert.deepEqual(alarmStuck.inboundMapping?.selector, {
+    commandClass: 113,
+    endpoint: 0,
+    property: 'Access Control',
+    propertyKey: 'Lock state',
+  });
+  assert.equal(
+    alarmStuck.inboundMapping?.transformRef,
+    'zwave_access_control_lock_state_to_homey_alarm_stuck',
+  );
+
+  const alarmPower = byCapabilityId.get('alarm_power');
+  assert.equal(alarmPower.directionality, 'inbound-only');
+  assert.deepEqual(alarmPower.inboundMapping?.selector, {
+    commandClass: 113,
+    endpoint: 0,
+    property: 'Power Management',
+    propertyKey: 'Power status',
+  });
+  assert.equal(
+    alarmPower.inboundMapping?.transformRef,
+    'zwave_power_status_nonzero_to_homey_alarm_power',
   );
 
   const alarmTamper = byCapabilityId.get('alarm_tamper');

@@ -782,6 +782,18 @@ function createBatteryMeterLockProfileMatch() {
               },
             },
             {
+              capabilityId: 'alarm_open',
+              inboundMapping: {
+                kind: 'value',
+                selector: {
+                  commandClass: 98,
+                  endpoint: 0,
+                  property: 'doorStatus',
+                },
+                transformRef: 'zwave_door_status_to_homey_alarm_open',
+              },
+            },
+            {
               capabilityId: 'alarm_generic',
               inboundMapping: {
                 kind: 'value',
@@ -805,6 +817,32 @@ function createBatteryMeterLockProfileMatch() {
                   propertyKey: 'Lock state',
                 },
                 transformRef: 'zwave_access_control_lock_state_to_homey_alarm_problem',
+              },
+            },
+            {
+              capabilityId: 'alarm_stuck',
+              inboundMapping: {
+                kind: 'value',
+                selector: {
+                  commandClass: 113,
+                  endpoint: 0,
+                  property: 'Access Control',
+                  propertyKey: 'Lock state',
+                },
+                transformRef: 'zwave_access_control_lock_state_to_homey_alarm_stuck',
+              },
+            },
+            {
+              capabilityId: 'alarm_power',
+              inboundMapping: {
+                kind: 'value',
+                selector: {
+                  commandClass: 113,
+                  endpoint: 0,
+                  property: 'Power Management',
+                  propertyKey: 'Power status',
+                },
+                transformRef: 'zwave_power_status_nonzero_to_homey_alarm_power',
               },
             },
             {
@@ -2172,6 +2210,12 @@ test('node device harness supports lock + battery + meter + notification runtime
     property: 'Access Control',
     propertyKey: 'Keypad state',
   };
+  const powerStatusSelector = {
+    commandClass: 113,
+    endpoint: 0,
+    property: 'Power Management',
+    propertyKey: 'Power status',
+  };
 
   const nodeValueResultsBySelector = new Map();
   nodeValueResultsBySelector.set(selectorKey(batterySelector), {
@@ -2195,6 +2239,10 @@ test('node device harness supports lock + battery + meter + notification runtime
     result: { value: 0 },
   });
   nodeValueResultsBySelector.set(selectorKey(keypadStateSelector), {
+    success: true,
+    result: { value: 0 },
+  });
+  nodeValueResultsBySelector.set(selectorKey(powerStatusSelector), {
     success: true,
     result: { value: 0 },
   });
@@ -2260,6 +2308,14 @@ test('node device harness supports lock + battery + meter + notification runtime
           type: 'number',
         },
         {
+          commandClass: 113,
+          endpoint: 0,
+          property: 'Power Management',
+          propertyKey: 'Power status',
+          readable: true,
+          type: 'number',
+        },
+        {
           commandClass: 98,
           endpoint: 0,
           property: 'targetMode',
@@ -2286,8 +2342,11 @@ test('node device harness supports lock + battery + meter + notification runtime
       'meter_power',
       'lock_mode',
       'alarm_contact',
+      'alarm_open',
       'alarm_generic',
       'alarm_problem',
+      'alarm_stuck',
+      'alarm_power',
       'enum_select',
       'locked',
       'alarm_tamper',
@@ -2300,12 +2359,15 @@ test('node device harness supports lock + battery + meter + notification runtime
   assert.equal(device._getCapabilityValue('meter_power'), 12.5);
   assert.equal(device._getCapabilityValue('lock_mode'), 'secured');
   assert.equal(device._getCapabilityValue('alarm_contact'), true);
+  assert.equal(device._getCapabilityValue('alarm_open'), true);
   assert.equal(device._getCapabilityValue('alarm_generic'), false);
   assert.equal(device._getCapabilityValue('alarm_problem'), false);
+  assert.equal(device._getCapabilityValue('alarm_stuck'), false);
+  assert.equal(device._getCapabilityValue('alarm_power'), false);
   assert.equal(device._getCapabilityValue('enum_select'), 'secured');
   assert.equal(device._getCapabilityValue('locked'), true);
   assert.equal(client.callLog.setNodeValue.length, 0);
-  assert.equal(client.getListenerCount(), 10);
+  assert.equal(client.getListenerCount(), 13);
 
   await device._triggerCapabilityListener('locked', true);
   await device._triggerCapabilityListener('locked', false);
@@ -2414,6 +2476,19 @@ test('node device harness supports lock + battery + meter + notification runtime
     },
   });
   client.emitEvent({
+    type: 'zwjs.event.node.value-updated',
+    event: {
+      nodeId: 48,
+      args: {
+        commandClass: 113,
+        endpoint: 0,
+        propertyName: 'Power Management',
+        propertyKeyName: 'Power status',
+        newValue: 1,
+      },
+    },
+  });
+  client.emitEvent({
     type: 'zwjs.event.node.notification',
     event: {
       nodeId: 48,
@@ -2435,14 +2510,17 @@ test('node device harness supports lock + battery + meter + notification runtime
   assert.equal(device._getCapabilityValue('meter_power'), 13.2);
   assert.equal(device._getCapabilityValue('lock_mode'), 'unsecured');
   assert.equal(device._getCapabilityValue('alarm_contact'), false);
+  assert.equal(device._getCapabilityValue('alarm_open'), false);
   assert.equal(device._getCapabilityValue('alarm_generic'), true);
   assert.equal(device._getCapabilityValue('alarm_problem'), true);
+  assert.equal(device._getCapabilityValue('alarm_stuck'), true);
+  assert.equal(device._getCapabilityValue('alarm_power'), true);
   assert.equal(device._getCapabilityValue('enum_select'), 'unsecured');
   assert.equal(device._getCapabilityValue('locked'), false);
   assert.equal(device._getCapabilityValue('alarm_tamper'), false);
 
   const profileResolution = device._getStoreValue('profileResolution');
-  assert.equal(profileResolution?.mappingDiagnostics?.length, 10);
+  assert.equal(profileResolution?.mappingDiagnostics?.length, 13);
   const diagnosticsByCapability = new Map(
     (profileResolution?.mappingDiagnostics ?? []).map((diagnostic) => [
       diagnostic.capabilityId,
@@ -2460,10 +2538,16 @@ test('node device harness supports lock + battery + meter + notification runtime
   assert.equal(diagnosticsByCapability.get('lock_mode')?.outbound.reason, null);
   assert.equal(diagnosticsByCapability.get('alarm_contact')?.inbound.enabled, true);
   assert.equal(diagnosticsByCapability.get('alarm_contact')?.outbound.enabled, false);
+  assert.equal(diagnosticsByCapability.get('alarm_open')?.inbound.enabled, true);
+  assert.equal(diagnosticsByCapability.get('alarm_open')?.outbound.enabled, false);
   assert.equal(diagnosticsByCapability.get('alarm_generic')?.inbound.enabled, true);
   assert.equal(diagnosticsByCapability.get('alarm_generic')?.outbound.enabled, false);
   assert.equal(diagnosticsByCapability.get('alarm_problem')?.inbound.enabled, true);
   assert.equal(diagnosticsByCapability.get('alarm_problem')?.outbound.enabled, false);
+  assert.equal(diagnosticsByCapability.get('alarm_stuck')?.inbound.enabled, true);
+  assert.equal(diagnosticsByCapability.get('alarm_stuck')?.outbound.enabled, false);
+  assert.equal(diagnosticsByCapability.get('alarm_power')?.inbound.enabled, true);
+  assert.equal(diagnosticsByCapability.get('alarm_power')?.outbound.enabled, false);
   assert.equal(diagnosticsByCapability.get('locked')?.inbound.enabled, true);
   assert.equal(diagnosticsByCapability.get('locked')?.outbound.enabled, true);
   assert.equal(diagnosticsByCapability.get('locked')?.outbound.reason, null);

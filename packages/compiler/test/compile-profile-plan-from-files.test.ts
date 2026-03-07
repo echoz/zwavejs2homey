@@ -565,6 +565,15 @@ test('root manifest product overrides curate Leviton switches and Yale locks', (
             metadata: { type: 'number', readable: true, writeable: false },
           },
           {
+            valueId: {
+              commandClass: 113,
+              endpoint: 0,
+              property: 'Power Management',
+              propertyKey: 'Power status',
+            },
+            metadata: { type: 'number', readable: true, writeable: false },
+          },
+          {
             valueId: { commandClass: 128, endpoint: 0, property: 'level' },
             metadata: { type: 'number', readable: true, writeable: false },
           },
@@ -578,8 +587,11 @@ test('root manifest product overrides curate Leviton switches and Yale locks', (
           'enum_select',
           'lock_mode',
           'alarm_contact',
+          'alarm_open',
           'alarm_generic',
           'alarm_problem',
+          'alarm_stuck',
+          'alarm_power',
           'measure_battery',
           'alarm_battery',
           'alarm_tamper',
@@ -628,11 +640,20 @@ test('root manifest product overrides curate Leviton switches and Yale locks', (
       const alarmContactCapability = result.profile.capabilities.find(
         (item) => item.capabilityId === 'alarm_contact',
       );
+      const alarmOpenCapability = result.profile.capabilities.find(
+        (item) => item.capabilityId === 'alarm_open',
+      );
       const alarmGenericCapability = result.profile.capabilities.find(
         (item) => item.capabilityId === 'alarm_generic',
       );
       const alarmProblemCapability = result.profile.capabilities.find(
         (item) => item.capabilityId === 'alarm_problem',
+      );
+      const alarmStuckCapability = result.profile.capabilities.find(
+        (item) => item.capabilityId === 'alarm_stuck',
+      );
+      const alarmPowerCapability = result.profile.capabilities.find(
+        (item) => item.capabilityId === 'alarm_power',
       );
       const alarmTamperCapability = result.profile.capabilities.find(
         (item) => item.capabilityId === 'alarm_tamper',
@@ -670,6 +691,16 @@ test('root manifest product overrides curate Leviton switches and Yale locks', (
         alarmContactCapability?.inboundMapping?.transformRef,
         'zwave_door_status_to_homey_alarm_contact',
       );
+      assert.equal(alarmOpenCapability?.inboundMapping?.kind, 'value');
+      assert.deepEqual(alarmOpenCapability?.inboundMapping?.selector, {
+        commandClass: 98,
+        endpoint: 0,
+        property: 'doorStatus',
+      });
+      assert.equal(
+        alarmOpenCapability?.inboundMapping?.transformRef,
+        'zwave_door_status_to_homey_alarm_open',
+      );
       assert.equal(alarmGenericCapability?.inboundMapping?.kind, 'value');
       assert.deepEqual(alarmGenericCapability?.inboundMapping?.selector, {
         commandClass: 113,
@@ -691,6 +722,28 @@ test('root manifest product overrides curate Leviton switches and Yale locks', (
       assert.equal(
         alarmProblemCapability?.inboundMapping?.transformRef,
         'zwave_access_control_lock_state_to_homey_alarm_problem',
+      );
+      assert.equal(alarmStuckCapability?.inboundMapping?.kind, 'value');
+      assert.deepEqual(alarmStuckCapability?.inboundMapping?.selector, {
+        commandClass: 113,
+        endpoint: 0,
+        property: 'Access Control',
+        propertyKey: 'Lock state',
+      });
+      assert.equal(
+        alarmStuckCapability?.inboundMapping?.transformRef,
+        'zwave_access_control_lock_state_to_homey_alarm_stuck',
+      );
+      assert.equal(alarmPowerCapability?.inboundMapping?.kind, 'value');
+      assert.deepEqual(alarmPowerCapability?.inboundMapping?.selector, {
+        commandClass: 113,
+        endpoint: 0,
+        property: 'Power Management',
+        propertyKey: 'Power status',
+      });
+      assert.equal(
+        alarmPowerCapability?.inboundMapping?.transformRef,
+        'zwave_power_status_nonzero_to_homey_alarm_power',
       );
       assert.equal(alarmTamperCapability?.inboundMapping?.kind, 'event');
       assert.deepEqual(alarmTamperCapability?.inboundMapping?.selector, {

@@ -118,6 +118,24 @@
         {
           "type": "capability",
           "mode": "replace",
+          "capabilityId": "alarm_open",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 98,
+              "endpoint": 0,
+              "property": "doorStatus"
+            },
+            "transformRef": "zwave_door_status_to_homey_alarm_open"
+          },
+          "flags": {
+            "readable": true,
+            "writeable": false
+          }
+        },
+        {
+          "type": "capability",
+          "mode": "replace",
           "capabilityId": "alarm_generic",
           "inboundMapping": {
             "kind": "value",
@@ -147,6 +165,44 @@
               "propertyKey": "Lock state"
             },
             "transformRef": "zwave_access_control_lock_state_to_homey_alarm_problem"
+          },
+          "flags": {
+            "readable": true,
+            "writeable": false
+          }
+        },
+        {
+          "type": "capability",
+          "mode": "replace",
+          "capabilityId": "alarm_stuck",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 113,
+              "endpoint": 0,
+              "property": "Access Control",
+              "propertyKey": "Lock state"
+            },
+            "transformRef": "zwave_access_control_lock_state_to_homey_alarm_stuck"
+          },
+          "flags": {
+            "readable": true,
+            "writeable": false
+          }
+        },
+        {
+          "type": "capability",
+          "mode": "replace",
+          "capabilityId": "alarm_power",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 113,
+              "endpoint": 0,
+              "property": "Power Management",
+              "propertyKey": "Power status"
+            },
+            "transformRef": "zwave_power_status_nonzero_to_homey_alarm_power"
           },
           "flags": {
             "readable": true,
