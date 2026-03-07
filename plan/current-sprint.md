@@ -38,6 +38,21 @@ Close Phase 6 Reliability + UX with production-ready stability + diagnostics UX:
     - `co.lazylabs.zwavejs2homey/test/node-runtime.test.ts`
     - `co.lazylabs.zwavejs2homey/test/bundled-compiled-artifact.test.ts`
 
+- Phase 7 live expansion-candidate ranking slice:
+  - added compile-inspect post-processing CLI:
+    - `compiler:expansion-candidates`
+  - reads `compiler:inspect-live` JSON output and ranks product triples by:
+    - review pressure (`curationCandidates.likelyNeedsReview`)
+    - generic profile outcomes
+    - unmatched action counts
+  - outputs actionable suggestions:
+    - `author-product-rule`
+    - `tighten-existing-product-rule`
+    - `review-generic-classification`
+    - `stable`
+  - added parser + ranking regression coverage:
+    - `packages/core/test/homey-compile-expansion-candidates-tool.test.ts`
+
 - Bridge deletion cascade slice:
   - deleting a bridge device now triggers cascading delete attempts for node devices bound to the same `bridgeId`
   - bridge deletion still tears down bridge runtime connection/session after cascade attempts

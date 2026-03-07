@@ -148,6 +148,13 @@ npm run compiler:validate-live -- --url ws://HOST:PORT --all-nodes --manifest-fi
 npm run compiler:simulate -- --url ws://HOST:PORT --all-nodes --manifest-file rules/manifest.json --signature 29:66:2
 ```
 
+Rank live product-triple expansion candidates from inspect output:
+
+```bash
+npm run compiler:inspect-live -- --url ws://HOST:PORT --all-nodes --compiled-file co.lazylabs.zwavejs2homey/assets/compiled/compiled-homey-profiles.v1.json --format json-pretty --output-file /tmp/inspect-live.json
+npm run compiler:expansion-candidates -- --inspect-live-file /tmp/inspect-live.json --top 12 --format markdown --output-file /tmp/expansion-candidates.md
+```
+
 Run the TUI:
 
 ```bash

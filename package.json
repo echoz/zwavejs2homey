@@ -21,6 +21,7 @@
     "compiler:tui": "npm run build -w @zwavejs2homey/tui && node packages/tui/dist/cli.js",
     "compiler:inspect": "node tools/homey-compile-inspect.mjs",
     "compiler:inspect-live": "node tools/homey-compile-inspect-live.mjs",
+    "compiler:expansion-candidates": "node tools/homey-compile-expansion-candidates.mjs",
     "compiler:validate-live": "node tools/homey-compile-validate-live.mjs",
     "compiler:baseline": "node tools/homey-compile-baseline.mjs",
     "compiler:simulate": "node tools/homey-compile-simulate.mjs",
