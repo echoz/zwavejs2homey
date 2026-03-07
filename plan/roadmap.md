@@ -207,6 +207,10 @@ Delivered in Phase 6 so far:
 - operator CLI parity for bridge scoping:
   - runtime API smoke CLI supports `--bridge-id` for bridge-scoped read-route checks
   - support-bundle CLI supports `--bridge-id` and records bridge scope in exported metadata
+- bridge diagnostics telemetry visibility:
+  - app now tracks per-bridge diagnostics refresh success/failure markers
+  - `GET /runtime/bridges` and bridge-scoped diagnostics now expose refresh timestamps + last failure reason
+  - settings bridge table + bridge tools surface those markers for faster triage
 
 ## Active Risks
 

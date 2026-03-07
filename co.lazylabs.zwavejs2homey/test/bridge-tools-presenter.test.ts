@@ -44,6 +44,12 @@ function createSnapshot() {
         source: 'settings',
         errorMessage: null,
       },
+      diagnosticsRefresh: {
+        lastSuccessAt: '2026-03-05T00:01:00.000Z',
+        lastFailureAt: null,
+        lastFailureReason: null,
+        lastReason: 'zwjs-connection-updated',
+      },
     },
     nodeSummary: {
       total: 2,
@@ -187,6 +193,9 @@ test('bridge tools presenter builds filtered action-needed view by default', () 
   assert.equal(vm.nodes[0].recommendationTone, 'danger');
   assert.equal(vm.nodesMeta, 'Showing 1 of 2 imported nodes that require action.');
   assert.equal(rowValue(vm.runtimeRows, 'Reconnect Attempts'), '2');
+  assert.equal(rowValue(vm.runtimeRows, 'Diagnostics Refresh'), 'Healthy');
+  assert.notEqual(rowValue(vm.summaryRows, 'Diagnostics Last Success'), 'n/a');
+  assert.equal(rowValue(vm.summaryRows, 'Diagnostics Failure Reason'), 'n/a');
   assert.equal(
     rowValue(vm.runtimeRows, 'Inference Policy'),
     'Compiled profiles only + safe fallback (no runtime generic inference)',
@@ -195,6 +204,26 @@ test('bridge tools presenter builds filtered action-needed view by default', () 
   assert.equal(rowValue(vm.summaryRows, 'With Override'), '1');
   assert.equal(rowValue(vm.summaryRows, 'Top Skip Reasons'), 'unsupported_value_type:3');
   assert.equal(vm.status.includes('reconnect attempts observed (2).'), true);
+});
+
+test('bridge tools presenter surfaces diagnostics refresh failure state', () => {
+  const snapshot = createSnapshot();
+  snapshot.runtime.diagnosticsRefresh = {
+    lastSuccessAt: '2026-03-05T00:01:00.000Z',
+    lastFailureAt: '2026-03-05T00:02:00.000Z',
+    lastFailureReason: 'Driver Not Initialized: bridge',
+    lastReason: 'startup',
+  };
+  const loaded = presenter.reduce(presenter.createInitialState(), {
+    type: 'load_success',
+    snapshot,
+  });
+  const vm = presenter.buildViewModel(loaded);
+  assert.equal(rowValue(vm.runtimeRows, 'Diagnostics Refresh'), 'Failed');
+  assert.equal(
+    rowValue(vm.runtimeAdvancedRows, 'Diagnostics Last Failure Reason'),
+    'Driver Not Initialized: bridge',
+  );
 });
 
 test('bridge tools presenter supports filter switching to all nodes', () => {

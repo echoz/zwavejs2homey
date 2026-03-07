@@ -203,16 +203,23 @@ function createBridgeRuntimeDevice({
   bridgeId,
   name,
   settings,
+  onRuntimeDiagnosticsRefresh,
 }: {
   id: string;
   bridgeId: string;
   name: string;
   settings: Record<string, unknown>;
+  onRuntimeDiagnosticsRefresh?: (reason: string) => Promise<void> | void;
 }) {
   return {
     getData: () => ({ id, bridgeId }),
     getName: () => name,
     getSettings: () => settings,
+    async onRuntimeDiagnosticsRefresh(reason: string) {
+      if (typeof onRuntimeDiagnosticsRefresh === 'function') {
+        await onRuntimeDiagnosticsRefresh(reason);
+      }
+    },
   };
 }
 
@@ -961,6 +968,8 @@ test('app bridge inventory reports configured bridge devices and runtime status'
   assert.equal(main.configured, true);
   assert.equal(main.settings.url, 'ws://127.0.0.1:3000');
   assert.equal(main.runtime.transportConnected, true);
+  assert.equal(main.diagnosticsRefresh.lastFailureReason, null);
+  assert.notEqual(main.diagnosticsRefresh.lastSuccessAt, null);
   assert.equal(main.importedNodeCount, 1);
 
   const secondary = inventory.bridges.find((bridge) => bridge.bridgeId === 'secondary');
@@ -969,7 +978,61 @@ test('app bridge inventory reports configured bridge devices and runtime status'
   assert.equal(secondary.configured, false);
   assert.equal(secondary.settings.url, null);
   assert.equal(secondary.runtime.transportConnected, true);
+  assert.equal(secondary.diagnosticsRefresh.lastFailureReason, null);
+  assert.notEqual(secondary.diagnosticsRefresh.lastSuccessAt, null);
   assert.equal(secondary.importedNodeCount, 1);
+
+  await app.onUninit();
+});
+
+test('app clears bridge diagnostics refresh failure after a subsequent successful refresh', async () => {
+  let failFirstRefresh = true;
+  const bridgeDevices = [
+    createBridgeRuntimeDevice({
+      id: 'zwjs-bridge-main',
+      bridgeId: 'main',
+      name: 'Main Bridge',
+      settings: {
+        zwjs_url: 'ws://127.0.0.1:3000',
+        zwjs_auth_type: 'none',
+      },
+      async onRuntimeDiagnosticsRefresh() {
+        if (failFirstRefresh) {
+          failFirstRefresh = false;
+          throw new Error('simulated diagnostics refresh failure');
+        }
+      },
+    }),
+  ];
+
+  const { app } = loadAppClass([], bridgeDevices);
+  await app.onInit();
+
+  const firstInventory = await app.getBridgeRuntimeInventory();
+  const firstMain = firstInventory.bridges.find((bridge) => bridge.bridgeId === 'main');
+  assert.ok(firstMain);
+  assert.equal(
+    firstMain.diagnosticsRefresh.lastFailureReason,
+    'simulated diagnostics refresh failure',
+  );
+  assert.equal(firstMain.diagnosticsRefresh.lastSuccessAt, null);
+
+  await app.configureBridgeConnection({
+    bridgeId: 'main',
+    settings: {
+      zwjs_url: 'ws://127.0.0.1:3000',
+      zwjs_auth_type: 'none',
+    },
+    reason: 'test-retry',
+  });
+
+  const secondInventory = await app.getBridgeRuntimeInventory();
+  const secondMain = secondInventory.bridges.find((bridge) => bridge.bridgeId === 'main');
+  assert.ok(secondMain);
+  assert.notEqual(secondMain.diagnosticsRefresh.lastSuccessAt, null);
+  assert.equal(secondMain.diagnosticsRefresh.lastFailureReason, null);
+  assert.equal(secondMain.diagnosticsRefresh.lastFailureAt, null);
+  assert.equal(secondMain.diagnosticsRefresh.lastReason, 'bridge-config-updated:main');
 
   await app.onUninit();
 });

@@ -41,11 +41,17 @@ Error responses keep the same shape:
     - bridge identity (`bridgeId`, Homey device id/name)
     - bridge configuration presence (`url`, auth type)
     - bridge runtime transport state (`transportConnected`, lifecycle/session details)
+    - bridge diagnostics refresh telemetry (`diagnosticsRefresh.lastSuccessAt`, `lastFailureAt`, `lastFailureReason`, `lastReason`)
     - imported node count per bridge
 - `GET /runtime/diagnostics`
   - query:
     - `homeyDeviceId` (optional string)
     - `bridgeId` (optional string)
+  - response includes bridge-scoped diagnostics refresh telemetry:
+    - `diagnosticsRefresh.lastSuccessAt`
+    - `diagnosticsRefresh.lastFailureAt`
+    - `diagnosticsRefresh.lastFailureReason`
+    - `diagnosticsRefresh.lastReason`
 - `GET /runtime/support-bundle`
   - query:
     - `homeyDeviceId` (optional string)

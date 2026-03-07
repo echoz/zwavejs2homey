@@ -602,6 +602,8 @@ test('bridge driver repair session exposes bridge tools snapshot handlers', asyn
   assert.equal(first.nodes[0].node.manufacturer, 'Leviton');
   assert.equal(first.nodes[0].sync.syncReason, 'startup');
   assert.equal(first.nodes[0].mapping.capabilityCount, 2);
+  assert.equal(first.runtime.diagnosticsRefresh.lastSuccessAt, null);
+  assert.equal(first.runtime.diagnosticsRefresh.lastFailureReason, null);
   assert.equal(second.runtime.zwjs.serverVersion, '3.4.0');
   assert.equal(second.runtime.zwjs.versionReceived, true);
   assert.equal(diagnosticsCalls.length, 2);

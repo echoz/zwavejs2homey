@@ -171,6 +171,21 @@ function runtimeStatusLabel(snapshot) {
 function runtimeInferencePolicyLabel() {
     return 'Compiled profiles only + safe fallback (no runtime generic inference)';
 }
+function diagnosticsRefreshStatusLabel(snapshot) {
+    const refresh = snapshot?.runtime && typeof snapshot.runtime === 'object'
+        ? snapshot.runtime.diagnosticsRefresh
+        : null;
+    if (refresh && typeof refresh === 'object') {
+        if (typeof refresh.lastFailureReason === 'string' &&
+            refresh.lastFailureReason.trim().length > 0) {
+            return 'Failed';
+        }
+        if (typeof refresh.lastSuccessAt === 'string' && refresh.lastSuccessAt.trim().length > 0) {
+            return 'Healthy';
+        }
+    }
+    return 'n/a';
+}
 function toNonNegativeCount(value) {
     if (typeof value !== 'number' || !Number.isFinite(value))
         return 0;
@@ -225,6 +240,15 @@ function buildBridgeSnapshotWarnings(snapshot) {
         : 0;
     if (reconnectAttempt > 0) {
         warnings.push(`ZWJS reconnect attempts observed (${reconnectAttempt}).`);
+    }
+    const diagnosticsRefresh = snapshot.runtime && typeof snapshot.runtime === 'object'
+        ? snapshot.runtime.diagnosticsRefresh
+        : null;
+    if (diagnosticsRefresh &&
+        typeof diagnosticsRefresh === 'object' &&
+        typeof diagnosticsRefresh.lastFailureReason === 'string' &&
+        diagnosticsRefresh.lastFailureReason.trim().length > 0) {
+        warnings.push(`Diagnostics refresh last failed: ${diagnosticsRefresh.lastFailureReason.trim()}`);
     }
     const actionable = Array.isArray(snapshot.nodes)
         ? snapshot.nodes.filter((node) => recommendationPriority(node) < 2).length
@@ -432,6 +456,7 @@ function sortNodes(nodes) {
                 ],
                 ['Server Version', snapshot?.runtime?.zwjs?.serverVersion],
                 ['Adapter Family', snapshot?.runtime?.zwjs?.adapterFamily],
+                ['Diagnostics Refresh', diagnosticsRefreshStatusLabel(snapshot)],
                 ['Version Received', asYesNoUnknown(snapshot?.runtime?.zwjs?.versionReceived)],
                 ['Initialized', asYesNoUnknown(snapshot?.runtime?.zwjs?.initialized)],
                 ['Listening', asYesNoUnknown(snapshot?.runtime?.zwjs?.listening)],
@@ -450,6 +475,19 @@ function sortNodes(nodes) {
                     snapshot?.runtime?.compiledProfiles?.pipelineFingerprint,
                     'mono',
                 ],
+                [
+                    'Diagnostics Last Success',
+                    asTimeOrNull(snapshot?.runtime?.diagnosticsRefresh?.lastSuccessAt),
+                ],
+                [
+                    'Diagnostics Last Failure',
+                    asTimeOrNull(snapshot?.runtime?.diagnosticsRefresh?.lastFailureAt),
+                ],
+                [
+                    'Diagnostics Last Failure Reason',
+                    snapshot?.runtime?.diagnosticsRefresh?.lastFailureReason,
+                ],
+                ['Diagnostics Last Reason', snapshot?.runtime?.diagnosticsRefresh?.lastReason, 'mono'],
                 [
                     'Compiled Generated At',
                     asTimeOrNull(snapshot?.runtime?.compiledProfiles?.generatedAt),
@@ -479,6 +517,15 @@ function sortNodes(nodes) {
                 ['Action Needed', actionNeededNodes.length],
                 ['Profile Updates', snapshot?.nodeSummary?.recommendationAvailableCount],
                 ['Backfill Needed', snapshot?.nodeSummary?.recommendationBackfillCount],
+                [
+                    'Diagnostics Last Success',
+                    asTimeOrNull(snapshot?.runtime?.diagnosticsRefresh?.lastSuccessAt),
+                ],
+                [
+                    'Diagnostics Last Failure',
+                    asTimeOrNull(snapshot?.runtime?.diagnosticsRefresh?.lastFailureAt),
+                ],
+                ['Diagnostics Failure Reason', snapshot?.runtime?.diagnosticsRefresh?.lastFailureReason],
                 ['Mapped Capabilities', snapshot?.nodeSummary?.capabilityCount],
                 ['Inbound Skipped', snapshot?.nodeSummary?.inboundSkipped],
                 ['Outbound Skipped', snapshot?.nodeSummary?.outboundSkipped],

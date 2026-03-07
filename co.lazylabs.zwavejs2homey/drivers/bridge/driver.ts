@@ -54,6 +54,12 @@ interface AppRuntimeAccess {
   getNodeRuntimeDiagnostics?: (options?: { homeyDeviceId?: string; bridgeId?: string }) => Promise<{
     generatedAt: string;
     bridgeId: string;
+    diagnosticsRefresh?: {
+      lastSuccessAt: string | null;
+      lastFailureAt: string | null;
+      lastFailureReason: string | null;
+      lastReason: string | null;
+    };
     zwjs: {
       available: boolean;
       transportConnected: boolean;
@@ -1110,6 +1116,12 @@ module.exports = class BridgeDriver extends Homey.Driver {
           zwjs: diagnostics.zwjs,
           compiledProfiles: diagnostics.compiledProfiles,
           curation: diagnostics.curation,
+          diagnosticsRefresh: diagnostics.diagnosticsRefresh ?? {
+            lastSuccessAt: null,
+            lastFailureAt: null,
+            lastFailureReason: null,
+            lastReason: null,
+          },
         },
         nodeSummary,
         nodes,

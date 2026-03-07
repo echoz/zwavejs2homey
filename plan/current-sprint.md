@@ -21,6 +21,18 @@ Kick off Phase 6 Reliability + UX delivery:
 
 ## Recently Completed
 
+- Bridge diagnostics refresh telemetry slice:
+  - app runtime now tracks per-bridge diagnostics refresh status:
+    - last success timestamp
+    - last failure timestamp + reason
+    - last refresh trigger reason
+  - runtime APIs now expose telemetry on both:
+    - `getBridgeRuntimeInventory()`
+    - `getNodeRuntimeDiagnostics(...)`
+  - settings configured-bridges table now renders refresh telemetry for each bridge row
+  - bridge tools presenter/snapshot now renders refresh telemetry in runtime + summary panels
+  - added transition regression coverage to ensure failure reason clears after a later successful refresh
+
 - Code-review remediation slice (settings bootstrap resilience):
   - fixed fail-closed settings bootstrap behavior when shared request-order gate script is unavailable
   - settings page now uses an in-page local request-order fallback gate instead of aborting initialization

@@ -189,6 +189,10 @@ Partially complete / next:
   - stale async diagnostics/inventory responses are ignored
   - bridge scope selector + refresh action disable while in-flight requests are active
   - bootstrap now fails open: when shared gate script wiring is unavailable, a local gate fallback keeps settings functional
+  - bridge inventory rows now surface diagnostics refresh telemetry per bridge:
+    - last successful refresh timestamp
+    - last failure timestamp/reason
+    - last refresh trigger reason
 - panel liveness gate coverage now exists for active custom panel session handlers:
   - pair/repair event handlers are exercised in table-driven tests with deadline-based liveness checks
   - timed session handler timeout behavior is explicitly locked to prevent spinner/hang regressions
@@ -197,6 +201,10 @@ Partially complete / next:
 - a runtime API client helper now exists for settings/custom-view consumers:
   - `co.lazylabs.zwavejs2homey/runtime-api-client.js`
   - contract reference: `docs/homey-api-contract.md`
+- bridge diagnostics snapshots now include refresh telemetry:
+  - app tracks per-bridge refresh success/failure markers
+  - `getNodeRuntimeDiagnostics(...)` and `getBridgeRuntimeInventory()` now expose this telemetry
+  - bridge tools and settings surfaces render those markers for operator triage
 - node Device Tools host path is now wired:
   - node driver `onRepair` session handlers:
     - `device_tools:get_snapshot`

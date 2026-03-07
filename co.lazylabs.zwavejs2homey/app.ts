@@ -49,6 +49,13 @@ interface ZwjsDiagnosticsStatusV1 {
   lastMessageAt: string | null;
 }
 
+interface BridgeDiagnosticsRefreshStatusV1 {
+  lastSuccessAt: string | null;
+  lastFailureAt: string | null;
+  lastFailureReason: string | null;
+  lastReason: string | null;
+}
+
 interface NodeStateSnapshotV1 {
   manufacturerId: number | null;
   productType: number | null;
@@ -213,6 +220,10 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
   private readonly bridgeSessions = new Map<string, BridgeSessionRuntimeState>([
     [ZWJS_DEFAULT_BRIDGE_ID, createBridgeSession(ZWJS_DEFAULT_BRIDGE_ID)],
   ]);
+  private readonly bridgeDiagnosticsRefreshStatusById = new Map<
+    string,
+    BridgeDiagnosticsRefreshStatusV1
+  >();
   private preferredBridgeId: string = ZWJS_DEFAULT_BRIDGE_ID;
   private compiledProfilesRuntime?: CompiledProfilesRuntime;
   private curationRuntime = loadCurationRuntimeFromSettings(undefined);
@@ -250,6 +261,14 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
   private static readonly DRIVER_READY_RETRY_MS = 25;
 
   private static readonly DRIVER_READY_TIMEOUT_MS = 15000;
+
+  private static toErrorMessage(error: unknown): string {
+    if (error instanceof Error && error.message.trim().length > 0) {
+      return error.message.trim();
+    }
+    const normalized = Zwavejs2HomeyApp.toStringOrNull(error);
+    return normalized ?? 'Unknown runtime error';
+  }
 
   private static wait(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
@@ -409,6 +428,50 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
       connectedAt: Zwavejs2HomeyApp.toStringOrNull(status?.connectedAt),
       lastMessageAt: Zwavejs2HomeyApp.toStringOrNull(status?.lastMessageAt),
     };
+  }
+
+  private getBridgeDiagnosticsRefreshStatus(bridgeId?: string): BridgeDiagnosticsRefreshStatusV1 {
+    const normalizedBridgeId = this.resolveBridgeId(bridgeId);
+    const existing = this.bridgeDiagnosticsRefreshStatusById.get(normalizedBridgeId);
+    if (existing) {
+      return {
+        lastSuccessAt: existing.lastSuccessAt,
+        lastFailureAt: existing.lastFailureAt,
+        lastFailureReason: existing.lastFailureReason,
+        lastReason: existing.lastReason,
+      };
+    }
+    return {
+      lastSuccessAt: null,
+      lastFailureAt: null,
+      lastFailureReason: null,
+      lastReason: null,
+    };
+  }
+
+  private markBridgeDiagnosticsRefreshSuccess(bridgeId: string, reason: string): void {
+    const normalizedBridgeId = this.resolveBridgeId(bridgeId);
+    this.bridgeDiagnosticsRefreshStatusById.set(normalizedBridgeId, {
+      lastSuccessAt: new Date().toISOString(),
+      lastFailureAt: null,
+      lastFailureReason: null,
+      lastReason: Zwavejs2HomeyApp.toStringOrNull(reason),
+    });
+  }
+
+  private markBridgeDiagnosticsRefreshFailure(
+    bridgeId: string,
+    reason: string,
+    error: unknown,
+  ): void {
+    const normalizedBridgeId = this.resolveBridgeId(bridgeId);
+    const status = this.getBridgeDiagnosticsRefreshStatus(normalizedBridgeId);
+    this.bridgeDiagnosticsRefreshStatusById.set(normalizedBridgeId, {
+      lastSuccessAt: status.lastSuccessAt,
+      lastFailureAt: new Date().toISOString(),
+      lastFailureReason: Zwavejs2HomeyApp.toErrorMessage(error),
+      lastReason: Zwavejs2HomeyApp.toStringOrNull(reason),
+    });
   }
 
   private static toRecommendationActionPriority(action: RecommendationActionKindV1): number {
@@ -943,21 +1006,47 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
     try {
       const bridgeDriver = await this.getDriverWhenReady<{
         getDevices: () => Array<{
+          getData?: () => { id?: unknown; bridgeId?: unknown } | undefined;
           onRuntimeDiagnosticsRefresh?: (refreshReason: string) => Promise<void>;
         }>;
       }>('bridge', `refreshBridgeRuntimeDiagnostics:${reason}`);
       if (!bridgeDriver) return;
       const devices = bridgeDriver.getDevices() as Array<{
+        getData?: () => { id?: unknown; bridgeId?: unknown } | undefined;
         onRuntimeDiagnosticsRefresh?: (refreshReason: string) => Promise<void>;
       }>;
       this.log('Refreshing bridge runtime diagnostics', {
         reason,
         devices: devices.length,
       });
+      let refreshError: unknown;
       for (const device of devices) {
+        const bridgeId =
+          this.resolveBridgeIdFromBridgeDeviceData(device.getData?.()) ??
+          this.resolveBridgeId(undefined);
         if (typeof device.onRuntimeDiagnosticsRefresh === 'function') {
-          await device.onRuntimeDiagnosticsRefresh(reason);
+          try {
+            await device.onRuntimeDiagnosticsRefresh(reason);
+            this.markBridgeDiagnosticsRefreshSuccess(bridgeId, reason);
+          } catch (error) {
+            if (!refreshError) refreshError = error;
+            this.markBridgeDiagnosticsRefreshFailure(bridgeId, reason, error);
+            this.error('Failed bridge runtime diagnostics refresh for bridge device', {
+              bridgeId,
+              reason,
+              error,
+            });
+          }
+          continue;
         }
+        this.markBridgeDiagnosticsRefreshFailure(
+          bridgeId,
+          reason,
+          new Error('Bridge device missing onRuntimeDiagnosticsRefresh handler'),
+        );
+      }
+      if (refreshError) {
+        throw refreshError;
       }
     } catch (error) {
       this.error('Failed to refresh bridge runtime diagnostics', { reason, error });
@@ -1207,6 +1296,7 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
       await this.stopBridgeClient(bridgeId, reason);
       if (bridgeId !== this.defaultBridgeId) {
         this.bridgeSessions.delete(bridgeId);
+        this.bridgeDiagnosticsRefreshStatusById.delete(bridgeId);
       }
       if (this.preferredBridgeId === bridgeId) {
         this.preferredBridgeId = this.defaultBridgeId;
@@ -1258,6 +1348,7 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
   }): Promise<{
     generatedAt: string;
     bridgeId: string;
+    diagnosticsRefresh: BridgeDiagnosticsRefreshStatusV1;
     zwjs: ZwjsDiagnosticsStatusV1;
     compiledProfiles: CompiledProfilesRuntimeStatus;
     curation: HomeyCurationRuntimeStatusV1;
@@ -1316,6 +1407,7 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
     return {
       generatedAt: new Date().toISOString(),
       bridgeId: diagnosticsBridgeId,
+      diagnosticsRefresh: this.getBridgeDiagnosticsRefreshStatus(diagnosticsBridgeId),
       zwjs: this.normalizeZwjsDiagnosticsStatus(diagnosticsBridgeId),
       compiledProfiles: this.getCompiledProfilesStatus(),
       curation: this.getCurationStatus(),
@@ -1335,6 +1427,7 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
         authType: 'none' | 'bearer';
       };
       runtime: ZwjsDiagnosticsStatusV1;
+      diagnosticsRefresh: BridgeDiagnosticsRefreshStatusV1;
       importedNodeCount: number;
     }>;
   }> {
@@ -1376,6 +1469,7 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
             authType,
           },
           runtime: this.normalizeZwjsDiagnosticsStatus(bridgeId),
+          diagnosticsRefresh: this.getBridgeDiagnosticsRefreshStatus(bridgeId),
           importedNodeCount: importedNodeCountByBridgeId.get(bridgeId) ?? 0,
         };
       })

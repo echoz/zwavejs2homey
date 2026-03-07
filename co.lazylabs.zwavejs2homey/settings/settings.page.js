@@ -88,6 +88,14 @@
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#39;');
     }
+    function formatDateTime(value) {
+        if (typeof value !== 'string' || value.trim().length === 0)
+            return 'n/a';
+        const parsed = new Date(value);
+        if (Number.isNaN(parsed.getTime()))
+            return value;
+        return parsed.toLocaleString();
+    }
     function setStatus(message, tone = 'muted') {
         status.textContent = message;
         status.classList.remove('ok', 'warn', 'error', 'muted');
@@ -204,6 +212,9 @@
             const runtime = record.runtime && typeof record.runtime === 'object'
                 ? record.runtime
                 : {};
+            const diagnosticsRefresh = record.diagnosticsRefresh && typeof record.diagnosticsRefresh === 'object'
+                ? record.diagnosticsRefresh
+                : {};
             const authType = settings.authType === 'bearer' ? 'bearer' : 'none';
             return {
                 bridgeId: typeof record.bridgeId === 'string' ? record.bridgeId : 'unknown',
@@ -217,6 +228,20 @@
                 runtime: {
                     transportConnected: runtime.transportConnected === true,
                     lifecycle: typeof runtime.lifecycle === 'string' ? runtime.lifecycle : 'stopped',
+                },
+                diagnosticsRefresh: {
+                    lastSuccessAt: typeof diagnosticsRefresh.lastSuccessAt === 'string'
+                        ? diagnosticsRefresh.lastSuccessAt
+                        : null,
+                    lastFailureAt: typeof diagnosticsRefresh.lastFailureAt === 'string'
+                        ? diagnosticsRefresh.lastFailureAt
+                        : null,
+                    lastFailureReason: typeof diagnosticsRefresh.lastFailureReason === 'string'
+                        ? diagnosticsRefresh.lastFailureReason
+                        : null,
+                    lastReason: typeof diagnosticsRefresh.lastReason === 'string'
+                        ? diagnosticsRefresh.lastReason
+                        : null,
                 },
                 importedNodeCount: typeof record.importedNodeCount === 'number' &&
                     Number.isFinite(record.importedNodeCount)
@@ -274,6 +299,10 @@
             const lifecycleLabel = item.runtime.lifecycle && item.runtime.lifecycle.trim().length > 0
                 ? item.runtime.lifecycle
                 : 'stopped';
+            const diagnosticsSuccessLabel = formatDateTime(item.diagnosticsRefresh.lastSuccessAt);
+            const diagnosticsFailureLabel = formatDateTime(item.diagnosticsRefresh.lastFailureAt);
+            const diagnosticsFailureReason = item.diagnosticsRefresh.lastFailureReason ?? null;
+            const diagnosticsReason = item.diagnosticsRefresh.lastReason ?? null;
             const isScoped = activeBridgeScope && activeBridgeScope === item.bridgeId;
             return `
           <tr class="${isScoped ? 'is-scoped' : ''}">
@@ -286,7 +315,14 @@
               <span class="muted">${escapeHtml(item.settings.url ?? 'URL not set')}</span><br />
               <span class="muted">Auth: ${escapeHtml(item.settings.authType)}</span>
             </td>
-            <td>${escapeHtml(lifecycleLabel)}</td>
+            <td>
+              ${escapeHtml(lifecycleLabel)}<br />
+              <span class="muted">Refresh success: ${escapeHtml(diagnosticsSuccessLabel)}</span><br />
+              <span class="muted">Last refresh: ${escapeHtml(diagnosticsReason ?? 'n/a')}</span><br />
+              <span class="muted">Refresh failure: ${escapeHtml(diagnosticsFailureLabel)}</span>${diagnosticsFailureReason
+                ? `<br /><span class="muted">Failure reason: ${escapeHtml(diagnosticsFailureReason)}</span>`
+                : ''}
+            </td>
             <td>${escapeHtml(item.importedNodeCount)}</td>
             <td>
               <div class="bridge-actions">
