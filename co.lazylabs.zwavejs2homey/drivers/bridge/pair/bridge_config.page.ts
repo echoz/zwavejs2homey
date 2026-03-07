@@ -66,6 +66,8 @@ interface PairHomey {
   emit: (event: string, payload?: unknown) => Promise<unknown>;
   done: () => void;
   ready: () => void;
+  showView?: (viewId: string) => void | Promise<void>;
+  nextView?: () => void | Promise<void>;
 }
 
 declare const Homey: PairHomey;
@@ -178,6 +180,27 @@ declare const Homey: PairHomey;
     render();
   }
 
+  async function openNextPairStep(): Promise<void> {
+    try {
+      if (typeof Homey.showView === 'function') {
+        await Promise.resolve(Homey.showView('next_steps'));
+        return;
+      }
+      if (typeof Homey.nextView === 'function') {
+        await Promise.resolve(Homey.nextView());
+      }
+    } catch (error) {
+      stateRef.current = {
+        ...stateRef.current,
+        status: 'Bridge settings saved. Open ZWJS Node pairing to import nodes.',
+        error: `Unable to open next step automatically: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      };
+      render();
+    }
+  }
+
   async function saveSettings(): Promise<void> {
     const validation = presenter.validateInput({
       bridgeId: currentContextBridgeId(),
@@ -207,6 +230,9 @@ declare const Homey: PairHomey;
         stateRef.current.context.settings.tokenConfigured =
           validation.payload.authType === 'bearer';
       }
+      render();
+      await openNextPairStep();
+      return;
     } catch (error) {
       stateRef.current = presenter.reduce(stateRef.current, {
         type: 'save_error',

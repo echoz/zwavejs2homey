@@ -16,23 +16,6 @@ interface RuntimeViewModel {
   runtimeHint: string;
 }
 
-interface LoadedSettings {
-  url: string;
-  authType: 'none' | 'bearer';
-  token: string;
-}
-
-interface ValidateSettingsResult {
-  payload?: {
-    url: string;
-    auth: {
-      type: 'none' | 'bearer';
-      token?: string;
-    };
-  };
-  error?: string;
-}
-
 interface RuntimeParseResult {
   data?: Record<string, unknown>;
   error?: string;
@@ -45,14 +28,7 @@ interface SupportBundleExportResult {
 }
 
 interface SettingsPresenter {
-  DEFAULT_URL: string;
   DEFAULT_SUPPORT_BUNDLE_FILE_NAME: string;
-  normalizeLoadedSettings: (raw: unknown) => LoadedSettings;
-  validateSettingsInput: (input: {
-    url?: unknown;
-    authType?: unknown;
-    token?: unknown;
-  }) => ValidateSettingsResult;
   parseRuntimeResponse: (response: unknown) => RuntimeParseResult;
   parseSupportBundleResponse: (response: unknown) => RuntimeParseResult;
   buildSupportBundleExport: (
@@ -87,8 +63,6 @@ interface SettingsHomey {
   if (!maybePresenter) return;
   const presenter: SettingsPresenter = maybePresenter;
 
-  const SETTINGS_KEY = 'zwjs_connection';
-
   function mustElement<T extends HTMLElement>(id: string): T {
     const element = document.getElementById(id);
     if (!element) {
@@ -97,12 +71,6 @@ interface SettingsHomey {
     return element as T;
   }
 
-  const urlInput = mustElement<HTMLInputElement>('url');
-  const authTypeSelect = mustElement<HTMLSelectElement>('authType');
-  const tokenWrap = mustElement<HTMLElement>('tokenWrap');
-  const tokenInput = mustElement<HTMLInputElement>('token');
-  const saveBtn = mustElement<HTMLButtonElement>('saveBtn');
-  const resetBtn = mustElement<HTMLButtonElement>('resetBtn');
   const status = mustElement<HTMLElement>('status');
   const runtimeKv = mustElement<HTMLElement>('runtime-kv');
   const runtimeHint = mustElement<HTMLElement>('runtime-hint');
@@ -150,11 +118,6 @@ interface SettingsHomey {
     document.body.removeChild(fallbackLink);
   }
 
-  function updateTokenVisibility(): void {
-    const needsToken = authTypeSelect.value === 'bearer';
-    tokenWrap.classList.toggle('hidden', !needsToken);
-  }
-
   function renderRuntimeRows(rows: RuntimeStatusRow[]): void {
     if (!Array.isArray(rows) || rows.length === 0) {
       runtimeKv.innerHTML = '<div class="k">Status</div><div class="v">n/a</div>';
@@ -181,22 +144,6 @@ interface SettingsHomey {
     }
     warnings.hidden = false;
     warnings.innerHTML = items.map((item) => `<li>${escapeHtml(item)}</li>`).join('');
-  }
-
-  function getDraftSettings(): { url: string; authType: string; token: string } {
-    return {
-      url: urlInput.value,
-      authType: authTypeSelect.value,
-      token: tokenInput.value,
-    };
-  }
-
-  function renderLoadedSettings(raw: unknown): void {
-    const normalized = presenter.normalizeLoadedSettings(raw);
-    urlInput.value = normalized.url;
-    authTypeSelect.value = normalized.authType;
-    tokenInput.value = normalized.token;
-    updateTokenVisibility();
   }
 
   function renderRuntimeDiagnostics(data: Record<string, unknown>): void {
@@ -317,64 +264,14 @@ interface SettingsHomey {
     }
   }
 
-  function loadSettings(homey: SettingsHomey): void {
-    homey.get(SETTINGS_KEY, (error, raw) => {
-      if (error) {
-        setStatus(`Failed to load settings: ${error.message || String(error)}`, 'error');
-        homey.ready();
-        return;
-      }
-      renderLoadedSettings(raw);
-      setStatus('Settings loaded.', 'ok');
-      void refreshDiagnostics(homey);
-      homey.ready();
-    });
-  }
-
   function wireEvents(homey: SettingsHomey): void {
-    authTypeSelect.addEventListener('change', () => {
-      updateTokenVisibility();
-    });
-
-    saveBtn.addEventListener('click', () => {
-      const result = presenter.validateSettingsInput(getDraftSettings());
-      if (result.error || !result.payload) {
-        setStatus(result.error || 'Invalid settings input.', 'error');
-        return;
-      }
-      homey.set(SETTINGS_KEY, result.payload, (error) => {
-        if (error) {
-          setStatus(`Failed to save settings: ${error.message || String(error)}`, 'error');
-          return;
-        }
-        setStatus('Saved. Connection will be reloaded automatically.', 'ok');
-        void refreshDiagnostics(homey);
-      });
-    });
-
-    resetBtn.addEventListener('click', () => {
-      const payload = {
-        url: presenter.DEFAULT_URL,
-        auth: { type: 'none' as const },
-      };
-      homey.set(SETTINGS_KEY, payload, (error) => {
-        if (error) {
-          setStatus(`Failed to reset settings: ${error.message || String(error)}`, 'error');
-          return;
-        }
-        renderLoadedSettings(payload);
-        setStatus('Reset to defaults. Connection will be reloaded automatically.', 'ok');
-        void refreshDiagnostics(homey);
-      });
-    });
-
     refreshDiagnosticsBtn.addEventListener('click', () => {
       void refreshDiagnostics(homey);
     });
 
     openBridgeToolsBtn.addEventListener('click', () => {
       setStatus(
-        'Open Devices -> ZWJS Bridge -> Repair to access Bridge Tools diagnostics.',
+        'Open Devices -> ZWJS Bridge -> Repair for runtime tools, or Device Settings to edit bridge URL/auth.',
         'muted',
       );
     });
@@ -386,7 +283,9 @@ interface SettingsHomey {
 
   function onHomeyReady(homey: SettingsHomey): void {
     wireEvents(homey);
-    loadSettings(homey);
+    setStatus('App diagnostics ready.', 'ok');
+    void refreshDiagnostics(homey);
+    homey.ready();
   }
 
   root!.onHomeyReady = onHomeyReady;

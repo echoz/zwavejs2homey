@@ -124,7 +124,32 @@ test('bridge driver returns default bridge pair candidate when no bridge exists'
 
 test('bridge driver pair session registers list_devices handler', async () => {
   const driver = new BridgeDriver();
-  driver._configureHarness({ devices: [] });
+  driver._configureHarness({
+    app: {
+      getBridgeSession() {
+        return {
+          bridgeId: 'main',
+          getZwjsClient() {
+            return {
+              getStatus() {
+                return {
+                  transportConnected: false,
+                  lifecycle: 'stopped',
+                };
+              },
+              async getNodeList() {
+                return { nodes: [] };
+              },
+            };
+          },
+        };
+      },
+      async getNodeRuntimeDiagnostics() {
+        return { bridgeId: 'main', nodes: [] };
+      },
+    },
+    devices: [],
+  });
   const handlers = new Map();
   await driver.onPair({
     setHandler(event, handler) {
@@ -145,6 +170,9 @@ test('bridge driver pair session registers list_devices handler', async () => {
   });
   assert.equal(Array.isArray(callbackCandidates), true);
   assert.equal(callbackCandidates.length, 1);
+  assert.equal(typeof handlers.get('next_steps:get_status'), 'function');
+  const nextStepsStatus = await handlers.get('next_steps:get_status')();
+  assert.equal(nextStepsStatus.bridgeId, 'main');
 });
 
 test('bridge driver pair session exposes bridge config context', async () => {

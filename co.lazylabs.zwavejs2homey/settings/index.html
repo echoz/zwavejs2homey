@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ZWJS Connection</title>
+    <title>ZWJS2Homey Settings</title>
     <script type="text/javascript" src="/homey.js" data-origin="settings"></script>
     <style>
       :root {
@@ -16,7 +16,6 @@
         --ok: #0f766e;
         --warn: #b45309;
         --danger: #b91c1c;
-        --accent: #1d4ed8;
       }
 
       * {
@@ -30,85 +29,30 @@
         background: var(--bg);
       }
 
-      .grid {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 12px;
-      }
-
-      @media (min-width: 980px) {
-        .grid {
-          grid-template-columns: minmax(0, 1fr) minmax(320px, 40%);
-        }
-      }
-
       .panel {
         background: var(--panel);
         border: 1px solid var(--panel-border);
         border-radius: 12px;
         padding: 12px;
+        max-width: 980px;
       }
 
       h1 {
         font-size: 1.1rem;
-        margin: 0 0 12px;
+        margin: 0 0 10px;
       }
 
       h2 {
-        margin: 0 0 8px;
+        margin: 14px 0 8px;
         font-size: 14px;
       }
 
       p {
-        margin: 0 0 12px;
-      }
-
-      label {
-        display: block;
-        font-weight: 600;
-        margin: 10px 0 6px;
-      }
-
-      input,
-      select,
-      button {
-        box-sizing: border-box;
-        width: 100%;
-        padding: 8px;
-        font-size: 14px;
-        color: var(--text);
-        background: transparent;
-        border: 1px solid var(--panel-border);
-        border-radius: 8px;
-      }
-
-      button {
-        cursor: pointer;
-      }
-
-      button.primary {
-        border-color: var(--accent);
-        color: var(--accent);
-      }
-
-      button:disabled {
-        cursor: not-allowed;
-        opacity: 0.5;
-      }
-
-      .row {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-        margin-top: 12px;
+        margin: 0 0 10px;
       }
 
       .muted {
         color: var(--muted);
-      }
-
-      .hidden {
-        display: none;
       }
 
       .message {
@@ -130,7 +74,7 @@
 
       .kv {
         display: grid;
-        grid-template-columns: 140px minmax(0, 1fr);
+        grid-template-columns: 160px minmax(0, 1fr);
         row-gap: 6px;
         column-gap: 10px;
         font-size: 13px;
@@ -182,6 +126,36 @@
         font-size: 12px;
       }
 
+      .row {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      @media (min-width: 760px) {
+        .row {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+      }
+
+      button {
+        box-sizing: border-box;
+        width: 100%;
+        padding: 8px;
+        font-size: 14px;
+        color: var(--text);
+        background: transparent;
+        border: 1px solid var(--panel-border);
+        border-radius: 8px;
+        cursor: pointer;
+      }
+
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+      }
+
       .inline-option {
         display: flex;
         align-items: center;
@@ -198,49 +172,31 @@
     </style>
   </head>
   <body>
-    <div class="grid">
-      <section class="panel">
-        <h1>ZWJS Connection</h1>
-        <p class="muted">Configure how this app connects to your Z-Wave JS UI server.</p>
+    <section class="panel">
+      <h1>App Diagnostics</h1>
+      <p class="muted">
+        Bridge connection settings are configured per <strong>ZWJS Bridge</strong> device during
+        pairing or in that device's advanced settings.
+      </p>
 
-        <label for="url">WebSocket URL</label>
-        <input id="url" type="text" placeholder="ws://192.168.1.15:3000" />
+      <h2>Runtime Diagnostics</h2>
+      <div id="runtime-kv" class="kv"></div>
+      <div id="runtime-hint" class="hint">Diagnostics not loaded yet.</div>
+      <ul id="warnings" class="warnings" hidden></ul>
 
-        <label for="authType">Authentication</label>
-        <select id="authType">
-          <option value="none">None</option>
-          <option value="bearer">Bearer token</option>
-        </select>
-
-        <div id="tokenWrap" class="hidden">
-          <label for="token">Bearer token</label>
-          <input id="token" type="password" placeholder="Paste token" />
-        </div>
-
-        <div class="row">
-          <button id="saveBtn" class="primary" type="button">Save</button>
-          <button id="resetBtn" type="button">Reset To Defaults</button>
-        </div>
-
-        <p id="status" class="message muted"></p>
-      </section>
-
-      <section class="panel">
-        <h2>Runtime Diagnostics</h2>
-        <div id="runtime-kv" class="kv"></div>
-        <div id="runtime-hint" class="hint">Diagnostics not loaded yet.</div>
-        <ul id="warnings" class="warnings" hidden></ul>
-        <div class="row">
-          <button id="refreshDiagnosticsBtn" type="button">Refresh Diagnostics</button>
-          <button id="openBridgeToolsBtn" type="button">Open Bridge Tools</button>
-        </div>
+      <div class="row">
+        <button id="refreshDiagnosticsBtn" type="button">Refresh Diagnostics</button>
+        <button id="openBridgeToolsBtn" type="button">Bridge Tools Help</button>
         <button id="exportSupportBundleBtn" type="button">Export Support Bundle</button>
-        <label class="inline-option" for="redactSupportBundle">
-          <input id="redactSupportBundle" type="checkbox" checked />
-          Redact support bundle for sharing
-        </label>
-      </section>
-    </div>
+      </div>
+
+      <label class="inline-option" for="redactSupportBundle">
+        <input id="redactSupportBundle" type="checkbox" checked />
+        Redact support bundle for sharing
+      </label>
+
+      <p id="status" class="message muted">Diagnostics page ready.</p>
+    </section>
 
     <script src="./settings.presenter.js"></script>
     <script src="./settings.page.js"></script>

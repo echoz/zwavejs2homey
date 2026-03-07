@@ -4,7 +4,6 @@
     if (!maybePresenter)
         return;
     const presenter = maybePresenter;
-    const SETTINGS_KEY = 'zwjs_connection';
     function mustElement(id) {
         const element = document.getElementById(id);
         if (!element) {
@@ -12,12 +11,6 @@
         }
         return element;
     }
-    const urlInput = mustElement('url');
-    const authTypeSelect = mustElement('authType');
-    const tokenWrap = mustElement('tokenWrap');
-    const tokenInput = mustElement('token');
-    const saveBtn = mustElement('saveBtn');
-    const resetBtn = mustElement('resetBtn');
     const status = mustElement('status');
     const runtimeKv = mustElement('runtime-kv');
     const runtimeHint = mustElement('runtime-hint');
@@ -61,10 +54,6 @@
         fallbackLink.click();
         document.body.removeChild(fallbackLink);
     }
-    function updateTokenVisibility() {
-        const needsToken = authTypeSelect.value === 'bearer';
-        tokenWrap.classList.toggle('hidden', !needsToken);
-    }
     function renderRuntimeRows(rows) {
         if (!Array.isArray(rows) || rows.length === 0) {
             runtimeKv.innerHTML = '<div class="k">Status</div><div class="v">n/a</div>';
@@ -90,20 +79,6 @@
         }
         warnings.hidden = false;
         warnings.innerHTML = items.map((item) => `<li>${escapeHtml(item)}</li>`).join('');
-    }
-    function getDraftSettings() {
-        return {
-            url: urlInput.value,
-            authType: authTypeSelect.value,
-            token: tokenInput.value,
-        };
-    }
-    function renderLoadedSettings(raw) {
-        const normalized = presenter.normalizeLoadedSettings(raw);
-        urlInput.value = normalized.url;
-        authTypeSelect.value = normalized.authType;
-        tokenInput.value = normalized.token;
-        updateTokenVisibility();
     }
     function renderRuntimeDiagnostics(data) {
         const viewModel = presenter.buildRuntimeViewModel(data);
@@ -203,58 +178,12 @@
             exportSupportBundleBtn.disabled = false;
         }
     }
-    function loadSettings(homey) {
-        homey.get(SETTINGS_KEY, (error, raw) => {
-            if (error) {
-                setStatus(`Failed to load settings: ${error.message || String(error)}`, 'error');
-                homey.ready();
-                return;
-            }
-            renderLoadedSettings(raw);
-            setStatus('Settings loaded.', 'ok');
-            void refreshDiagnostics(homey);
-            homey.ready();
-        });
-    }
     function wireEvents(homey) {
-        authTypeSelect.addEventListener('change', () => {
-            updateTokenVisibility();
-        });
-        saveBtn.addEventListener('click', () => {
-            const result = presenter.validateSettingsInput(getDraftSettings());
-            if (result.error || !result.payload) {
-                setStatus(result.error || 'Invalid settings input.', 'error');
-                return;
-            }
-            homey.set(SETTINGS_KEY, result.payload, (error) => {
-                if (error) {
-                    setStatus(`Failed to save settings: ${error.message || String(error)}`, 'error');
-                    return;
-                }
-                setStatus('Saved. Connection will be reloaded automatically.', 'ok');
-                void refreshDiagnostics(homey);
-            });
-        });
-        resetBtn.addEventListener('click', () => {
-            const payload = {
-                url: presenter.DEFAULT_URL,
-                auth: { type: 'none' },
-            };
-            homey.set(SETTINGS_KEY, payload, (error) => {
-                if (error) {
-                    setStatus(`Failed to reset settings: ${error.message || String(error)}`, 'error');
-                    return;
-                }
-                renderLoadedSettings(payload);
-                setStatus('Reset to defaults. Connection will be reloaded automatically.', 'ok');
-                void refreshDiagnostics(homey);
-            });
-        });
         refreshDiagnosticsBtn.addEventListener('click', () => {
             void refreshDiagnostics(homey);
         });
         openBridgeToolsBtn.addEventListener('click', () => {
-            setStatus('Open Devices -> ZWJS Bridge -> Repair to access Bridge Tools diagnostics.', 'muted');
+            setStatus('Open Devices -> ZWJS Bridge -> Repair for runtime tools, or Device Settings to edit bridge URL/auth.', 'muted');
         });
         exportSupportBundleBtn.addEventListener('click', () => {
             void exportSupportBundle(homey);
@@ -262,7 +191,9 @@
     }
     function onHomeyReady(homey) {
         wireEvents(homey);
-        loadSettings(homey);
+        setStatus('App diagnostics ready.', 'ok');
+        void refreshDiagnostics(homey);
+        homey.ready();
     }
     root.onHomeyReady = onHomeyReady;
 })(typeof window !== 'undefined'

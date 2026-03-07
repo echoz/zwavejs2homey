@@ -22,7 +22,13 @@
       }
     },
     {
-      "id": "bridge_config"
+      "id": "bridge_config",
+      "navigation": {
+        "next": "next_steps"
+      }
+    },
+    {
+      "id": "next_steps"
     }
   ],
   "repair": [
