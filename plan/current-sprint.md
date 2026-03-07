@@ -31,6 +31,11 @@ Kick off Phase 6 Reliability + UX delivery:
   - added timeout-behavior regression checks to verify timed session wrappers reject stalled handler work
   - new test file:
     - `co.lazylabs.zwavejs2homey/test/panel-liveness-contract.test.ts`
+  - expanded liveness hardening to callback mode:
+    - table-driven callback-path checks now cover the same active pair/repair handlers
+    - callback timeout/error propagation paths are now regression-tested
+  - added timed-handler event inventory contract:
+    - `co.lazylabs.zwavejs2homey/test/session-handler-guard.test.ts` now asserts expected event set per driver
 
 - Settings stale-response hardening slice:
   - added request-order gating for settings diagnostics and bridge inventory fetches

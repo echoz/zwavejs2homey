@@ -95,6 +95,37 @@ async function invokeWithDeadline(handler, payload, label, timeoutMs = 1000) {
   }
 }
 
+async function invokeCallbackWithDeadline(handler, payload, label, timeoutMs = 1000) {
+  return await new Promise((resolve, reject) => {
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      reject(new Error(`${label} (callback) did not resolve within ${timeoutMs}ms`));
+    }, timeoutMs);
+
+    const callback = (error, result) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve(result);
+    };
+
+    try {
+      handler(payload, callback);
+    } catch (error) {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      reject(error);
+    }
+  });
+}
+
 function createBridgeDiagnosticsSnapshot(bridgeId) {
   return {
     generatedAt: '2026-03-06T00:00:00.000Z',
@@ -346,6 +377,174 @@ test('panel liveness contract: active pair/repair handlers resolve with expected
   assert.equal(bridgeSettings.length > 0, true);
 });
 
+test('panel liveness contract: active pair/repair handlers resolve via callback mode', async () => {
+  const bridgeId = 'main';
+  const bridgeDeviceData = {
+    id: 'zwjs-bridge-main',
+    kind: 'zwjs-bridge',
+    bridgeId,
+  };
+
+  const bridgeDriver = new BridgeDriver();
+  bridgeDriver._configureHarness({
+    app: {
+      async configureBridgeConnection() {},
+      async getNodeRuntimeDiagnostics() {
+        return createBridgeDiagnosticsSnapshot(bridgeId);
+      },
+    },
+    devices: [
+      {
+        getData: () => bridgeDeviceData,
+        getName: () => 'ZWJS Bridge (main)',
+        getSettings: () => ({
+          zwjs_url: 'ws://127.0.0.1:3000',
+          zwjs_auth_type: 'none',
+          zwjs_auth_token: '',
+        }),
+        async setSettings() {},
+      },
+    ],
+  });
+
+  const nodeDriver = new NodeDriver();
+  nodeDriver._configureHarness({
+    app: {
+      getBridgeSession() {
+        return {
+          bridgeId,
+          getZwjsClient() {
+            return {
+              async getNodeList() {
+                return {
+                  nodes: [
+                    { nodeId: 1, name: 'Controller' },
+                    { nodeId: 12, name: 'Lamp' },
+                  ],
+                };
+              },
+            };
+          },
+        };
+      },
+      async getNodeDeviceToolsSnapshot({ homeyDeviceId }) {
+        return createNodeDeviceToolsSnapshot(bridgeId, homeyDeviceId);
+      },
+      async executeRecommendationAction() {
+        return { ok: true, action: 'none', reason: 'noop' };
+      },
+    },
+    devices: [],
+  });
+
+  const bridgePairHarness = createSessionHarness();
+  const bridgeRepairHarness = createSessionHarness();
+  const nodePairHarness = createSessionHarness();
+  const nodeRepairHarness = createSessionHarness();
+
+  await bridgeDriver.onPair(bridgePairHarness.session);
+  await bridgeDriver.onRepair(bridgeRepairHarness.session, {
+    getData: () => ({ id: 'zwjs-bridge-main', bridgeId }),
+  });
+  await nodeDriver.onPair(nodePairHarness.session);
+  await nodeDriver.onRepair(nodeRepairHarness.session, {
+    getData: () => ({ id: 'main:12', bridgeId, nodeId: 12 }),
+  });
+
+  const callbackCases = [
+    {
+      label: 'bridge pair bridge_config:get_context',
+      handler: bridgePairHarness.handlers.get('bridge_config:get_context'),
+      payload: undefined,
+      assertShape(result) {
+        assert.equal(typeof result, 'object');
+        assert.equal(result.bridgeId, bridgeId);
+      },
+    },
+    {
+      label: 'bridge pair list_devices',
+      handler: bridgePairHarness.handlers.get('list_devices'),
+      payload: undefined,
+      assertShape(result) {
+        assert.equal(Array.isArray(result), true);
+      },
+    },
+    {
+      label: 'bridge pair bridge_config:save_settings',
+      handler: bridgePairHarness.handlers.get('bridge_config:save_settings'),
+      payload: {
+        bridgeId,
+        url: 'ws://127.0.0.1:3000',
+        authType: 'none',
+        token: '',
+      },
+      assertShape(result) {
+        assert.equal(result.ok, true);
+        assert.equal(result.bridgeId, bridgeId);
+      },
+    },
+    {
+      label: 'bridge repair bridge_tools:get_snapshot',
+      handler: bridgeRepairHarness.handlers.get('bridge_tools:get_snapshot'),
+      payload: undefined,
+      assertShape(result) {
+        assert.equal(result.schemaVersion, 'bridge-device-tools/v1');
+      },
+    },
+    {
+      label: 'bridge repair bridge_tools:refresh',
+      handler: bridgeRepairHarness.handlers.get('bridge_tools:refresh'),
+      payload: undefined,
+      assertShape(result) {
+        assert.equal(result.schemaVersion, 'bridge-device-tools/v1');
+      },
+    },
+    {
+      label: 'node pair list_devices',
+      handler: nodePairHarness.handlers.get('list_devices'),
+      payload: undefined,
+      assertShape(result) {
+        assert.equal(Array.isArray(result), true);
+      },
+    },
+    {
+      label: 'node repair device_tools:get_snapshot',
+      handler: nodeRepairHarness.handlers.get('device_tools:get_snapshot'),
+      payload: undefined,
+      assertShape(result) {
+        assert.equal(result.schemaVersion, 'node-device-tools/v1');
+      },
+    },
+    {
+      label: 'node repair device_tools:refresh',
+      handler: nodeRepairHarness.handlers.get('device_tools:refresh'),
+      payload: undefined,
+      assertShape(result) {
+        assert.equal(result.schemaVersion, 'node-device-tools/v1');
+      },
+    },
+    {
+      label: 'node repair device_tools:execute_action',
+      handler: nodeRepairHarness.handlers.get('device_tools:execute_action'),
+      payload: { action: 'auto' },
+      assertShape(result) {
+        assert.equal(typeof result, 'object');
+        assert.equal(result.snapshot.schemaVersion, 'node-device-tools/v1');
+      },
+    },
+  ];
+
+  for (const testCase of callbackCases) {
+    assert.equal(typeof testCase.handler, 'function', `${testCase.label}: handler missing`);
+    const result = await invokeCallbackWithDeadline(
+      testCase.handler,
+      testCase.payload,
+      testCase.label,
+    );
+    testCase.assertShape(result);
+  }
+});
+
 test('panel liveness contract: timed handlers reject stalled work', async () => {
   const originalSetTimeout = global.setTimeout;
   const originalClearTimeout = global.clearTimeout;
@@ -382,6 +581,77 @@ test('panel liveness contract: timed handlers reject stalled work', async () => 
     await assert.rejects(
       () => nodeRepairHarness.handlers.get('device_tools:get_snapshot')(),
       /timed out after/i,
+    );
+  } finally {
+    global.setTimeout = originalSetTimeout;
+    global.clearTimeout = originalClearTimeout;
+  }
+});
+
+test('panel liveness contract: callback mode receives timeout and validation errors', async () => {
+  const originalSetTimeout = global.setTimeout;
+  const originalClearTimeout = global.clearTimeout;
+
+  try {
+    global.setTimeout = (callback, _delay, ...args) => {
+      if (typeof callback === 'function') callback(...args);
+      return 0;
+    };
+    global.clearTimeout = () => {};
+
+    const bridgeDriver = new BridgeDriver();
+    bridgeDriver._configureHarness({ app: {}, devices: [] });
+    bridgeDriver.onPairListDevices = async () => new Promise(() => {});
+    const bridgePairHarness = createSessionHarness();
+    await bridgeDriver.onPair(bridgePairHarness.session);
+    await assert.rejects(
+      () =>
+        new Promise((resolve, reject) => {
+          bridgePairHarness.handlers.get('list_devices')(undefined, (error, result) => {
+            if (error) {
+              reject(error);
+              return;
+            }
+            resolve(result);
+          });
+        }),
+      /timed out after/i,
+    );
+
+    global.setTimeout = originalSetTimeout;
+    global.clearTimeout = originalClearTimeout;
+
+    const nodeDriver = new NodeDriver();
+    nodeDriver._configureHarness({
+      app: {
+        async getNodeDeviceToolsSnapshot() {
+          return createNodeDeviceToolsSnapshot('main', 'main:5');
+        },
+        async executeRecommendationAction() {
+          return { ok: true };
+        },
+      },
+      devices: [],
+    });
+    const nodeRepairHarness = createSessionHarness();
+    await nodeDriver.onRepair(nodeRepairHarness.session, {
+      getData: () => ({ id: 'main:5', bridgeId: 'main', nodeId: 5 }),
+    });
+    await assert.rejects(
+      () =>
+        new Promise((resolve, reject) => {
+          nodeRepairHarness.handlers.get('device_tools:execute_action')(
+            { action: 'invalid-action' },
+            (error, result) => {
+              if (error) {
+                reject(error);
+                return;
+              }
+              resolve(result);
+            },
+          );
+        }),
+      /Invalid Device Tools action selection/i,
     );
   } finally {
     global.setTimeout = originalSetTimeout;

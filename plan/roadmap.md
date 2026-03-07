@@ -202,6 +202,8 @@ Delivered in Phase 6 so far:
 - panel liveness gate coverage:
   - table-driven tests now assert active pair/repair handlers are registered and return valid payload shapes within deadlines
   - timed session handler behavior is now regression-tested to reject stalled panel events instead of hanging indefinitely
+  - callback-mode panel invocation paths are now regression-tested for the same handlers
+  - driver timed-handler event inventories are now locked to active panel contracts
 - operator CLI parity for bridge scoping:
   - runtime API smoke CLI supports `--bridge-id` for bridge-scoped read-route checks
   - support-bundle CLI supports `--bridge-id` and records bridge scope in exported metadata

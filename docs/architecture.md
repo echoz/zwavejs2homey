@@ -191,6 +191,8 @@ Partially complete / next:
 - panel liveness gate coverage now exists for active custom panel session handlers:
   - pair/repair event handlers are exercised in table-driven tests with deadline-based liveness checks
   - timed session handler timeout behavior is explicitly locked to prevent spinner/hang regressions
+  - callback-mode handler invocation paths are also covered, including timeout/error propagation behavior
+  - timed-handler event inventories are contract-checked per driver to detect accidental panel event drift
 - a runtime API client helper now exists for settings/custom-view consumers:
   - `co.lazylabs.zwavejs2homey/runtime-api-client.js`
   - contract reference: `docs/homey-api-contract.md`
