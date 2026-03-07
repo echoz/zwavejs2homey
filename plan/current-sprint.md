@@ -15,6 +15,10 @@ Close Phase 6 Reliability + UX with production-ready stability + diagnostics UX:
   - keep gates green while broadening runtime capability semantics
   - prioritize capability families using artifact + runtime diagnostics correlation
   - preserve strict package boundaries (`core`/`compiler`/`tui`/Homey app)
+- Phase 7 curated-profile extension planning kickoff:
+  - define a reusable extension contract for profile-specific custom behavior
+  - land lock user-code management as the first extension vertical
+  - inventory additional device families likely to need custom UX/actions
 
 ## Recently Completed
 
@@ -1829,6 +1833,9 @@ Close Phase 6 Reliability + UX with production-ready stability + diagnostics UX:
 1. Expand runtime capability handling for top capability families identified by the audit while preserving existing UX contracts.
 2. Run closure gates on every slice (`npm --prefix co.lazylabs.zwavejs2homey run test`, runtime smoke/support bundle checks).
 3. Use `compiler:ship:curated` whenever product/generic rule changes affect bundled runtime profiles.
+4. Define and implement a profile-extension registry contract so curated device profiles can expose custom panel/actions without weakening system capability semantics.
+5. Build the first extension slice for Yale locks: user-code management read path + clear action safety constraints.
+6. Produce a cross-device extension candidate inventory (locks, covers, thermostat/schedules, security/siren) so custom work follows a reusable model instead of one-offs.
 
 Note:
 
@@ -1849,6 +1856,8 @@ Note:
   - `plan/homey-translation-compiler-plan.md`
 - TUI implementation plan (phase 4):
   - `plan/tui-implementation-plan.md`
+- curated profile extension plan:
+  - `plan/homey-profile-extension-plan.md`
 - Current system architecture overview:
   - `docs/architecture.md`
 - Documentation sync contract (readme/plan/docs update expectations):

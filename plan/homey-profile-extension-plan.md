@@ -1,0 +1,79 @@
+# Homey Profile Extension Plan
+
+## Goal
+
+Add a reusable way for curated device profiles to expose advanced behavior that cannot be represented cleanly with system capabilities alone.
+
+First concrete target: lock user-code management.
+
+## Principles
+
+- System capabilities remain the baseline contract.
+- Extensions are additive and optional.
+- Extensions are scoped by curated profile identity (`profileId` and/or `driverTemplateId`).
+- Compiler remains focused on static profile/capability outputs; extension execution stays in adapter runtime.
+- All extension actions are explicit, audited, and safety-constrained.
+
+## Why This Exists
+
+Some high-value domains need richer semantics than standard capability mapping:
+
+- lock user-code slot management
+- advanced cover calibration/programming
+- thermostat schedule/program configuration
+- advanced security/siren mode programming
+
+Without an extension model, these become one-off app logic paths that drift over time.
+
+## Extension Contract (Target Shape)
+
+Read contract:
+
+- extension id
+- supported profile match predicates
+- read-only data sections for custom panels
+- diagnostics summary for unsupported/missing prerequisites
+
+Action contract:
+
+- explicit action id and argument schema
+- dry-run/validate path where possible
+- runtime safety gate (permission, capability, device state, writeability checks)
+- deterministic result envelope (`ok`, `status`, `reason`, `details`)
+
+## Slice Plan
+
+1. Registry + schema slice
+- add extension registry module in Homey app runtime
+- define stable read/action contract types
+- add unit tests for match routing and contract validation
+
+2. Runtime API slice
+- expose extension discovery/read routes via app runtime API
+- expose extension action execution route with strict validation
+- add smoke tests and API contract coverage
+
+3. Lock extension read slice
+- implement read-only Yale lock user-code snapshot panel payload
+- include slot summary, enabled/disabled status, and lockout-related diagnostics
+- no mutation yet
+
+4. Lock extension action slice
+- implement safe user-code actions (set/update/remove/enable/disable)
+- enforce explicit writeability + selector checks before writes
+- surface clear failure reasons on unsupported lock variants
+
+5. UX slice
+- wire node custom panel to extension read/action API
+- keep system capability controls unchanged
+- add contextual hints when extension is unavailable for that device
+
+6. Candidate inventory slice
+- classify additional families needing extension paths
+- document priority and prerequisites for each family
+
+## Exit Criteria
+
+- At least one production-useful extension vertical (lock user-code management) is shipped with tests.
+- Extension paths are discoverable and deterministic through runtime API contracts.
+- Adding a second extension family does not require ad-hoc architecture changes.

@@ -65,6 +65,7 @@ Homey App (app.ts)
        4) gate by live readable/writeable facts
        5) wire inbound/outbound listeners
        6) persist diagnostics to device store
+       7) optionally apply curated-profile extension handlers (custom panel/actions)
 ```
 
 ## Ownership Boundaries
@@ -267,6 +268,29 @@ Selected ZWJS node lifecycle events
     -> targeted node refresh (not global refresh)
 ```
 
+## Curated Profile Extension Lane (Planned)
+
+```text
+compiled profile match (profileId + driverTemplateId)
+                    |
+                    v
+           extension registry lookup
+           (curated profile specific)
+                    |
+        +-----------+-----------+
+        |                       |
+        v                       v
+  standard Homey caps      custom panel/actions
+  (locked, alarms, etc.)   (example: lock user-code admin)
+```
+
+Design intent:
+
+- system Homey capabilities stay the baseline contract for all devices
+- extension behavior is additive and explicitly scoped to curated profile identity
+- extension handlers remain adapter-owned runtime behavior (not compiler mutation logic)
+- first target extension vertical is lock user-code management
+
 ## Quality and Guardrails
 
 Primary gate: `npm run check`
@@ -296,7 +320,8 @@ After that:
 
 1. per-node capability expansion and broader runtime vertical coverage
 2. deeper custom UX where Homey system templates are too constrained
-3. non-production parity validation for deferred protocol domains
+3. reusable curated-profile extension framework (registry + runtime API + safety constraints)
+4. non-production parity validation for deferred protocol domains
 
 ## Key ADRs
 

@@ -228,6 +228,7 @@ Primary focus:
 3. add richer custom UX where Homey system templates are too constrained
 4. keep recommendation/diagnostics semantics stable while capability breadth grows
 5. maintain bridge-scoped runtime reliability and test gates as non-negotiable baseline
+6. introduce a reusable curated-profile extension model so advanced device-specific behavior can be added without ad-hoc app logic
 
 Delivered in early Phase 7 slices:
 
@@ -243,6 +244,15 @@ Delivered in early Phase 7 slices:
   - `measure_battery` (Z-Wave battery sentinel normalization + bounded values)
   - `enum_select` (stable inbound string normalization + numeric outbound adaptation when target value type is numeric)
 
+Planned next Phase 7 extension slices:
+
+- define `profile extension` contract (registry + runtime API shape + action safety model)
+- implement first extension vertical for locks (user-code management in custom panel flow)
+- add an extension-candidate inventory pass for other families likely to need custom behavior:
+  - covers/blinds calibration and advanced movement controls
+  - thermostat schedule/program management
+  - security/siren advanced tone/mode programming
+
 ## Active Risks
 
 - recommendation workflow semantics may need refinement during real UX integration
@@ -254,4 +264,5 @@ Delivered in early Phase 7 slices:
 - architecture: `docs/architecture.md`
 - active sprint log: `plan/current-sprint.md`
 - curation execution plan: `plan/homey-adapter-runtime-curation-plan.md`
+- curated profile extension plan: `plan/homey-profile-extension-plan.md`
 - decision records: `docs/decisions/`
