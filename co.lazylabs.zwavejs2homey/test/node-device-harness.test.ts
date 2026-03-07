@@ -693,6 +693,51 @@ function createMotionOnlyProfileMatch() {
   };
 }
 
+function createTamperEventOnlyProfileMatch() {
+  return {
+    by: 'product-triple',
+    key: '1004:2004:3006',
+    entry: {
+      device: {
+        deviceKey: 'main:49',
+        nodeId: 49,
+        manufacturerId: 1004,
+        productType: 2004,
+        productId: 3006,
+      },
+      compiled: {
+        profile: {
+          profileId: 'profile-main-49',
+          match: {},
+          classification: {
+            homeyClass: 'sensor',
+            confidence: 'curated',
+            uncurated: false,
+          },
+          capabilities: [
+            {
+              capabilityId: 'alarm_tamper',
+              inboundMapping: {
+                kind: 'event',
+                selector: {
+                  eventType: 'zwjs.event.node.notification',
+                },
+                transformRef: 'zwjs_notification_to_homey_alarm_tamper',
+              },
+            },
+          ],
+          provenance: {
+            layer: 'project-product',
+            ruleId: 'example-tamper-event-profile',
+            action: 'replace',
+          },
+        },
+        report: {},
+      },
+    },
+  };
+}
+
 function createBatteryMeterLockProfileMatch() {
   return {
     by: 'product-triple',
@@ -2174,6 +2219,64 @@ test('node device harness records writeability-unknown diagnostics for binary al
     profileResolution?.mappingDiagnostics?.[0]?.outbound?.reason,
     'outbound_target_writeability_unknown',
   );
+});
+
+test('node device harness treats event-only inbound mappings as applied vertical slices', async () => {
+  const client = createMockZwjsClient({
+    nodeStateResult: {
+      success: true,
+      result: {
+        state: {
+          manufacturerId: '1004',
+          productType: '2004',
+          productId: '3006',
+        },
+      },
+    },
+    definedValueIdsResult: {
+      success: true,
+      result: [],
+    },
+  });
+
+  const app = {
+    getZwjsClient: () => client,
+    getCompiledProfilesStatus: () => createRuntimeStatus(),
+    resolveCompiledProfileEntry: () => createTamperEventOnlyProfileMatch(),
+  };
+
+  const device = new NodeDevice();
+  device._configureHarness({
+    app,
+    data: { bridgeId: 'main', nodeId: 49 },
+    capabilities: ['alarm_tamper'],
+  });
+
+  await device.onInit();
+  assert.equal(client.callLog.getNodeValue.length, 0);
+  assert.equal(client.callLog.setNodeValue.length, 0);
+  assert.equal(client.getListenerCount(), 1);
+
+  client.emitEvent({
+    type: 'zwjs.event.node.notification',
+    event: {
+      nodeId: 49,
+      args: {
+        eventLabel: 'Tampering, product moved',
+      },
+    },
+  });
+  await Promise.resolve();
+  assert.equal(device._getCapabilityValue('alarm_tamper'), true);
+
+  const profileResolution = device._getStoreValue('profileResolution');
+  assert.equal(profileResolution?.verticalSliceApplied, true);
+  assert.equal(profileResolution?.mappingDiagnostics?.length, 1);
+  assert.equal(profileResolution?.mappingDiagnostics?.[0]?.inbound?.enabled, true);
+  assert.equal(profileResolution?.mappingDiagnostics?.[0]?.outbound?.enabled, false);
+
+  await device.onDeleted();
+  assert.equal(client.getListenerCount(), 0);
 });
 
 test('node device harness supports lock + battery + meter + notification runtime verticals', async () => {

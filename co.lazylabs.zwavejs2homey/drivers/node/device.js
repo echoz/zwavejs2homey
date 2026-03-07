@@ -383,7 +383,7 @@ module.exports = class NodeDevice extends homey_1.default.Device {
             this.zwjsEventUnsubscribers.push(unsubscribe);
         }
         return {
-            applied: Boolean(enabledInboundSelector || enabledOutboundTarget),
+            applied: Boolean(enabledInboundSelector || enabledInboundEventType || enabledOutboundTarget),
             diagnostic,
         };
     }
