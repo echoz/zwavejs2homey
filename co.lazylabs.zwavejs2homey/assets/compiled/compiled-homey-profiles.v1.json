@@ -178,8 +178,8 @@
           "suppressedActions": [],
           "summary": {
             "appliedActions": 14,
-            "unmatchedActions": 1017,
-            "totalActions": 1038,
+            "unmatchedActions": 1041,
+            "totalActions": 1062,
             "appliedProjectProductActions": 9,
             "suppressedFillActions": 15,
             "ignoredValues": 0
@@ -441,8 +441,8 @@
           "suppressedActions": [],
           "summary": {
             "appliedActions": 9,
-            "unmatchedActions": 333,
-            "totalActions": 346,
+            "unmatchedActions": 341,
+            "totalActions": 354,
             "appliedProjectProductActions": 4,
             "suppressedFillActions": 10,
             "ignoredValues": 0
@@ -732,8 +732,8 @@
           "suppressedActions": [],
           "summary": {
             "appliedActions": 5,
-            "unmatchedActions": 166,
-            "totalActions": 173,
+            "unmatchedActions": 170,
+            "totalActions": 177,
             "appliedProjectProductActions": 3,
             "suppressedFillActions": 5,
             "ignoredValues": 0
@@ -1005,8 +1005,8 @@
           "suppressedActions": [],
           "summary": {
             "appliedActions": 5,
-            "unmatchedActions": 166,
-            "totalActions": 173,
+            "unmatchedActions": 170,
+            "totalActions": 177,
             "appliedProjectProductActions": 3,
             "suppressedFillActions": 5,
             "ignoredValues": 0
@@ -1239,8 +1239,8 @@
           "suppressedActions": [],
           "summary": {
             "appliedActions": 4,
-            "unmatchedActions": 167,
-            "totalActions": 173,
+            "unmatchedActions": 171,
+            "totalActions": 177,
             "appliedProjectProductActions": 2,
             "suppressedFillActions": 5,
             "ignoredValues": 0
@@ -1473,8 +1473,8 @@
           "suppressedActions": [],
           "summary": {
             "appliedActions": 4,
-            "unmatchedActions": 167,
-            "totalActions": 173,
+            "unmatchedActions": 171,
+            "totalActions": 177,
             "appliedProjectProductActions": 2,
             "suppressedFillActions": 5,
             "ignoredValues": 0
@@ -1660,6 +1660,76 @@
           },
           "capabilities": [
             {
+              "capabilityId": "alarm_battery",
+              "inboundMapping": {
+                "kind": "value",
+                "selector": {
+                  "commandClass": 128,
+                  "endpoint": 0,
+                  "property": "level"
+                },
+                "transformRef": "zwave_battery_level_to_homey_alarm_battery"
+              },
+              "directionality": "inbound-only",
+              "flags": {
+                "readable": true,
+                "writeable": false
+              },
+              "provenance": {
+                "layer": "project-product",
+                "ruleId": "product-yale-yrd226-battery-level",
+                "action": "replace",
+                "sourceRef": "product-yale-yrd226-battery-level",
+                "reason": "cc=128,ep=0,prop=level"
+              }
+            },
+            {
+              "capabilityId": "alarm_contact",
+              "inboundMapping": {
+                "kind": "value",
+                "selector": {
+                  "commandClass": 98,
+                  "endpoint": 0,
+                  "property": "doorStatus"
+                },
+                "transformRef": "zwave_door_status_to_homey_alarm_contact"
+              },
+              "directionality": "inbound-only",
+              "flags": {
+                "readable": true,
+                "writeable": false
+              },
+              "provenance": {
+                "layer": "project-product",
+                "ruleId": "product-yale-yrd226-class-and-lock",
+                "action": "replace",
+                "sourceRef": "product-yale-yrd226-class-and-lock",
+                "reason": "cc=98,ep=0,prop=currentMode"
+              }
+            },
+            {
+              "capabilityId": "alarm_tamper",
+              "inboundMapping": {
+                "kind": "event",
+                "selector": {
+                  "eventType": "zwjs.event.node.notification"
+                },
+                "transformRef": "zwjs_notification_to_homey_alarm_tamper"
+              },
+              "directionality": "inbound-only",
+              "flags": {
+                "readable": true,
+                "writeable": false
+              },
+              "provenance": {
+                "layer": "project-product",
+                "ruleId": "product-yale-yrd226-class-and-lock",
+                "action": "replace",
+                "sourceRef": "product-yale-yrd226-class-and-lock",
+                "reason": "cc=98,ep=0,prop=currentMode"
+              }
+            },
+            {
               "capabilityId": "enum_select",
               "inboundMapping": {
                 "kind": "value",
@@ -1691,6 +1761,37 @@
                 "supersedes": [
                   "ha-derived:ha:ha_extracted_select_door_lock_719"
                 ]
+              }
+            },
+            {
+              "capabilityId": "lock_mode",
+              "inboundMapping": {
+                "kind": "value",
+                "selector": {
+                  "commandClass": 98,
+                  "endpoint": 0,
+                  "property": "currentMode"
+                }
+              },
+              "outboundMapping": {
+                "kind": "set_value",
+                "target": {
+                  "commandClass": 98,
+                  "endpoint": 0,
+                  "property": "targetMode"
+                }
+              },
+              "directionality": "bidirectional",
+              "flags": {
+                "readable": true,
+                "writeable": true
+              },
+              "provenance": {
+                "layer": "project-product",
+                "ruleId": "product-yale-yrd226-class-and-lock",
+                "action": "replace",
+                "sourceRef": "product-yale-yrd226-class-and-lock",
+                "reason": "cc=98,ep=0,prop=currentMode"
               }
             },
             {
@@ -1764,10 +1865,10 @@
           "actions": [],
           "suppressedActions": [],
           "summary": {
-            "appliedActions": 9,
-            "unmatchedActions": 334,
-            "totalActions": 346,
-            "appliedProjectProductActions": 5,
+            "appliedActions": 13,
+            "unmatchedActions": 338,
+            "totalActions": 354,
+            "appliedProjectProductActions": 9,
             "suppressedFillActions": 6,
             "ignoredValues": 0
           },
@@ -1789,7 +1890,7 @@
             "likelyNeedsReview": false,
             "reasons": [
               "suppressed-fill-actions:6",
-              "high-unmatched-ratio:0.97"
+              "high-unmatched-ratio:0.95"
             ]
           },
           "diagnosticDeviceKey": "product-triple:297-32770-1536"

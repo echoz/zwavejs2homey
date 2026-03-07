@@ -210,7 +210,7 @@ module.exports = class NodeDevice extends Homey.Device {
     return {
       capabilityId: slice.capabilityId,
       inbound: {
-        configured: Boolean(slice.inboundSelector),
+        configured: Boolean(slice.inboundSelector || slice.inboundEventSelector),
         enabled: false,
         reason: null,
         valueId: slice.inboundSelector ? cloneValueId(slice.inboundSelector) : null,
@@ -358,6 +358,7 @@ module.exports = class NodeDevice extends Homey.Device {
     const {
       capabilityId,
       inboundSelector,
+      inboundEventSelector,
       inboundTransformRef,
       outboundTarget,
       outboundTransformRef,
@@ -374,6 +375,7 @@ module.exports = class NodeDevice extends Homey.Device {
     }
 
     let enabledInboundSelector: ZwjsValueId | undefined;
+    let enabledInboundEventType: string | undefined;
     let enabledInboundValueType: string | undefined;
     if (inboundSelector) {
       const facts = this.getNodeDefinedValueFacts(valueIndex, inboundSelector);
@@ -386,6 +388,11 @@ module.exports = class NodeDevice extends Homey.Device {
         enabledInboundValueType = facts.type;
         diagnostic.inbound.enabled = true;
       }
+    }
+    if (inboundEventSelector) {
+      enabledInboundEventType = inboundEventSelector.eventType;
+      diagnostic.inbound.enabled = true;
+      diagnostic.inbound.reason = null;
     }
 
     let enabledOutboundTarget: ZwjsValueId | undefined;
@@ -474,25 +481,52 @@ module.exports = class NodeDevice extends Homey.Device {
         }
       });
     }
-    if (enabledInboundSelector) {
+    if (enabledInboundSelector || enabledInboundEventType) {
       const unsubscribe = client.onEvent((event) => {
-        if (event.type !== 'zwjs.event.node.value-updated') return;
-        if (event.event.nodeId !== nodeId) return;
-        if (!selectorMatchesNodeValueUpdatedEvent(enabledInboundSelector, event.event)) return;
-        const nextValue = coerceCapabilityInboundValue(
-          capabilityId,
-          event.event.args?.newValue,
-          inboundTransformRef,
-          enabledInboundValueType,
-        );
-        if (nextValue === undefined) return;
-        this.setCapabilityValue(capabilityId, nextValue).catch((error: unknown) => {
-          this.error('NodeDevice failed to apply value-updated event', {
-            nodeId,
+        const protocolEvent =
+          event && typeof event === 'object' && 'event' in event ? (event as { event: unknown }).event : undefined;
+        const protocolNodeId =
+          protocolEvent && typeof protocolEvent === 'object' && 'nodeId' in protocolEvent
+            ? (protocolEvent as { nodeId?: unknown }).nodeId
+            : undefined;
+        if (typeof protocolNodeId !== 'number' || protocolNodeId !== nodeId) return;
+
+        if (enabledInboundSelector && event.type === 'zwjs.event.node.value-updated') {
+          if (!selectorMatchesNodeValueUpdatedEvent(enabledInboundSelector, event.event)) return;
+          const nextValue = coerceCapabilityInboundValue(
             capabilityId,
-            error,
+            event.event.args?.newValue,
+            inboundTransformRef,
+            enabledInboundValueType,
+          );
+          if (nextValue === undefined) return;
+          this.setCapabilityValue(capabilityId, nextValue).catch((error: unknown) => {
+            this.error('NodeDevice failed to apply value-updated event', {
+              nodeId,
+              capabilityId,
+              error,
+            });
           });
-        });
+          return;
+        }
+
+        if (enabledInboundEventType && event.type === enabledInboundEventType) {
+          const nextValue = coerceCapabilityInboundValue(
+            capabilityId,
+            event,
+            inboundTransformRef,
+            enabledInboundValueType,
+          );
+          if (nextValue === undefined) return;
+          this.setCapabilityValue(capabilityId, nextValue).catch((error: unknown) => {
+            this.error('NodeDevice failed to apply event-mapped inbound update', {
+              nodeId,
+              capabilityId,
+              eventType: enabledInboundEventType,
+              error,
+            });
+          });
+        }
       });
       this.zwjsEventUnsubscribers.push(unsubscribe);
     }

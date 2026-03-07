@@ -56,6 +56,14 @@ function normalizeCapabilityId(value) {
         return undefined;
     return trimmed;
 }
+function normalizeEventTypeSelector(value) {
+    if (!isObject(value))
+        return undefined;
+    const eventType = normalizeComparableValue(value.eventType);
+    if (!eventType)
+        return undefined;
+    return { eventType };
+}
 function isValidRuntimeValueIdShape(valueId) {
     if (!isObject(valueId))
         return false;
@@ -89,10 +97,14 @@ function extractCapabilityRuntimeVerticals(profile) {
         const inbound = capability.inboundMapping;
         const outbound = capability.outboundMapping;
         let inboundCandidate;
+        let inboundEventCandidate;
         if (isObject(inbound) && inbound.kind === 'value') {
             if (isValidRuntimeValueIdShape(inbound.selector)) {
                 inboundCandidate = inbound.selector;
             }
+        }
+        else if (isObject(inbound) && inbound.kind === 'event') {
+            inboundEventCandidate = normalizeEventTypeSelector(inbound.selector);
         }
         let outboundTargetCandidate;
         if (isObject(outbound) && outbound.kind === 'set_value' && isObject(outbound.target)) {
@@ -101,18 +113,20 @@ function extractCapabilityRuntimeVerticals(profile) {
             }
         }
         const inboundSelector = inboundCandidate;
-        const inboundTransformRef = inboundSelector
+        const inboundEventSelector = inboundEventCandidate;
+        const inboundTransformRef = inboundSelector || inboundEventSelector
             ? normalizeComparableValue(isObject(inbound) ? inbound.transformRef : undefined)
             : undefined;
         const outboundTarget = outboundTargetCandidate;
         const outboundTransformRef = outboundTarget
             ? normalizeComparableValue(isObject(outbound) ? outbound.transformRef : undefined)
             : undefined;
-        if (!inboundSelector && !outboundTarget)
+        if (!inboundSelector && !inboundEventSelector && !outboundTarget)
             continue;
         slices.push({
             capabilityId,
             inboundSelector,
+            ...(inboundEventSelector ? { inboundEventSelector } : {}),
             inboundTransformRef,
             outboundTarget,
             outboundTransformRef,
@@ -214,6 +228,152 @@ function coerceOnOffOutboundTransform(value) {
         return undefined;
     return booleanValue ? 99 : 0;
 }
+function coerceAlarmBatteryInboundTransform(value) {
+    const numeric = normalizeNumericValue(value);
+    if (numeric === undefined)
+        return undefined;
+    if (numeric === 255)
+        return true;
+    return clamp(numeric, 0, 100) <= 20;
+}
+function coerceAlarmContactDoorStatusTransform(value) {
+    const payload = extractValueResultPayload(value);
+    if (typeof payload === 'boolean')
+        return payload;
+    if (typeof payload === 'number' && Number.isFinite(payload)) {
+        if (payload === 0)
+            return false;
+        if (payload === 255)
+            return true;
+    }
+    if (typeof payload !== 'string')
+        return undefined;
+    const normalized = payload.trim().toLowerCase();
+    if (normalized.length === 0)
+        return undefined;
+    if (normalized === 'open' ||
+        normalized === 'opening' ||
+        normalized === 'ajar' ||
+        normalized.includes('open')) {
+        return true;
+    }
+    if (normalized === 'closed' ||
+        normalized === 'closing' ||
+        normalized.includes('closed') ||
+        normalized.includes('close')) {
+        return false;
+    }
+    return undefined;
+}
+function collectNotificationTextCandidates(value) {
+    const candidates = [];
+    const visited = new Set();
+    const queue = [value];
+    while (queue.length > 0) {
+        const current = queue.shift();
+        if (current === undefined || current === null || visited.has(current))
+            continue;
+        visited.add(current);
+        if (typeof current === 'string') {
+            const normalized = current.trim();
+            if (normalized.length > 0)
+                candidates.push(normalized);
+            continue;
+        }
+        if (Array.isArray(current)) {
+            for (const item of current)
+                queue.push(item);
+            continue;
+        }
+        if (!isObject(current))
+            continue;
+        const record = current;
+        for (const key of [
+            'label',
+            'eventLabel',
+            'notificationLabel',
+            'statusLabel',
+            'stateLabel',
+            'alarmLabel',
+            'description',
+        ]) {
+            if (record[key] !== undefined)
+                queue.push(record[key]);
+        }
+        if (record.args !== undefined)
+            queue.push(record.args);
+        if (record.event !== undefined)
+            queue.push(record.event);
+        if (record.eventPayload !== undefined)
+            queue.push(record.eventPayload);
+    }
+    return candidates;
+}
+function extractNotificationNumericArgs(value) {
+    const result = {};
+    const queue = [value];
+    const visited = new Set();
+    while (queue.length > 0) {
+        const current = queue.shift();
+        if (current === undefined || current === null || visited.has(current))
+            continue;
+        visited.add(current);
+        if (!isObject(current))
+            continue;
+        const alarmType = parseNumericIdentity(current.alarmType);
+        if (alarmType !== undefined && result.alarmType === undefined)
+            result.alarmType = alarmType;
+        const notificationType = parseNumericIdentity(current.notificationType);
+        if (notificationType !== undefined && result.notificationType === undefined) {
+            result.notificationType = notificationType;
+        }
+        const notificationEvent = parseNumericIdentity(current.notificationEvent);
+        if (notificationEvent !== undefined && result.notificationEvent === undefined) {
+            result.notificationEvent = notificationEvent;
+        }
+        if (current.args !== undefined)
+            queue.push(current.args);
+        if (current.event !== undefined)
+            queue.push(current.event);
+        if (current.eventPayload !== undefined)
+            queue.push(current.eventPayload);
+    }
+    return result;
+}
+function coerceAlarmTamperNotificationTransform(value) {
+    const textCandidates = collectNotificationTextCandidates(value).map((candidate) => candidate.toLowerCase());
+    for (const candidate of textCandidates) {
+        if (candidate.includes('tamper') ||
+            candidate.includes('jam') ||
+            candidate.includes('forced') ||
+            candidate.includes('intrusion') ||
+            candidate.includes('cover removed')) {
+            return true;
+        }
+        if (candidate.includes('idle') ||
+            candidate.includes('cleared') ||
+            candidate.includes('clear') ||
+            candidate.includes('normal') ||
+            candidate.includes('no event') ||
+            candidate.includes('inactive')) {
+            return false;
+        }
+    }
+    const { alarmType, notificationType, notificationEvent } = extractNotificationNumericArgs(value);
+    if (alarmType !== undefined) {
+        if ([24, 25, 27].includes(alarmType))
+            return true;
+        if (alarmType === 0)
+            return false;
+    }
+    if (notificationType !== undefined && notificationEvent !== undefined) {
+        if (notificationType === 6 && [3, 4, 9].includes(notificationEvent))
+            return true;
+        if (notificationEvent === 0)
+            return false;
+    }
+    return undefined;
+}
 function coerceNumericOutboundFallback(value) {
     const numeric = normalizeNumericValue(value);
     if (numeric === undefined)
@@ -284,12 +444,20 @@ function coerceEnumSelectOutboundValue(value, valueTypeHint) {
 const INBOUND_TRANSFORMERS = {
     zwave_level_0_99_to_homey_dim: coerceDimInboundTransform,
     zwave_level_nonzero_to_homey_onoff: coerceOnOffInboundTransform,
+    zwave_battery_level_to_homey_alarm_battery: coerceAlarmBatteryInboundTransform,
+    zwave_door_status_to_homey_alarm_contact: coerceAlarmContactDoorStatusTransform,
+    zwjs_notification_to_homey_alarm_tamper: coerceAlarmTamperNotificationTransform,
 };
 const OUTBOUND_TRANSFORMERS = {
     homey_dim_to_zwave_level_0_99: coerceDimOutboundTransform,
     homey_onoff_to_zwave_level_0_99: coerceOnOffOutboundTransform,
 };
-const SPECIALIZED_CAPABILITY_COERCIONS = new Set(['enum_select', 'locked', 'measure_battery']);
+const SPECIALIZED_CAPABILITY_COERCIONS = new Set([
+    'enum_select',
+    'lock_mode',
+    'locked',
+    'measure_battery',
+]);
 function getSupportedInboundTransformRefs() {
     return Object.keys(INBOUND_TRANSFORMERS).sort();
 }
@@ -318,7 +486,7 @@ function coerceCapabilityInboundValue(capabilityId, value, transformRef, valueTy
             if (batteryValue !== undefined)
                 return batteryValue;
         }
-        else if (capabilityId === 'enum_select') {
+        else if (capabilityId === 'enum_select' || capabilityId === 'lock_mode') {
             const enumValue = coerceEnumSelectInboundValue(value);
             if (enumValue !== undefined)
                 return enumValue;
@@ -355,7 +523,7 @@ function coerceCapabilityOutboundValue(capabilityId, value, transformRef, valueT
             if (batteryValue !== undefined)
                 return batteryValue;
         }
-        else if (capabilityId === 'enum_select') {
+        else if (capabilityId === 'enum_select' || capabilityId === 'lock_mode') {
             const enumValue = coerceEnumSelectOutboundValue(value, valueTypeHint);
             if (enumValue !== undefined)
                 return enumValue;

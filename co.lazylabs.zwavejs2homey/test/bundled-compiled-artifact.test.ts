@@ -40,23 +40,48 @@ const RUNTIME_MAPPING_COVERAGE_POLICY = {
   },
   measure_power: {
     coercionMode: 'generic',
-    coverageRef: 'test/node-device-harness.test.ts:measure_battery/meter_power/enum_select/locked',
+    coverageRef:
+      'test/node-device-harness.test.ts:lock + battery + meter + notification runtime verticals',
   },
   meter_power: {
     coercionMode: 'generic',
-    coverageRef: 'test/node-device-harness.test.ts:measure_battery/meter_power/enum_select/locked',
+    coverageRef:
+      'test/node-device-harness.test.ts:lock + battery + meter + notification runtime verticals',
   },
   measure_battery: {
     coercionMode: 'specialized',
-    coverageRef: 'test/node-device-harness.test.ts:measure_battery/meter_power/enum_select/locked',
+    coverageRef:
+      'test/node-device-harness.test.ts:lock + battery + meter + notification runtime verticals',
+  },
+  alarm_battery: {
+    coercionMode: 'specialized',
+    coverageRef:
+      'test/node-device-harness.test.ts:lock + battery + meter + notification runtime verticals',
+  },
+  alarm_contact: {
+    coercionMode: 'specialized',
+    coverageRef:
+      'test/node-device-harness.test.ts:lock + battery + meter + notification runtime verticals',
   },
   enum_select: {
     coercionMode: 'specialized',
-    coverageRef: 'test/node-device-harness.test.ts:measure_battery/meter_power/enum_select/locked',
+    coverageRef:
+      'test/node-device-harness.test.ts:lock + battery + meter + notification runtime verticals',
+  },
+  lock_mode: {
+    coercionMode: 'specialized',
+    coverageRef:
+      'test/node-device-harness.test.ts:lock + battery + meter + notification runtime verticals',
   },
   locked: {
     coercionMode: 'specialized',
-    coverageRef: 'test/node-device-harness.test.ts:measure_battery/meter_power/enum_select/locked',
+    coverageRef:
+      'test/node-device-harness.test.ts:lock + battery + meter + notification runtime verticals',
+  },
+  alarm_tamper: {
+    coercionMode: 'specialized',
+    coverageRef:
+      'test/node-device-harness.test.ts:lock + battery + meter + notification runtime verticals',
   },
 };
 
@@ -139,7 +164,7 @@ function readRuntimeVerticalCoverageFromArtifact(artifact) {
       if (!capabilityId) continue;
       const inboundKind = capability.inboundMapping?.kind;
       const outboundKind = capability.outboundMapping?.kind;
-      if (inboundKind === 'value' || outboundKind === 'set_value') {
+      if (inboundKind === 'value' || inboundKind === 'event' || outboundKind === 'set_value') {
         if (!capabilityCoverage.has(capabilityId)) {
           capabilityCoverage.set(capabilityId, {
             inboundTransformRefs: new Set(),
@@ -148,7 +173,7 @@ function readRuntimeVerticalCoverageFromArtifact(artifact) {
         }
         const details = capabilityCoverage.get(capabilityId);
         if (
-          inboundKind === 'value' &&
+          (inboundKind === 'value' || inboundKind === 'event') &&
           typeof capability.inboundMapping?.transformRef === 'string' &&
           capability.inboundMapping.transformRef.trim().length > 0
         ) {
@@ -312,7 +337,7 @@ test('bundled runtime vertical coercion modes align with explicit policy', () =>
   );
 });
 
-test('bundled Yale YRD226 profile includes bidirectional lock + battery verticals', () => {
+test('bundled Yale YRD226 profile includes lock + battery + contact + notification verticals', () => {
   const artifact = readJsonFile(BUNDLED_ARTIFACT_FILE);
   assertCompiledHomeyProfilesArtifactV1(artifact);
 
@@ -329,7 +354,11 @@ test('bundled Yale YRD226 profile includes bidirectional lock + battery vertical
 
   assert.equal(byCapabilityId.has('locked'), true, 'expected locked capability');
   assert.equal(byCapabilityId.has('enum_select'), true, 'expected enum_select capability');
+  assert.equal(byCapabilityId.has('lock_mode'), true, 'expected lock_mode capability');
   assert.equal(byCapabilityId.has('measure_battery'), true, 'expected measure_battery capability');
+  assert.equal(byCapabilityId.has('alarm_battery'), true, 'expected alarm_battery capability');
+  assert.equal(byCapabilityId.has('alarm_contact'), true, 'expected alarm_contact capability');
+  assert.equal(byCapabilityId.has('alarm_tamper'), true, 'expected alarm_tamper capability');
   assert.equal(byCapabilityId.has('measure_generic'), false, 'measure_generic should be suppressed');
 
   const locked = byCapabilityId.get('locked');
@@ -348,6 +377,14 @@ test('bundled Yale YRD226 profile includes bidirectional lock + battery vertical
     property: 'targetMode',
   });
 
+  const lockMode = byCapabilityId.get('lock_mode');
+  assert.equal(lockMode.directionality, 'bidirectional');
+  assert.deepEqual(lockMode.outboundMapping?.target, {
+    commandClass: 98,
+    endpoint: 0,
+    property: 'targetMode',
+  });
+
   const battery = byCapabilityId.get('measure_battery');
   assert.equal(battery.directionality, 'inbound-only');
   assert.deepEqual(battery.inboundMapping?.selector, {
@@ -355,4 +392,33 @@ test('bundled Yale YRD226 profile includes bidirectional lock + battery vertical
     endpoint: 0,
     property: 'level',
   });
+
+  const alarmBattery = byCapabilityId.get('alarm_battery');
+  assert.equal(alarmBattery.directionality, 'inbound-only');
+  assert.equal(
+    alarmBattery.inboundMapping?.transformRef,
+    'zwave_battery_level_to_homey_alarm_battery',
+  );
+
+  const alarmContact = byCapabilityId.get('alarm_contact');
+  assert.equal(alarmContact.directionality, 'inbound-only');
+  assert.deepEqual(alarmContact.inboundMapping?.selector, {
+    commandClass: 98,
+    endpoint: 0,
+    property: 'doorStatus',
+  });
+  assert.equal(
+    alarmContact.inboundMapping?.transformRef,
+    'zwave_door_status_to_homey_alarm_contact',
+  );
+
+  const alarmTamper = byCapabilityId.get('alarm_tamper');
+  assert.equal(alarmTamper.directionality, 'inbound-only');
+  assert.deepEqual(alarmTamper.inboundMapping?.selector, {
+    eventType: 'zwjs.event.node.notification',
+  });
+  assert.equal(
+    alarmTamper.inboundMapping?.transformRef,
+    'zwjs_notification_to_homey_alarm_tamper',
+  );
 });

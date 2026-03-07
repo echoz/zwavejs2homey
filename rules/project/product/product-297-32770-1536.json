@@ -71,6 +71,65 @@
             "readable": true,
             "writeable": true
           }
+        },
+        {
+          "type": "capability",
+          "mode": "replace",
+          "capabilityId": "lock_mode",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 98,
+              "endpoint": 0,
+              "property": "currentMode"
+            }
+          },
+          "outboundMapping": {
+            "kind": "set_value",
+            "target": {
+              "commandClass": 98,
+              "endpoint": 0,
+              "property": "targetMode"
+            }
+          },
+          "flags": {
+            "readable": true,
+            "writeable": true
+          }
+        },
+        {
+          "type": "capability",
+          "mode": "replace",
+          "capabilityId": "alarm_contact",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 98,
+              "endpoint": 0,
+              "property": "doorStatus"
+            },
+            "transformRef": "zwave_door_status_to_homey_alarm_contact"
+          },
+          "flags": {
+            "readable": true,
+            "writeable": false
+          }
+        },
+        {
+          "type": "capability",
+          "mode": "replace",
+          "capabilityId": "alarm_tamper",
+          "inboundMapping": {
+            "kind": "event",
+            "selector": {
+              "eventType": "zwjs.event.node.notification"
+            },
+            "transformRef": "zwjs_notification_to_homey_alarm_tamper"
+          },
+          "flags": {
+            "readable": true,
+            "writeable": false
+          }
         }
       ]
     },
@@ -98,6 +157,24 @@
               "endpoint": 0,
               "property": "level"
             }
+          },
+          "flags": {
+            "readable": true,
+            "writeable": false
+          }
+        },
+        {
+          "type": "capability",
+          "mode": "replace",
+          "capabilityId": "alarm_battery",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 128,
+              "endpoint": 0,
+              "property": "level"
+            },
+            "transformRef": "zwave_battery_level_to_homey_alarm_battery"
           },
           "flags": {
             "readable": true,

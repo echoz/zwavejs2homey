@@ -543,6 +543,10 @@ test('root manifest product overrides curate Leviton switches and Yale locks', (
             metadata: { type: 'number', readable: true, writeable: true },
           },
           {
+            valueId: { commandClass: 98, endpoint: 0, property: 'doorStatus' },
+            metadata: { type: 'string', readable: true, writeable: false },
+          },
+          {
             valueId: { commandClass: 128, endpoint: 0, property: 'level' },
             metadata: { type: 'number', readable: true, writeable: false },
           },
@@ -551,7 +555,15 @@ test('root manifest product overrides curate Leviton switches and Yale locks', (
       expected: {
         homeyClass: 'lock',
         driverTemplateId: 'product-yale-lock',
-        requiredCapabilities: ['locked', 'enum_select', 'measure_battery'],
+        requiredCapabilities: [
+          'locked',
+          'enum_select',
+          'lock_mode',
+          'alarm_contact',
+          'measure_battery',
+          'alarm_battery',
+          'alarm_tamper',
+        ],
         forbiddenCapabilities: [],
       },
     },
@@ -587,6 +599,18 @@ test('root manifest product overrides curate Leviton switches and Yale locks', (
       const enumSelectCapability = result.profile.capabilities.find(
         (item) => item.capabilityId === 'enum_select',
       );
+      const lockModeCapability = result.profile.capabilities.find(
+        (item) => item.capabilityId === 'lock_mode',
+      );
+      const alarmBatteryCapability = result.profile.capabilities.find(
+        (item) => item.capabilityId === 'alarm_battery',
+      );
+      const alarmContactCapability = result.profile.capabilities.find(
+        (item) => item.capabilityId === 'alarm_contact',
+      );
+      const alarmTamperCapability = result.profile.capabilities.find(
+        (item) => item.capabilityId === 'alarm_tamper',
+      );
       assert.equal(lockedCapability?.outboundMapping?.kind, 'set_value');
       assert.deepEqual(lockedCapability?.outboundMapping?.target, {
         commandClass: 98,
@@ -599,6 +623,35 @@ test('root manifest product overrides curate Leviton switches and Yale locks', (
         endpoint: 0,
         property: 'targetMode',
       });
+      assert.equal(lockModeCapability?.outboundMapping?.kind, 'set_value');
+      assert.deepEqual(lockModeCapability?.outboundMapping?.target, {
+        commandClass: 98,
+        endpoint: 0,
+        property: 'targetMode',
+      });
+      assert.equal(alarmBatteryCapability?.inboundMapping?.kind, 'value');
+      assert.equal(
+        alarmBatteryCapability?.inboundMapping?.transformRef,
+        'zwave_battery_level_to_homey_alarm_battery',
+      );
+      assert.equal(alarmContactCapability?.inboundMapping?.kind, 'value');
+      assert.deepEqual(alarmContactCapability?.inboundMapping?.selector, {
+        commandClass: 98,
+        endpoint: 0,
+        property: 'doorStatus',
+      });
+      assert.equal(
+        alarmContactCapability?.inboundMapping?.transformRef,
+        'zwave_door_status_to_homey_alarm_contact',
+      );
+      assert.equal(alarmTamperCapability?.inboundMapping?.kind, 'event');
+      assert.deepEqual(alarmTamperCapability?.inboundMapping?.selector, {
+        eventType: 'zwjs.event.node.notification',
+      });
+      assert.equal(
+        alarmTamperCapability?.inboundMapping?.transformRef,
+        'zwjs_notification_to_homey_alarm_tamper',
+      );
     }
   }
 });

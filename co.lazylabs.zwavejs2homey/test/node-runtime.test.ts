@@ -13,8 +13,11 @@ const {
 
 test('node-runtime publishes supported transform refs and specialized coercion ids', () => {
   assert.deepEqual(getSupportedInboundTransformRefs(), [
+    'zwave_battery_level_to_homey_alarm_battery',
+    'zwave_door_status_to_homey_alarm_contact',
     'zwave_level_0_99_to_homey_dim',
     'zwave_level_nonzero_to_homey_onoff',
+    'zwjs_notification_to_homey_alarm_tamper',
   ]);
   assert.deepEqual(getSupportedOutboundTransformRefs(), [
     'homey_dim_to_zwave_level_0_99',
@@ -22,6 +25,7 @@ test('node-runtime publishes supported transform refs and specialized coercion i
   ]);
   assert.deepEqual(getSpecializedCapabilityCoercions(), [
     'enum_select',
+    'lock_mode',
     'locked',
     'measure_battery',
   ]);
@@ -135,6 +139,14 @@ test('extractCapabilityRuntimeVerticals returns value/set_value runtime-compatib
       inboundSelector: { commandClass: 118, endpoint: 0, property: 'locked' },
       inboundTransformRef: undefined,
       outboundTarget: { commandClass: 118, endpoint: 0, property: 'locked' },
+      outboundTransformRef: undefined,
+    },
+    {
+      capabilityId: 'ignored_event',
+      inboundSelector: undefined,
+      inboundEventSelector: { eventType: 'node.notification' },
+      inboundTransformRef: undefined,
+      outboundTarget: undefined,
       outboundTransformRef: undefined,
     },
   ]);
@@ -318,6 +330,60 @@ test('coerceCapability inbound/outbound uses transform refs and generic pass-thr
     88,
   );
   assert.equal(
+    coerceCapabilityInboundValue(
+      'alarm_battery',
+      { value: '88' },
+      'zwave_battery_level_to_homey_alarm_battery',
+    ),
+    false,
+  );
+  assert.equal(
+    coerceCapabilityInboundValue(
+      'alarm_battery',
+      { value: '15' },
+      'zwave_battery_level_to_homey_alarm_battery',
+    ),
+    true,
+  );
+  assert.equal(
+    coerceCapabilityInboundValue(
+      'alarm_contact',
+      { value: 'open' },
+      'zwave_door_status_to_homey_alarm_contact',
+    ),
+    true,
+  );
+  assert.equal(
+    coerceCapabilityInboundValue(
+      'alarm_contact',
+      { value: 'closed' },
+      'zwave_door_status_to_homey_alarm_contact',
+    ),
+    false,
+  );
+  assert.equal(
+    coerceCapabilityInboundValue(
+      'alarm_tamper',
+      {
+        type: 'zwjs.event.node.notification',
+        event: { nodeId: 24, args: { eventLabel: 'Tampering, product moved' } },
+      },
+      'zwjs_notification_to_homey_alarm_tamper',
+    ),
+    true,
+  );
+  assert.equal(
+    coerceCapabilityInboundValue(
+      'alarm_tamper',
+      {
+        type: 'zwjs.event.node.notification',
+        event: { nodeId: 24, args: { eventLabel: 'Idle' } },
+      },
+      'zwjs_notification_to_homey_alarm_tamper',
+    ),
+    false,
+  );
+  assert.equal(
     coerceCapabilityInboundValue('measure_battery', { value: 255 }, undefined, 'number'),
     1,
   );
@@ -334,6 +400,7 @@ test('coerceCapability inbound/outbound uses transform refs and generic pass-thr
     'secured',
   );
   assert.equal(coerceCapabilityInboundValue('enum_select', { value: 3 }, undefined, 'number'), '3');
+  assert.equal(coerceCapabilityInboundValue('lock_mode', { value: 3 }, undefined, 'number'), '3');
   assert.equal(coerceCapabilityInboundValue('locked', { value: 'secured' }), true);
   assert.equal(coerceCapabilityInboundValue('locked', { value: 'unsecured' }), false);
   assert.equal(
@@ -378,6 +445,7 @@ test('coerceCapability inbound/outbound uses transform refs and generic pass-thr
     coerceCapabilityOutboundValue('enum_select', { value: 'unsecured' }, undefined, 'string'),
     'unsecured',
   );
+  assert.equal(coerceCapabilityOutboundValue('lock_mode', { value: '2' }, undefined, 'number'), 2);
   assert.equal(
     coerceCapabilityOutboundValue('enum_select', { value: '2' }, undefined, 'number'),
     2,
