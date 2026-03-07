@@ -21,6 +21,8 @@ test('compiler simulate parseCliArgs validates signature source and simulate opt
     'markdown',
     '--inspect-format',
     'json',
+    '--noise-filter',
+    'all',
     '--dry-run',
     '--url',
     'ws://x',
@@ -28,6 +30,8 @@ test('compiler simulate parseCliArgs validates signature source and simulate opt
   ]);
   assert.equal(parsedSignature.ok, true);
   assert.equal(parsedSignature.command.dryRun, true);
+  assert.equal(parsedSignature.command.forwardedArgv.includes('--noise-filter'), true);
+  assert.equal(parsedSignature.command.forwardedArgv.includes('all'), true);
   assert.equal(parsedSignature.command.forwardedArgv.includes('--dry-run'), false);
 });
 
