@@ -21,6 +21,12 @@ Kick off Phase 6 Reliability + UX delivery:
 
 ## Recently Completed
 
+- Code-review remediation slice (settings bootstrap resilience):
+  - fixed fail-closed settings bootstrap behavior when shared request-order gate script is unavailable
+  - settings page now uses an in-page local request-order fallback gate instead of aborting initialization
+  - added guard assertions to ensure bootstrap does not hard-return on missing shared gate wiring
+  - updated readiness status messaging to reflect fallback guard mode when active
+
 - Panel liveness gate slice:
   - added table-driven panel contract coverage for active pair/repair session handlers:
     - bridge pairing: `list_devices`, `bridge_config:get_context`, `bridge_config:save_settings`

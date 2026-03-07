@@ -79,4 +79,14 @@ test('settings page wraps Homey.api calls with apiRequestWithTimeout helper', ()
     /requestOrderGate\.isCurrent\(REQUEST_CHANNEL_INVENTORY,\s*requestTicket\)/,
     `${relativePath}: inventory path should ignore stale responses`,
   );
+  assert.match(
+    source,
+    /function createLocalRequestOrderGate\s*\(/,
+    `${relativePath}: should provide local request-order gate fallback`,
+  );
+  assert.doesNotMatch(
+    source,
+    /if\s*\(\s*!maybeRequestOrderGate[\s\S]*?\)\s*\{\s*return;\s*\}/,
+    `${relativePath}: should not hard-return when shared request-order gate is unavailable`,
+  );
 });

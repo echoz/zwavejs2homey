@@ -93,14 +93,59 @@ interface SettingsHomey {
     root && root.Zwjs2HomeyUi && root.Zwjs2HomeyUi.requestOrderGate
       ? root.Zwjs2HomeyUi.requestOrderGate
       : null;
-  if (
-    !maybeRequestOrderGate ||
-    typeof maybeRequestOrderGate.createRequestOrderGate !== 'function'
-  ) {
-    return;
+  const hasSharedRequestOrderGate =
+    Boolean(maybeRequestOrderGate) &&
+    typeof maybeRequestOrderGate?.createRequestOrderGate === 'function';
+
+  function createLocalRequestOrderGate(): RequestOrderGate {
+    const latestTicketByChannel = new Map<string, number>();
+    const inFlightCountByChannel = new Map<string, number>();
+
+    function normalizeChannel(channel: string): string {
+      const trimmed = channel.trim();
+      return trimmed.length > 0 ? trimmed : 'default';
+    }
+
+    return {
+      begin(channel: string): number {
+        const key = normalizeChannel(channel);
+        const nextTicket = (latestTicketByChannel.get(key) ?? 0) + 1;
+        latestTicketByChannel.set(key, nextTicket);
+        inFlightCountByChannel.set(key, (inFlightCountByChannel.get(key) ?? 0) + 1);
+        return nextTicket;
+      },
+      isCurrent(channel: string, ticket: number): boolean {
+        const key = normalizeChannel(channel);
+        return (latestTicketByChannel.get(key) ?? 0) === ticket;
+      },
+      finish(channel: string): void {
+        const key = normalizeChannel(channel);
+        const current = inFlightCountByChannel.get(key) ?? 0;
+        if (current <= 1) {
+          inFlightCountByChannel.delete(key);
+          return;
+        }
+        inFlightCountByChannel.set(key, current - 1);
+      },
+      isBusy(channels?: string[]): boolean {
+        if (Array.isArray(channels) && channels.length > 0) {
+          return channels.some((channel) => {
+            const key = normalizeChannel(channel);
+            return (inFlightCountByChannel.get(key) ?? 0) > 0;
+          });
+        }
+        for (const count of inFlightCountByChannel.values()) {
+          if (count > 0) return true;
+        }
+        return false;
+      },
+    };
   }
+
   const presenter: SettingsPresenter = maybePresenter;
-  const requestOrderGate = maybeRequestOrderGate.createRequestOrderGate();
+  const requestOrderGate: RequestOrderGate = hasSharedRequestOrderGate
+    ? (maybeRequestOrderGate as RequestOrderGateApi).createRequestOrderGate()
+    : createLocalRequestOrderGate();
   const REQUEST_CHANNEL_DIAGNOSTICS = 'diagnostics';
   const REQUEST_CHANNEL_INVENTORY = 'inventory';
 
@@ -596,7 +641,12 @@ interface SettingsHomey {
 
   function onHomeyReady(homey: SettingsHomey): void {
     wireEvents(homey);
-    setStatus('App diagnostics ready.', 'ok');
+    setStatus(
+      hasSharedRequestOrderGate
+        ? 'App diagnostics ready.'
+        : 'App diagnostics ready (local request guard active).',
+      hasSharedRequestOrderGate ? 'ok' : 'warn',
+    );
     syncControlsDisabledState();
     void refreshDiagnostics(homey);
     void refreshBridgeInventory(homey);
