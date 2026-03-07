@@ -148,6 +148,9 @@ npm run compiler:validate-live -- --url ws://HOST:PORT --all-nodes --manifest-fi
 npm run compiler:simulate -- --url ws://HOST:PORT --all-nodes --manifest-file rules/manifest.json --signature 29:66:2
 ```
 
+`compiler:inspect-live` supports `--noise-filter actionable|all` (default `actionable`) to suppress
+technical-only unmatched-rule noise in human-facing diagnostics.
+
 Rank live product-triple expansion candidates from inspect output:
 
 ```bash

@@ -15,6 +15,7 @@ test('parseCliArgs validates required device and rule inputs', async () => {
   const parsed = parseCliArgs(['--device-file', 'd.json', '--rules-file', 'r.json']);
   assert.equal(parsed.ok, true);
   assert.deepEqual(parsed.command.rulesFiles, ['r.json']);
+  assert.equal(parsed.command.noiseFilter, 'actionable');
   assert.equal(parsed.command.catalogFile, undefined);
   const withCatalog = parseCliArgs([
     '--device-file',
@@ -33,6 +34,17 @@ test('parseCliArgs validates required device and rule inputs', async () => {
   );
   assert.equal(
     parseCliArgs(['--device-file', 'd.json', '--rules-file', 'r.json', '--focus', 'unmatched']).ok,
+    true,
+  );
+  assert.equal(
+    parseCliArgs([
+      '--device-file',
+      'd.json',
+      '--rules-file',
+      'r.json',
+      '--noise-filter',
+      'actionable',
+    ]).ok,
     true,
   );
   assert.equal(
@@ -122,6 +134,17 @@ test('parseCliArgs validates required device and rule inputs', async () => {
   );
   assert.equal(
     parseCliArgs(['--device-file', 'd.json', '--rules-file', 'r.json', '--show', 'detail']).ok,
+    false,
+  );
+  assert.equal(
+    parseCliArgs([
+      '--device-file',
+      'd.json',
+      '--rules-file',
+      'r.json',
+      '--noise-filter',
+      'technical',
+    ]).ok,
     false,
   );
 });
@@ -331,6 +354,76 @@ test('formatCompileSummary respects --top limit for unmatched diagnostics', asyn
   const summary = formatCompileSummary(fixture);
   assert.match(summary, /Top unmatched rules: ha-derived:r1=3, project-generic:r2=2/);
   assert.doesNotMatch(summary, /project-product:r3=1/);
+});
+
+test('formatCompileSummary suppresses technical-only unmatched diagnostics by default noise filter', async () => {
+  const { formatCompileSummary, formatCompileOutput } = await loadLib();
+  const fixture = {
+    profile: {
+      profileId: 'p-noise',
+      classification: { homeyClass: 'light', confidence: 'curated', uncurated: false },
+      capabilities: [],
+      ignoredValues: [],
+    },
+    ruleSources: [],
+    report: {
+      profileOutcome: 'curated',
+      summary: { appliedActions: 2, unmatchedActions: 12, suppressedFillActions: 3 },
+      diagnosticDeviceKey: 'product-triple:9-9-9',
+      byRule: [
+        { ruleId: 'rA', layer: 'ha-derived', applied: 0, unmatched: 7, actionTypes: {} },
+        { ruleId: 'rB', layer: 'project-generic', applied: 0, unmatched: 5, actionTypes: {} },
+      ],
+      bySuppressedSlot: [],
+      curationCandidates: {
+        likelyNeedsReview: false,
+        reasons: ['suppressed-fill-actions:3', 'high-unmatched-ratio:0.95'],
+      },
+    },
+  };
+
+  const summary = formatCompileSummary(fixture);
+  assert.match(summary, /Top unmatched rules: \(technical-only rows suppressed by noise filter\)/);
+
+  const markdown = formatCompileOutput(fixture, 'markdown');
+  assert.match(
+    markdown,
+    /Top unmatched rules: \(technical-only rows suppressed by noise filter\)/,
+  );
+
+  const ndjson = formatCompileOutput(fixture, 'ndjson');
+  assert.doesNotMatch(ndjson, /"type":"topUnmatchedRule"/);
+});
+
+test('formatCompileSummary noise filter can include all unmatched diagnostics', async () => {
+  const { formatCompileSummary } = await loadLib();
+  const fixture = {
+    profile: {
+      profileId: 'p-noise-all',
+      classification: { homeyClass: 'light', confidence: 'curated', uncurated: false },
+      capabilities: [],
+      ignoredValues: [],
+    },
+    ruleSources: [],
+    report: {
+      profileOutcome: 'curated',
+      summary: { appliedActions: 1, unmatchedActions: 9, suppressedFillActions: 2 },
+      diagnosticDeviceKey: 'product-triple:1-1-1',
+      byRule: [
+        { ruleId: 'rA', layer: 'ha-derived', applied: 0, unmatched: 6, actionTypes: {} },
+        { ruleId: 'rB', layer: 'project-generic', applied: 0, unmatched: 3, actionTypes: {} },
+      ],
+      bySuppressedSlot: [],
+      curationCandidates: {
+        likelyNeedsReview: false,
+        reasons: ['suppressed-fill-actions:2', 'high-unmatched-ratio:0.95'],
+      },
+    },
+    __noiseFilter: 'all',
+  };
+
+  const summary = formatCompileSummary(fixture);
+  assert.match(summary, /Top unmatched rules: ha-derived:rA=6, project-generic:rB=3/);
 });
 
 test('formatCompileSummary supports focus filters for unmatched/suppressed/curation', async () => {

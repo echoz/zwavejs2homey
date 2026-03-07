@@ -48,6 +48,7 @@ export function getUsageText() {
     '                     [--vocabulary-file <rules/homey-authoring-vocabulary.json>]',
     '                     [--catalog-file <catalog.json>]',
     '                     [--focus all|unmatched|suppressed|curation]',
+    '                     [--noise-filter actionable|all]',
     '                     [--top <n>]',
     '                     [--show rule|suppressed|curation|all]',
     '                     [--explain <capabilityId>]',
@@ -81,6 +82,10 @@ export function parseCliArgs(argv) {
   if (!['all', 'unmatched', 'suppressed', 'curation'].includes(focus)) {
     return { ok: false, error: `Unsupported focus: ${focus}` };
   }
+  const noiseFilter = flags.get('--noise-filter') ?? 'actionable';
+  if (!['actionable', 'all'].includes(noiseFilter)) {
+    return { ok: false, error: `Unsupported --noise-filter: ${noiseFilter}` };
+  }
   const topRaw = flags.get('--top');
   const top = topRaw === undefined ? 3 : Number.parseInt(topRaw, 10);
   if (!Number.isInteger(top) || top <= 0) {
@@ -110,6 +115,7 @@ export function parseCliArgs(argv) {
       rulesFiles,
       format,
       focus,
+      noiseFilter,
       top,
       show,
       explainCapabilityId: flags.get('--explain'),
@@ -170,6 +176,7 @@ export function compileFromFiles(command) {
   return {
     ...compiled,
     __focus: command.focus ?? 'all',
+    __noiseFilter: command.noiseFilter ?? 'actionable',
     __top: command.top ?? 3,
     __show: command.show ?? 'none',
     __explainCapabilityId: command.explainCapabilityId,
@@ -205,6 +212,25 @@ function splitCurationReasons(reasons) {
     }
   }
   return { actionable, technical };
+}
+
+function resolveNoiseFilter(result) {
+  return result?.__noiseFilter === 'all' ? 'all' : 'actionable';
+}
+
+function shouldSuppressTechnicalUnmatchedDiagnostics(result, curationReasonGroups) {
+  if (resolveNoiseFilter(result) !== 'actionable') return false;
+  const actionableCount = curationReasonGroups?.actionable?.length ?? 0;
+  const technicalCount = curationReasonGroups?.technical?.length ?? 0;
+  return actionableCount === 0 && technicalCount > 0;
+}
+
+function filterRuleRowsByNoise(result, curationReasonGroups) {
+  const byRuleRows = Array.isArray(result?.report?.byRule) ? result.report.byRule : [];
+  if (!shouldSuppressTechnicalUnmatchedDiagnostics(result, curationReasonGroups)) {
+    return byRuleRows;
+  }
+  return byRuleRows.filter((row) => (row?.applied ?? 0) > 0 || (row?.unmatched ?? 0) <= 0);
 }
 
 function humanizeCurationReason(reason) {
@@ -445,8 +471,15 @@ export function formatCompileSummary(result) {
   const topLimit = Number.isInteger(result.__top) && result.__top > 0 ? result.__top : 3;
   const focus = result.__focus ?? 'all';
   const show = result.__show ?? 'none';
+  const noiseFilter = resolveNoiseFilter(result);
   const conflictSuppressions = getConflictSuppressions(result);
-  const topUnmatchedRules = [...(result.report.byRule ?? [])]
+  const curationReasons = result?.report?.curationCandidates?.reasons ?? [];
+  const curationReasonGroups = splitCurationReasons(curationReasons);
+  const filteredByRuleRows = filterRuleRowsByNoise(result, curationReasonGroups);
+  const unmatchedRowsSuppressed =
+    shouldSuppressTechnicalUnmatchedDiagnostics(result, curationReasonGroups) &&
+    (result.report.byRule ?? []).some((row) => (row.unmatched ?? 0) > 0);
+  const topUnmatchedRules = [...filteredByRuleRows]
     .filter((row) => (row.unmatched ?? 0) > 0)
     .sort(
       (a, b) =>
@@ -456,8 +489,6 @@ export function formatCompileSummary(result) {
     )
     .slice(0, topLimit);
   const lines = [];
-  const curationReasons = result?.report?.curationCandidates?.reasons ?? [];
-  const curationReasonGroups = splitCurationReasons(curationReasons);
   lines.push(`Profile: ${result.profile.profileId}`);
   lines.push(
     `Class: ${result.profile.classification.homeyClass} (${result.profile.classification.confidence}, uncurated=${result.profile.classification.uncurated})`,
@@ -521,9 +552,13 @@ export function formatCompileSummary(result) {
         .map((row) => `${row.layer}:${row.ruleId}=${row.unmatched}`)
         .join(', ')}`,
     );
+  } else if (focus === 'all' || focus === 'unmatched') {
+    if (unmatchedRowsSuppressed && noiseFilter === 'actionable') {
+      lines.push('Top unmatched rules: (technical-only rows suppressed by noise filter)');
+    }
   }
   if (show === 'rule' || show === 'all') {
-    const topRules = [...(result.report.byRule ?? [])]
+    const topRules = [...filteredByRuleRows]
       .sort(
         (a, b) =>
           (b.applied ?? 0) - (a.applied ?? 0) ||
@@ -582,8 +617,15 @@ export function formatCompileMarkdown(result) {
   const topLimit = Number.isInteger(result.__top) && result.__top > 0 ? result.__top : 3;
   const focus = result.__focus ?? 'all';
   const show = result.__show ?? 'none';
+  const noiseFilter = resolveNoiseFilter(result);
   const conflictSuppressions = getConflictSuppressions(result);
-  const topUnmatchedRules = [...(result.report.byRule ?? [])]
+  const curationReasons = result?.report?.curationCandidates?.reasons ?? [];
+  const curationReasonGroups = splitCurationReasons(curationReasons);
+  const filteredByRuleRows = filterRuleRowsByNoise(result, curationReasonGroups);
+  const unmatchedRowsSuppressed =
+    shouldSuppressTechnicalUnmatchedDiagnostics(result, curationReasonGroups) &&
+    (result.report.byRule ?? []).some((row) => (row.unmatched ?? 0) > 0);
+  const topUnmatchedRules = [...filteredByRuleRows]
     .filter((row) => (row.unmatched ?? 0) > 0)
     .sort(
       (a, b) =>
@@ -593,8 +635,6 @@ export function formatCompileMarkdown(result) {
     )
     .slice(0, topLimit);
   const lines = [];
-  const curationReasons = result?.report?.curationCandidates?.reasons ?? [];
-  const curationReasonGroups = splitCurationReasons(curationReasons);
   lines.push(`## Compiled Profile: \`${result.profile.profileId}\``);
   lines.push(
     `- Class: \`${result.profile.classification.homeyClass}\` (${result.profile.classification.confidence}, uncurated=${result.profile.classification.uncurated})`,
@@ -665,6 +705,10 @@ export function formatCompileMarkdown(result) {
         .map((row) => `\`${row.layer}:${row.ruleId}=${row.unmatched}\``)
         .join(', ')}`,
     );
+  } else if (focus === 'all' || focus === 'unmatched') {
+    if (unmatchedRowsSuppressed && noiseFilter === 'actionable') {
+      lines.push(`- Top unmatched rules: (technical-only rows suppressed by noise filter)`);
+    }
   }
   if ((show === 'suppressed' || show === 'all') && result.report.bySuppressedSlot.length > 0) {
     lines.push(`- Suppressed detail:`);
@@ -684,7 +728,7 @@ export function formatCompileMarkdown(result) {
     }
   }
   if (show === 'rule' || show === 'all') {
-    const topRules = [...(result.report.byRule ?? [])]
+    const topRules = [...filteredByRuleRows]
       .sort(
         (a, b) =>
           (b.applied ?? 0) - (a.applied ?? 0) ||
@@ -719,6 +763,9 @@ export function formatCompileNdjson(result) {
   const topLimit = Number.isInteger(result.__top) && result.__top > 0 ? result.__top : 3;
   const capabilityExplain = getCapabilityExplanationRecord(result);
   const conflictSuppressions = getConflictSuppressions(result);
+  const curationReasons = result?.report?.curationCandidates?.reasons ?? [];
+  const curationReasonGroups = splitCurationReasons(curationReasons);
+  const filteredByRuleRows = filterRuleRowsByNoise(result, curationReasonGroups);
   const records = [
     { type: 'profile', profile: result.profile },
     ...(result.classificationProvenance
@@ -741,7 +788,7 @@ export function formatCompileNdjson(result) {
       unknownDeviceReport: result.report.unknownDeviceReport,
       diagnosticDeviceKey: result.report.diagnosticDeviceKey,
     },
-    ...result.report.byRule.map((row) => ({ type: 'byRule', row })),
+    ...filteredByRuleRows.map((row) => ({ type: 'byRule', row })),
     ...result.report.bySuppressedSlot.map((row) => ({ type: 'bySuppressedSlot', row })),
     ...conflictSuppressions.map((row) => ({ type: 'conflictSuppression', row })),
     ...result.report.curationCandidates.reasons.map((reason) => ({
@@ -751,7 +798,7 @@ export function formatCompileNdjson(result) {
     ...(result.report.unknownDeviceReport
       ? [{ type: 'unknownDeviceReport', unknownDeviceReport: result.report.unknownDeviceReport }]
       : []),
-    ...[...(result.report.byRule ?? [])]
+    ...[...filteredByRuleRows]
       .filter((row) => (row.unmatched ?? 0) > 0)
       .sort(
         (a, b) =>

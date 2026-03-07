@@ -94,7 +94,7 @@ export function getUsageText() {
     '                           [--include-values none|summary|full] [--max-values N]',
     '                           [--include-controller-nodes]',
     '                           [--signature <manufacturerId:productType:productId>]',
-    '                           [--focus ...] [--top N] [--show ...] [--explain <cap>] [--explain-all] [--explain-only]',
+    '                           [--focus ...] [--noise-filter actionable|all] [--top N] [--show ...] [--explain <cap>] [--explain-all] [--explain-only]',
   ].join('\n');
 }
 
@@ -160,6 +160,10 @@ export function parseCliArgs(argv) {
   if (!['all', 'unmatched', 'suppressed', 'curation'].includes(focus)) {
     return { ok: false, error: `Unsupported focus: ${focus}` };
   }
+  const noiseFilter = flags.get('--noise-filter') ?? 'actionable';
+  if (!['actionable', 'all'].includes(noiseFilter)) {
+    return { ok: false, error: `Unsupported --noise-filter: ${noiseFilter}` };
+  }
   const topRaw = flags.get('--top');
   const top = topRaw === undefined ? 3 : Number.parseInt(topRaw, 10);
   if (!Number.isInteger(top) || top <= 0) {
@@ -210,6 +214,7 @@ export function parseCliArgs(argv) {
       includeControllerNodes: flags.has('--include-controller-nodes'),
       signature,
       focus,
+      noiseFilter,
       top,
       show,
       explainCapabilityId: flags.get('--explain'),
@@ -225,6 +230,7 @@ function cloneCompiledForInspect(compiled, command) {
   return {
     ...compiled,
     __focus: command.focus,
+    __noiseFilter: command.noiseFilter ?? 'actionable',
     __top: command.top,
     __show: command.show,
     __explainCapabilityId: command.explainCapabilityId,

@@ -78,6 +78,31 @@ test('parseCliArgs validates live inspect required inputs and formats', async ()
   assert.equal(parsed.command.nodeId, 5);
   assert.equal(parsed.command.includeValues, 'full');
   assert.equal(parsed.command.signature, undefined);
+  assert.equal(parsed.command.noiseFilter, 'actionable');
+
+  const parsedNoise = parseCliArgs([
+    '--url',
+    'ws://x',
+    '--all-nodes',
+    '--rules-file',
+    'r.json',
+    '--noise-filter',
+    'all',
+  ]);
+  assert.equal(parsedNoise.ok, true);
+  assert.equal(parsedNoise.command.noiseFilter, 'all');
+  assert.equal(
+    parseCliArgs([
+      '--url',
+      'ws://x',
+      '--all-nodes',
+      '--rules-file',
+      'r.json',
+      '--noise-filter',
+      'technical',
+    ]).ok,
+    false,
+  );
 });
 
 test('normalizeCompilerDeviceFactsFromZwjsDetail converts zwjs-inspect node detail', async () => {
