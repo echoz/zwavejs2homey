@@ -788,6 +788,95 @@ test('node driver pair session registers list_devices handler', async () => {
   assert.equal(callbackCandidates[0]?.data?.nodeId, 12);
 });
 
+test('node driver aggregates pairing candidates across all connected bridges', async () => {
+  const driver = new NodeDriver();
+  const mainClient = {
+    async getNodeList() {
+      return {
+        nodes: [
+          { nodeId: 1, name: 'Controller' },
+          { nodeId: 12, name: 'Main Dimmer' },
+        ],
+      };
+    },
+    async getNodeState() {
+      return { success: false, result: null };
+    },
+  };
+  const secondaryClient = {
+    async getNodeList() {
+      return {
+        nodes: [
+          { nodeId: 1, name: 'Controller' },
+          { nodeId: 9, name: 'Secondary Lamp' },
+        ],
+      };
+    },
+    async getNodeState() {
+      return { success: false, result: null };
+    },
+  };
+  driver._configureHarness({
+    app: {
+      listBridgeSessions() {
+        return [
+          { bridgeId: 'main', getZwjsClient: () => mainClient },
+          { bridgeId: 'secondary', getZwjsClient: () => secondaryClient },
+        ];
+      },
+    },
+    devices: [],
+  });
+
+  const candidates = await driver.onPairListDevices();
+  assert.equal(Array.isArray(candidates), true);
+  assert.equal(candidates.length, 2);
+  assert.equal(candidates[0]?.data?.id, 'main:12');
+  assert.equal(candidates[0]?.data?.bridgeId, 'main');
+  assert.equal(candidates[1]?.data?.id, 'secondary:9');
+  assert.equal(candidates[1]?.data?.bridgeId, 'secondary');
+  assert.equal(candidates[0]?.name.includes('(main)'), true);
+  assert.equal(candidates[1]?.name.includes('(secondary)'), true);
+});
+
+test('node driver pairing remains partial-failure tolerant across bridges', async () => {
+  const driver = new NodeDriver();
+  const healthyClient = {
+    async getNodeList() {
+      return {
+        nodes: [{ nodeId: 22, name: 'Healthy Bridge Node' }],
+      };
+    },
+    async getNodeState() {
+      return { success: false, result: null };
+    },
+  };
+  const failingClient = {
+    async getNodeList() {
+      throw new Error('simulated secondary bridge failure');
+    },
+    async getNodeState() {
+      return { success: false, result: null };
+    },
+  };
+  driver._configureHarness({
+    app: {
+      listBridgeSessions() {
+        return [
+          { bridgeId: 'main', getZwjsClient: () => healthyClient },
+          { bridgeId: 'secondary', getZwjsClient: () => failingClient },
+        ];
+      },
+    },
+    devices: [],
+  });
+
+  const candidates = await driver.onPairListDevices();
+  assert.equal(candidates.length, 1);
+  assert.equal(candidates[0]?.data?.id, 'main:22');
+  assert.equal(candidates[0]?.data?.bridgeId, 'main');
+});
+
 test('node driver import summary status aggregates runtime diagnostics', async () => {
   const driver = new NodeDriver();
   driver._configureHarness({

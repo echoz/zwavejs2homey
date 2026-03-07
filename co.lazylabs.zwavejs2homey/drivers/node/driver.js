@@ -78,6 +78,39 @@ module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
             const client = session?.getZwjsClient?.() ?? app.getZwjsClient?.(bridgeId);
             return { bridgeId, client };
         }
+        resolvePairRuntimeBridges(app) {
+            const runtimeClientsByBridgeId = new Map();
+            const setRuntime = (bridgeId, client) => {
+                const normalizedBridgeId = this.normalizeStringOrNull(bridgeId);
+                if (!normalizedBridgeId)
+                    return;
+                if (!runtimeClientsByBridgeId.has(normalizedBridgeId)) {
+                    runtimeClientsByBridgeId.set(normalizedBridgeId, client);
+                    return;
+                }
+                if (client && !runtimeClientsByBridgeId.get(normalizedBridgeId)) {
+                    runtimeClientsByBridgeId.set(normalizedBridgeId, client);
+                }
+            };
+            const sessions = app.listBridgeSessions?.();
+            if (Array.isArray(sessions)) {
+                for (const session of sessions) {
+                    const bridgeId = this.normalizeStringOrNull(session?.bridgeId) ??
+                        app.getBridgeId?.() ??
+                        pairing_1.ZWJS_DEFAULT_BRIDGE_ID;
+                    const client = session.getZwjsClient?.() ?? app.getZwjsClient?.(bridgeId);
+                    setRuntime(bridgeId, client);
+                }
+            }
+            const preferredBridgeId = app.getBridgeId?.() ?? pairing_1.ZWJS_DEFAULT_BRIDGE_ID;
+            setRuntime(preferredBridgeId, app.getZwjsClient?.(preferredBridgeId));
+            const fallback = this.resolveBridgeRuntime(app);
+            setRuntime(fallback.bridgeId, fallback.client);
+            return [...runtimeClientsByBridgeId.entries()].map(([bridgeId, client]) => ({
+                bridgeId,
+                client,
+            }));
+        }
         countImportedNodeDevices(bridgeId) {
             return this.getDevices()
                 .map((device) => device.getData())
@@ -479,30 +512,17 @@ module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
         async onPairListDevices() {
             this.log('Node pair list requested');
             const app = this.homey.app;
-            const runtime = this.resolveBridgeRuntime(app);
-            const client = runtime.client;
-            if (!client) {
-                this.error('Node pair list unavailable: bridge is not connected. Configure a bridge device and verify transport connectivity.');
+            const runtimes = this.resolvePairRuntimeBridges(app);
+            const connectedRuntimes = runtimes.filter((runtime) => Boolean(runtime.client));
+            if (connectedRuntimes.length === 0) {
+                this.error('Node pair list unavailable: no bridge transport is connected. Configure bridge device settings and verify connectivity.');
                 return [];
             }
             let latestCandidates = [];
             const runPairFlow = async () => {
-                const bridgeId = runtime.bridgeId;
                 const existingData = this.getDevices().map((device) => {
                     return device.getData();
                 });
-                const existingNodeIds = (0, pairing_1.collectExistingNodeIdsFromData)(existingData, bridgeId);
-                let nodes = [];
-                try {
-                    const nodeListResult = await this.withTimeout(client.getNodeList(), _a.PAIR_NODE_LIST_TIMEOUT_MS, 'node list lookup');
-                    nodes = Array.isArray(nodeListResult?.nodes) ? nodeListResult.nodes : [];
-                }
-                catch (error) {
-                    this.error('Failed to load node list during pairing', {
-                        error,
-                    });
-                    return [];
-                }
                 let knownZoneNames = [];
                 try {
                     knownZoneNames = await this.withTimeout(this.loadHomeyZoneNames(), _a.PAIR_ZONE_LOOKUP_TIMEOUT_MS, 'zone lookup');
@@ -513,51 +533,93 @@ module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
                     });
                     knownZoneNames = [];
                 }
-                const candidates = (0, pairing_1.buildNodePairCandidates)(nodes, bridgeId, existingNodeIds, undefined, {
-                    knownZoneNames,
-                    pairIconDriverId: 'node',
-                });
-                latestCandidates = candidates;
-                if (app.resolveCompiledProfileEntry) {
+                const allCandidates = [];
+                const totalConnectedBridges = connectedRuntimes.length;
+                await Promise.all(connectedRuntimes.map(async (runtime) => {
+                    const bridgeId = runtime.bridgeId;
+                    const client = runtime.client;
+                    if (!client)
+                        return;
+                    const existingNodeIds = (0, pairing_1.collectExistingNodeIdsFromData)(existingData, bridgeId);
+                    let nodes = [];
                     try {
-                        await this.withTimeout(this.runWithConcurrencyLimit(candidates, _a.PAIR_ICON_INFERENCE_CONCURRENCY, async (candidate) => {
-                            try {
-                                const nodeStateResult = await this.withTimeout(client.getNodeState(candidate.data.nodeId), _a.PAIR_NODE_STATE_TIMEOUT_MS, `node ${candidate.data.nodeId} state lookup`);
-                                if (!nodeStateResult.success)
-                                    return;
-                                const selector = (0, compiled_profiles_1.buildNodeResolverSelector)({ bridgeId, nodeId: candidate.data.nodeId }, nodeStateResult.result?.state);
-                                const match = app.resolveCompiledProfileEntry?.(selector);
-                                if (match?.by === 'none')
-                                    return;
-                                const homeyClass = (0, pairing_icons_1.normalizeHomeyClassForPairIcon)(match?.entry?.compiled?.profile?.classification?.homeyClass);
-                                candidate.icon = (0, pairing_icons_1.resolveDriverPairIconForHomeyClass)(homeyClass, 'node');
-                                candidate.store.inferredHomeyClass = homeyClass;
-                            }
-                            catch (error) {
-                                this.error('Failed to infer node pairing icon', {
-                                    bridgeId,
-                                    nodeId: candidate.data.nodeId,
-                                    error,
-                                });
-                            }
-                        }), _a.PAIR_ICON_INFERENCE_TIMEOUT_MS, 'node icon inference');
+                        const nodeListResult = await this.withTimeout(client.getNodeList(), _a.PAIR_NODE_LIST_TIMEOUT_MS, `node list lookup (${bridgeId})`);
+                        nodes = Array.isArray(nodeListResult?.nodes) ? nodeListResult.nodes : [];
                     }
                     catch (error) {
-                        this.error('Node pairing icon inference timed out; returning candidates without inferred icons', {
-                            error,
+                        this.error('Failed to load node list during pairing', {
                             bridgeId,
-                            candidates: candidates.length,
+                            error,
                         });
+                        return;
                     }
-                }
-                this.log('Node pair list generated', {
-                    bridgeId,
-                    discovered: nodes.length,
-                    existing: existingNodeIds.size,
-                    candidates: candidates.length,
-                    knownZones: knownZoneNames.length,
+                    const candidates = (0, pairing_1.buildNodePairCandidates)(nodes, bridgeId, existingNodeIds, undefined, {
+                        knownZoneNames,
+                        pairIconDriverId: 'node',
+                    });
+                    if (totalConnectedBridges > 1) {
+                        for (const candidate of candidates) {
+                            candidate.name = `${candidate.name} (${bridgeId})`;
+                        }
+                    }
+                    allCandidates.push(...candidates);
+                    latestCandidates = [...allCandidates];
+                    if (app.resolveCompiledProfileEntry) {
+                        try {
+                            await this.withTimeout(this.runWithConcurrencyLimit(candidates, _a.PAIR_ICON_INFERENCE_CONCURRENCY, async (candidate) => {
+                                try {
+                                    const nodeStateResult = await this.withTimeout(client.getNodeState(candidate.data.nodeId), _a.PAIR_NODE_STATE_TIMEOUT_MS, `node ${candidate.data.nodeId} state lookup`);
+                                    if (!nodeStateResult.success)
+                                        return;
+                                    const selector = (0, compiled_profiles_1.buildNodeResolverSelector)({ bridgeId, nodeId: candidate.data.nodeId }, nodeStateResult.result?.state);
+                                    const match = app.resolveCompiledProfileEntry?.(selector);
+                                    if (match?.by === 'none')
+                                        return;
+                                    const homeyClass = (0, pairing_icons_1.normalizeHomeyClassForPairIcon)(match?.entry?.compiled?.profile?.classification?.homeyClass);
+                                    candidate.icon = (0, pairing_icons_1.resolveDriverPairIconForHomeyClass)(homeyClass, 'node');
+                                    candidate.store.inferredHomeyClass = homeyClass;
+                                }
+                                catch (error) {
+                                    this.error('Failed to infer node pairing icon', {
+                                        bridgeId,
+                                        nodeId: candidate.data.nodeId,
+                                        error,
+                                    });
+                                }
+                            }), _a.PAIR_ICON_INFERENCE_TIMEOUT_MS, `node icon inference (${bridgeId})`);
+                        }
+                        catch (error) {
+                            this.error('Node pairing icon inference timed out; returning candidates without inferred icons', {
+                                error,
+                                bridgeId,
+                                candidates: candidates.length,
+                            });
+                        }
+                    }
+                    this.log('Node pair list generated for bridge', {
+                        bridgeId,
+                        discovered: nodes.length,
+                        existing: existingNodeIds.size,
+                        candidates: candidates.length,
+                        knownZones: knownZoneNames.length,
+                    });
+                }));
+                allCandidates.sort((left, right) => {
+                    const leftBridge = left.data.bridgeId === pairing_1.ZWJS_DEFAULT_BRIDGE_ID ? '' : left.data.bridgeId;
+                    const rightBridge = right.data.bridgeId === pairing_1.ZWJS_DEFAULT_BRIDGE_ID ? '' : right.data.bridgeId;
+                    if (leftBridge !== rightBridge) {
+                        return leftBridge.localeCompare(rightBridge);
+                    }
+                    return left.data.nodeId - right.data.nodeId;
                 });
-                const payload = candidates.map((candidate) => ({
+                latestCandidates = allCandidates;
+                this.log('Node pair list generated (aggregate)', {
+                    bridgesConnected: connectedRuntimes.length,
+                    bridgesWithCandidates: new Set(allCandidates.map((candidate) => candidate.data.bridgeId))
+                        .size,
+                    candidates: allCandidates.length,
+                });
+                const payload = allCandidates.map((candidate) => ({
                     name: candidate.name,
                     data: candidate.data,
                     store: candidate.store,
