@@ -126,6 +126,14 @@
                 stateRef.current.context.settings.tokenConfigured =
                     validation.payload.authType === 'bearer';
             }
+            if (typeof Homey.alert === 'function') {
+                try {
+                    await Homey.alert('Bridge saved. Next: add your ZWJS Node devices.', 'info');
+                }
+                catch (_error) {
+                    // Non-fatal: continue and close the pairing flow.
+                }
+            }
             Homey.done();
             return;
         }

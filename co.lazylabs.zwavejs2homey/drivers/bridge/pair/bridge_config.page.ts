@@ -66,6 +66,7 @@ interface PairHomey {
   emit: (event: string, payload?: unknown) => Promise<unknown>;
   done: () => void;
   ready: () => void;
+  alert?: (message: string, icon?: 'error' | 'warning' | 'info' | null) => Promise<void>;
 }
 
 declare const Homey: PairHomey;
@@ -206,6 +207,13 @@ declare const Homey: PairHomey;
           validation.payload.authType === 'bearer' ? (validation.payload.token ?? '') : '';
         stateRef.current.context.settings.tokenConfigured =
           validation.payload.authType === 'bearer';
+      }
+      if (typeof Homey.alert === 'function') {
+        try {
+          await Homey.alert('Bridge saved. Next: add your ZWJS Node devices.', 'info');
+        } catch (_error) {
+          // Non-fatal: continue and close the pairing flow.
+        }
       }
       Homey.done();
       return;
