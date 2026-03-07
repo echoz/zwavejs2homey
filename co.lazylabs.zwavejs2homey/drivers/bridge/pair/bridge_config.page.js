@@ -1,5 +1,6 @@
 (function bootstrapBridgeConfigPage(root) {
     const PANEL_EMIT_TIMEOUT_MS = 15000;
+    const CLOSE_AFTER_SUCCESS_DELAY_MS = 1200;
     const maybePresenter = root?.Zwjs2HomeyUi?.bridgeConfigPresenter;
     if (!maybePresenter)
         return;
@@ -126,14 +127,12 @@
                 stateRef.current.context.settings.tokenConfigured =
                     validation.payload.authType === 'bearer';
             }
-            if (typeof Homey.alert === 'function') {
-                try {
-                    await Homey.alert('Bridge saved. Next: add your ZWJS Node devices.', 'info');
-                }
-                catch (_error) {
-                    // Non-fatal: continue and close the pairing flow.
-                }
-            }
+            stateRef.current = {
+                ...stateRef.current,
+                status: 'Bridge saved. Closing pairing… Next: add ZWJS Node devices.',
+            };
+            render();
+            await new Promise((resolve) => setTimeout(resolve, CLOSE_AFTER_SUCCESS_DELAY_MS));
             Homey.done();
             return;
         }

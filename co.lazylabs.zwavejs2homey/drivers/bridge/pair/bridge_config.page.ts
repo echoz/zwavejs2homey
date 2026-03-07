@@ -66,13 +66,13 @@ interface PairHomey {
   emit: (event: string, payload?: unknown) => Promise<unknown>;
   done: () => void;
   ready: () => void;
-  alert?: (message: string, icon?: 'error' | 'warning' | 'info' | null) => Promise<void>;
 }
 
 declare const Homey: PairHomey;
 
 (function bootstrapBridgeConfigPage(root: UiRoot | undefined) {
   const PANEL_EMIT_TIMEOUT_MS = 15000;
+  const CLOSE_AFTER_SUCCESS_DELAY_MS = 1200;
   const maybePresenter = root?.Zwjs2HomeyUi?.bridgeConfigPresenter;
   if (!maybePresenter) return;
   const presenter: BridgeConfigPresenter = maybePresenter;
@@ -208,13 +208,12 @@ declare const Homey: PairHomey;
         stateRef.current.context.settings.tokenConfigured =
           validation.payload.authType === 'bearer';
       }
-      if (typeof Homey.alert === 'function') {
-        try {
-          await Homey.alert('Bridge saved. Next: add your ZWJS Node devices.', 'info');
-        } catch (_error) {
-          // Non-fatal: continue and close the pairing flow.
-        }
-      }
+      stateRef.current = {
+        ...stateRef.current,
+        status: 'Bridge saved. Closing pairing… Next: add ZWJS Node devices.',
+      };
+      render();
+      await new Promise((resolve) => setTimeout(resolve, CLOSE_AFTER_SUCCESS_DELAY_MS));
       Homey.done();
       return;
     } catch (error) {
