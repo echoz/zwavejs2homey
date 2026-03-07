@@ -148,6 +148,11 @@ interface AppRuntimeAccess {
       };
     }>;
   }>;
+  configureBridgeConnection?: (options: {
+    bridgeId: string;
+    settings?: unknown;
+    reason?: string;
+  }) => Promise<unknown>;
 }
 
 interface RepairSessionLike {
@@ -167,6 +172,18 @@ module.exports = class BridgeDriver extends Homey.Driver {
   private static readonly PAIR_HANDLER_TIMEOUT_MS = 5000;
 
   private static readonly REPAIR_HANDLER_TIMEOUT_MS = 15000;
+
+  private static readonly BRIDGE_LOOKUP_TIMEOUT_MS = 4000;
+
+  private static readonly BRIDGE_LOOKUP_RETRY_MS = 50;
+
+  private readonly pairSessionBridgeIds = new WeakMap<object, string>();
+
+  private lastOfferedBridgeId: string | null = null;
+
+  private static wait(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
 
   private async withTimeout<T>(
     promise: Promise<T>,
@@ -231,10 +248,37 @@ module.exports = class BridgeDriver extends Homey.Driver {
       'bridge pair list',
       async () => {
         this.log('Bridge pair list requested (session handler)');
-        return this.onPairListDevices();
+        const candidates = await this.onPairListDevices();
+        const bridgeId =
+          candidates[0] && typeof candidates[0] === 'object'
+            ? this.normalizeStringOrNull(
+                (candidates[0] as { data?: { bridgeId?: unknown } }).data?.bridgeId,
+              )
+            : null;
+        if (bridgeId) {
+          this.pairSessionBridgeIds.set(session as unknown as object, bridgeId);
+          this.lastOfferedBridgeId = bridgeId;
+        }
+        return candidates;
       },
     );
     this.log('Bridge pair handler registered', { event: 'list_devices' });
+    this.registerTimedSessionHandler(
+      session,
+      'bridge_config:get_context',
+      BridgeDriver.PAIR_HANDLER_TIMEOUT_MS,
+      'bridge pair config',
+      async () => this.getBridgeConfigContext(session),
+    );
+    this.log('Bridge pair handler registered', { event: 'bridge_config:get_context' });
+    this.registerTimedSessionHandler(
+      session,
+      'bridge_config:save_settings',
+      BridgeDriver.PAIR_HANDLER_TIMEOUT_MS,
+      'bridge pair config',
+      async (payload) => this.saveBridgeSettingsFromPairSession(session, payload),
+    );
+    this.log('Bridge pair handler registered', { event: 'bridge_config:save_settings' });
   }
 
   async onInit() {
@@ -284,6 +328,7 @@ module.exports = class BridgeDriver extends Homey.Driver {
         },
       ];
       const payload = this.toSerializablePairPayload(candidates, 'bridge:onPairListDevices');
+      this.lastOfferedBridgeId = payload[0]?.data?.bridgeId ?? null;
       this.log('Bridge pair list response ready (onPairListDevices hook)', {
         candidates: payload.length,
       });
@@ -291,6 +336,7 @@ module.exports = class BridgeDriver extends Homey.Driver {
     } catch (error) {
       this.error('Bridge pair list generation failed; returning fallback candidate', { error });
       const candidate = createNextBridgePairCandidate([], 'bridge');
+      this.lastOfferedBridgeId = candidate.data.bridgeId;
       return [
         {
           name: candidate.name,
@@ -298,6 +344,167 @@ module.exports = class BridgeDriver extends Homey.Driver {
         },
       ];
     }
+  }
+
+  private resolvePairBridgeId(session: PairSessionLike, payloadBridgeId?: unknown): string {
+    const payloadId = this.normalizeStringOrNull(payloadBridgeId);
+    if (payloadId) return payloadId;
+    const sessionBridgeId = this.pairSessionBridgeIds.get(session as unknown as object);
+    if (sessionBridgeId) return sessionBridgeId;
+    if (this.lastOfferedBridgeId) return this.lastOfferedBridgeId;
+    return ZWJS_DEFAULT_BRIDGE_ID;
+  }
+
+  private findBridgeDeviceByBridgeId(bridgeId: string):
+    | (Homey.Device & {
+        getData?: () => HomeyBridgeDeviceData | undefined;
+        getSettings?: () => Record<string, unknown>;
+        setSettings?: (settings: Record<string, unknown>) => Promise<void>;
+        getName?: () => string;
+      })
+    | undefined {
+    return this.getDevices().find((device) => {
+      const data = device.getData() as HomeyBridgeDeviceData | undefined;
+      if (!data) return false;
+      if (typeof data.bridgeId === 'string' && data.bridgeId.trim() === bridgeId) return true;
+      return typeof data.id === 'string' && data.id.trim() === `zwjs-bridge-${bridgeId}`;
+    }) as
+      | (Homey.Device & {
+          getData?: () => HomeyBridgeDeviceData | undefined;
+          getSettings?: () => Record<string, unknown>;
+          setSettings?: (settings: Record<string, unknown>) => Promise<void>;
+          getName?: () => string;
+        })
+      | undefined;
+  }
+
+  private async waitForBridgeDevice(bridgeId: string): Promise<
+    | (Homey.Device & {
+        getData?: () => HomeyBridgeDeviceData | undefined;
+        getSettings?: () => Record<string, unknown>;
+        setSettings?: (settings: Record<string, unknown>) => Promise<void>;
+        getName?: () => string;
+      })
+    | undefined
+  > {
+    const startedAt = Date.now();
+    while (Date.now() - startedAt < BridgeDriver.BRIDGE_LOOKUP_TIMEOUT_MS) {
+      const device = this.findBridgeDeviceByBridgeId(bridgeId);
+      if (device) return device;
+      await BridgeDriver.wait(BridgeDriver.BRIDGE_LOOKUP_RETRY_MS);
+    }
+    return this.findBridgeDeviceByBridgeId(bridgeId);
+  }
+
+  private parseBridgeSettingsPayload(payload: unknown): {
+    bridgeId?: string;
+    settings: {
+      zwjs_url: string;
+      zwjs_auth_type: 'none' | 'bearer';
+      zwjs_auth_token: string;
+    };
+  } {
+    const record =
+      payload && typeof payload === 'object' && !Array.isArray(payload)
+        ? (payload as Record<string, unknown>)
+        : {};
+    const bridgeId = this.normalizeStringOrNull(record.bridgeId) ?? undefined;
+    const url = this.normalizeStringOrNull(record.url);
+    if (!url) {
+      throw new Error('WebSocket URL is required.');
+    }
+
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol !== 'ws:' && parsed.protocol !== 'wss:') {
+        throw new Error('URL must start with ws:// or wss://.');
+      }
+    } catch {
+      throw new Error('URL must start with ws:// or wss://.');
+    }
+
+    const authType = record.authType === 'bearer' ? 'bearer' : 'none';
+    const token = this.normalizeStringOrNull(record.token) ?? '';
+    if (authType === 'bearer' && token.length === 0) {
+      throw new Error('Bearer token is required when auth type is bearer.');
+    }
+    return {
+      bridgeId,
+      settings: {
+        zwjs_url: url,
+        zwjs_auth_type: authType,
+        zwjs_auth_token: authType === 'bearer' ? token : '',
+      },
+    };
+  }
+
+  private async getBridgeConfigContext(session: PairSessionLike): Promise<{
+    bridgeId: string;
+    homeyDeviceId: string | null;
+    name: string | null;
+    paired: boolean;
+    settings: {
+      url: string;
+      authType: 'none' | 'bearer';
+      token: string;
+      tokenConfigured: boolean;
+    };
+  }> {
+    const bridgeId = this.resolvePairBridgeId(session);
+    const device = await this.waitForBridgeDevice(bridgeId);
+    const data = device?.getData?.() as HomeyBridgeDeviceData | undefined;
+    const settings =
+      device && typeof device.getSettings === 'function' ? device.getSettings() : undefined;
+    const settingsRecord =
+      settings && typeof settings === 'object' ? (settings as Record<string, unknown>) : {};
+    const authType = settingsRecord.zwjs_auth_type === 'bearer' ? 'bearer' : 'none';
+    const token =
+      authType === 'bearer'
+        ? (this.normalizeStringOrNull(settingsRecord.zwjs_auth_token) ?? '')
+        : '';
+    return {
+      bridgeId,
+      homeyDeviceId: this.normalizeStringOrNull(data?.id),
+      name:
+        device && typeof device.getName === 'function'
+          ? this.normalizeStringOrNull(device.getName())
+          : null,
+      paired: Boolean(device),
+      settings: {
+        url: this.normalizeStringOrNull(settingsRecord.zwjs_url) ?? '',
+        authType,
+        token,
+        tokenConfigured: token.length > 0,
+      },
+    };
+  }
+
+  private async saveBridgeSettingsFromPairSession(
+    session: PairSessionLike,
+    payload: unknown,
+  ): Promise<{ ok: true; bridgeId: string; configured: boolean }> {
+    const parsed = this.parseBridgeSettingsPayload(payload);
+    const bridgeId = this.resolvePairBridgeId(session, parsed.bridgeId);
+    const device = await this.waitForBridgeDevice(bridgeId);
+    if (!device || typeof device.setSettings !== 'function') {
+      throw new Error('Bridge device is not ready yet. Please wait a moment and try again.');
+    }
+    await device.setSettings(parsed.settings);
+
+    const app = this.homey.app as AppRuntimeAccess;
+    if (typeof app.configureBridgeConnection === 'function') {
+      await app.configureBridgeConnection({
+        bridgeId,
+        settings: parsed.settings,
+        reason: 'bridge-pair-config',
+      });
+    }
+
+    return {
+      ok: true,
+      bridgeId,
+      configured: true,
+    };
   }
 
   private resolveBridgeRuntime(app: AppRuntimeAccess): {

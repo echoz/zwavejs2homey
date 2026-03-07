@@ -1,0 +1,173 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Configure Bridge</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f6f8fb;
+        --panel: #ffffff;
+        --panel-border: #d8dfec;
+        --text: #1f2937;
+        --muted: #64748b;
+        --accent: #1d4ed8;
+      }
+
+      body {
+        margin: 0;
+        padding: 16px;
+        background: var(--bg);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        border-radius: 12px;
+        padding: 16px;
+      }
+
+      h1 {
+        margin: 0 0 10px;
+        font-size: 18px;
+      }
+
+      .meta {
+        font-size: 12px;
+        color: var(--muted);
+        margin-bottom: 12px;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        border: 1px solid transparent;
+      }
+
+      .pill.ok {
+        color: #0f766e;
+        background: rgba(15, 118, 110, 0.1);
+        border-color: rgba(15, 118, 110, 0.35);
+      }
+
+      .pill.warn {
+        color: #b45309;
+        background: rgba(180, 83, 9, 0.1);
+        border-color: rgba(180, 83, 9, 0.35);
+      }
+
+      form {
+        display: grid;
+        gap: 10px;
+      }
+
+      label {
+        font-size: 12px;
+        color: var(--muted);
+        display: grid;
+        gap: 4px;
+      }
+
+      input,
+      select {
+        border: 1px solid var(--panel-border);
+        border-radius: 8px;
+        padding: 8px 10px;
+        font-size: 14px;
+        background: var(--panel);
+        color: var(--text);
+      }
+
+      .hint {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .button-group {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+      }
+
+      .button {
+        border: 1px solid var(--accent);
+        background: transparent;
+        color: var(--accent);
+        border-radius: 10px;
+        padding: 10px 12px;
+        font-size: 14px;
+        cursor: pointer;
+      }
+
+      .button.secondary {
+        border-color: var(--panel-border);
+        color: var(--text);
+      }
+
+      .status {
+        margin-top: 10px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .error {
+        margin-top: 6px;
+        font-size: 12px;
+        color: #b91c1c;
+      }
+
+      .disabled {
+        opacity: 0.6;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="panel">
+      <h1>Configure Bridge Connection</h1>
+      <p class="meta">
+        Bridge: <strong id="bridge-name">Bridge</strong> (<span id="bridge-id">main</span>) ·
+        <span id="pair-status"><span class="pill warn">Loading</span></span>
+      </p>
+
+      <form id="bridge-config-form">
+        <label>
+          WebSocket URL
+          <input id="zwjs-url" type="text" placeholder="ws://192.168.1.15:3000" />
+        </label>
+
+        <label>
+          Auth Type
+          <select id="zwjs-auth-type">
+            <option value="none">None</option>
+            <option value="bearer">Bearer Token</option>
+          </select>
+        </label>
+
+        <div id="zwjs-token-wrap" hidden>
+          <label>
+            Bearer Token
+            <input id="zwjs-token" type="password" placeholder="token" />
+          </label>
+          <div id="zwjs-token-hint" class="hint"></div>
+        </div>
+      </form>
+
+      <div class="button-group">
+        <button id="save-btn" class="button">Save Connection</button>
+        <button id="done-btn" class="button secondary">Done</button>
+      </div>
+
+      <div id="status-line" class="status">Loading bridge context...</div>
+      <div id="error-line" class="error" hidden></div>
+    </section>
+
+    <script src="./bridge_config.presenter.js"></script>
+    <script src="./bridge_config.page.js"></script>
+  </body>
+</html>

@@ -16,7 +16,13 @@
     },
     {
       "id": "add_devices",
-      "template": "add_devices"
+      "template": "add_devices",
+      "navigation": {
+        "next": "bridge_config"
+      }
+    },
+    {
+      "id": "bridge_config"
     }
   ],
   "repair": [

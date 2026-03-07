@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const settingsPresenter = require('../settings/settings.presenter.js');
+const bridgeConfigPresenter = require('../drivers/bridge/pair/bridge_config.presenter.js');
 const bridgeNextStepsPresenter = require('../drivers/bridge/pair/next_steps.presenter.js');
 const nodeImportSummaryPresenter = require('../drivers/node/pair/import_summary.presenter.js');
 
@@ -201,6 +202,72 @@ test('settings presenter parses and exports support bundles with optional redact
   assert.equal(redactedPayload.source.homeyDeviceId, '<redacted>');
   assert.equal(redactedPayload.diagnostics.node.name, '<redacted>');
   assert.equal(redactedPayload.diagnostics.node.location, '<redacted>');
+});
+
+test('bridge config presenter validates payload and reflects paired context', () => {
+  const initial = bridgeConfigPresenter.createInitialState();
+  assert.equal(initial.loading, false);
+  assert.equal(initial.context, null);
+
+  const loading = bridgeConfigPresenter.reduce(initial, { type: 'load_start' });
+  assert.equal(loading.loading, true);
+
+  const loaded = bridgeConfigPresenter.reduce(loading, {
+    type: 'load_success',
+    context: {
+      bridgeId: 'bridge-2',
+      homeyDeviceId: 'zwjs-bridge-bridge-2',
+      name: 'ZWJS Bridge (bridge-2)',
+      paired: true,
+      settings: {
+        url: 'ws://192.168.1.15:3000',
+        authType: 'bearer',
+        token: 'abc123',
+        tokenConfigured: true,
+      },
+    },
+  });
+  const viewModel = bridgeConfigPresenter.buildViewModel(loaded);
+  assert.equal(viewModel.bridgeId, 'bridge-2');
+  assert.equal(viewModel.paired, true);
+  assert.equal(viewModel.url, 'ws://192.168.1.15:3000');
+  assert.equal(viewModel.authType, 'bearer');
+  assert.equal(viewModel.tokenConfigured, true);
+  assert.equal(viewModel.saveDisabled, false);
+
+  assert.deepEqual(
+    bridgeConfigPresenter.validateInput({
+      bridgeId: 'bridge-2',
+      url: 'ws://192.168.1.15:3000',
+      authType: 'none',
+      token: '',
+    }),
+    {
+      payload: {
+        bridgeId: 'bridge-2',
+        url: 'ws://192.168.1.15:3000',
+        authType: 'none',
+      },
+    },
+  );
+
+  assert.equal(
+    bridgeConfigPresenter.validateInput({
+      bridgeId: 'bridge-2',
+      url: 'http://192.168.1.15:3000',
+      authType: 'none',
+    }).error,
+    'URL must start with ws:// or wss://.',
+  );
+  assert.equal(
+    bridgeConfigPresenter.validateInput({
+      bridgeId: 'bridge-2',
+      url: 'ws://192.168.1.15:3000',
+      authType: 'bearer',
+      token: '',
+    }).error,
+    'Bearer token is required when auth type is bearer.',
+  );
 });
 
 function runPairPresenterContract(name, presenter) {

@@ -147,6 +147,132 @@ test('bridge driver pair session registers list_devices handler', async () => {
   assert.equal(callbackCandidates.length, 1);
 });
 
+test('bridge driver pair session exposes bridge config context', async () => {
+  const driver = new BridgeDriver();
+  driver._configureHarness({
+    devices: [
+      {
+        getData: () => ({ id: 'zwjs-bridge-main', kind: 'zwjs-bridge', bridgeId: 'main' }),
+        getName: () => 'ZWJS Bridge (main)',
+        getSettings: () => ({
+          zwjs_url: 'ws://192.168.1.15:3000',
+          zwjs_auth_type: 'bearer',
+          zwjs_auth_token: 'token-1',
+        }),
+      },
+    ],
+  });
+
+  const handlers = new Map();
+  await driver.onPair({
+    setHandler(event, handler) {
+      handlers.set(event, handler);
+    },
+  });
+
+  assert.equal(typeof handlers.get('bridge_config:get_context'), 'function');
+  const context = await handlers.get('bridge_config:get_context')();
+  assert.equal(context.bridgeId, 'main');
+  assert.equal(context.homeyDeviceId, 'zwjs-bridge-main');
+  assert.equal(context.name, 'ZWJS Bridge (main)');
+  assert.equal(context.paired, true);
+  assert.equal(context.settings.url, 'ws://192.168.1.15:3000');
+  assert.equal(context.settings.authType, 'bearer');
+  assert.equal(context.settings.tokenConfigured, true);
+});
+
+test('bridge driver pair session saves bridge config settings and reconfigures runtime', async () => {
+  const driver = new BridgeDriver();
+  const appliedSettings = [];
+  const configureCalls = [];
+  driver._configureHarness({
+    app: {
+      async configureBridgeConnection(payload) {
+        configureCalls.push(payload);
+      },
+    },
+    devices: [
+      {
+        getData: () => ({ id: 'zwjs-bridge-main', kind: 'zwjs-bridge', bridgeId: 'main' }),
+        getSettings: () => ({}),
+        async setSettings(settings) {
+          appliedSettings.push(settings);
+        },
+      },
+    ],
+  });
+
+  const handlers = new Map();
+  await driver.onPair({
+    setHandler(event, handler) {
+      handlers.set(event, handler);
+    },
+  });
+
+  assert.equal(typeof handlers.get('bridge_config:save_settings'), 'function');
+  const result = await handlers.get('bridge_config:save_settings')({
+    bridgeId: 'main',
+    url: 'wss://zwjs.example.com/ws',
+    authType: 'bearer',
+    token: 'secret',
+  });
+
+  assert.deepEqual(result, {
+    ok: true,
+    bridgeId: 'main',
+    configured: true,
+  });
+  assert.equal(appliedSettings.length, 1);
+  assert.deepEqual(appliedSettings[0], {
+    zwjs_url: 'wss://zwjs.example.com/ws',
+    zwjs_auth_type: 'bearer',
+    zwjs_auth_token: 'secret',
+  });
+  assert.equal(configureCalls.length, 1);
+  assert.deepEqual(configureCalls[0], {
+    bridgeId: 'main',
+    settings: {
+      zwjs_url: 'wss://zwjs.example.com/ws',
+      zwjs_auth_type: 'bearer',
+      zwjs_auth_token: 'secret',
+    },
+    reason: 'bridge-pair-config',
+  });
+});
+
+test('bridge driver pair session rejects invalid bridge config payload', async () => {
+  const driver = new BridgeDriver();
+  driver._configureHarness({
+    devices: [
+      {
+        getData: () => ({ id: 'zwjs-bridge-main', kind: 'zwjs-bridge', bridgeId: 'main' }),
+        getSettings: () => ({}),
+        async setSettings() {
+          return undefined;
+        },
+      },
+    ],
+  });
+
+  const handlers = new Map();
+  await driver.onPair({
+    setHandler(event, handler) {
+      handlers.set(event, handler);
+    },
+  });
+
+  await assert.rejects(
+    () =>
+      handlers.get('bridge_config:save_settings')({
+        bridgeId: 'main',
+        url: 'ws://192.168.1.15:3000',
+        authType: 'bearer',
+        token: '',
+      }),
+    /Bearer token is required when auth type is bearer\./,
+  );
+});
+
 test('bridge driver returns next bridge candidate when a bridge already exists', async () => {
   const driver = new BridgeDriver();
   driver._configureHarness({
