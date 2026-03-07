@@ -353,13 +353,12 @@ test('coerceCapability inbound/outbound uses transform refs and generic pass-thr
     50,
   );
   assert.equal(coerceCapabilityOutboundValue('onoff', true, 'homey_onoff_to_zwave_level_0_99'), 99);
-  assert.equal(
-    coerceCapabilityOutboundValue('onoff', false, 'homey_onoff_to_zwave_level_0_99'),
-    0,
-  );
+  assert.equal(coerceCapabilityOutboundValue('onoff', false, 'homey_onoff_to_zwave_level_0_99'), 0);
   assert.equal(coerceCapabilityOutboundValue('locked', true), true);
   assert.equal(coerceCapabilityOutboundValue('locked', true, undefined, 'string'), 'secured');
   assert.equal(coerceCapabilityOutboundValue('locked', false, undefined, 'string'), 'unsecured');
+  assert.equal(coerceCapabilityOutboundValue('locked', true, undefined, 'number'), 255);
+  assert.equal(coerceCapabilityOutboundValue('locked', false, undefined, 'number'), 0);
   assert.equal(coerceCapabilityOutboundValue('measure_power', 13.4), 13.4);
   assert.equal(
     coerceCapabilityOutboundValue('target_temperature', '22.5', undefined, 'number'),

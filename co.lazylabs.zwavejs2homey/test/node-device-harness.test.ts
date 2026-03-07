@@ -748,6 +748,14 @@ function createBatteryMeterLockProfileMatch() {
                   property: 'currentMode',
                 },
               },
+              outboundMapping: {
+                kind: 'set_value',
+                target: {
+                  commandClass: 98,
+                  endpoint: 0,
+                  property: 'targetMode',
+                },
+              },
             },
             {
               capabilityId: 'locked',
@@ -757,6 +765,14 @@ function createBatteryMeterLockProfileMatch() {
                   commandClass: 98,
                   endpoint: 0,
                   property: 'currentMode',
+                },
+              },
+              outboundMapping: {
+                kind: 'set_value',
+                target: {
+                  commandClass: 98,
+                  endpoint: 0,
+                  property: 'targetMode',
                 },
               },
             },
@@ -2043,7 +2059,7 @@ test('node device harness records writeability-unknown diagnostics for binary al
   );
 });
 
-test('node device harness supports remaining compiled artifact inbound-only verticals', async () => {
+test('node device harness supports lock + battery + meter runtime verticals', async () => {
   const batterySelector = {
     commandClass: 128,
     endpoint: 0,
@@ -2112,6 +2128,13 @@ test('node device harness supports remaining compiled artifact inbound-only vert
           readable: true,
           type: 'string',
         },
+        {
+          commandClass: 98,
+          endpoint: 0,
+          property: 'targetMode',
+          writeable: true,
+          type: 'number',
+        },
       ],
     },
   });
@@ -2136,6 +2159,39 @@ test('node device harness supports remaining compiled artifact inbound-only vert
   assert.equal(device._getCapabilityValue('locked'), true);
   assert.equal(client.callLog.setNodeValue.length, 0);
   assert.equal(client.getListenerCount(), 4);
+
+  await device._triggerCapabilityListener('locked', true);
+  await device._triggerCapabilityListener('locked', false);
+  await device._triggerCapabilityListener('enum_select', '2');
+  assert.deepEqual(client.callLog.setNodeValue, [
+    {
+      nodeId: 48,
+      valueId: {
+        commandClass: 98,
+        endpoint: 0,
+        property: 'targetMode',
+      },
+      value: 255,
+    },
+    {
+      nodeId: 48,
+      valueId: {
+        commandClass: 98,
+        endpoint: 0,
+        property: 'targetMode',
+      },
+      value: 0,
+    },
+    {
+      nodeId: 48,
+      valueId: {
+        commandClass: 98,
+        endpoint: 0,
+        property: 'targetMode',
+      },
+      value: 2,
+    },
+  ]);
 
   client.emitEvent({
     type: 'zwjs.event.node.value-updated',
@@ -2169,12 +2225,22 @@ test('node device harness supports remaining compiled artifact inbound-only vert
 
   const profileResolution = device._getStoreValue('profileResolution');
   assert.equal(profileResolution?.mappingDiagnostics?.length, 4);
-  for (const diagnostic of profileResolution?.mappingDiagnostics ?? []) {
-    assert.equal(diagnostic.inbound.enabled, true);
-    assert.equal(diagnostic.outbound.configured, false);
-    assert.equal(diagnostic.outbound.enabled, false);
-    assert.equal(diagnostic.outbound.reason, null);
-  }
+  const diagnosticsByCapability = new Map(
+    (profileResolution?.mappingDiagnostics ?? []).map((diagnostic) => [
+      diagnostic.capabilityId,
+      diagnostic,
+    ]),
+  );
+  assert.equal(diagnosticsByCapability.get('measure_battery')?.inbound.enabled, true);
+  assert.equal(diagnosticsByCapability.get('measure_battery')?.outbound.enabled, false);
+  assert.equal(diagnosticsByCapability.get('meter_power')?.inbound.enabled, true);
+  assert.equal(diagnosticsByCapability.get('meter_power')?.outbound.enabled, false);
+  assert.equal(diagnosticsByCapability.get('locked')?.inbound.enabled, true);
+  assert.equal(diagnosticsByCapability.get('locked')?.outbound.enabled, true);
+  assert.equal(diagnosticsByCapability.get('locked')?.outbound.reason, null);
+  assert.equal(diagnosticsByCapability.get('enum_select')?.inbound.enabled, true);
+  assert.equal(diagnosticsByCapability.get('enum_select')?.outbound.enabled, true);
+  assert.equal(diagnosticsByCapability.get('enum_select')?.outbound.reason, null);
 });
 
 test('node device harness records enum-like mapping diagnostics for unreadable inbound and unknown outbound writeability', async () => {

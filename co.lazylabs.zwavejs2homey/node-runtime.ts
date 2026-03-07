@@ -250,6 +250,7 @@ function coerceLockedOutboundValue(
   if (booleanValue === undefined) return undefined;
   const normalizedType = normalizeComparableValue(valueTypeHint)?.toLowerCase();
   if (normalizedType === 'string') return booleanValue ? 'secured' : 'unsecured';
+  if (normalizedType === 'number') return booleanValue ? 255 : 0;
   return booleanValue;
 }
 

@@ -538,12 +538,20 @@ test('root manifest product overrides curate Leviton switches and Yale locks', (
             valueId: { commandClass: 98, endpoint: 0, property: 'currentMode' },
             metadata: { type: 'number', readable: true, writeable: false },
           },
+          {
+            valueId: { commandClass: 98, endpoint: 0, property: 'targetMode' },
+            metadata: { type: 'number', readable: true, writeable: true },
+          },
+          {
+            valueId: { commandClass: 128, endpoint: 0, property: 'level' },
+            metadata: { type: 'number', readable: true, writeable: false },
+          },
         ],
       },
       expected: {
         homeyClass: 'lock',
         driverTemplateId: 'product-yale-lock',
-        requiredCapabilities: ['locked', 'enum_select'],
+        requiredCapabilities: ['locked', 'enum_select', 'measure_battery'],
         forbiddenCapabilities: [],
       },
     },
@@ -570,6 +578,27 @@ test('root manifest product overrides curate Leviton switches and Yale locks', (
         false,
         `${entry.name} should not include capability ${capability}`,
       );
+    }
+
+    if (entry.name === 'yale-yrd226') {
+      const lockedCapability = result.profile.capabilities.find(
+        (item) => item.capabilityId === 'locked',
+      );
+      const enumSelectCapability = result.profile.capabilities.find(
+        (item) => item.capabilityId === 'enum_select',
+      );
+      assert.equal(lockedCapability?.outboundMapping?.kind, 'set_value');
+      assert.deepEqual(lockedCapability?.outboundMapping?.target, {
+        commandClass: 98,
+        endpoint: 0,
+        property: 'targetMode',
+      });
+      assert.equal(enumSelectCapability?.outboundMapping?.kind, 'set_value');
+      assert.deepEqual(enumSelectCapability?.outboundMapping?.target, {
+        commandClass: 98,
+        endpoint: 0,
+        property: 'targetMode',
+      });
     }
   }
 });

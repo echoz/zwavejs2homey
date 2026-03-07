@@ -49,7 +49,7 @@
       },
       {
         "filePath": "rules/project/product/product-297-32770-1536.json",
-        "ruleCount": 1,
+        "ruleCount": 2,
         "declaredLayer": "project-product",
         "resolvedLayer": "project-product"
       },
@@ -60,7 +60,7 @@
         "resolvedLayer": "project-generic"
       }
     ],
-    "pipelineFingerprint": "60410d7c0899e0f125bc3a8a0dd50532c718fbf3b8ed418b044198dec9862e4c"
+    "pipelineFingerprint": "ed4e2184f6506aa6b053790688c8d25a31e0d62c02f3211b0b9087b5452c1e7a"
   },
   "entries": [
     {
@@ -178,8 +178,8 @@
           "suppressedActions": [],
           "summary": {
             "appliedActions": 14,
-            "unmatchedActions": 1005,
-            "totalActions": 1026,
+            "unmatchedActions": 1017,
+            "totalActions": 1038,
             "appliedProjectProductActions": 9,
             "suppressedFillActions": 15,
             "ignoredValues": 0
@@ -324,9 +324,10 @@
           },
           {
             "filePath": "rules/project/product/product-297-32770-1536.json",
-            "ruleCount": 1,
+            "ruleCount": 2,
             "ruleIds": [
-              "product-yale-yrd226-class-and-lock"
+              "product-yale-yrd226-class-and-lock",
+              "product-yale-yrd226-battery-level"
             ]
           },
           {
@@ -440,8 +441,8 @@
           "suppressedActions": [],
           "summary": {
             "appliedActions": 9,
-            "unmatchedActions": 329,
-            "totalActions": 342,
+            "unmatchedActions": 333,
+            "totalActions": 346,
             "appliedProjectProductActions": 4,
             "suppressedFillActions": 10,
             "ignoredValues": 0
@@ -604,9 +605,10 @@
           },
           {
             "filePath": "rules/project/product/product-297-32770-1536.json",
-            "ruleCount": 1,
+            "ruleCount": 2,
             "ruleIds": [
-              "product-yale-yrd226-class-and-lock"
+              "product-yale-yrd226-class-and-lock",
+              "product-yale-yrd226-battery-level"
             ]
           },
           {
@@ -730,8 +732,8 @@
           "suppressedActions": [],
           "summary": {
             "appliedActions": 5,
-            "unmatchedActions": 164,
-            "totalActions": 171,
+            "unmatchedActions": 166,
+            "totalActions": 173,
             "appliedProjectProductActions": 3,
             "suppressedFillActions": 5,
             "ignoredValues": 0
@@ -876,9 +878,10 @@
           },
           {
             "filePath": "rules/project/product/product-297-32770-1536.json",
-            "ruleCount": 1,
+            "ruleCount": 2,
             "ruleIds": [
-              "product-yale-yrd226-class-and-lock"
+              "product-yale-yrd226-class-and-lock",
+              "product-yale-yrd226-battery-level"
             ]
           },
           {
@@ -1002,8 +1005,8 @@
           "suppressedActions": [],
           "summary": {
             "appliedActions": 5,
-            "unmatchedActions": 164,
-            "totalActions": 171,
+            "unmatchedActions": 166,
+            "totalActions": 173,
             "appliedProjectProductActions": 3,
             "suppressedFillActions": 5,
             "ignoredValues": 0
@@ -1148,9 +1151,10 @@
           },
           {
             "filePath": "rules/project/product/product-297-32770-1536.json",
-            "ruleCount": 1,
+            "ruleCount": 2,
             "ruleIds": [
-              "product-yale-yrd226-class-and-lock"
+              "product-yale-yrd226-class-and-lock",
+              "product-yale-yrd226-battery-level"
             ]
           },
           {
@@ -1235,8 +1239,8 @@
           "suppressedActions": [],
           "summary": {
             "appliedActions": 4,
-            "unmatchedActions": 165,
-            "totalActions": 171,
+            "unmatchedActions": 167,
+            "totalActions": 173,
             "appliedProjectProductActions": 2,
             "suppressedFillActions": 5,
             "ignoredValues": 0
@@ -1248,7 +1252,7 @@
             "likelyNeedsReview": false,
             "reasons": [
               "suppressed-fill-actions:5",
-              "high-unmatched-ratio:0.96"
+              "high-unmatched-ratio:0.97"
             ]
           },
           "diagnosticDeviceKey": "product-triple:29-13313-1"
@@ -1381,9 +1385,10 @@
           },
           {
             "filePath": "rules/project/product/product-297-32770-1536.json",
-            "ruleCount": 1,
+            "ruleCount": 2,
             "ruleIds": [
-              "product-yale-yrd226-class-and-lock"
+              "product-yale-yrd226-class-and-lock",
+              "product-yale-yrd226-battery-level"
             ]
           },
           {
@@ -1468,8 +1473,8 @@
           "suppressedActions": [],
           "summary": {
             "appliedActions": 4,
-            "unmatchedActions": 165,
-            "totalActions": 171,
+            "unmatchedActions": 167,
+            "totalActions": 173,
             "appliedProjectProductActions": 2,
             "suppressedFillActions": 5,
             "ignoredValues": 0
@@ -1481,7 +1486,7 @@
             "likelyNeedsReview": false,
             "reasons": [
               "suppressed-fill-actions:5",
-              "high-unmatched-ratio:0.96"
+              "high-unmatched-ratio:0.97"
             ]
           },
           "diagnosticDeviceKey": "product-triple:29-66-2"
@@ -1614,9 +1619,10 @@
           },
           {
             "filePath": "rules/project/product/product-297-32770-1536.json",
-            "ruleCount": 1,
+            "ruleCount": 2,
             "ruleIds": [
-              "product-yale-yrd226-class-and-lock"
+              "product-yale-yrd226-class-and-lock",
+              "product-yale-yrd226-battery-level"
             ]
           },
           {
@@ -1663,7 +1669,19 @@
                   "property": "currentMode"
                 }
               },
-              "directionality": "inbound-only",
+              "outboundMapping": {
+                "kind": "set_value",
+                "target": {
+                  "commandClass": 98,
+                  "endpoint": 0,
+                  "property": "targetMode"
+                }
+              },
+              "directionality": "bidirectional",
+              "flags": {
+                "readable": true,
+                "writeable": true
+              },
               "provenance": {
                 "layer": "project-product",
                 "ruleId": "product-yale-yrd226-class-and-lock",
@@ -1685,9 +1703,19 @@
                   "property": "currentMode"
                 }
               },
-              "directionality": "inbound-only",
+              "outboundMapping": {
+                "kind": "set_value",
+                "target": {
+                  "commandClass": 98,
+                  "endpoint": 0,
+                  "property": "targetMode"
+                }
+              },
+              "directionality": "bidirectional",
               "flags": {
-                "allowMulti": true
+                "allowMulti": true,
+                "readable": true,
+                "writeable": true
               },
               "provenance": {
                 "layer": "project-product",
@@ -1698,6 +1726,29 @@
                 "supersedes": [
                   "ha-derived:ha:ha_extracted_lock_714_714"
                 ]
+              }
+            },
+            {
+              "capabilityId": "measure_battery",
+              "inboundMapping": {
+                "kind": "value",
+                "selector": {
+                  "commandClass": 128,
+                  "endpoint": 0,
+                  "property": "level"
+                }
+              },
+              "directionality": "inbound-only",
+              "flags": {
+                "readable": true,
+                "writeable": false
+              },
+              "provenance": {
+                "layer": "project-product",
+                "ruleId": "product-yale-yrd226-battery-level",
+                "action": "replace",
+                "sourceRef": "product-yale-yrd226-battery-level",
+                "reason": "cc=128,ep=0,prop=level"
               }
             }
           ],
@@ -1713,12 +1764,23 @@
           "actions": [],
           "suppressedActions": [],
           "summary": {
-            "appliedActions": 6,
-            "unmatchedActions": 164,
-            "totalActions": 171,
-            "appliedProjectProductActions": 3,
-            "suppressedFillActions": 2,
+            "appliedActions": 9,
+            "unmatchedActions": 334,
+            "totalActions": 346,
+            "appliedProjectProductActions": 5,
+            "suppressedFillActions": 6,
             "ignoredValues": 0
+          },
+          "overlapPolicy": {
+            "suppressedCapabilities": [
+              {
+                "capabilityId": "measure_generic",
+                "winnerCapabilityId": "measure_battery",
+                "selectorKey": "value:128:0:level",
+                "conflictKey": "sensor.battery_level",
+                "reason": "conflict-exclusive:sensor.battery_level"
+              }
+            ]
           },
           "profileOutcome": "curated",
           "byRule": [],
@@ -1726,8 +1788,8 @@
           "curationCandidates": {
             "likelyNeedsReview": false,
             "reasons": [
-              "suppressed-fill-actions:2",
-              "high-unmatched-ratio:0.96"
+              "suppressed-fill-actions:6",
+              "high-unmatched-ratio:0.97"
             ]
           },
           "diagnosticDeviceKey": "product-triple:297-32770-1536"
@@ -1860,9 +1922,10 @@
           },
           {
             "filePath": "rules/project/product/product-297-32770-1536.json",
-            "ruleCount": 1,
+            "ruleCount": 2,
             "ruleIds": [
-              "product-yale-yrd226-class-and-lock"
+              "product-yale-yrd226-class-and-lock",
+              "product-yale-yrd226-battery-level"
             ]
           },
           {

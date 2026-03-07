@@ -33,8 +33,18 @@
               "property": "currentMode"
             }
           },
+          "outboundMapping": {
+            "kind": "set_value",
+            "target": {
+              "commandClass": 98,
+              "endpoint": 0,
+              "property": "targetMode"
+            }
+          },
           "flags": {
-            "allowMulti": true
+            "allowMulti": true,
+            "readable": true,
+            "writeable": true
           }
         },
         {
@@ -48,6 +58,72 @@
               "endpoint": 0,
               "property": "currentMode"
             }
+          },
+          "outboundMapping": {
+            "kind": "set_value",
+            "target": {
+              "commandClass": 98,
+              "endpoint": 0,
+              "property": "targetMode"
+            }
+          },
+          "flags": {
+            "readable": true,
+            "writeable": true
+          }
+        }
+      ]
+    },
+    {
+      "ruleId": "product-yale-yrd226-battery-level",
+      "value": {
+        "commandClass": [128],
+        "property": ["level"],
+        "readable": true
+      },
+      "actions": [
+        {
+          "type": "capability",
+          "mode": "replace",
+          "capabilityId": "measure_battery",
+          "conflict": {
+            "key": "sensor.battery_level",
+            "mode": "exclusive",
+            "priority": 100
+          },
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 128,
+              "endpoint": 0,
+              "property": "level"
+            }
+          },
+          "flags": {
+            "readable": true,
+            "writeable": false
+          }
+        },
+        {
+          "type": "capability",
+          "mode": "replace",
+          "capabilityId": "measure_generic",
+          "conflict": {
+            "key": "sensor.battery_level",
+            "mode": "exclusive",
+            "priority": 10
+          },
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 128,
+              "endpoint": 0,
+              "property": "level"
+            }
+          },
+          "flags": {
+            "readable": true,
+            "writeable": false
           }
         }
       ]
