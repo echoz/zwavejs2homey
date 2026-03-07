@@ -33,9 +33,9 @@ Pairing/onboarding model:
 - If inclusion is initiated from `bridge`, the app does not auto-open `node` pairing or auto-create Homey node devices.
 - User explicitly completes import through `node` pairing (or equivalent explicit add action).
 - No cross-driver automatic pairing handoff is assumed in v1.
-- MVP pairing keeps Homey system templates for selection/add (`list_devices`, `add_devices`) and uses custom post-add views for guidance:
-  - bridge flow: `next_steps`
-  - node flow: `import_summary`
+- MVP pairing keeps Homey system templates for selection/add (`list_devices`, `add_devices`) and uses focused custom views only where needed:
+  - bridge flow: `bridge_config` (per-bridge connection setup, inline success/error feedback, then close)
+  - node flow: `import_summary` (post-add import status/diagnostics)
 - Deep custom pairing layouts beyond template steps remain out of scope for v1.
 
 Bridge instance policy:
@@ -78,5 +78,5 @@ Tradeoffs:
   - `removeBridgeConnection({ bridgeId })`
   - `listBridgeSessions()`
 - `node` pairing imports from live ZWJS node list, filters controller node (`nodeId = 1`), and dedupes by `bridgeId + nodeId`.
-- `bridge` pairing flow now includes post-add custom guidance view (`next_steps`) with live onboarding status.
+- `bridge` pairing flow now ends on `bridge_config` with inline save feedback and auto-close on success (no intermediate `next_steps` page).
 - `node` pairing flow now includes post-add custom summary view (`import_summary`) with live import status.

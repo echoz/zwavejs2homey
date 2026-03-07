@@ -3,7 +3,6 @@ const assert = require('node:assert/strict');
 
 const settingsPresenter = require('../settings/settings.presenter.js');
 const bridgeConfigPresenter = require('../drivers/bridge/pair/bridge_config.presenter.js');
-const bridgeNextStepsPresenter = require('../drivers/bridge/pair/next_steps.presenter.js');
 const nodeImportSummaryPresenter = require('../drivers/node/pair/import_summary.presenter.js');
 
 function rowValue(viewModel, key) {
@@ -376,5 +375,4 @@ function runPairPresenterContract(name, presenter) {
   });
 }
 
-runPairPresenterContract('bridge next_steps', bridgeNextStepsPresenter);
 runPairPresenterContract('node import_summary', nodeImportSummaryPresenter);

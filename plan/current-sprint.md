@@ -21,6 +21,15 @@ Kick off Phase 6 Reliability + UX delivery:
 
 ## Recently Completed
 
+- Bridge pairing + settings UX simplification slice:
+  - removed bridge post-add `next_steps` handoff page from active pairing flow
+  - bridge pairing now ends at `bridge_config` with inline outcome handling:
+    - save failure stays inline on the config view (no navigation)
+    - save success shows inline confirmation and closes pairing after short delay
+  - app settings page is now diagnostics/support-bundle focused only (no global `zwjs_connection` editing UI)
+  - per-bridge transport setup remains on bridge device settings + bridge pairing `bridge_config`
+  - validated with Homey app build/validate and full Homey app test suite
+
 - Phase 6 per-bridge connection configuration slice:
   - bridge runtime is no longer singleton-gated; pairing now proposes deterministic ids (`main`, `bridge-2`, ...)
   - moved ZWJS transport config to bridge-device settings (`zwjs_url`, optional bearer auth)

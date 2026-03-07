@@ -11,7 +11,7 @@ function readFile(relativePath) {
 
 test('panel scripts wrap Homey.emit calls with emitWithTimeout helper', () => {
   const pageFiles = [
-    'drivers/bridge/pair/next_steps.page.ts',
+    'drivers/bridge/pair/bridge_config.page.ts',
     'drivers/node/pair/import_summary.page.ts',
     'drivers/bridge/repair/bridge_tools.page.ts',
     'drivers/node/repair/device_tools.page.ts',

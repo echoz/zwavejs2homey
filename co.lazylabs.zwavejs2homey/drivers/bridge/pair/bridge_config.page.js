@@ -1,6 +1,7 @@
 (function bootstrapBridgeConfigPage(root) {
     const PANEL_EMIT_TIMEOUT_MS = 15000;
     const CLOSE_AFTER_SUCCESS_DELAY_MS = 1200;
+    let closingAfterSuccess = false;
     const maybePresenter = root?.Zwjs2HomeyUi?.bridgeConfigPresenter;
     if (!maybePresenter)
         return;
@@ -100,6 +101,9 @@
         render();
     }
     async function saveSettings() {
+        if (closingAfterSuccess || stateRef.current.saving) {
+            return;
+        }
         const validation = presenter.validateInput({
             bridgeId: currentContextBridgeId(),
             url: urlInput.value,
@@ -129,8 +133,10 @@
             }
             stateRef.current = {
                 ...stateRef.current,
+                saving: true,
                 status: 'Bridge saved. Closing pairing… Next: add ZWJS Node devices.',
             };
+            closingAfterSuccess = true;
             render();
             await new Promise((resolve) => setTimeout(resolve, CLOSE_AFTER_SUCCESS_DELAY_MS));
             Homey.done();

@@ -191,6 +191,9 @@ Delivered in Phase 6 so far:
   - bridge pairing now generates deterministic per-bridge ids (`main`, `bridge-2`, ...)
   - bridge session transport config is now device-scoped (`zwjs_url`, optional bearer auth)
   - diagnostics/recommendation APIs now support bridge filtering (`bridgeId`)
+- pairing/settings UX simplification:
+  - bridge pairing now completes from `bridge_config` with inline success/error messaging (no `next_steps` screen in active flow)
+  - app settings page is diagnostics/support-bundle focused; global connection editing is removed from app settings UI
 
 ## Active Risks
 

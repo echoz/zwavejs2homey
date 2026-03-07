@@ -121,9 +121,9 @@ Owns:
 - `curation.v1` load/validate/lower/apply integration
 - pairing UX policy:
   - current MVP keeps Homey system templates for selection/add (`list_devices` -> `add_devices`)
-  - custom post-add guidance/summary views are now used for onboarding clarity:
-    - bridge: `next_steps`
-    - node: `import_summary`
+  - custom pair UX is now applied where it removes ambiguity without broad flow complexity:
+    - bridge: `bridge_config` (per-bridge URL/auth setup, inline save feedback, then close)
+    - node: `import_summary` (post-add import status/diagnostics)
   - deep custom pairing layouts beyond template steps remain post-MVP
 
 ## Current State
@@ -233,7 +233,7 @@ Deferred:
 ```text
 Settings changes
   bridge device settings   -> reload that bridge session -> refresh node mappings
-  zwjs_connection          -> reload default session (`main`) [legacy fallback]
+  zwjs_connection          -> reload default session (`main`) [legacy fallback, no longer app-UI editable]
   compiled_profiles_file   -> reload resolver -> refresh node mappings
   curation.v1              -> reload curation -> refresh node mappings
 
