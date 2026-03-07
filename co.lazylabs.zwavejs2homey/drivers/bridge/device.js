@@ -193,10 +193,33 @@ module.exports = class BridgeDevice extends homey_1.default.Device {
     async onDeleted() {
         const app = this.getRuntimeApp();
         const bridgeId = this.resolveDeviceBridgeId(app);
+        let cascadeResult;
+        try {
+            const result = await app.deleteNodeDevicesForBridge?.({
+                bridgeId,
+                reason: 'bridge-device-deleted',
+            });
+            if (result) {
+                cascadeResult = {
+                    requested: result.requested,
+                    deleted: result.deleted,
+                    failed: result.failed,
+                };
+            }
+        }
+        catch (error) {
+            this.error('Failed cascading node delete during bridge deletion', {
+                bridgeId,
+                error,
+            });
+        }
         await app.removeBridgeConnection?.({
             bridgeId,
             reason: 'bridge-device-deleted',
         });
-        this.log('BridgeDevice deleted', { bridgeId });
+        this.log('BridgeDevice deleted', {
+            bridgeId,
+            cascadeNodeDelete: cascadeResult ?? null,
+        });
     }
 };

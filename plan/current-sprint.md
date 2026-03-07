@@ -18,6 +18,12 @@ Close Phase 6 Reliability + UX with production-ready stability + diagnostics UX:
 
 ## Recently Completed
 
+- Bridge deletion cascade slice:
+  - deleting a bridge device now triggers cascading delete attempts for node devices bound to the same `bridgeId`
+  - bridge deletion still tears down bridge runtime connection/session after cascade attempts
+  - bridge device deletion telemetry now logs cascade requested/deleted/failed counts
+  - added harness + app-runtime regression coverage for cascade path and partial-failure behavior
+
 - Bridge diagnostics refresh telemetry slice:
   - app runtime now tracks per-bridge diagnostics refresh status:
     - last success timestamp

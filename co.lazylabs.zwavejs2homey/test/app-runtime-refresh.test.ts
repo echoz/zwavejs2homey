@@ -1065,6 +1065,68 @@ test('app bridge connection lifecycle can be configured and removed per bridge',
   await app.onUninit();
 });
 
+test('app can cascade delete node devices for a deleted bridge', async () => {
+  const nodeDevices = [
+    createNodeDiagnosticsDevice({
+      id: 'main:8',
+      bridgeId: 'main',
+      nodeId: 8,
+      profileResolution: {
+        profileId: 'profile-main-8',
+        mappingDiagnostics: [],
+      },
+    }),
+    createNodeDiagnosticsDevice({
+      id: 'secondary:12',
+      bridgeId: 'secondary',
+      nodeId: 12,
+      profileResolution: {
+        profileId: 'profile-secondary-12',
+        mappingDiagnostics: [],
+      },
+    }),
+    createNodeDiagnosticsDevice({
+      id: 'secondary:9',
+      bridgeId: 'secondary',
+      nodeId: 9,
+      profileResolution: {
+        profileId: 'profile-secondary-9',
+        mappingDiagnostics: [],
+      },
+    }),
+  ];
+  const { app } = loadAppClass(nodeDevices);
+  const deleteCalls = [];
+  app.homey.api = {
+    delete: async (uri) => {
+      deleteCalls.push(uri);
+      if (uri.endsWith(encodeURIComponent('secondary:9'))) {
+        throw new Error('simulated api failure');
+      }
+    },
+  };
+
+  await app.onInit();
+  const result = await app.deleteNodeDevicesForBridge({
+    bridgeId: 'secondary',
+    reason: 'test-cascade-delete',
+  });
+
+  assert.equal(result.bridgeId, 'secondary');
+  assert.equal(result.requested, 2);
+  assert.equal(result.deleted, 1);
+  assert.equal(result.failed, 1);
+  assert.equal(result.errors.length, 1);
+  assert.equal(result.errors[0].homeyDeviceId, 'secondary:9');
+  assert.equal(result.errors[0].error, 'simulated api failure');
+  assert.deepEqual(deleteCalls, [
+    '/manager/devices/device/secondary%3A12',
+    '/manager/devices/device/secondary%3A9',
+  ]);
+
+  await app.onUninit();
+});
+
 test('app node device tools snapshot returns targeted diagnostics payload', async () => {
   const nodeDevices = [
     createNodeDiagnosticsDevice({

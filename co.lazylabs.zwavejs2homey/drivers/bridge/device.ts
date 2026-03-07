@@ -15,6 +15,13 @@ interface AppRuntimeAccess {
     settings?: unknown;
     reason?: string;
   }) => Promise<unknown>;
+  deleteNodeDevicesForBridge?: (options: { bridgeId: string; reason?: string }) => Promise<{
+    bridgeId: string;
+    requested: number;
+    deleted: number;
+    failed: number;
+    errors: Array<{ homeyDeviceId: string; error: string }>;
+  }>;
   removeBridgeConnection?: (options: { bridgeId: string; reason?: string }) => Promise<unknown>;
   getNodeRuntimeDiagnostics?: (options?: { homeyDeviceId?: string; bridgeId?: string }) => Promise<{
     generatedAt: string;
@@ -291,10 +298,38 @@ module.exports = class BridgeDevice extends Homey.Device {
   async onDeleted() {
     const app = this.getRuntimeApp();
     const bridgeId = this.resolveDeviceBridgeId(app);
+    let cascadeResult:
+      | {
+          requested: number;
+          deleted: number;
+          failed: number;
+        }
+      | undefined;
+    try {
+      const result = await app.deleteNodeDevicesForBridge?.({
+        bridgeId,
+        reason: 'bridge-device-deleted',
+      });
+      if (result) {
+        cascadeResult = {
+          requested: result.requested,
+          deleted: result.deleted,
+          failed: result.failed,
+        };
+      }
+    } catch (error) {
+      this.error('Failed cascading node delete during bridge deletion', {
+        bridgeId,
+        error,
+      });
+    }
     await app.removeBridgeConnection?.({
       bridgeId,
       reason: 'bridge-device-deleted',
     });
-    this.log('BridgeDevice deleted', { bridgeId });
+    this.log('BridgeDevice deleted', {
+      bridgeId,
+      cascadeNodeDelete: cascadeResult ?? null,
+    });
   }
 };

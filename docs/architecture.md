@@ -256,6 +256,9 @@ Settings changes
   compiled_profiles_file   -> reload resolver -> refresh node mappings
   curation.v1              -> reload curation -> refresh node mappings
 
+Bridge lifecycle
+  bridge device deleted    -> cascade delete node devices bound to that bridgeId -> remove bridge session/connection
+
 Selected ZWJS node lifecycle events
   interview-completed / value-added / metadata-updated
     -> targeted node refresh (not global refresh)

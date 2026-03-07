@@ -1558,10 +1558,21 @@ test('bridge device settings change reconfigures bridge connection', async () =>
 
 test('bridge device deletion removes bridge runtime connection', async () => {
   const removeCalls = [];
+  const cascadeDeleteCalls = [];
   const device = new BridgeDevice();
   device._configureHarness({
     data: { id: 'zwjs-bridge-secondary', bridgeId: 'secondary' },
     app: {
+      async deleteNodeDevicesForBridge(options) {
+        cascadeDeleteCalls.push(options);
+        return {
+          bridgeId: 'secondary',
+          requested: 2,
+          deleted: 2,
+          failed: 0,
+          errors: [],
+        };
+      },
       async removeBridgeConnection(options) {
         removeCalls.push(options);
       },
@@ -1570,12 +1581,25 @@ test('bridge device deletion removes bridge runtime connection', async () => {
 
   await device.onDeleted();
 
+  assert.deepEqual(cascadeDeleteCalls, [
+    {
+      bridgeId: 'secondary',
+      reason: 'bridge-device-deleted',
+    },
+  ]);
   assert.deepEqual(removeCalls, [
     {
       bridgeId: 'secondary',
       reason: 'bridge-device-deleted',
     },
   ]);
+  const logs = device._getLogs();
+  assert.equal(logs.at(-1)?.message, 'BridgeDevice deleted');
+  assert.deepEqual(logs.at(-1)?.meta?.cascadeNodeDelete, {
+    requested: 2,
+    deleted: 2,
+    failed: 0,
+  });
 });
 
 test('bridge device executes recommendation action and refreshes diagnostics snapshot', async () => {

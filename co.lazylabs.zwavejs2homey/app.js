@@ -494,6 +494,9 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
             const suffix = id.slice('zwjs-bridge-'.length).trim();
             return suffix.length > 0 ? suffix : null;
         }
+        resolveBridgeIdFromNodeDeviceData(data) {
+            return _a.toStringOrNull(data?.bridgeId) ?? this.resolveBridgeId(undefined);
+        }
         findNodeDeviceByHomeyDeviceId(homeyDeviceId, devices) {
             return devices.find((device) => {
                 const data = device.getData?.();
@@ -929,6 +932,64 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
                 await this.refreshNodeRuntimeMappings(`bridge-removed:${bridgeId}`);
                 await this.refreshBridgeRuntimeDiagnostics(`bridge-removed:${bridgeId}`);
             });
+        }
+        async deleteNodeDevicesForBridge(options) {
+            const bridgeId = this.resolveBridgeId(options.bridgeId);
+            const reason = options.reason ?? 'bridge-device-deleted';
+            const nodeDevices = await this.getNodeDriverDevices(`deleteNodeDevicesForBridge:${reason}`);
+            const targetHomeyDeviceIds = new Set();
+            for (const nodeDevice of nodeDevices) {
+                const data = nodeDevice.getData?.();
+                const nodeBridgeId = this.resolveBridgeIdFromNodeDeviceData(data);
+                if (nodeBridgeId !== bridgeId)
+                    continue;
+                const homeyDeviceId = _a.toStringOrNull(data?.id);
+                if (!homeyDeviceId)
+                    continue;
+                targetHomeyDeviceIds.add(homeyDeviceId);
+            }
+            const deleteApi = this.homey.api && typeof this.homey.api.delete === 'function'
+                ? this.homey.api.delete.bind(this.homey.api)
+                : null;
+            if (!deleteApi) {
+                throw new Error('Homey Manager API is unavailable for cascading node deletes');
+            }
+            const errors = [];
+            let deleted = 0;
+            for (const homeyDeviceId of targetHomeyDeviceIds) {
+                try {
+                    await deleteApi(`/manager/devices/device/${encodeURIComponent(homeyDeviceId)}`);
+                    deleted += 1;
+                }
+                catch (error) {
+                    const errorMessage = _a.toErrorMessage(error);
+                    errors.push({
+                        homeyDeviceId,
+                        error: errorMessage,
+                    });
+                    this.error('Failed cascading node delete for bridge', {
+                        bridgeId,
+                        homeyDeviceId,
+                        reason,
+                        error,
+                    });
+                }
+            }
+            const result = {
+                bridgeId,
+                requested: targetHomeyDeviceIds.size,
+                deleted,
+                failed: errors.length,
+                errors,
+            };
+            this.log('Completed cascading node delete for bridge', {
+                bridgeId,
+                reason,
+                requested: result.requested,
+                deleted: result.deleted,
+                failed: result.failed,
+            });
+            return result;
         }
         getCompiledProfilesStatus() {
             if (this.compiledProfilesRuntime?.status)
