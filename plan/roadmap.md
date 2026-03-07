@@ -199,6 +199,9 @@ Delivered in Phase 6 so far:
   - settings page now lists configured bridges with connection/runtime status and imported-node counts
   - settings diagnostics/support-bundle flows now support per-bridge scope selection and row-level quick actions (`Use Scope`/`Help`)
   - settings diagnostics/inventory requests now use stale-response guards to prevent older async payloads from overriding newer scope selections
+- panel liveness gate coverage:
+  - table-driven tests now assert active pair/repair handlers are registered and return valid payload shapes within deadlines
+  - timed session handler behavior is now regression-tested to reject stalled panel events instead of hanging indefinitely
 - operator CLI parity for bridge scoping:
   - runtime API smoke CLI supports `--bridge-id` for bridge-scoped read-route checks
   - support-bundle CLI supports `--bridge-id` and records bridge scope in exported metadata

@@ -21,6 +21,17 @@ Kick off Phase 6 Reliability + UX delivery:
 
 ## Recently Completed
 
+- Panel liveness gate slice:
+  - added table-driven panel contract coverage for active pair/repair session handlers:
+    - bridge pairing: `list_devices`, `bridge_config:get_context`, `bridge_config:save_settings`
+    - bridge repair: `bridge_tools:get_snapshot`, `bridge_tools:refresh`
+    - node pairing: `list_devices`
+    - node repair: `device_tools:get_snapshot`, `device_tools:refresh`, `device_tools:execute_action`
+  - added per-handler response-shape assertions with explicit invocation deadlines to catch hanging regressions early
+  - added timeout-behavior regression checks to verify timed session wrappers reject stalled handler work
+  - new test file:
+    - `co.lazylabs.zwavejs2homey/test/panel-liveness-contract.test.ts`
+
 - Settings stale-response hardening slice:
   - added request-order gating for settings diagnostics and bridge inventory fetches
   - stale async responses are now ignored when a newer request has already started

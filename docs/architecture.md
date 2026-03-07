@@ -188,6 +188,9 @@ Partially complete / next:
 - settings diagnostics page now applies request-order gating:
   - stale async diagnostics/inventory responses are ignored
   - bridge scope selector + refresh action disable while in-flight requests are active
+- panel liveness gate coverage now exists for active custom panel session handlers:
+  - pair/repair event handlers are exercised in table-driven tests with deadline-based liveness checks
+  - timed session handler timeout behavior is explicitly locked to prevent spinner/hang regressions
 - a runtime API client helper now exists for settings/custom-view consumers:
   - `co.lazylabs.zwavejs2homey/runtime-api-client.js`
   - contract reference: `docs/homey-api-contract.md`
