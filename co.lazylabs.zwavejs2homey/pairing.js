@@ -2,6 +2,9 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ZWJS_NODE_DEVICE_KIND = exports.ZWJS_BRIDGE_DEVICE_UNIQUE_ID = exports.ZWJS_BRIDGE_DEVICE_KIND = exports.ZWJS_DEFAULT_BRIDGE_ID = void 0;
 exports.hasBridgePairDeviceFromData = hasBridgePairDeviceFromData;
+exports.collectExistingBridgeIdsFromData = collectExistingBridgeIdsFromData;
+exports.pickNextBridgeId = pickNextBridgeId;
+exports.createNextBridgePairCandidate = createNextBridgePairCandidate;
 exports.createBridgePairCandidate = createBridgePairCandidate;
 exports.collectExistingNodeIdsFromData = collectExistingNodeIdsFromData;
 exports.buildNodePairCandidates = buildNodePairCandidates;
@@ -41,6 +44,47 @@ function locationMatchesKnownZone(location, knownZoneLocationKeys) {
 }
 function hasBridgePairDeviceFromData(existingData, expectedBridgeDeviceId = exports.ZWJS_BRIDGE_DEVICE_UNIQUE_ID) {
     return existingData.some((entry) => entry?.id === expectedBridgeDeviceId);
+}
+function normalizeBridgeIdFromDeviceData(entry) {
+    if (!entry)
+        return undefined;
+    if (typeof entry.bridgeId === 'string' && entry.bridgeId.trim().length > 0) {
+        return entry.bridgeId.trim();
+    }
+    if (typeof entry.id === 'string' && entry.id.startsWith(`${exports.ZWJS_BRIDGE_DEVICE_KIND}-`)) {
+        const suffix = entry.id.slice(`${exports.ZWJS_BRIDGE_DEVICE_KIND}-`.length).trim();
+        return suffix.length > 0 ? suffix : undefined;
+    }
+    return undefined;
+}
+function collectExistingBridgeIdsFromData(existingData, expectedBridgeKind = exports.ZWJS_BRIDGE_DEVICE_KIND) {
+    const bridgeIds = new Set();
+    for (const entry of existingData) {
+        if (!entry)
+            continue;
+        if (typeof entry.kind === 'string' && entry.kind !== expectedBridgeKind)
+            continue;
+        const bridgeId = normalizeBridgeIdFromDeviceData(entry);
+        if (bridgeId)
+            bridgeIds.add(bridgeId);
+    }
+    return bridgeIds;
+}
+function pickNextBridgeId(existingBridgeIds) {
+    if (!existingBridgeIds.has(exports.ZWJS_DEFAULT_BRIDGE_ID)) {
+        return exports.ZWJS_DEFAULT_BRIDGE_ID;
+    }
+    let index = 2;
+    while (existingBridgeIds.has(`bridge-${index}`)) {
+        index += 1;
+    }
+    return `bridge-${index}`;
+}
+function createNextBridgePairCandidate(existingData, pairIconDriverId = 'bridge') {
+    const existingBridgeIds = collectExistingBridgeIdsFromData(existingData);
+    const bridgeId = pickNextBridgeId(existingBridgeIds);
+    const name = bridgeId === exports.ZWJS_DEFAULT_BRIDGE_ID ? 'ZWJS Bridge' : `ZWJS Bridge (${bridgeId})`;
+    return createBridgePairCandidate(bridgeId, name, pairIconDriverId);
 }
 function createBridgePairCandidate(bridgeId = exports.ZWJS_DEFAULT_BRIDGE_ID, name = 'ZWJS Bridge', pairIconDriverId = 'bridge') {
     return {

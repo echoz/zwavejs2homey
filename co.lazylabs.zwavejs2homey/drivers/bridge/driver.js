@@ -76,18 +76,11 @@ module.exports = (_a = class BridgeDriver extends homey_1.default.Driver {
                     : [],
             });
         }
-        hasBridgeDeviceAlreadyPaired() {
-            const existingData = this.getDevices().map((device) => device.getData());
-            return (0, pairing_1.hasBridgePairDeviceFromData)(existingData);
-        }
         async onPairListDevices() {
             this.log('Bridge pair list requested');
             try {
-                if (this.hasBridgeDeviceAlreadyPaired()) {
-                    this.log('Bridge device already paired, returning empty pair list');
-                    return [];
-                }
-                const candidate = (0, pairing_1.createBridgePairCandidate)();
+                const existingData = this.getDevices().map((device) => device.getData());
+                const candidate = (0, pairing_1.createNextBridgePairCandidate)(existingData, 'bridge');
                 // Keep bridge template payload minimal to avoid list view runtime quirks.
                 const candidates = [
                     {
@@ -103,7 +96,7 @@ module.exports = (_a = class BridgeDriver extends homey_1.default.Driver {
             }
             catch (error) {
                 this.error('Bridge pair list generation failed; returning fallback candidate', { error });
-                const candidate = (0, pairing_1.createBridgePairCandidate)();
+                const candidate = (0, pairing_1.createNextBridgePairCandidate)([], 'bridge');
                 return [
                     {
                         name: candidate.name,
@@ -113,13 +106,20 @@ module.exports = (_a = class BridgeDriver extends homey_1.default.Driver {
             }
         }
         resolveBridgeRuntime(app) {
-            const session = app.getBridgeSession?.(pairing_1.ZWJS_DEFAULT_BRIDGE_ID);
+            const preferredSession = app.getBridgeSession?.();
+            const sessions = app.listBridgeSessions?.() ?? [];
+            const connectedSession = sessions.find((session) => session.getZwjsClient?.()?.getStatus?.().transportConnected === true);
+            const sessionWithClient = sessions.find((session) => Boolean(session.getZwjsClient?.()));
+            const session = connectedSession ??
+                sessionWithClient ??
+                preferredSession ??
+                app.getBridgeSession?.(pairing_1.ZWJS_DEFAULT_BRIDGE_ID);
             const bridgeId = (typeof session?.bridgeId === 'string' && session.bridgeId.trim().length > 0
                 ? session.bridgeId.trim()
                 : undefined) ??
                 app.getBridgeId?.() ??
                 pairing_1.ZWJS_DEFAULT_BRIDGE_ID;
-            const client = session?.getZwjsClient?.() ?? app.getZwjsClient?.();
+            const client = session?.getZwjsClient?.() ?? app.getZwjsClient?.(bridgeId);
             return { bridgeId, client };
         }
         async loadNextStepsStatus() {
@@ -185,11 +185,11 @@ module.exports = (_a = class BridgeDriver extends homey_1.default.Driver {
                 }
             }
             else {
-                warnings.push('ZWJS client is unavailable; configure zwjs_connection.url in app settings.');
+                warnings.push('No bridge connection is configured. Configure this bridge device settings.');
             }
             if (app.getNodeRuntimeDiagnostics) {
                 try {
-                    const diagnostics = await app.getNodeRuntimeDiagnostics();
+                    const diagnostics = await app.getNodeRuntimeDiagnostics({ bridgeId });
                     if (diagnostics &&
                         typeof diagnostics.bridgeId === 'string' &&
                         diagnostics.bridgeId.trim().length > 0) {
@@ -388,11 +388,18 @@ module.exports = (_a = class BridgeDriver extends homey_1.default.Driver {
         }
         async onRepair(session, device) {
             const app = this.homey.app;
+            const data = device.getData();
+            const homeyDeviceId = typeof data?.id === 'string' && data.id.trim().length > 0 ? data.id.trim() : null;
+            const bridgeIdFilter = typeof data?.bridgeId === 'string' && data.bridgeId.trim().length > 0
+                ? data.bridgeId.trim()
+                : undefined;
             const loadSnapshot = async () => {
                 if (!app.getNodeRuntimeDiagnostics) {
                     throw new Error('Bridge Tools unavailable: app runtime diagnostics API is not ready.');
                 }
-                const diagnostics = await app.getNodeRuntimeDiagnostics();
+                const diagnostics = await app.getNodeRuntimeDiagnostics({
+                    bridgeId: bridgeIdFilter,
+                });
                 const nodeSummary = {
                     total: diagnostics.nodes.length,
                     profileResolvedCount: 0,
@@ -559,11 +566,7 @@ module.exports = (_a = class BridgeDriver extends homey_1.default.Driver {
                         },
                     };
                 });
-                const data = device.getData();
-                const homeyDeviceId = typeof data?.id === 'string' && data.id.trim().length > 0 ? data.id.trim() : null;
-                const bridgeId = typeof data?.bridgeId === 'string' && data.bridgeId.trim().length > 0
-                    ? data.bridgeId.trim()
-                    : diagnostics.bridgeId;
+                const bridgeId = bridgeIdFilter ?? diagnostics.bridgeId;
                 return {
                     schemaVersion: 'bridge-device-tools/v1',
                     generatedAt: new Date().toISOString(),

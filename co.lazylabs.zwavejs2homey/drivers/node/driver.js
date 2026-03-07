@@ -64,11 +64,18 @@ module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
             });
         }
         resolveBridgeRuntime(app) {
-            const session = app.getBridgeSession?.(pairing_1.ZWJS_DEFAULT_BRIDGE_ID);
+            const preferredSession = app.getBridgeSession?.();
+            const sessions = app.listBridgeSessions?.() ?? [];
+            const connectedSession = sessions.find((session) => session.getZwjsClient?.()?.getStatus?.().transportConnected === true);
+            const sessionWithClient = sessions.find((session) => Boolean(session.getZwjsClient?.()));
+            const session = connectedSession ??
+                sessionWithClient ??
+                preferredSession ??
+                app.getBridgeSession?.(pairing_1.ZWJS_DEFAULT_BRIDGE_ID);
             const bridgeId = this.normalizeStringOrNull(session?.bridgeId) ??
                 app.getBridgeId?.() ??
                 pairing_1.ZWJS_DEFAULT_BRIDGE_ID;
-            const client = session?.getZwjsClient?.() ?? app.getZwjsClient?.();
+            const client = session?.getZwjsClient?.() ?? app.getZwjsClient?.(bridgeId);
             return { bridgeId, client };
         }
         countImportedNodeDevices(bridgeId) {
@@ -137,7 +144,7 @@ module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
                 }
             }
             else {
-                warnings.push('ZWJS client is unavailable; configure zwjs_connection.url in app settings.');
+                warnings.push('No bridge connection is configured. Configure this bridge device settings.');
             }
             let importedNodeDetails = [];
             let importedNodes = this.countImportedNodeDevices(bridgeId);
@@ -152,7 +159,7 @@ module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
             let confidenceUnknownNodes = 0;
             if (app.getNodeRuntimeDiagnostics) {
                 try {
-                    const diagnostics = await app.getNodeRuntimeDiagnostics();
+                    const diagnostics = await app.getNodeRuntimeDiagnostics({ bridgeId });
                     if (diagnostics?.zwjs && typeof diagnostics.zwjs === 'object') {
                         if (zwjs.versionReceived === null &&
                             typeof diagnostics.zwjs.versionReceived === 'boolean') {
@@ -475,7 +482,7 @@ module.exports = (_a = class NodeDriver extends homey_1.default.Driver {
             const runtime = this.resolveBridgeRuntime(app);
             const client = runtime.client;
             if (!client) {
-                this.error('Node pair list unavailable: ZWJS client is not connected. Configure zwjs_connection.url in app settings and pair a bridge first.');
+                this.error('Node pair list unavailable: bridge is not connected. Configure a bridge device and verify transport connectivity.');
                 return [];
             }
             let latestCandidates = [];

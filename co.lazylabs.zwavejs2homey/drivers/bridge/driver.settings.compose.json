@@ -1,0 +1,54 @@
+[
+  {
+    "type": "group",
+    "label": {
+      "en": "ZWJS Connection"
+    },
+    "children": [
+      {
+        "id": "zwjs_url",
+        "type": "text",
+        "label": {
+          "en": "WebSocket URL"
+        },
+        "value": "",
+        "hint": {
+          "en": "Set ws:// or wss:// endpoint for this bridge instance."
+        }
+      },
+      {
+        "id": "zwjs_auth_type",
+        "type": "dropdown",
+        "label": {
+          "en": "Auth Type"
+        },
+        "value": "none",
+        "values": [
+          {
+            "id": "none",
+            "label": {
+              "en": "None"
+            }
+          },
+          {
+            "id": "bearer",
+            "label": {
+              "en": "Bearer Token"
+            }
+          }
+        ]
+      },
+      {
+        "id": "zwjs_auth_token",
+        "type": "password",
+        "label": {
+          "en": "Bearer Token"
+        },
+        "value": "",
+        "hint": {
+          "en": "Only used when Auth Type is Bearer Token."
+        }
+      }
+    ]
+  }
+]

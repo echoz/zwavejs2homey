@@ -123,7 +123,8 @@ Per ADR 0017, runtime curation work in this plan assumes:
 Current implementation baseline:
 
 - `bridge` and `node` driver scaffolds exist in `co.lazylabs.zwavejs2homey/drivers`
-- bridge pairing singleton gating is implemented (`zwjs-bridge-main`)
+- bridge pairing supports deterministic multi-instance ids (`zwjs-bridge-main`, `zwjs-bridge-bridge-2`, ...)
+- bridge transport settings are device-scoped (per bridge device) rather than app-global
 - node pairing imports/dedupes ZWJS nodes using `bridgeId + nodeId`
 
 ## Goals (v1)

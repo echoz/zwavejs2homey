@@ -50,11 +50,11 @@ Homey App (app.ts)
   +-- bridge-session seam
   |    - default session id: `main`
   |    - owns per-bridge ZwjsClient attachment/status
-  |    - current behavior remains singleton, but runtime access is now bridge-scoped
+  |    - runtime is now multi-bridge capable (`main`, `bridge-2`, ...)
   +-- compiled profile runtime (artifact + resolver index)
   +-- curation runtime (curation.v1 load/validate)
   |
-  +--> drivers/bridge  (singleton-like control plane)
+  +--> drivers/bridge  (one control-plane device per ZWJS instance)
   +--> drivers/node    (one Homey device per imported ZWJS node)
              |
              v
@@ -134,12 +134,12 @@ Delivered:
 - compiler pipeline and diagnostics/tooling are fully operational
 - TUI is delivered (panel-first, dual-root, simulation/scaffold workflows)
 - Homey app topology is in place:
-  - `bridge` singleton-like pairing
+  - `bridge` multi-instance pairing (`main`, `bridge-2`, `bridge-3`, ...)
   - `node` import flow with dedupe (`bridgeId + nodeId`)
 - bridge-session abstraction is in place:
   - app runtime now owns bridge sessions explicitly instead of relying on implicit global client state
   - drivers/devices resolve runtime through bridge session first (`getBridgeSession`) with legacy fallbacks retained
-  - current runtime behavior is unchanged (`main` session only), but multi-bridge seams are now test-backed
+  - bridge device settings now configure per-bridge transport (`zwjs_url`, optional bearer auth)
 - runtime mapping kernel is live:
   - generic `value` inbound + `set_value` outbound path
   - transform-aware coercion
@@ -232,7 +232,8 @@ Deferred:
 
 ```text
 Settings changes
-  zwjs_connection          -> reload client -> refresh node mappings
+  bridge device settings   -> reload that bridge session -> refresh node mappings
+  zwjs_connection          -> reload default session (`main`) [legacy fallback]
   compiled_profiles_file   -> reload resolver -> refresh node mappings
   curation.v1              -> reload curation -> refresh node mappings
 
@@ -259,7 +260,7 @@ Near-term:
    - runtime mapping drift-proofing gates
    - support/log bundle workflow
 2. keep pairing/settings flows defect-driven while preserving MVP template constraints
-3. prepare session registry evolution from singleton default (`main`) to multi-bridge enrollment when pairing model changes
+3. add explicit node-pair bridge selection UX when multiple bridge sessions are connected
 
 After that:
 

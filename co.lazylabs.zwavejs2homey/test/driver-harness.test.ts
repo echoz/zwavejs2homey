@@ -47,10 +47,14 @@ class FakeHomeyDevice {
     this._logs = [];
     this._errors = [];
     this._store = new Map();
+    this._data = {};
+    this._settings = {};
   }
 
-  _configureHarness({ app } = {}) {
+  _configureHarness({ app, data, settings } = {}) {
     if (app) this.homey = { app };
+    if (typeof data !== 'undefined') this._data = data;
+    if (typeof settings !== 'undefined') this._settings = settings;
   }
 
   _getLogs() {
@@ -63,6 +67,14 @@ class FakeHomeyDevice {
 
   _getStoreValue(key) {
     return this._store.get(key);
+  }
+
+  getData() {
+    return this._data;
+  }
+
+  getSettings() {
+    return this._settings;
   }
 
   log(message, meta) {
@@ -100,7 +112,7 @@ const BridgeDriver = loadClass('../.homeybuild/drivers/bridge/driver.js');
 const NodeDriver = loadClass('../.homeybuild/drivers/node/driver.js');
 const BridgeDevice = loadClass('../.homeybuild/drivers/bridge/device.js');
 
-test('bridge driver returns singleton pair candidate when bridge is unpaired', async () => {
+test('bridge driver returns default bridge pair candidate when no bridge exists', async () => {
   const driver = new BridgeDriver();
   driver._configureHarness({ devices: [] });
 
@@ -135,18 +147,20 @@ test('bridge driver pair session registers list_devices handler', async () => {
   assert.equal(callbackCandidates.length, 1);
 });
 
-test('bridge driver returns no candidates when singleton bridge already exists', async () => {
+test('bridge driver returns next bridge candidate when a bridge already exists', async () => {
   const driver = new BridgeDriver();
   driver._configureHarness({
     devices: [
       {
-        getData: () => ({ id: 'zwjs-bridge-main' }),
+        getData: () => ({ id: 'zwjs-bridge-main', kind: 'zwjs-bridge', bridgeId: 'main' }),
       },
     ],
   });
 
   const candidates = await driver.onPairListDevices();
-  assert.deepEqual(candidates, []);
+  assert.equal(candidates.length, 1);
+  assert.equal(candidates[0]?.data?.id, 'zwjs-bridge-bridge-2');
+  assert.equal(candidates[0]?.data?.bridgeId, 'bridge-2');
 });
 
 test('bridge driver next steps status aggregates runtime diagnostics', async () => {
@@ -251,10 +265,15 @@ test('bridge driver next steps status aggregates runtime diagnostics', async () 
 
 test('bridge onPairListDevices returns fallback candidate when pair list generation fails', async () => {
   const driver = new BridgeDriver();
-  driver._configureHarness({ devices: [] });
-  driver.hasBridgeDeviceAlreadyPaired = () => {
-    throw new Error('pair list failed');
-  };
+  driver._configureHarness({
+    devices: [
+      {
+        getData: () => {
+          throw new Error('pair list failed');
+        },
+      },
+    ],
+  });
 
   const candidates = await driver.onPairListDevices();
   assert.equal(candidates.length, 1);
@@ -1208,8 +1227,15 @@ test('node driver repair action handler rejects when snapshot API is unavailable
 
 test('bridge device init logs bridge status and stores runtime diagnostics snapshot', async () => {
   const device = new BridgeDevice();
+  const configureCalls = [];
+  const diagnosticsCalls = [];
   device._configureHarness({
+    data: { id: 'zwjs-bridge-main', bridgeId: 'main' },
+    settings: { zwjs_url: 'ws://127.0.0.1:3000' },
     app: {
+      async configureBridgeConnection(options) {
+        configureCalls.push(options);
+      },
       getBridgeId: () => 'main',
       getZwjsClient: () => ({
         getStatus: () => ({
@@ -1217,7 +1243,8 @@ test('bridge device init logs bridge status and stores runtime diagnostics snaps
           lifecycle: 'started',
         }),
       }),
-      async getNodeRuntimeDiagnostics() {
+      async getNodeRuntimeDiagnostics(options) {
+        diagnosticsCalls.push(options);
         return {
           generatedAt: '2026-03-02T12:00:00.000Z',
           bridgeId: 'main',
@@ -1264,6 +1291,14 @@ test('bridge device init logs bridge status and stores runtime diagnostics snaps
   assert.equal(logs[0]?.meta?.bridgeId, 'main');
   assert.equal(logs[0]?.meta?.transportConnected, true);
   assert.equal(logs[0]?.meta?.lifecycle, 'started');
+  assert.deepEqual(configureCalls, [
+    {
+      bridgeId: 'main',
+      settings: { zwjs_url: 'ws://127.0.0.1:3000' },
+      reason: 'bridge-device-init',
+    },
+  ]);
+  assert.deepEqual(diagnosticsCalls, [{ bridgeId: 'main' }]);
 
   const diagnostics = device._getStoreValue('runtimeDiagnostics');
   assert.ok(diagnostics);
@@ -1283,6 +1318,7 @@ test('bridge device forwards runtime diagnostics and recommendation queue option
   const queueResult = { generatedAt: '2026-03-02T12:01:00.000Z', items: [] };
   const device = new BridgeDevice();
   device._configureHarness({
+    data: { id: 'zwjs-bridge-secondary', bridgeId: 'secondary' },
     app: {
       async getNodeRuntimeDiagnostics(options) {
         diagnosticsCalls.push(options);
@@ -1297,14 +1333,96 @@ test('bridge device forwards runtime diagnostics and recommendation queue option
 
   const diagnostics = await device.getRuntimeDiagnostics({ homeyDeviceId: '  main:8 ' });
   assert.equal(diagnostics, diagnosticsResult);
-  assert.deepEqual(diagnosticsCalls, [{ homeyDeviceId: 'main:8' }]);
+  assert.deepEqual(diagnosticsCalls, [{ homeyDeviceId: 'main:8', bridgeId: 'secondary' }]);
 
   const queue = await device.getRecommendationActionQueue({
     homeyDeviceId: 'main:8',
     includeNoAction: true,
   });
   assert.equal(queue, queueResult);
-  assert.deepEqual(queueCalls, [{ homeyDeviceId: 'main:8', includeNoAction: true }]);
+  assert.deepEqual(queueCalls, [
+    { homeyDeviceId: 'main:8', bridgeId: 'secondary', includeNoAction: true },
+  ]);
+});
+
+test('bridge device settings change reconfigures bridge connection', async () => {
+  const configureCalls = [];
+  const diagnosticsCalls = [];
+  const device = new BridgeDevice();
+  device._configureHarness({
+    data: { id: 'zwjs-bridge-main', bridgeId: 'main' },
+    app: {
+      async configureBridgeConnection(options) {
+        configureCalls.push(options);
+      },
+      async getNodeRuntimeDiagnostics(options) {
+        diagnosticsCalls.push(options);
+        return {
+          generatedAt: '2026-03-02T12:00:00.000Z',
+          bridgeId: 'main',
+          zwjs: {
+            available: false,
+            transportConnected: false,
+            lifecycle: 'stopped',
+          },
+          compiledProfiles: {
+            loaded: true,
+            sourcePath: '/tmp/mock.json',
+            generatedAt: '2026-03-01T00:00:00.000Z',
+            pipelineFingerprint: 'pf-1',
+            entryCount: 1,
+            errorMessage: null,
+          },
+          curation: {
+            loaded: true,
+            source: 'settings',
+            entryCount: 0,
+            errorMessage: null,
+          },
+          nodes: [],
+        };
+      },
+    },
+  });
+
+  await device.onSettings({
+    oldSettings: {},
+    newSettings: { zwjs_url: 'ws://192.168.1.10:3000', zwjs_auth_type: 'none' },
+    changedKeys: ['zwjs_url'],
+  });
+
+  assert.deepEqual(configureCalls, [
+    {
+      bridgeId: 'main',
+      settings: { zwjs_url: 'ws://192.168.1.10:3000', zwjs_auth_type: 'none' },
+      reason: 'bridge-device-settings-changed',
+    },
+  ]);
+  assert.deepEqual(diagnosticsCalls, [{ bridgeId: 'main' }]);
+  const stored = device._getStoreValue('runtimeDiagnostics');
+  assert.equal(stored.reason, 'bridge-settings-changed');
+});
+
+test('bridge device deletion removes bridge runtime connection', async () => {
+  const removeCalls = [];
+  const device = new BridgeDevice();
+  device._configureHarness({
+    data: { id: 'zwjs-bridge-secondary', bridgeId: 'secondary' },
+    app: {
+      async removeBridgeConnection(options) {
+        removeCalls.push(options);
+      },
+    },
+  });
+
+  await device.onDeleted();
+
+  assert.deepEqual(removeCalls, [
+    {
+      bridgeId: 'secondary',
+      reason: 'bridge-device-deleted',
+    },
+  ]);
 });
 
 test('bridge device executes recommendation action and refreshes diagnostics snapshot', async () => {
@@ -1312,6 +1430,7 @@ test('bridge device executes recommendation action and refreshes diagnostics sna
   const diagnosticsCalls = [];
   const device = new BridgeDevice();
   device._configureHarness({
+    data: { id: 'zwjs-bridge-main', bridgeId: 'main' },
     app: {
       async executeRecommendationAction(options) {
         actionCalls.push(options);
@@ -1321,8 +1440,8 @@ test('bridge device executes recommendation action and refreshes diagnostics sna
           selectedAction: 'backfill-marker',
         };
       },
-      async getNodeRuntimeDiagnostics() {
-        diagnosticsCalls.push('called');
+      async getNodeRuntimeDiagnostics(options) {
+        diagnosticsCalls.push(options);
         return {
           generatedAt: '2026-03-02T12:00:00.000Z',
           bridgeId: 'main',
@@ -1363,7 +1482,7 @@ test('bridge device executes recommendation action and refreshes diagnostics sna
   });
   assert.equal(result.executed, true);
   assert.deepEqual(actionCalls, [{ homeyDeviceId: 'main:8', action: 'backfill-marker' }]);
-  assert.equal(diagnosticsCalls.length, 1);
+  assert.deepEqual(diagnosticsCalls, [{ bridgeId: 'main' }]);
   const stored = device._getStoreValue('runtimeDiagnostics');
   assert.equal(stored.reason, 'recommendation-action-executed');
 });
@@ -1393,14 +1512,17 @@ test('bridge device validates recommendation action inputs', async () => {
 
 test('bridge device executes recommendation action queue and refreshes diagnostics snapshot', async () => {
   const actionsCalls = [];
+  const diagnosticsCalls = [];
   const device = new BridgeDevice();
   device._configureHarness({
+    data: { id: 'zwjs-bridge-main', bridgeId: 'main' },
     app: {
       async executeRecommendationActions(options) {
         actionsCalls.push(options);
         return { total: 2, executed: 1, skipped: 1, results: [] };
       },
-      async getNodeRuntimeDiagnostics() {
+      async getNodeRuntimeDiagnostics(options) {
+        diagnosticsCalls.push(options);
         return {
           generatedAt: '2026-03-02T12:00:00.000Z',
           bridgeId: 'main',
@@ -1434,7 +1556,10 @@ test('bridge device executes recommendation action queue and refreshes diagnosti
     includeNoAction: true,
   });
   assert.equal(result.executed, 1);
-  assert.deepEqual(actionsCalls, [{ homeyDeviceId: 'main:8', includeNoAction: true }]);
+  assert.deepEqual(actionsCalls, [
+    { homeyDeviceId: 'main:8', bridgeId: 'main', includeNoAction: true },
+  ]);
+  assert.deepEqual(diagnosticsCalls, [{ bridgeId: 'main' }]);
   const stored = device._getStoreValue('runtimeDiagnostics');
   assert.equal(stored.reason, 'recommendation-actions-executed');
 });

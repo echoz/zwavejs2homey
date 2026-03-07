@@ -567,8 +567,10 @@ test('app ignores stale bridge-session client events after zwjs reconnect', asyn
     event: { nodeId: 5 },
   });
   await flushEventQueue();
-  assert.deepEqual(nodeRefreshCalls, ['event:zwjs.event.node.metadata-updated:node-5']);
-  assert.deepEqual(bridgeRefreshCalls, ['event:zwjs.event.node.metadata-updated:node-5']);
+  assert.deepEqual(nodeRefreshCalls, ['event:zwjs.event.node.metadata-updated:bridge-main:node-5']);
+  assert.deepEqual(bridgeRefreshCalls, [
+    'event:zwjs.event.node.metadata-updated:bridge-main:node-5',
+  ]);
 
   await app.onUninit();
 });
@@ -612,7 +614,7 @@ test('app performs targeted node runtime refresh from node lifecycle events', as
     },
   });
   await flushEventQueue();
-  assert.deepEqual(node5Calls, ['event:zwjs.event.node.metadata-updated:node-5']);
+  assert.deepEqual(node5Calls, ['event:zwjs.event.node.metadata-updated:bridge-main:node-5']);
   assert.deepEqual(node8Calls, []);
   assert.deepEqual(otherBridgeCalls, []);
 
@@ -623,7 +625,7 @@ test('app performs targeted node runtime refresh from node lifecycle events', as
     },
   });
   await flushEventQueue();
-  assert.deepEqual(node8Calls, ['event:zwjs.event.node.value-added:node-8']);
+  assert.deepEqual(node8Calls, ['event:zwjs.event.node.value-added:bridge-main:node-8']);
 
   coreMock.mockClient.emitEvent({
     type: 'zwjs.event.driver.logging',
@@ -658,7 +660,9 @@ test('app refreshes bridge diagnostics from targeted node lifecycle events', asy
     },
   });
   await flushEventQueue();
-  assert.deepEqual(bridgeRefreshCalls, ['event:zwjs.event.node.metadata-updated:node-5']);
+  assert.deepEqual(bridgeRefreshCalls, [
+    'event:zwjs.event.node.metadata-updated:bridge-main:node-5',
+  ]);
 
   coreMock.mockClient.emitEvent({
     type: 'zwjs.event.driver.logging',
@@ -820,6 +824,76 @@ test('app diagnostics snapshot supports homeyDeviceId filtering', async () => {
   assert.equal(snapshot.nodes.length, 1);
   assert.equal(snapshot.nodes[0].homeyDeviceId, 'main:8');
   assert.equal(snapshot.nodes[0].recommendation.available, true);
+
+  await app.onUninit();
+});
+
+test('app diagnostics snapshot supports bridgeId filtering', async () => {
+  const nodeDevices = [
+    createNodeDiagnosticsDevice({
+      id: 'main:5',
+      bridgeId: 'main',
+      nodeId: 5,
+      profileResolution: {
+        profileId: 'profile-main-5',
+        recommendationAvailable: false,
+        mappingDiagnostics: [],
+      },
+    }),
+    createNodeDiagnosticsDevice({
+      id: 'secondary:8',
+      bridgeId: 'secondary',
+      nodeId: 8,
+      profileResolution: {
+        profileId: 'profile-secondary-8',
+        recommendationAvailable: true,
+        recommendationReason: 'baseline-hash-changed',
+        mappingDiagnostics: [],
+      },
+    }),
+  ];
+
+  const { app } = loadAppClass(nodeDevices);
+  await app.onInit();
+  await app.configureBridgeConnection({
+    bridgeId: 'secondary',
+    settings: { zwjs_url: 'ws://127.0.0.1:3002' },
+    reason: 'test-secondary',
+  });
+
+  const snapshot = await app.getNodeRuntimeDiagnostics({ bridgeId: 'secondary' });
+  assert.equal(snapshot.bridgeId, 'secondary');
+  assert.equal(snapshot.zwjs.available, true);
+  assert.equal(snapshot.nodes.length, 1);
+  assert.equal(snapshot.nodes[0].homeyDeviceId, 'secondary:8');
+
+  await app.onUninit();
+});
+
+test('app bridge connection lifecycle can be configured and removed per bridge', async () => {
+  const { app, coreMock } = loadAppClass([]);
+  await app.onInit();
+
+  assert.equal(coreMock.totals.startCalls, 0);
+  assert.equal(coreMock.totals.stopCalls, 0);
+  assert.equal(app.getBridgeSession('secondary'), undefined);
+
+  await app.configureBridgeConnection({
+    bridgeId: 'secondary',
+    settings: { zwjs_url: 'ws://127.0.0.1:3002' },
+    reason: 'test-configure',
+  });
+
+  assert.equal(coreMock.totals.startCalls, 1);
+  assert.equal(Boolean(app.getBridgeSession('secondary')?.getZwjsClient()), true);
+
+  await app.removeBridgeConnection({
+    bridgeId: 'secondary',
+    reason: 'test-remove',
+  });
+
+  assert.equal(coreMock.totals.stopCalls, 1);
+  assert.equal(app.getBridgeSession('secondary'), undefined);
 
   await app.onUninit();
 });

@@ -39,19 +39,23 @@ module.exports = class BridgeDevice extends homey_1.default.Device {
     getRuntimeApp() {
         return this.homey.app;
     }
+    resolveDeviceBridgeId(app) {
+        const data = this.getData();
+        const dataBridgeId = typeof data?.bridgeId === 'string' && data.bridgeId.trim().length > 0
+            ? data.bridgeId.trim()
+            : null;
+        return dataBridgeId ?? app.getBridgeId?.() ?? 'main';
+    }
     resolveBridgeRuntime(app) {
-        const session = app.getBridgeSession?.();
-        const bridgeId = (typeof session?.bridgeId === 'string' && session.bridgeId.trim().length > 0
-            ? session.bridgeId.trim()
-            : undefined) ??
-            app.getBridgeId?.() ??
-            'unknown';
-        const client = session?.getZwjsClient?.() ?? app.getZwjsClient?.();
+        const bridgeId = this.resolveDeviceBridgeId(app);
+        const session = app.getBridgeSession?.(bridgeId);
+        const client = session?.getZwjsClient?.() ?? app.getZwjsClient?.(bridgeId);
         return { bridgeId, client };
     }
     async refreshRuntimeDiagnostics(reason) {
         const app = this.getRuntimeApp();
-        const diagnostics = await app.getNodeRuntimeDiagnostics?.();
+        const bridgeId = this.resolveDeviceBridgeId(app);
+        const diagnostics = await app.getNodeRuntimeDiagnostics?.({ bridgeId });
         if (!diagnostics)
             return;
         let recommendationAvailableCount = 0;
@@ -73,7 +77,7 @@ module.exports = class BridgeDevice extends homey_1.default.Device {
             refreshedAt: new Date().toISOString(),
             reason,
             generatedAt: diagnostics.generatedAt,
-            bridgeId: diagnostics.bridgeId,
+            bridgeId,
             zwjs: diagnostics.zwjs,
             compiledProfiles: {
                 loaded: diagnostics.compiledProfiles.loaded,
@@ -102,16 +106,20 @@ module.exports = class BridgeDevice extends homey_1.default.Device {
     async getRuntimeDiagnostics(options) {
         const app = this.getRuntimeApp();
         const homeyDeviceId = BridgeDevice.toStringOption(options, 'homeyDeviceId');
+        const bridgeId = this.resolveDeviceBridgeId(app);
         return app.getNodeRuntimeDiagnostics?.({
             homeyDeviceId: homeyDeviceId ?? undefined,
+            bridgeId,
         });
     }
     async getRecommendationActionQueue(options) {
         const app = this.getRuntimeApp();
         const homeyDeviceId = BridgeDevice.toStringOption(options, 'homeyDeviceId');
         const includeNoAction = BridgeDevice.toBooleanOption(options, 'includeNoAction');
+        const bridgeId = this.resolveDeviceBridgeId(app);
         return app.getRecommendationActionQueue?.({
             homeyDeviceId: homeyDeviceId ?? undefined,
+            bridgeId,
             includeNoAction: includeNoAction === true,
         });
     }
@@ -136,8 +144,10 @@ module.exports = class BridgeDevice extends homey_1.default.Device {
         const app = this.getRuntimeApp();
         const homeyDeviceId = BridgeDevice.toStringOption(options, 'homeyDeviceId');
         const includeNoAction = BridgeDevice.toBooleanOption(options, 'includeNoAction');
+        const bridgeId = this.resolveDeviceBridgeId(app);
         const result = await app.executeRecommendationActions?.({
             homeyDeviceId: homeyDeviceId ?? undefined,
+            bridgeId,
             includeNoAction: includeNoAction === true,
         });
         await this.refreshRuntimeDiagnostics('recommendation-actions-executed');
@@ -145,8 +155,13 @@ module.exports = class BridgeDevice extends homey_1.default.Device {
     }
     async onInit() {
         const app = this.getRuntimeApp();
+        const bridgeId = this.resolveDeviceBridgeId(app);
+        await app.configureBridgeConnection?.({
+            bridgeId,
+            settings: this.getSettings(),
+            reason: 'bridge-device-init',
+        });
         const runtime = this.resolveBridgeRuntime(app);
-        const bridgeId = runtime.bridgeId;
         const status = runtime.client?.getStatus();
         this.log('BridgeDevice initialized', {
             bridgeId,
@@ -161,13 +176,27 @@ module.exports = class BridgeDevice extends homey_1.default.Device {
     async onAdded() {
         this.log('BridgeDevice paired');
     }
-    async onSettings({ oldSettings: _oldSettings, newSettings: _newSettings, changedKeys, }) {
+    async onSettings({ oldSettings: _oldSettings, newSettings, changedKeys, }) {
         this.log('BridgeDevice settings changed', { changedKeys });
+        const app = this.getRuntimeApp();
+        const bridgeId = this.resolveDeviceBridgeId(app);
+        await app.configureBridgeConnection?.({
+            bridgeId,
+            settings: newSettings,
+            reason: 'bridge-device-settings-changed',
+        });
+        await this.refreshRuntimeDiagnostics('bridge-settings-changed');
     }
     async onRenamed(newName) {
         this.log('BridgeDevice renamed', { newName });
     }
     async onDeleted() {
-        this.log('BridgeDevice deleted');
+        const app = this.getRuntimeApp();
+        const bridgeId = this.resolveDeviceBridgeId(app);
+        await app.removeBridgeConnection?.({
+            bridgeId,
+            reason: 'bridge-device-deleted',
+        });
+        this.log('BridgeDevice deleted', { bridgeId });
     }
 };

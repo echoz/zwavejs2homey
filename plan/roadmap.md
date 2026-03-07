@@ -80,8 +80,13 @@ Done so far:
 - locked topology (`bridge` + `node`) and pairing model
 - app-level shared ZWJS session ownership
 - explicit bridge-session seam for runtime ownership:
-  - default session id `main` remains singleton for MVP behavior parity
+  - default session id `main` remains canonical first bridge id
+  - runtime now supports multiple bridge sessions (`main`, `bridge-N`)
   - app now exposes `getBridgeSession(bridgeId?)` and routes runtime lifecycle through session state
+  - app now exposes per-bridge lifecycle APIs:
+    - `listBridgeSessions()`
+    - `configureBridgeConnection({ bridgeId, settings })`
+    - `removeBridgeConnection({ bridgeId })`
   - bridge/node drivers and devices resolve session-scoped client access first, with legacy fallbacks retained
 - compiled profile runtime loader/resolver integration
 - node runtime mapping kernel with live read/write gating + diagnostics
@@ -182,6 +187,10 @@ Delivered in Phase 6 so far:
 - generic inference policy checkpoint closed:
   - runtime generic inference remains frozen in v1
   - adapter runtime stays compiled-profile-first + curation-only
+- bridge configuration moved to bridge-device settings (multi-instance model):
+  - bridge pairing now generates deterministic per-bridge ids (`main`, `bridge-2`, ...)
+  - bridge session transport config is now device-scoped (`zwjs_url`, optional bearer auth)
+  - diagnostics/recommendation APIs now support bridge filtering (`bridgeId`)
 
 ## Active Risks
 

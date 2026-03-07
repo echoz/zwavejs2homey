@@ -35,7 +35,7 @@ interface BridgeSessionLike {
 
 interface AppRuntimeAccess {
   getBridgeSession?: (bridgeId?: string) => BridgeSessionLike | undefined;
-  getZwjsClient?: () => ZwjsClient | undefined;
+  getZwjsClient?: (bridgeId?: string) => ZwjsClient | undefined;
   getCompiledProfilesStatus?: () => CompiledProfilesRuntimeStatus;
   getCurationStatus?: () => HomeyCurationRuntimeStatusV1;
   resolveCompiledProfileEntry?: (
@@ -506,7 +506,7 @@ module.exports = class NodeDevice extends Homey.Device {
     const app = this.homey.app as AppRuntimeAccess;
     const ctx = this.getNodeContext();
     const session = app.getBridgeSession?.(ctx.bridgeId);
-    const client = session?.getZwjsClient?.() ?? app.getZwjsClient?.();
+    const client = session?.getZwjsClient?.() ?? app.getZwjsClient?.(ctx.bridgeId);
     const clientStatus = client?.getStatus();
     const resolverStatus = app.getCompiledProfilesStatus?.();
     const curationStatus = app.getCurationStatus?.();

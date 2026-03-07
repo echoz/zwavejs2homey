@@ -44,11 +44,11 @@ HA import + project rules + catalog + vocabulary
 
 Homey App (co.lazylabs.zwavejs2homey)
   |
-  +-- shared ZwjsClient session (@zwavejs2homey/core)
+  +-- bridge session registry (@zwavejs2homey/core client per bridgeId)
   +-- compiled profile resolver runtime
   +-- curation.v1 runtime (load/validate/apply)
   |
-  +--> bridge driver (singleton-like control plane)
+  +--> bridge driver (one control-plane device per ZWJS instance)
   +--> node driver (one Homey device per ZWJS node)
            |
            v
@@ -80,7 +80,7 @@ docs/ and plan/
 
 ```text
 Pairing:
-  bridge driver -> add singleton bridge device
+  bridge driver -> add bridge device(s): main, bridge-2, bridge-3...
   node driver   -> import ZWJS nodes (skip nodeId=1, dedupe by bridgeId+nodeId)
 
 Node runtime sync:
@@ -179,13 +179,17 @@ cd co.lazylabs.zwavejs2homey
 homey app run --path .
 ```
 
-Then open the app settings in Homey and configure `ZWJS Connection`:
+Then in Homey:
 
-- WebSocket URL: `ws://192.168.1.15:3000` (or your ZWJS URL)
-- Authentication: `None` or `Bearer token`
+1. Add a `ZWJS Bridge` device.
+2. Open that bridge device's Advanced Settings.
+3. Configure:
+   - `WebSocket URL`: `ws://192.168.1.15:3000` (or your ZWJS URL)
+   - `Auth Type`: `None` or `Bearer Token`
+   - `Bearer Token`: required only when auth type is bearer
 
-This writes the app setting key `zwjs_connection` and triggers automatic client reload in runtime.
-If no `zwjs_connection.url` is configured, the app will not attempt a ZWJS connection.
+Bridge settings are per-device. The app runtime creates one bridge session per `bridgeId`.
+If a bridge has no `WebSocket URL`, that bridge session will stay disconnected.
 
 Smoke-test Homey runtime API routes:
 

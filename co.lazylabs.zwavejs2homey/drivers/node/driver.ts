@@ -24,9 +24,10 @@ interface BridgeSessionLike {
 
 interface AppRuntimeAccess {
   getBridgeSession?: (bridgeId?: string) => BridgeSessionLike | undefined;
-  getZwjsClient?: () => ZwjsClient | undefined;
+  listBridgeSessions?: () => BridgeSessionLike[];
+  getZwjsClient?: (bridgeId?: string) => ZwjsClient | undefined;
   getBridgeId?: () => string;
-  getNodeRuntimeDiagnostics?: (options?: { homeyDeviceId?: string }) => Promise<{
+  getNodeRuntimeDiagnostics?: (options?: { homeyDeviceId?: string; bridgeId?: string }) => Promise<{
     bridgeId: string;
     zwjs?: {
       versionReceived?: boolean | null;
@@ -229,12 +230,22 @@ module.exports = class NodeDriver extends Homey.Driver {
     bridgeId: string;
     client: ZwjsClient | undefined;
   } {
-    const session = app.getBridgeSession?.(ZWJS_DEFAULT_BRIDGE_ID);
+    const preferredSession = app.getBridgeSession?.();
+    const sessions = app.listBridgeSessions?.() ?? [];
+    const connectedSession = sessions.find(
+      (session) => session.getZwjsClient?.()?.getStatus?.().transportConnected === true,
+    );
+    const sessionWithClient = sessions.find((session) => Boolean(session.getZwjsClient?.()));
+    const session =
+      connectedSession ??
+      sessionWithClient ??
+      preferredSession ??
+      app.getBridgeSession?.(ZWJS_DEFAULT_BRIDGE_ID);
     const bridgeId =
       this.normalizeStringOrNull(session?.bridgeId) ??
       app.getBridgeId?.() ??
       ZWJS_DEFAULT_BRIDGE_ID;
-    const client = session?.getZwjsClient?.() ?? app.getZwjsClient?.();
+    const client = session?.getZwjsClient?.() ?? app.getZwjsClient?.(bridgeId);
     return { bridgeId, client };
   }
 
@@ -342,7 +353,7 @@ module.exports = class NodeDriver extends Homey.Driver {
         warnings.push('Unable to load discovered-node count from ZWJS.');
       }
     } else {
-      warnings.push('ZWJS client is unavailable; configure zwjs_connection.url in app settings.');
+      warnings.push('No bridge connection is configured. Configure this bridge device settings.');
     }
 
     let importedNodeDetails: ImportSummaryNodeEntry[] = [];
@@ -358,7 +369,7 @@ module.exports = class NodeDriver extends Homey.Driver {
     let confidenceUnknownNodes = 0;
     if (app.getNodeRuntimeDiagnostics) {
       try {
-        const diagnostics = await app.getNodeRuntimeDiagnostics();
+        const diagnostics = await app.getNodeRuntimeDiagnostics({ bridgeId });
         if (diagnostics?.zwjs && typeof diagnostics.zwjs === 'object') {
           if (
             zwjs.versionReceived === null &&
@@ -733,7 +744,7 @@ module.exports = class NodeDriver extends Homey.Driver {
     const client = runtime.client;
     if (!client) {
       this.error(
-        'Node pair list unavailable: ZWJS client is not connected. Configure zwjs_connection.url in app settings and pair a bridge first.',
+        'Node pair list unavailable: bridge is not connected. Configure a bridge device and verify transport connectivity.',
       );
       return [];
     }

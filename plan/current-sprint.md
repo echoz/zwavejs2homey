@@ -21,6 +21,17 @@ Kick off Phase 6 Reliability + UX delivery:
 
 ## Recently Completed
 
+- Phase 6 per-bridge connection configuration slice:
+  - bridge runtime is no longer singleton-gated; pairing now proposes deterministic ids (`main`, `bridge-2`, ...)
+  - moved ZWJS transport config to bridge-device settings (`zwjs_url`, optional bearer auth)
+  - app runtime now supports per-bridge lifecycle APIs:
+    - `listBridgeSessions()`
+    - `configureBridgeConnection({ bridgeId, settings })`
+    - `removeBridgeConnection({ bridgeId })`
+  - diagnostics/recommendation runtime APIs now support bridge-level filtering (`bridgeId`)
+  - updated bridge/node guidance text to point users at bridge-device settings instead of app-level `zwjs_connection`
+  - added/updated harness and app-runtime tests for multi-bridge pairing ids, per-bridge diagnostics filters, and per-bridge connection lifecycle
+
 - Phase 6 support/log bundle workflow slice:
   - added read-only support bundle CLI:
     - `tools/homey-support-bundle.mjs`

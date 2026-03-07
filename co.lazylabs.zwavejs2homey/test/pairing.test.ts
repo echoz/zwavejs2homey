@@ -4,16 +4,29 @@ const {
   ZWJS_BRIDGE_DEVICE_UNIQUE_ID,
   ZWJS_DEFAULT_BRIDGE_ID,
   ZWJS_NODE_DEVICE_KIND,
+  collectExistingBridgeIdsFromData,
   createBridgePairCandidate,
+  createNextBridgePairCandidate,
   hasBridgePairDeviceFromData,
+  pickNextBridgeId,
   collectExistingNodeIdsFromData,
   buildNodePairCandidates,
 } = require('../pairing.js');
 
-test('bridge pairing helpers enforce singleton identity', () => {
+test('bridge pairing helpers build deterministic bridge ids and candidates', () => {
   assert.equal(hasBridgePairDeviceFromData([]), false);
   assert.equal(hasBridgePairDeviceFromData([{ id: 'other' }]), false);
   assert.equal(hasBridgePairDeviceFromData([{ id: ZWJS_BRIDGE_DEVICE_UNIQUE_ID }]), true);
+
+  const existingBridgeIds = collectExistingBridgeIdsFromData([
+    { id: 'zwjs-bridge-main' },
+    { kind: 'zwjs-bridge', bridgeId: 'bridge-3' },
+    { id: 'zwjs-bridge-bridge-2', kind: 'zwjs-bridge' },
+    { id: 'zwjs-node-main:9', kind: 'zwjs-node' },
+    undefined,
+  ]);
+  assert.deepEqual([...existingBridgeIds].sort(), ['bridge-2', 'bridge-3', 'main']);
+  assert.equal(pickNextBridgeId(existingBridgeIds), 'bridge-4');
 
   assert.deepEqual(createBridgePairCandidate(), {
     name: 'ZWJS Bridge',
@@ -24,6 +37,28 @@ test('bridge pairing helpers enforce singleton identity', () => {
       bridgeId: ZWJS_DEFAULT_BRIDGE_ID,
     },
   });
+
+  assert.deepEqual(createNextBridgePairCandidate([], 'bridge'), {
+    name: 'ZWJS Bridge',
+    icon: '/pair-icons/bridge.svg',
+    data: {
+      id: ZWJS_BRIDGE_DEVICE_UNIQUE_ID,
+      kind: 'zwjs-bridge',
+      bridgeId: ZWJS_DEFAULT_BRIDGE_ID,
+    },
+  });
+  assert.deepEqual(
+    createNextBridgePairCandidate([{ id: 'zwjs-bridge-main', kind: 'zwjs-bridge' }], 'bridge'),
+    {
+      name: 'ZWJS Bridge (bridge-2)',
+      icon: '/pair-icons/bridge.svg',
+      data: {
+        id: 'zwjs-bridge-bridge-2',
+        kind: 'zwjs-bridge',
+        bridgeId: 'bridge-2',
+      },
+    },
+  );
 });
 
 test('node pairing helpers collect existing node ids by bridge and kind', () => {

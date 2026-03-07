@@ -280,7 +280,7 @@ interface UiRoot {
       let guidanceTitle = 'Pairing follow-up';
       if (!status.zwjs || status.zwjs.available !== true) {
         guidanceTitle = 'Bridge configuration required';
-        guidanceSteps.push('Open app Settings and set zwjs_connection.url.');
+        guidanceSteps.push('Open this bridge device settings and set WebSocket URL.');
         guidanceSteps.push('Return and press Refresh Status.');
       } else if (status.zwjs.transportConnected !== true) {
         guidanceTitle = 'Bridge is disconnected';
@@ -334,7 +334,11 @@ interface UiRoot {
             value: asText(status.zwjs && status.zwjs.versionReceived),
             kind: 'text',
           },
-          { key: 'Initialized', value: asText(status.zwjs && status.zwjs.initialized), kind: 'text' },
+          {
+            key: 'Initialized',
+            value: asText(status.zwjs && status.zwjs.initialized),
+            kind: 'text',
+          },
           { key: 'Listening', value: asText(status.zwjs && status.zwjs.listening), kind: 'text' },
           {
             key: 'Authenticated',

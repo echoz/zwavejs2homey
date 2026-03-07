@@ -1,7 +1,8 @@
 # ADR 0017: Homey MVP Driver Topology and Pairing Model
 
-- Status: Accepted
+- Status: Accepted (Amended)
 - Date: 2026-03-01
+- Amended: 2026-03-07
 
 ## Context
 
@@ -19,7 +20,7 @@ We need a concrete v1 policy for:
 Use a two-driver Homey topology in v1:
 
 1. `bridge` driver
-   - one singleton-like device representing the ZWJS endpoint/control plane
+   - one device per ZWJS endpoint/control-plane instance
    - owns connection visibility and operational actions such as inclusion controls
 2. `node` driver
    - many device instances, one per imported Z-Wave node/data plane
@@ -37,16 +38,19 @@ Pairing/onboarding model:
   - node flow: `import_summary`
 - Deep custom pairing layouts beyond template steps remain out of scope for v1.
 
-Bridge singleton policy:
+Bridge instance policy:
 
-- enforce singleton behavior via stable `device.data` identity + driver pairing filter
-- if bridge already exists, do not offer another bridge device in pair list
+- allow multiple bridge devices (multi-instance)
+- each bridge device stores its own endpoint settings (`zwjs_url`, optional bearer auth)
+- runtime creates one bridge session per `bridgeId`
+- bridge pairing proposes the next deterministic bridge id (`main`, then `bridge-2`, `bridge-3`, ...)
 
 ## Consequences
 
 Positive:
 
 - clear control-plane/data-plane separation in Homey runtime
+- supports multiple ZWJS backends without app-level global reconfiguration
 - predictable onboarding path for node devices
 - no hidden auto-provision side effects after inclusion
 - aligns with compiler/runtime split (resolver/mappings are node-device concerns)
@@ -56,17 +60,23 @@ Tradeoffs:
 - bridge-initiated inclusion still requires an explicit follow-up import step in v1
 - system template constraints still limit custom layout during device selection/add steps
 - onboarding clarity relies on post-add custom guidance/summary views
+- node import flow currently selects the best available bridge runtime automatically; explicit bridge selection UI is deferred
 
 ## Follow-up Implementation Notes
 
-- Keep one shared app-level ZWJS session service used by both drivers.
+- Keep one shared app-level ZWJS session service with per-bridge sessions used by both drivers.
 - Node devices should consume the shared compiler artifact resolver API for profile selection.
 - Device-level curation UI should live in node Device Tools flow hosted via `onRepair` (or equivalent explicit per-device editor flow).
 
-## Implementation Status (2026-03-01)
+## Implementation Status (2026-03-07)
 
 - `bridge` and `node` driver scaffolds are implemented in `co.lazylabs.zwavejs2homey/drivers`.
-- `bridge` pairing enforces singleton behavior through stable `device.data.id = zwjs-bridge-main`.
+- `bridge` pairing now supports multi-instance candidates (`main`, `bridge-N`) instead of singleton gating.
+- bridge device settings now configure per-bridge ZWJS connection details (`zwjs_url`, optional bearer auth).
+- app runtime now exposes per-bridge session lifecycle APIs:
+  - `configureBridgeConnection({ bridgeId, settings })`
+  - `removeBridgeConnection({ bridgeId })`
+  - `listBridgeSessions()`
 - `node` pairing imports from live ZWJS node list, filters controller node (`nodeId = 1`), and dedupes by `bridgeId + nodeId`.
 - `bridge` pairing flow now includes post-add custom guidance view (`next_steps`) with live onboarding status.
 - `node` pairing flow now includes post-add custom summary view (`import_summary`) with live import status.

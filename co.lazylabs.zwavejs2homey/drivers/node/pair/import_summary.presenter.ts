@@ -286,7 +286,7 @@ interface UiRoot {
       let guidanceTitle = 'Import follow-up';
       if (!status.zwjs || status.zwjs.available !== true) {
         guidanceTitle = 'Bridge configuration required';
-        guidanceSteps.push('Open app Settings and set zwjs_connection.url.');
+        guidanceSteps.push('Open bridge device settings and set WebSocket URL.');
         guidanceSteps.push('Return and press Refresh Status.');
       } else if (status.zwjs.transportConnected !== true) {
         guidanceTitle = 'Bridge is disconnected';
@@ -294,7 +294,9 @@ interface UiRoot {
         guidanceSteps.push('Press Refresh Status when bridge connectivity recovers.');
       } else {
         if (pendingCount !== null && pendingCount > 0) {
-          guidanceSteps.push(`Import remaining ${pendingCount} node(s) from Add Device -> ZWJS Node.`);
+          guidanceSteps.push(
+            `Import remaining ${pendingCount} node(s) from Add Device -> ZWJS Node.`,
+          );
         } else if (status.discoveredNodes === 0) {
           guidanceSteps.push('No discoverable nodes reported yet from ZWJS.');
         } else {
@@ -340,7 +342,11 @@ interface UiRoot {
             value: asText(status.zwjs && status.zwjs.versionReceived),
             kind: 'text',
           },
-          { key: 'Initialized', value: asText(status.zwjs && status.zwjs.initialized), kind: 'text' },
+          {
+            key: 'Initialized',
+            value: asText(status.zwjs && status.zwjs.initialized),
+            kind: 'text',
+          },
           { key: 'Listening', value: asText(status.zwjs && status.zwjs.listening), kind: 'text' },
           {
             key: 'Authenticated',
@@ -355,14 +361,26 @@ interface UiRoot {
           { key: 'Compiled Only', value: asText(status.compiledOnlyNodes), kind: 'text' },
           { key: 'With Override', value: asText(status.overrideNodes), kind: 'text' },
           { key: 'Unresolved Source', value: asText(status.unresolvedNodes), kind: 'text' },
-          { key: 'Rule Match: Project', value: asText(status.confidenceCuratedNodes), kind: 'text' },
+          {
+            key: 'Rule Match: Project',
+            value: asText(status.confidenceCuratedNodes),
+            kind: 'text',
+          },
           {
             key: 'Rule Match: HA Derived',
             value: asText(status.confidenceHaDerivedNodes),
             kind: 'text',
           },
-          { key: 'Rule Match: Generic', value: asText(status.confidenceGenericNodes), kind: 'text' },
-          { key: 'Rule Match: Unknown', value: asText(status.confidenceUnknownNodes), kind: 'text' },
+          {
+            key: 'Rule Match: Generic',
+            value: asText(status.confidenceGenericNodes),
+            kind: 'text',
+          },
+          {
+            key: 'Rule Match: Unknown',
+            value: asText(status.confidenceUnknownNodes),
+            kind: 'text',
+          },
           { key: 'Updated', value: toTimeText(status.generatedAt), kind: 'text' },
         ],
         warnings,

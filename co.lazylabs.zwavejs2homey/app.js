@@ -17,6 +17,7 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
             this.bridgeSessions = new Map([
                 [pairing_1.ZWJS_DEFAULT_BRIDGE_ID, (0, bridge_session_1.createBridgeSession)(pairing_1.ZWJS_DEFAULT_BRIDGE_ID)],
             ]);
+            this.preferredBridgeId = pairing_1.ZWJS_DEFAULT_BRIDGE_ID;
             this.curationRuntime = (0, curation_1.loadCurationRuntimeFromSettings)(undefined);
             this.clientLogger = {
                 info: (msg, meta) => this.log(msg, meta),
@@ -181,11 +182,14 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
             this.bridgeSessions.set(bridgeId, session);
             return session;
         }
-        getDefaultBridgeSession() {
-            return this.getOrCreateBridgeSession(this.defaultBridgeId);
+        resolveBridgeId(input) {
+            return _a.toStringOrNull(input) ?? this.defaultBridgeId;
         }
-        normalizeZwjsDiagnosticsStatus() {
-            const session = this.getDefaultBridgeSession();
+        getDefaultBridgeSession() {
+            return this.getOrCreateBridgeSession(this.resolveBridgeId(this.preferredBridgeId));
+        }
+        normalizeZwjsDiagnosticsStatus(bridgeId) {
+            const session = this.getOrCreateBridgeSession(this.resolveBridgeId(bridgeId));
             const status = session.getZwjsStatus();
             return {
                 available: Boolean(session.getZwjsClient()),
@@ -468,19 +472,22 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
             });
             return this.lifecycleQueue;
         }
-        async stopZwjsClient(reason) {
-            const session = this.getDefaultBridgeSession();
+        async stopBridgeClient(bridgeId, reason) {
+            const session = this.getOrCreateBridgeSession(this.resolveBridgeId(bridgeId));
             const client = session.getZwjsClient();
             if (!client)
                 return;
-            this.log(`Stopping ZWJS client (${reason})`);
+            this.log(`Stopping ZWJS client (${reason})`, { bridgeId: session.bridgeId });
             session.setZwjsClient(undefined);
             try {
                 await client.stop();
             }
             catch (error) {
-                this.error('Failed to stop ZWJS client', { reason, error });
+                this.error('Failed to stop ZWJS client', { bridgeId: session.bridgeId, reason, error });
             }
+        }
+        async stopZwjsClient(reason) {
+            await this.stopBridgeClient(this.defaultBridgeId, reason);
         }
         static hasConfiguredZwjsUrl(rawSettings) {
             if (typeof rawSettings === 'string') {
@@ -512,18 +519,19 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
                 return false;
             }
         }
-        async startZwjsClient(reason) {
-            const session = this.getDefaultBridgeSession();
-            const rawConnectionSettings = this.homey.settings.get(core_1.ZWJS_CONNECTION_SETTINGS_KEY);
+        async startBridgeClient(bridgeId, rawConnectionSettings, reason) {
+            const session = this.getOrCreateBridgeSession(this.resolveBridgeId(bridgeId));
             if (!_a.hasConfiguredZwjsUrl(rawConnectionSettings)) {
-                this.log(`Skipping ZWJS client start (${reason}): no explicit ${core_1.ZWJS_CONNECTION_SETTINGS_KEY}.url configured`);
-                return;
+                this.log(`Skipping ZWJS client start (${reason}): no URL configured`, {
+                    bridgeId: session.bridgeId,
+                });
+                return false;
             }
             const resolved = (0, core_1.resolveZwjsConnectionConfig)(rawConnectionSettings);
             for (const warning of resolved.warnings) {
-                this.error('ZWJS config warning', warning);
+                this.error('ZWJS config warning', { bridgeId: session.bridgeId, warning });
             }
-            this.log(`Starting ZWJS client (${reason}) from ${resolved.source}: ${resolved.clientConfig.url}`);
+            this.log(`Starting ZWJS client (${reason}) from ${resolved.source}: ${resolved.clientConfig.url}`, { bridgeId: session.bridgeId });
             const nextClient = (0, core_1.createZwjsClient)({
                 url: resolved.clientConfig.url,
                 auth: resolved.clientConfig.auth,
@@ -534,21 +542,23 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
                     allowCommands: [core_1.ZWJS_COMMAND_NODE_SET_VALUE],
                 },
             });
+            const sessionBridgeId = session.bridgeId;
             nextClient.onEvent((event) => {
                 // Ignore events from stale clients after a reconnect swaps the active session client.
-                if (this.getDefaultBridgeSession().getZwjsClient() !== nextClient) {
+                if (this.getOrCreateBridgeSession(sessionBridgeId).getZwjsClient() !== nextClient) {
                     return;
                 }
-                this.log('zwjs event', event.type);
+                this.log('zwjs event', { bridgeId: sessionBridgeId, type: event.type });
                 const refreshNodeId = this.getRuntimeRefreshNodeIdFromEvent(event);
                 if (refreshNodeId === undefined || this.shuttingDown) {
                     return;
                 }
                 this.enqueueLifecycle(async () => {
-                    await this.refreshNodeRuntimeMappingsForNode(refreshNodeId, `event:${event.type}:node-${refreshNodeId}`);
-                    await this.refreshBridgeRuntimeDiagnostics(`event:${event.type}:node-${refreshNodeId}`);
+                    await this.refreshNodeRuntimeMappingsForNode(sessionBridgeId, refreshNodeId, `event:${event.type}:bridge-${sessionBridgeId}:node-${refreshNodeId}`);
+                    await this.refreshBridgeRuntimeDiagnostics(`event:${event.type}:bridge-${sessionBridgeId}:node-${refreshNodeId}`);
                 }).catch((error) => {
                     this.error('Failed to refresh node runtime mappings from event', {
+                        bridgeId: sessionBridgeId,
                         eventType: event.type,
                         nodeId: refreshNodeId,
                         error,
@@ -557,7 +567,13 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
             });
             await nextClient.start();
             session.setZwjsClient(nextClient);
-            this.log('zwjs status', session.getZwjsStatus());
+            this.preferredBridgeId = session.bridgeId;
+            this.log('zwjs status', { bridgeId: session.bridgeId, ...(session.getZwjsStatus() ?? {}) });
+            return true;
+        }
+        async startZwjsClient(reason) {
+            const rawConnectionSettings = this.homey.settings.get(core_1.ZWJS_CONNECTION_SETTINGS_KEY);
+            await this.startBridgeClient(this.defaultBridgeId, rawConnectionSettings, reason);
         }
         async loadCompiledProfilesRuntime(reason) {
             const sourcePath = (0, compiled_profiles_1.resolveCompiledProfilesArtifactPath)(__dirname, this.homey.settings.get(compiled_profiles_1.COMPILED_PROFILES_PATH_SETTINGS_KEY));
@@ -579,9 +595,13 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
                 errorMessage: runtime.status.errorMessage,
             });
         }
+        async reloadBridgeClient(bridgeId, rawConnectionSettings, reason) {
+            await this.stopBridgeClient(bridgeId, `${reason}:reload`);
+            await this.startBridgeClient(bridgeId, rawConnectionSettings, reason);
+        }
         async reloadZwjsClient(reason) {
-            await this.stopZwjsClient(`${reason}:reload`);
-            await this.startZwjsClient(reason);
+            const rawConnectionSettings = this.homey.settings.get(core_1.ZWJS_CONNECTION_SETTINGS_KEY);
+            await this.reloadBridgeClient(this.defaultBridgeId, rawConnectionSettings, reason);
         }
         loadCurationRuntime(reason) {
             const runtime = (0, curation_1.loadCurationRuntimeFromSettings)(this.homey.settings.get(curation_1.CURATION_SETTINGS_KEY));
@@ -654,7 +674,7 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
             }
             return payload.nodeId;
         }
-        async refreshNodeRuntimeMappingsForNode(nodeId, reason) {
+        async refreshNodeRuntimeMappingsForNode(bridgeId, nodeId, reason) {
             try {
                 const nodeDriver = await this.getDriverWhenReady('node', `refreshNodeRuntimeMappingsForNode:${reason}`);
                 if (!nodeDriver)
@@ -666,7 +686,7 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
                     if (!data || typeof data.nodeId !== 'number' || data.nodeId !== nodeId) {
                         continue;
                     }
-                    if (data.bridgeId && data.bridgeId !== this.getDefaultBridgeSession().bridgeId) {
+                    if (data.bridgeId && data.bridgeId !== bridgeId) {
                         continue;
                     }
                     if (typeof device.onRuntimeMappingsRefresh === 'function') {
@@ -675,13 +695,19 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
                     }
                 }
                 this.log('Refreshed node runtime mappings for node', {
+                    bridgeId,
                     reason,
                     nodeId,
                     refreshed,
                 });
             }
             catch (error) {
-                this.error('Failed targeted node runtime mapping refresh', { nodeId, reason, error });
+                this.error('Failed targeted node runtime mapping refresh', {
+                    bridgeId,
+                    nodeId,
+                    reason,
+                    error,
+                });
             }
         }
         async getDriverWhenReady(driverId, reason) {
@@ -740,17 +766,84 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
             }
             await this.enqueueLifecycle(async () => {
                 await this.stopZwjsClient('shutdown');
+                for (const [bridgeId] of this.bridgeSessions) {
+                    if (bridgeId === this.defaultBridgeId)
+                        continue;
+                    await this.stopBridgeClient(bridgeId, 'shutdown');
+                }
             });
         }
-        getZwjsClient() {
-            return this.getDefaultBridgeSession().getZwjsClient();
+        getZwjsClient(bridgeId) {
+            const session = this.getBridgeSession(bridgeId);
+            return session?.getZwjsClient();
         }
         getBridgeId() {
-            return this.getDefaultBridgeSession().bridgeId;
+            return this.resolveBridgeId(this.preferredBridgeId);
         }
         getBridgeSession(bridgeId) {
-            const normalizedBridgeId = _a.toStringOrNull(bridgeId) ?? this.defaultBridgeId;
+            const normalizedBridgeId = this.resolveBridgeId(bridgeId ?? this.preferredBridgeId);
             return this.bridgeSessions.get(normalizedBridgeId);
+        }
+        listBridgeSessions() {
+            return [...this.bridgeSessions.values()];
+        }
+        resolveBridgeConnectionSettingsFromDeviceSettings(rawSettings) {
+            if (!rawSettings || typeof rawSettings !== 'object' || Array.isArray(rawSettings)) {
+                return undefined;
+            }
+            const settings = rawSettings;
+            const url = _a.toStringOrNull(settings.zwjs_url);
+            if (!url)
+                return undefined;
+            const authType = _a.toStringOrNull(settings.zwjs_auth_type) ?? 'none';
+            const token = _a.toStringOrNull(settings.zwjs_auth_token);
+            if (authType === 'bearer' && token) {
+                return {
+                    url,
+                    auth: { type: 'bearer', token },
+                };
+            }
+            return {
+                url,
+                auth: { type: 'none' },
+            };
+        }
+        async configureBridgeConnection(options) {
+            const bridgeId = this.resolveBridgeId(options.bridgeId);
+            const reason = options.reason ?? 'bridge-configure';
+            const connectionSettings = this.resolveBridgeConnectionSettingsFromDeviceSettings(options.settings);
+            this.preferredBridgeId = bridgeId;
+            await this.enqueueLifecycle(async () => {
+                if (connectionSettings) {
+                    await this.reloadBridgeClient(bridgeId, connectionSettings, `${reason}:device-settings`);
+                }
+                else {
+                    await this.stopBridgeClient(bridgeId, `${reason}:no-url`);
+                }
+                await this.refreshNodeRuntimeMappings(`bridge-config-updated:${bridgeId}`);
+                await this.refreshBridgeRuntimeDiagnostics(`bridge-config-updated:${bridgeId}`);
+            });
+            const connected = this.getBridgeSession(bridgeId)?.getZwjsStatus?.()?.transportConnected === true;
+            return {
+                bridgeId,
+                configured: Boolean(connectionSettings),
+                connected,
+            };
+        }
+        async removeBridgeConnection(options) {
+            const bridgeId = this.resolveBridgeId(options.bridgeId);
+            const reason = options.reason ?? 'bridge-remove';
+            await this.enqueueLifecycle(async () => {
+                await this.stopBridgeClient(bridgeId, reason);
+                if (bridgeId !== this.defaultBridgeId) {
+                    this.bridgeSessions.delete(bridgeId);
+                }
+                if (this.preferredBridgeId === bridgeId) {
+                    this.preferredBridgeId = this.defaultBridgeId;
+                }
+                await this.refreshNodeRuntimeMappings(`bridge-removed:${bridgeId}`);
+                await this.refreshBridgeRuntimeDiagnostics(`bridge-removed:${bridgeId}`);
+            });
         }
         getCompiledProfilesStatus() {
             if (this.compiledProfilesRuntime?.status)
@@ -782,6 +875,7 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
         async getNodeRuntimeDiagnostics(options) {
             const devices = await this.getNodeDriverDevices('getNodeRuntimeDiagnostics');
             const filterHomeyDeviceId = _a.toStringOrNull(options?.homeyDeviceId);
+            const filterBridgeId = _a.toStringOrNull(options?.bridgeId);
             const nodeDiagnostics = [];
             for (const device of devices) {
                 try {
@@ -790,6 +884,10 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
                         continue;
                     const diagnosticsEntry = this.normalizeNodeDiagnosticsEntry(profileResolution, device.getData?.());
                     if (filterHomeyDeviceId && diagnosticsEntry.homeyDeviceId !== filterHomeyDeviceId) {
+                        continue;
+                    }
+                    if (filterBridgeId &&
+                        (!diagnosticsEntry.bridgeId || diagnosticsEntry.bridgeId !== filterBridgeId)) {
                         continue;
                     }
                     nodeDiagnostics.push(diagnosticsEntry);
@@ -812,10 +910,15 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
                 const idB = _a.toStringOrNull(b.homeyDeviceId) ?? '';
                 return idA.localeCompare(idB);
             });
+            const diagnosticsBridgeId = filterBridgeId ??
+                _a.toStringOrNull(filterHomeyDeviceId
+                    ? nodeDiagnostics.find((entry) => entry.homeyDeviceId === filterHomeyDeviceId)?.bridgeId
+                    : null) ??
+                this.getBridgeId();
             return {
                 generatedAt: new Date().toISOString(),
-                bridgeId: this.getDefaultBridgeSession().bridgeId,
-                zwjs: this.normalizeZwjsDiagnosticsStatus(),
+                bridgeId: diagnosticsBridgeId,
+                zwjs: this.normalizeZwjsDiagnosticsStatus(diagnosticsBridgeId),
                 compiledProfiles: this.getCompiledProfilesStatus(),
                 curation: this.getCurationStatus(),
                 nodes: nodeDiagnostics,
@@ -850,7 +953,7 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
                     nodeId: diagnosticsEntry.nodeId,
                 },
                 runtime: {
-                    zwjs: this.normalizeZwjsDiagnosticsStatus(),
+                    zwjs: this.normalizeZwjsDiagnosticsStatus(diagnosticsEntry.bridgeId ?? undefined),
                     compiledProfiles: this.getCompiledProfilesStatus(),
                     curation: this.getCurationStatus(),
                 },
@@ -884,6 +987,7 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
         async getRecommendationActionQueue(options) {
             const diagnostics = await this.getNodeRuntimeDiagnostics({
                 homeyDeviceId: options?.homeyDeviceId,
+                bridgeId: options?.bridgeId,
             });
             const includeNoAction = options?.includeNoAction === true;
             const queueItems = diagnostics.nodes.map((node) => this.toRecommendationActionQueueItem(node));
@@ -912,12 +1016,15 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
         }
         async getRuntimeSupportBundle(options) {
             const homeyDeviceId = _a.toStringOrNull(options?.homeyDeviceId);
+            const bridgeId = _a.toStringOrNull(options?.bridgeId);
             const includeNoAction = options?.includeNoAction === true;
             const diagnostics = await this.getNodeRuntimeDiagnostics({
                 homeyDeviceId: homeyDeviceId ?? undefined,
+                bridgeId: bridgeId ?? undefined,
             });
             const recommendations = await this.getRecommendationActionQueue({
                 homeyDeviceId: homeyDeviceId ?? undefined,
+                bridgeId: bridgeId ?? undefined,
                 includeNoAction,
             });
             return {
@@ -925,6 +1032,7 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
                 generatedAt: new Date().toISOString(),
                 filters: {
                     homeyDeviceId,
+                    bridgeId,
                     includeNoAction,
                 },
                 summary: {
@@ -1051,6 +1159,7 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
         async executeRecommendationActions(options) {
             const queue = await this.getRecommendationActionQueue({
                 homeyDeviceId: options?.homeyDeviceId,
+                bridgeId: options?.bridgeId,
                 includeNoAction: true,
             });
             const includeNoAction = options?.includeNoAction === true;

@@ -16,6 +16,12 @@ export interface BridgePairCandidate {
   };
 }
 
+export interface ExistingBridgeDeviceData {
+  id?: string;
+  kind?: string;
+  bridgeId?: string;
+}
+
 export interface ExistingNodeDeviceData {
   kind?: string;
   bridgeId?: string;
@@ -87,8 +93,57 @@ export function hasBridgePairDeviceFromData(
   return existingData.some((entry) => entry?.id === expectedBridgeDeviceId);
 }
 
+function normalizeBridgeIdFromDeviceData(
+  entry: ExistingBridgeDeviceData | undefined,
+): string | undefined {
+  if (!entry) return undefined;
+  if (typeof entry.bridgeId === 'string' && entry.bridgeId.trim().length > 0) {
+    return entry.bridgeId.trim();
+  }
+  if (typeof entry.id === 'string' && entry.id.startsWith(`${ZWJS_BRIDGE_DEVICE_KIND}-`)) {
+    const suffix = entry.id.slice(`${ZWJS_BRIDGE_DEVICE_KIND}-`.length).trim();
+    return suffix.length > 0 ? suffix : undefined;
+  }
+  return undefined;
+}
+
+export function collectExistingBridgeIdsFromData(
+  existingData: ReadonlyArray<ExistingBridgeDeviceData | undefined>,
+  expectedBridgeKind = ZWJS_BRIDGE_DEVICE_KIND,
+): Set<string> {
+  const bridgeIds = new Set<string>();
+  for (const entry of existingData) {
+    if (!entry) continue;
+    if (typeof entry.kind === 'string' && entry.kind !== expectedBridgeKind) continue;
+    const bridgeId = normalizeBridgeIdFromDeviceData(entry);
+    if (bridgeId) bridgeIds.add(bridgeId);
+  }
+  return bridgeIds;
+}
+
+export function pickNextBridgeId(existingBridgeIds: ReadonlySet<string>): string {
+  if (!existingBridgeIds.has(ZWJS_DEFAULT_BRIDGE_ID)) {
+    return ZWJS_DEFAULT_BRIDGE_ID;
+  }
+  let index = 2;
+  while (existingBridgeIds.has(`bridge-${index}`)) {
+    index += 1;
+  }
+  return `bridge-${index}`;
+}
+
+export function createNextBridgePairCandidate(
+  existingData: ReadonlyArray<ExistingBridgeDeviceData | undefined>,
+  pairIconDriverId = 'bridge',
+): BridgePairCandidate {
+  const existingBridgeIds = collectExistingBridgeIdsFromData(existingData);
+  const bridgeId = pickNextBridgeId(existingBridgeIds);
+  const name = bridgeId === ZWJS_DEFAULT_BRIDGE_ID ? 'ZWJS Bridge' : `ZWJS Bridge (${bridgeId})`;
+  return createBridgePairCandidate(bridgeId, name, pairIconDriverId);
+}
+
 export function createBridgePairCandidate(
-  bridgeId = ZWJS_DEFAULT_BRIDGE_ID,
+  bridgeId: string = ZWJS_DEFAULT_BRIDGE_ID,
   name = 'ZWJS Bridge',
   pairIconDriverId = 'bridge',
 ): BridgePairCandidate {
