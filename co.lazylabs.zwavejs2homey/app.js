@@ -724,7 +724,7 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
                         throw error;
                     }
                     if (Date.now() >= timeoutAt) {
-                        this.error('Timed out waiting for driver initialization', {
+                        this.log('Driver still not initialized; skipping this refresh cycle', {
                             driverId,
                             reason,
                             attempts,
@@ -1369,5 +1369,5 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
         none: 'No recommendation is available.',
     },
     _a.DRIVER_READY_RETRY_MS = 25,
-    _a.DRIVER_READY_TIMEOUT_MS = 5000,
+    _a.DRIVER_READY_TIMEOUT_MS = 15000,
     _a);

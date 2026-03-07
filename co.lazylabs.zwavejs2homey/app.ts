@@ -243,7 +243,7 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
 
   private static readonly DRIVER_READY_RETRY_MS = 25;
 
-  private static readonly DRIVER_READY_TIMEOUT_MS = 5000;
+  private static readonly DRIVER_READY_TIMEOUT_MS = 15000;
 
   private static wait(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
@@ -1016,7 +1016,7 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
           throw error;
         }
         if (Date.now() >= timeoutAt) {
-          this.error('Timed out waiting for driver initialization', {
+          this.log('Driver still not initialized; skipping this refresh cycle', {
             driverId,
             reason,
             attempts,
