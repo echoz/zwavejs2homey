@@ -54,9 +54,21 @@ interface SettingsPresenter {
   buildRuntimeViewModel: (data: Record<string, unknown>) => RuntimeViewModel;
 }
 
+interface RequestOrderGate {
+  begin: (channel: string) => number;
+  isCurrent: (channel: string, ticket: number) => boolean;
+  finish: (channel: string) => void;
+  isBusy: (channels?: string[]) => boolean;
+}
+
+interface RequestOrderGateApi {
+  createRequestOrderGate: () => RequestOrderGate;
+}
+
 interface UiRoot {
   Zwjs2HomeyUi?: {
     settingsPresenter?: SettingsPresenter;
+    requestOrderGate?: RequestOrderGateApi;
   };
   onHomeyReady?: (homey: SettingsHomey) => void;
 }
@@ -77,7 +89,20 @@ interface SettingsHomey {
   const PANEL_API_TIMEOUT_MS = 15000;
   const maybePresenter = root && root.Zwjs2HomeyUi && root.Zwjs2HomeyUi.settingsPresenter;
   if (!maybePresenter) return;
+  const maybeRequestOrderGate =
+    root && root.Zwjs2HomeyUi && root.Zwjs2HomeyUi.requestOrderGate
+      ? root.Zwjs2HomeyUi.requestOrderGate
+      : null;
+  if (
+    !maybeRequestOrderGate ||
+    typeof maybeRequestOrderGate.createRequestOrderGate !== 'function'
+  ) {
+    return;
+  }
   const presenter: SettingsPresenter = maybePresenter;
+  const requestOrderGate = maybeRequestOrderGate.createRequestOrderGate();
+  const REQUEST_CHANNEL_DIAGNOSTICS = 'diagnostics';
+  const REQUEST_CHANNEL_INVENTORY = 'inventory';
 
   function mustElement<T extends HTMLElement>(id: string): T {
     const element = document.getElementById(id);
@@ -145,6 +170,12 @@ interface SettingsHomey {
 
   function renderBridgeScopeHint(): void {
     bridgeScopeHint.textContent = `Scope: ${bridgeScopeLabel()}.`;
+  }
+
+  function syncControlsDisabledState(): void {
+    const busy = requestOrderGate.isBusy([REQUEST_CHANNEL_DIAGNOSTICS, REQUEST_CHANNEL_INVENTORY]);
+    refreshDiagnosticsBtn.disabled = busy;
+    bridgeFilter.disabled = busy || bridgeInventoryItems.length === 0;
   }
 
   function downloadTextFile(fileName: string, content: string): void {
@@ -284,9 +315,9 @@ interface SettingsHomey {
       bridgeFilter.appendChild(option);
     }
 
-    bridgeFilter.disabled = items.length === 0;
     bridgeFilter.value = activeBridgeScope ?? '';
     renderBridgeScopeHint();
+    syncControlsDisabledState();
 
     if (previousScope && previousScope !== activeBridgeScope) {
       setStatus(
@@ -390,7 +421,8 @@ interface SettingsHomey {
   }
 
   async function refreshDiagnostics(homey: SettingsHomey): Promise<void> {
-    refreshDiagnosticsBtn.disabled = true;
+    const requestTicket = requestOrderGate.begin(REQUEST_CHANNEL_DIAGNOSTICS);
+    syncControlsDisabledState();
     runtimeHint.textContent = `Refreshing runtime diagnostics for ${bridgeScopeLabel()}...`;
     setStatus(`Refreshing runtime diagnostics for ${bridgeScopeLabel()}...`, 'muted');
     try {
@@ -402,6 +434,9 @@ interface SettingsHomey {
         null,
         'runtime diagnostics request',
       );
+      if (!requestOrderGate.isCurrent(REQUEST_CHANNEL_DIAGNOSTICS, requestTicket)) {
+        return;
+      }
       const parsed = presenter.parseRuntimeResponse(response);
       if (parsed.error) {
         setStatus(parsed.error, 'error');
@@ -412,17 +447,23 @@ interface SettingsHomey {
       }
       renderRuntimeDiagnostics(parsed.data || {});
     } catch (error) {
+      if (!requestOrderGate.isCurrent(REQUEST_CHANNEL_DIAGNOSTICS, requestTicket)) {
+        return;
+      }
       const message = error instanceof Error ? error.message : String(error);
       setStatus(`Failed to load runtime diagnostics: ${message}`, 'error');
       renderRuntimeRows([]);
       renderWarnings(['Runtime diagnostics endpoint is unavailable.']);
       runtimeHint.textContent = `Runtime diagnostics unavailable for ${bridgeScopeLabel()}.`;
     } finally {
-      refreshDiagnosticsBtn.disabled = false;
+      requestOrderGate.finish(REQUEST_CHANNEL_DIAGNOSTICS);
+      syncControlsDisabledState();
     }
   }
 
   async function refreshBridgeInventory(homey: SettingsHomey): Promise<void> {
+    const requestTicket = requestOrderGate.begin(REQUEST_CHANNEL_INVENTORY);
+    syncControlsDisabledState();
     bridgesHint.textContent = 'Refreshing bridge inventory...';
     bridgesEmpty.hidden = true;
     try {
@@ -433,6 +474,9 @@ interface SettingsHomey {
         null,
         'bridge inventory request',
       );
+      if (!requestOrderGate.isCurrent(REQUEST_CHANNEL_INVENTORY, requestTicket)) {
+        return;
+      }
       const parsed = presenter.parseRuntimeResponse(response);
       if (parsed.error || !parsed.data) {
         bridgeInventoryItems = [];
@@ -444,10 +488,16 @@ interface SettingsHomey {
       bridgeInventoryItems = items;
       renderBridgeInventory(items);
     } catch (error) {
+      if (!requestOrderGate.isCurrent(REQUEST_CHANNEL_INVENTORY, requestTicket)) {
+        return;
+      }
       bridgeInventoryItems = [];
       renderBridgeInventory([]);
       const message = error instanceof Error ? error.message : String(error);
       bridgesHint.textContent = `Bridge inventory unavailable: ${message}`;
+    } finally {
+      requestOrderGate.finish(REQUEST_CHANNEL_INVENTORY);
+      syncControlsDisabledState();
     }
   }
 
@@ -547,6 +597,7 @@ interface SettingsHomey {
   function onHomeyReady(homey: SettingsHomey): void {
     wireEvents(homey);
     setStatus('App diagnostics ready.', 'ok');
+    syncControlsDisabledState();
     void refreshDiagnostics(homey);
     void refreshBridgeInventory(homey);
     homey.ready();

@@ -59,4 +59,24 @@ test('settings page wraps Homey.api calls with apiRequestWithTimeout helper', ()
     /\/runtime\/support-bundle\$\{query\}/,
     `${relativePath}: support bundle request should support scoped query`,
   );
+  assert.match(
+    source,
+    /requestOrderGate\.begin\(REQUEST_CHANNEL_DIAGNOSTICS\)/,
+    `${relativePath}: diagnostics path should start request-order ticket`,
+  );
+  assert.match(
+    source,
+    /requestOrderGate\.isCurrent\(REQUEST_CHANNEL_DIAGNOSTICS,\s*requestTicket\)/,
+    `${relativePath}: diagnostics path should ignore stale responses`,
+  );
+  assert.match(
+    source,
+    /requestOrderGate\.begin\(REQUEST_CHANNEL_INVENTORY\)/,
+    `${relativePath}: inventory path should start request-order ticket`,
+  );
+  assert.match(
+    source,
+    /requestOrderGate\.isCurrent\(REQUEST_CHANNEL_INVENTORY,\s*requestTicket\)/,
+    `${relativePath}: inventory path should ignore stale responses`,
+  );
 });

@@ -3,7 +3,17 @@
     const maybePresenter = root && root.Zwjs2HomeyUi && root.Zwjs2HomeyUi.settingsPresenter;
     if (!maybePresenter)
         return;
+    const maybeRequestOrderGate = root && root.Zwjs2HomeyUi && root.Zwjs2HomeyUi.requestOrderGate
+        ? root.Zwjs2HomeyUi.requestOrderGate
+        : null;
+    if (!maybeRequestOrderGate ||
+        typeof maybeRequestOrderGate.createRequestOrderGate !== 'function') {
+        return;
+    }
     const presenter = maybePresenter;
+    const requestOrderGate = maybeRequestOrderGate.createRequestOrderGate();
+    const REQUEST_CHANNEL_DIAGNOSTICS = 'diagnostics';
+    const REQUEST_CHANNEL_INVENTORY = 'inventory';
     function mustElement(id) {
         const element = document.getElementById(id);
         if (!element) {
@@ -65,6 +75,11 @@
     }
     function renderBridgeScopeHint() {
         bridgeScopeHint.textContent = `Scope: ${bridgeScopeLabel()}.`;
+    }
+    function syncControlsDisabledState() {
+        const busy = requestOrderGate.isBusy([REQUEST_CHANNEL_DIAGNOSTICS, REQUEST_CHANNEL_INVENTORY]);
+        refreshDiagnosticsBtn.disabled = busy;
+        bridgeFilter.disabled = busy || bridgeInventoryItems.length === 0;
     }
     function downloadTextFile(fileName, content) {
         const payload = content ?? '';
@@ -186,9 +201,9 @@
             option.textContent = `${item.bridgeId}${nameLabel}`;
             bridgeFilter.appendChild(option);
         }
-        bridgeFilter.disabled = items.length === 0;
         bridgeFilter.value = activeBridgeScope ?? '';
         renderBridgeScopeHint();
+        syncControlsDisabledState();
         if (previousScope && previousScope !== activeBridgeScope) {
             setStatus(`Selected scope "${previousScope}" is no longer available. Reset to all bridges.`, 'warn');
         }
@@ -273,12 +288,16 @@
         });
     }
     async function refreshDiagnostics(homey) {
-        refreshDiagnosticsBtn.disabled = true;
+        const requestTicket = requestOrderGate.begin(REQUEST_CHANNEL_DIAGNOSTICS);
+        syncControlsDisabledState();
         runtimeHint.textContent = `Refreshing runtime diagnostics for ${bridgeScopeLabel()}...`;
         setStatus(`Refreshing runtime diagnostics for ${bridgeScopeLabel()}...`, 'muted');
         try {
             const query = buildQueryString({ bridgeId: activeBridgeScope ?? undefined });
             const response = await apiRequestWithTimeout(homey, 'GET', `/runtime/diagnostics${query}`, null, 'runtime diagnostics request');
+            if (!requestOrderGate.isCurrent(REQUEST_CHANNEL_DIAGNOSTICS, requestTicket)) {
+                return;
+            }
             const parsed = presenter.parseRuntimeResponse(response);
             if (parsed.error) {
                 setStatus(parsed.error, 'error');
@@ -290,6 +309,9 @@
             renderRuntimeDiagnostics(parsed.data || {});
         }
         catch (error) {
+            if (!requestOrderGate.isCurrent(REQUEST_CHANNEL_DIAGNOSTICS, requestTicket)) {
+                return;
+            }
             const message = error instanceof Error ? error.message : String(error);
             setStatus(`Failed to load runtime diagnostics: ${message}`, 'error');
             renderRuntimeRows([]);
@@ -297,14 +319,20 @@
             runtimeHint.textContent = `Runtime diagnostics unavailable for ${bridgeScopeLabel()}.`;
         }
         finally {
-            refreshDiagnosticsBtn.disabled = false;
+            requestOrderGate.finish(REQUEST_CHANNEL_DIAGNOSTICS);
+            syncControlsDisabledState();
         }
     }
     async function refreshBridgeInventory(homey) {
+        const requestTicket = requestOrderGate.begin(REQUEST_CHANNEL_INVENTORY);
+        syncControlsDisabledState();
         bridgesHint.textContent = 'Refreshing bridge inventory...';
         bridgesEmpty.hidden = true;
         try {
             const response = await apiRequestWithTimeout(homey, 'GET', '/runtime/bridges', null, 'bridge inventory request');
+            if (!requestOrderGate.isCurrent(REQUEST_CHANNEL_INVENTORY, requestTicket)) {
+                return;
+            }
             const parsed = presenter.parseRuntimeResponse(response);
             if (parsed.error || !parsed.data) {
                 bridgeInventoryItems = [];
@@ -317,10 +345,17 @@
             renderBridgeInventory(items);
         }
         catch (error) {
+            if (!requestOrderGate.isCurrent(REQUEST_CHANNEL_INVENTORY, requestTicket)) {
+                return;
+            }
             bridgeInventoryItems = [];
             renderBridgeInventory([]);
             const message = error instanceof Error ? error.message : String(error);
             bridgesHint.textContent = `Bridge inventory unavailable: ${message}`;
+        }
+        finally {
+            requestOrderGate.finish(REQUEST_CHANNEL_INVENTORY);
+            syncControlsDisabledState();
         }
     }
     async function exportSupportBundle(homey) {
@@ -409,6 +444,7 @@
     function onHomeyReady(homey) {
         wireEvents(homey);
         setStatus('App diagnostics ready.', 'ok');
+        syncControlsDisabledState();
         void refreshDiagnostics(homey);
         void refreshBridgeInventory(homey);
         homey.ready();

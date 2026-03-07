@@ -21,6 +21,18 @@ Kick off Phase 6 Reliability + UX delivery:
 
 ## Recently Completed
 
+- Settings stale-response hardening slice:
+  - added request-order gating for settings diagnostics and bridge inventory fetches
+  - stale async responses are now ignored when a newer request has already started
+  - refresh controls are now disabled/re-enabled deterministically while diagnostics/inventory requests are in flight:
+    - `Refresh Diagnostics`
+    - `Bridge Scope` selector
+  - introduced browser-safe shared gate module:
+    - `settings/request-order-gate.ts`
+  - added regression coverage:
+    - `test/request-order-gate.test.ts`
+    - expanded `test/panel-timeout-guard.test.ts` checks for stale-response guards
+
 - CLI bridge-scope parity slice:
   - `homey:runtime-api:smoke` now supports optional `--bridge-id`
   - `homey:support-bundle` now supports optional `--bridge-id`

@@ -185,6 +185,9 @@ Partially complete / next:
   - npm alias: `npm run homey:support-bundle -- ...`
   - supports optional bridge scoping (`--bridge-id`)
   - optional share redaction via `--redact-share`
+- settings diagnostics page now applies request-order gating:
+  - stale async diagnostics/inventory responses are ignored
+  - bridge scope selector + refresh action disable while in-flight requests are active
 - a runtime API client helper now exists for settings/custom-view consumers:
   - `co.lazylabs.zwavejs2homey/runtime-api-client.js`
   - contract reference: `docs/homey-api-contract.md`
