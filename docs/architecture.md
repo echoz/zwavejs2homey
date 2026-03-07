@@ -282,6 +282,9 @@ Near-term:
    - runtime mapping drift-proofing gates
    - support/log bundle workflow
 2. preserve current pairing/settings reliability baseline while Phase 7 work begins
+3. shift node pairing discovery to aggregate all configured bridges by default:
+   - candidates remain bridge-attributed (`bridgeId + nodeId` identity)
+   - one-bridge discovery failures must not block healthy bridges
 
 After that:
 

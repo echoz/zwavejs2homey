@@ -223,10 +223,11 @@ Exit checkpoint:
 
 Primary focus:
 
-1. expand per-node capability mapping breadth from current vertical baseline
-2. add richer custom UX where Homey system templates are too constrained
-3. keep recommendation/diagnostics semantics stable while capability breadth grows
-4. maintain bridge-scoped runtime reliability and test gates as non-negotiable baseline
+1. pivot node pairing discovery to aggregate across all configured bridges by default (bridge-attributed candidates, partial-failure tolerant discovery)
+2. expand per-node capability mapping breadth from current vertical baseline
+3. add richer custom UX where Homey system templates are too constrained
+4. keep recommendation/diagnostics semantics stable while capability breadth grows
+5. maintain bridge-scoped runtime reliability and test gates as non-negotiable baseline
 
 ## Active Risks
 

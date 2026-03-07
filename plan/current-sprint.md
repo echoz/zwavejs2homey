@@ -14,6 +14,7 @@ Close Phase 6 Reliability + UX with production-ready stability + diagnostics UX:
 - Phase transition prep:
   - lock Phase 6 closure state in docs/roadmap
   - keep gates green while preparing Phase 7 kickoff (capability expansion + custom UX)
+  - pivot node pairing discovery model to aggregate across all configured bridges (instead of bridge-selector-first)
   - preserve strict package boundaries (`core`/`compiler`/`tui`/Homey app)
 
 ## Recently Completed
@@ -1691,7 +1692,7 @@ Close Phase 6 Reliability + UX with production-ready stability + diagnostics UX:
 
 ## Next Tasks
 
-1. Kick off Phase 7 capability expansion slices with strict test-first/runtime-safe constraints.
+1. Implement node pairing aggregate discovery across all configured bridges (candidate attribution by `bridgeId`, partial-failure tolerant).
 2. Keep Homey UX surfaces stable while adding broader capability coverage.
 3. Run closure gates on every slice (`npm --prefix co.lazylabs.zwavejs2homey run test`, runtime smoke/support bundle checks).
 
