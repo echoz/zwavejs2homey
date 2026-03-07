@@ -35,6 +35,13 @@ Error responses keep the same shape:
 
 ## Routes
 
+- `GET /runtime/bridges`
+  - query: none
+  - returns read-only bridge inventory for app/settings surfaces:
+    - bridge identity (`bridgeId`, Homey device id/name)
+    - bridge configuration presence (`url`, auth type)
+    - bridge runtime transport state (`transportConnected`, lifecycle/session details)
+    - imported node count per bridge
 - `GET /runtime/diagnostics`
   - query:
     - `homeyDeviceId` (optional string)
@@ -68,6 +75,7 @@ Use `co.lazylabs.zwavejs2homey/runtime-api-client.js`:
 - `createRuntimeApiClient(homeyApi)`
   - expects `homeyApi.api(method, uri, body?, callback)` facade
 - returned methods:
+  - `getRuntimeBridges()`
   - `getRuntimeDiagnostics(options?)`
   - `getRuntimeSupportBundle(options?)`
   - `getRecommendationActionQueue(options?)`

@@ -194,6 +194,9 @@ Delivered in Phase 6 so far:
 - pairing/settings UX simplification:
   - bridge pairing now completes from `bridge_config` with inline success/error messaging (no `next_steps` screen in active flow)
   - app settings page is diagnostics/support-bundle focused; global connection editing is removed from app settings UI
+- app settings bridge visibility:
+  - added read-only runtime bridge inventory endpoint (`GET /runtime/bridges`)
+  - settings page now lists configured bridges with connection/runtime status and imported-node counts
 
 ## Active Risks
 

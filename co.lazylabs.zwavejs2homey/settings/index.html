@@ -120,6 +120,40 @@
         color: var(--warn);
       }
 
+      .bridge-table-wrap {
+        margin-top: 8px;
+        border: 1px solid var(--panel-border);
+        border-radius: 10px;
+        overflow: auto;
+      }
+
+      .bridge-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+      }
+
+      .bridge-table th,
+      .bridge-table td {
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--panel-border);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      .bridge-table thead th {
+        color: var(--muted);
+        font-weight: 600;
+      }
+
+      .bridge-table tbody tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .bridge-table .muted {
+        font-size: 11px;
+      }
+
       .hint {
         margin-top: 8px;
         color: var(--muted);
@@ -183,6 +217,23 @@
       <div id="runtime-kv" class="kv"></div>
       <div id="runtime-hint" class="hint">Diagnostics not loaded yet.</div>
       <ul id="warnings" class="warnings" hidden></ul>
+
+      <h2>Configured Bridges</h2>
+      <div id="bridges-hint" class="hint">Bridge inventory not loaded yet.</div>
+      <div id="bridges-table-wrap" class="bridge-table-wrap" hidden>
+        <table class="bridge-table">
+          <thead>
+            <tr>
+              <th>Bridge</th>
+              <th>Connection</th>
+              <th>Transport</th>
+              <th>Imported Nodes</th>
+            </tr>
+          </thead>
+          <tbody id="bridges-table-body"></tbody>
+        </table>
+      </div>
+      <div id="bridges-empty" class="hint" hidden>No bridge devices configured yet.</div>
 
       <div class="row">
         <button id="refreshDiagnosticsBtn" type="button">Refresh Diagnostics</button>

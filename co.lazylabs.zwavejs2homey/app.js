@@ -431,6 +431,24 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
                 return [];
             return nodeDriver.getDevices();
         }
+        async getBridgeDriverDevices(reason) {
+            const bridgeDriver = await this.getDriverWhenReady('bridge', reason);
+            if (!bridgeDriver)
+                return [];
+            return bridgeDriver.getDevices();
+        }
+        resolveBridgeIdFromBridgeDeviceData(data) {
+            const bridgeIdFromData = _a.toStringOrNull(data?.bridgeId);
+            if (bridgeIdFromData)
+                return bridgeIdFromData;
+            const id = _a.toStringOrNull(data?.id);
+            if (!id)
+                return null;
+            if (!id.startsWith('zwjs-bridge-'))
+                return null;
+            const suffix = id.slice('zwjs-bridge-'.length).trim();
+            return suffix.length > 0 ? suffix : null;
+        }
         findNodeDeviceByHomeyDeviceId(homeyDeviceId, devices) {
             return devices.find((device) => {
                 const data = device.getData?.();
@@ -922,6 +940,43 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
                 compiledProfiles: this.getCompiledProfilesStatus(),
                 curation: this.getCurationStatus(),
                 nodes: nodeDiagnostics,
+            };
+        }
+        async getBridgeRuntimeInventory() {
+            const bridgeDevices = await this.getBridgeDriverDevices('getBridgeRuntimeInventory');
+            const nodeDevices = await this.getNodeDriverDevices('getBridgeRuntimeInventory:nodes');
+            const importedNodeCountByBridgeId = new Map();
+            for (const nodeDevice of nodeDevices) {
+                const data = nodeDevice.getData?.();
+                const bridgeId = _a.toStringOrNull(data?.bridgeId) ?? this.resolveBridgeId(undefined);
+                importedNodeCountByBridgeId.set(bridgeId, (importedNodeCountByBridgeId.get(bridgeId) ?? 0) + 1);
+            }
+            const bridges = bridgeDevices
+                .map((bridgeDevice) => {
+                const data = bridgeDevice.getData?.();
+                const bridgeId = this.resolveBridgeIdFromBridgeDeviceData(data) ?? this.resolveBridgeId(undefined);
+                const settings = bridgeDevice.getSettings?.();
+                const url = _a.toStringOrNull(settings?.zwjs_url);
+                const authType = settings?.zwjs_auth_type === 'bearer' ? 'bearer' : 'none';
+                return {
+                    bridgeId,
+                    homeyDeviceId: _a.toStringOrNull(data?.id),
+                    name: _a.toStringOrNull(bridgeDevice.getName && typeof bridgeDevice.getName === 'function'
+                        ? bridgeDevice.getName()
+                        : null),
+                    configured: Boolean(url),
+                    settings: {
+                        url,
+                        authType,
+                    },
+                    runtime: this.normalizeZwjsDiagnosticsStatus(bridgeId),
+                    importedNodeCount: importedNodeCountByBridgeId.get(bridgeId) ?? 0,
+                };
+            })
+                .sort((left, right) => left.bridgeId.localeCompare(right.bridgeId));
+            return {
+                generatedAt: new Date().toISOString(),
+                bridges,
             };
         }
         async getNodeDeviceToolsSnapshot(options) {

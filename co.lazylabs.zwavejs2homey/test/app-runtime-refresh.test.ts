@@ -198,6 +198,24 @@ function createNodeDiagnosticsDevice({ id, bridgeId = 'main', nodeId, profileRes
   };
 }
 
+function createBridgeRuntimeDevice({
+  id,
+  bridgeId,
+  name,
+  settings,
+}: {
+  id: string;
+  bridgeId: string;
+  name: string;
+  settings: Record<string, unknown>;
+}) {
+  return {
+    getData: () => ({ id, bridgeId }),
+    getName: () => name,
+    getSettings: () => settings,
+  };
+}
+
 function createCurationDocument(entries) {
   return {
     schemaVersion: 'homey-curation/v1',
@@ -866,6 +884,92 @@ test('app diagnostics snapshot supports bridgeId filtering', async () => {
   assert.equal(snapshot.zwjs.available, true);
   assert.equal(snapshot.nodes.length, 1);
   assert.equal(snapshot.nodes[0].homeyDeviceId, 'secondary:8');
+
+  await app.onUninit();
+});
+
+test('app bridge inventory reports configured bridge devices and runtime status', async () => {
+  const nodeDevices = [
+    createNodeDiagnosticsDevice({
+      id: 'main:8',
+      bridgeId: 'main',
+      nodeId: 8,
+      profileResolution: {
+        profileId: 'profile-main-8',
+        recommendationAvailable: false,
+        mappingDiagnostics: [],
+      },
+    }),
+    createNodeDiagnosticsDevice({
+      id: 'secondary:12',
+      bridgeId: 'secondary',
+      nodeId: 12,
+      profileResolution: {
+        profileId: 'profile-secondary-12',
+        recommendationAvailable: false,
+        mappingDiagnostics: [],
+      },
+    }),
+  ];
+  const bridgeDevices = [
+    createBridgeRuntimeDevice({
+      id: 'zwjs-bridge-main',
+      bridgeId: 'main',
+      name: 'Main Bridge',
+      settings: {
+        zwjs_url: 'ws://127.0.0.1:3000',
+        zwjs_auth_type: 'none',
+      },
+    }),
+    createBridgeRuntimeDevice({
+      id: 'zwjs-bridge-secondary',
+      bridgeId: 'secondary',
+      name: 'Secondary Bridge',
+      settings: {
+        zwjs_url: '',
+        zwjs_auth_type: 'none',
+      },
+    }),
+  ];
+
+  const { app } = loadAppClass(nodeDevices, bridgeDevices);
+  await app.onInit();
+  await app.configureBridgeConnection({
+    bridgeId: 'main',
+    settings: {
+      zwjs_url: 'ws://127.0.0.1:3000',
+      zwjs_auth_type: 'none',
+    },
+    reason: 'test-main',
+  });
+  await app.configureBridgeConnection({
+    bridgeId: 'secondary',
+    settings: {
+      zwjs_url: 'ws://127.0.0.1:3002',
+      zwjs_auth_type: 'none',
+    },
+    reason: 'test-secondary',
+  });
+
+  const inventory = await app.getBridgeRuntimeInventory();
+  assert.equal(Array.isArray(inventory.bridges), true);
+  assert.equal(inventory.bridges.length, 2);
+
+  const main = inventory.bridges.find((bridge) => bridge.bridgeId === 'main');
+  assert.ok(main);
+  assert.equal(main.name, 'Main Bridge');
+  assert.equal(main.configured, true);
+  assert.equal(main.settings.url, 'ws://127.0.0.1:3000');
+  assert.equal(main.runtime.transportConnected, true);
+  assert.equal(main.importedNodeCount, 1);
+
+  const secondary = inventory.bridges.find((bridge) => bridge.bridgeId === 'secondary');
+  assert.ok(secondary);
+  assert.equal(secondary.name, 'Secondary Bridge');
+  assert.equal(secondary.configured, false);
+  assert.equal(secondary.settings.url, null);
+  assert.equal(secondary.runtime.transportConnected, true);
+  assert.equal(secondary.importedNodeCount, 1);
 
   await app.onUninit();
 });

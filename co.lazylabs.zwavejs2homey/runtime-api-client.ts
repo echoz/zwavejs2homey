@@ -46,6 +46,7 @@ interface HomeyApiFacade {
 
 export interface RuntimeApiClient {
   RuntimeApiClientError: typeof RuntimeApiClientError;
+  getRuntimeBridges: () => Promise<unknown>;
   getRuntimeDiagnostics: (options?: { homeyDeviceId?: unknown }) => Promise<unknown>;
   getRuntimeSupportBundle: (options?: {
     homeyDeviceId?: unknown;
@@ -205,6 +206,11 @@ export function createRuntimeApiClient(homeyApi: unknown): RuntimeApiClient {
 
   return {
     RuntimeApiClientError,
+    async getRuntimeBridges() {
+      const response = await invokeHomeyApi(homeyApi, 'GET', '/runtime/bridges');
+      return parseEnvelope(response);
+    },
+
     async getRuntimeDiagnostics(options = {}) {
       const homeyDeviceId = normalizeOptionalString(options.homeyDeviceId, 'homeyDeviceId');
       const query = toQueryString({ homeyDeviceId });

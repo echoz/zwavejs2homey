@@ -6,6 +6,7 @@ const api = require(path.resolve(__dirname, '../.homeybuild/api.js'));
 
 function createHomeyAppStub(overrides = {}) {
   const calls = {
+    bridges: [],
     diagnostics: [],
     supportBundle: [],
     queue: [],
@@ -14,6 +15,10 @@ function createHomeyAppStub(overrides = {}) {
   };
 
   const app = {
+    async getBridgeRuntimeInventory(options) {
+      calls.bridges.push(options);
+      return { kind: 'bridges' };
+    },
     async getNodeRuntimeDiagnostics(options) {
       calls.diagnostics.push(options);
       return { kind: 'diagnostics' };
@@ -65,6 +70,16 @@ test('api getRuntimeDiagnostics forwards normalized query options', async () => 
   assertSuccessEnvelope(result);
   assert.equal(result.data.kind, 'diagnostics');
   assert.deepEqual(calls.diagnostics, [{ homeyDeviceId: 'main:8' }]);
+});
+
+test('api getRuntimeBridges forwards request to app runtime', async () => {
+  const { homey, calls } = createHomeyAppStub();
+  const result = await api.getRuntimeBridges({
+    homey,
+  });
+  assertSuccessEnvelope(result);
+  assert.equal(result.data.kind, 'bridges');
+  assert.deepEqual(calls.bridges, [undefined]);
 });
 
 test('api getRecommendationActionQueue parses includeNoAction values', async () => {

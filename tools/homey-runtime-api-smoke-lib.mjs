@@ -145,6 +145,12 @@ export function buildSmokeRouteRequests(command) {
 
   return [
     {
+      key: 'getRuntimeBridges',
+      method: 'GET',
+      path: '/runtime/bridges',
+      query: {},
+    },
+    {
       key: 'getRuntimeDiagnostics',
       method: 'GET',
       path: '/runtime/diagnostics',

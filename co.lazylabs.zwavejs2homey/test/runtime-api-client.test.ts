@@ -54,6 +54,23 @@ test('client getRuntimeDiagnostics forwards encoded query and unwraps envelope',
   ]);
 });
 
+test('client getRuntimeBridges calls bridges endpoint and unwraps envelope', async () => {
+  const homeyApi = createCallbackHomeyApi(({ callback }) => {
+    callback(null, createEnvelope({ kind: 'bridges' }));
+  });
+  const client = createRuntimeApiClient(homeyApi);
+
+  const result = await client.getRuntimeBridges();
+  assert.deepEqual(result, { kind: 'bridges' });
+  assert.deepEqual(homeyApi.calls, [
+    {
+      method: 'GET',
+      uri: '/runtime/bridges',
+      body: undefined,
+    },
+  ]);
+});
+
 test('client getRecommendationActionQueue encodes includeNoAction in query', async () => {
   const homeyApi = createCallbackHomeyApi(({ callback }) => {
     callback(null, createEnvelope({ kind: 'queue' }));

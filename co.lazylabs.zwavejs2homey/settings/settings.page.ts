@@ -21,6 +21,22 @@ interface RuntimeParseResult {
   error?: string;
 }
 
+interface BridgeInventoryItem {
+  bridgeId: string;
+  homeyDeviceId: string | null;
+  name: string | null;
+  configured: boolean;
+  settings: {
+    url: string | null;
+    authType: 'none' | 'bearer';
+  };
+  runtime: {
+    transportConnected: boolean;
+    lifecycle: string;
+  };
+  importedNodeCount: number;
+}
+
 interface SupportBundleExportResult {
   fileName: string;
   content: string;
@@ -75,6 +91,10 @@ interface SettingsHomey {
   const runtimeKv = mustElement<HTMLElement>('runtime-kv');
   const runtimeHint = mustElement<HTMLElement>('runtime-hint');
   const warnings = mustElement<HTMLElement>('warnings');
+  const bridgesHint = mustElement<HTMLElement>('bridges-hint');
+  const bridgesTableWrap = mustElement<HTMLElement>('bridges-table-wrap');
+  const bridgesTableBody = mustElement<HTMLElement>('bridges-table-body');
+  const bridgesEmpty = mustElement<HTMLElement>('bridges-empty');
   const refreshDiagnosticsBtn = mustElement<HTMLButtonElement>('refreshDiagnosticsBtn');
   const openBridgeToolsBtn = mustElement<HTMLButtonElement>('openBridgeToolsBtn');
   const exportSupportBundleBtn = mustElement<HTMLButtonElement>('exportSupportBundleBtn');
@@ -163,6 +183,94 @@ interface SettingsHomey {
     setStatus('Runtime diagnostics refreshed.', 'ok');
   }
 
+  function toBridgeConnectionPill(item: BridgeInventoryItem): ConnectionPill {
+    if (!item.configured) {
+      return { label: 'Not Configured', tone: 'warn' };
+    }
+    if (item.runtime.transportConnected) {
+      return { label: 'Connected', tone: 'ok' };
+    }
+    return { label: 'Disconnected', tone: 'warn' };
+  }
+
+  function normalizeBridgeInventoryItems(data: Record<string, unknown>): BridgeInventoryItem[] {
+    const rawItems = Array.isArray(data.bridges) ? data.bridges : [];
+    return rawItems
+      .filter((item) => item && typeof item === 'object')
+      .map((item) => {
+        const record = item as Record<string, unknown>;
+        const settings =
+          record.settings && typeof record.settings === 'object'
+            ? (record.settings as Record<string, unknown>)
+            : {};
+        const runtime =
+          record.runtime && typeof record.runtime === 'object'
+            ? (record.runtime as Record<string, unknown>)
+            : {};
+        const authType: 'none' | 'bearer' = settings.authType === 'bearer' ? 'bearer' : 'none';
+        return {
+          bridgeId: typeof record.bridgeId === 'string' ? record.bridgeId : 'unknown',
+          homeyDeviceId: typeof record.homeyDeviceId === 'string' ? record.homeyDeviceId : null,
+          name: typeof record.name === 'string' ? record.name : null,
+          configured: record.configured === true,
+          settings: {
+            url: typeof settings.url === 'string' ? settings.url : null,
+            authType,
+          },
+          runtime: {
+            transportConnected: runtime.transportConnected === true,
+            lifecycle: typeof runtime.lifecycle === 'string' ? runtime.lifecycle : 'stopped',
+          },
+          importedNodeCount:
+            typeof record.importedNodeCount === 'number' &&
+            Number.isFinite(record.importedNodeCount)
+              ? Math.max(0, Math.trunc(record.importedNodeCount))
+              : 0,
+        };
+      })
+      .sort((left, right) => left.bridgeId.localeCompare(right.bridgeId));
+  }
+
+  function renderBridgeInventory(items: BridgeInventoryItem[]): void {
+    if (!Array.isArray(items) || items.length === 0) {
+      bridgesTableWrap.hidden = true;
+      bridgesTableBody.innerHTML = '';
+      bridgesEmpty.hidden = false;
+      bridgesHint.textContent = 'No bridge devices are currently configured.';
+      return;
+    }
+
+    bridgesTableWrap.hidden = false;
+    bridgesEmpty.hidden = true;
+    bridgesHint.textContent = `Showing ${items.length} configured bridge device(s).`;
+    bridgesTableBody.innerHTML = items
+      .map((item) => {
+        const connectionPill = toBridgeConnectionPill(item);
+        const lifecycleLabel =
+          item.runtime.lifecycle && item.runtime.lifecycle.trim().length > 0
+            ? item.runtime.lifecycle
+            : 'stopped';
+        return `
+          <tr>
+            <td>
+              <strong>${escapeHtml(item.bridgeId)}</strong><br />
+              <span class="muted">${escapeHtml(item.name ?? item.homeyDeviceId ?? 'n/a')}</span>
+            </td>
+            <td>
+              <span class="status-pill ${escapeHtml(connectionPill.tone)}">${escapeHtml(
+                connectionPill.label,
+              )}</span><br />
+              <span class="muted">${escapeHtml(item.settings.url ?? 'URL not set')}</span><br />
+              <span class="muted">Auth: ${escapeHtml(item.settings.authType)}</span>
+            </td>
+            <td>${escapeHtml(lifecycleLabel)}</td>
+            <td>${escapeHtml(item.importedNodeCount)}</td>
+          </tr>
+        `;
+      })
+      .join('');
+  }
+
   async function apiRequestWithTimeout(
     homey: SettingsHomey,
     method: string,
@@ -230,6 +338,32 @@ interface SettingsHomey {
     }
   }
 
+  async function refreshBridgeInventory(homey: SettingsHomey): Promise<void> {
+    bridgesHint.textContent = 'Refreshing bridge inventory...';
+    bridgesEmpty.hidden = true;
+    try {
+      const response = await apiRequestWithTimeout(
+        homey,
+        'GET',
+        '/runtime/bridges',
+        null,
+        'bridge inventory request',
+      );
+      const parsed = presenter.parseRuntimeResponse(response);
+      if (parsed.error || !parsed.data) {
+        renderBridgeInventory([]);
+        bridgesHint.textContent = parsed.error || 'Bridge inventory payload is invalid.';
+        return;
+      }
+      const items = normalizeBridgeInventoryItems(parsed.data);
+      renderBridgeInventory(items);
+    } catch (error) {
+      renderBridgeInventory([]);
+      const message = error instanceof Error ? error.message : String(error);
+      bridgesHint.textContent = `Bridge inventory unavailable: ${message}`;
+    }
+  }
+
   async function exportSupportBundle(homey: SettingsHomey): Promise<void> {
     exportSupportBundleBtn.disabled = true;
     const redact = redactSupportBundleCheckbox.checked;
@@ -267,6 +401,7 @@ interface SettingsHomey {
   function wireEvents(homey: SettingsHomey): void {
     refreshDiagnosticsBtn.addEventListener('click', () => {
       void refreshDiagnostics(homey);
+      void refreshBridgeInventory(homey);
     });
 
     openBridgeToolsBtn.addEventListener('click', () => {
@@ -285,6 +420,7 @@ interface SettingsHomey {
     wireEvents(homey);
     setStatus('App diagnostics ready.', 'ok');
     void refreshDiagnostics(homey);
+    void refreshBridgeInventory(homey);
     homey.ready();
   }
 

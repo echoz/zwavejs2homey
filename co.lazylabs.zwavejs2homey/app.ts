@@ -162,6 +162,12 @@ interface RuntimeNodeDeviceLike {
   getStoreValue?: (key: string) => Promise<unknown>;
 }
 
+interface RuntimeBridgeDeviceLike {
+  getData?: () => { id?: unknown; bridgeId?: unknown } | undefined;
+  getSettings?: () => Record<string, unknown> | undefined;
+  getName?: () => string;
+}
+
 interface NodeDeviceToolsSnapshotV1 {
   schemaVersion: 'node-device-tools/v1';
   generatedAt: string;
@@ -661,6 +667,26 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
     }>('node', reason);
     if (!nodeDriver) return [];
     return nodeDriver.getDevices() as RuntimeNodeDeviceLike[];
+  }
+
+  private async getBridgeDriverDevices(reason: string): Promise<RuntimeBridgeDeviceLike[]> {
+    const bridgeDriver = await this.getDriverWhenReady<{
+      getDevices: () => RuntimeBridgeDeviceLike[];
+    }>('bridge', reason);
+    if (!bridgeDriver) return [];
+    return bridgeDriver.getDevices() as RuntimeBridgeDeviceLike[];
+  }
+
+  private resolveBridgeIdFromBridgeDeviceData(
+    data: { id?: unknown; bridgeId?: unknown } | undefined,
+  ): string | null {
+    const bridgeIdFromData = Zwavejs2HomeyApp.toStringOrNull(data?.bridgeId);
+    if (bridgeIdFromData) return bridgeIdFromData;
+    const id = Zwavejs2HomeyApp.toStringOrNull(data?.id);
+    if (!id) return null;
+    if (!id.startsWith('zwjs-bridge-')) return null;
+    const suffix = id.slice('zwjs-bridge-'.length).trim();
+    return suffix.length > 0 ? suffix : null;
   }
 
   private findNodeDeviceByHomeyDeviceId(
@@ -1294,6 +1320,70 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
       compiledProfiles: this.getCompiledProfilesStatus(),
       curation: this.getCurationStatus(),
       nodes: nodeDiagnostics,
+    };
+  }
+
+  async getBridgeRuntimeInventory(): Promise<{
+    generatedAt: string;
+    bridges: Array<{
+      bridgeId: string;
+      homeyDeviceId: string | null;
+      name: string | null;
+      configured: boolean;
+      settings: {
+        url: string | null;
+        authType: 'none' | 'bearer';
+      };
+      runtime: ZwjsDiagnosticsStatusV1;
+      importedNodeCount: number;
+    }>;
+  }> {
+    const bridgeDevices = await this.getBridgeDriverDevices('getBridgeRuntimeInventory');
+    const nodeDevices = await this.getNodeDriverDevices('getBridgeRuntimeInventory:nodes');
+    const importedNodeCountByBridgeId = new Map<string, number>();
+
+    for (const nodeDevice of nodeDevices) {
+      const data = nodeDevice.getData?.();
+      const bridgeId =
+        Zwavejs2HomeyApp.toStringOrNull(data?.bridgeId) ?? this.resolveBridgeId(undefined);
+      importedNodeCountByBridgeId.set(
+        bridgeId,
+        (importedNodeCountByBridgeId.get(bridgeId) ?? 0) + 1,
+      );
+    }
+
+    const bridges = bridgeDevices
+      .map((bridgeDevice) => {
+        const data = bridgeDevice.getData?.();
+        const bridgeId =
+          this.resolveBridgeIdFromBridgeDeviceData(data) ?? this.resolveBridgeId(undefined);
+        const settings = bridgeDevice.getSettings?.();
+        const url = Zwavejs2HomeyApp.toStringOrNull(settings?.zwjs_url);
+        const authType: 'none' | 'bearer' =
+          settings?.zwjs_auth_type === 'bearer' ? 'bearer' : 'none';
+
+        return {
+          bridgeId,
+          homeyDeviceId: Zwavejs2HomeyApp.toStringOrNull(data?.id),
+          name: Zwavejs2HomeyApp.toStringOrNull(
+            bridgeDevice.getName && typeof bridgeDevice.getName === 'function'
+              ? bridgeDevice.getName()
+              : null,
+          ),
+          configured: Boolean(url),
+          settings: {
+            url,
+            authType,
+          },
+          runtime: this.normalizeZwjsDiagnosticsStatus(bridgeId),
+          importedNodeCount: importedNodeCountByBridgeId.get(bridgeId) ?? 0,
+        };
+      })
+      .sort((left, right) => left.bridgeId.localeCompare(right.bridgeId));
+
+    return {
+      generatedAt: new Date().toISOString(),
+      bridges,
     };
   }
 

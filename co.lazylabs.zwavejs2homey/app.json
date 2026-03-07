@@ -19,6 +19,10 @@
   ],
   "permissions": [],
   "api": {
+    "getRuntimeBridges": {
+      "method": "GET",
+      "path": "/runtime/bridges"
+    },
     "getRuntimeDiagnostics": {
       "method": "GET",
       "path": "/runtime/diagnostics"

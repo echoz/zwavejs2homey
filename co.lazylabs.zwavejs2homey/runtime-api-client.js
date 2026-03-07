@@ -130,6 +130,10 @@ function createRuntimeApiClient(homeyApi) {
     assertApiFacade(homeyApi);
     return {
         RuntimeApiClientError,
+        async getRuntimeBridges() {
+            const response = await invokeHomeyApi(homeyApi, 'GET', '/runtime/bridges');
+            return parseEnvelope(response);
+        },
         async getRuntimeDiagnostics(options = {}) {
             const homeyDeviceId = normalizeOptionalString(options.homeyDeviceId, 'homeyDeviceId');
             const query = toQueryString({ homeyDeviceId });

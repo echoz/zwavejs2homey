@@ -155,6 +155,12 @@ function getRuntimeApp(homey) {
     return app;
 }
 module.exports = {
+    async getRuntimeBridges({ homey }) {
+        return executeRoute('getRuntimeBridges', async () => {
+            const app = getRuntimeApp(homey);
+            return app.getBridgeRuntimeInventory();
+        });
+    },
     async getRuntimeDiagnostics({ homey, query }) {
         return executeRoute('getRuntimeDiagnostics', async () => {
             const app = getRuntimeApp(homey);

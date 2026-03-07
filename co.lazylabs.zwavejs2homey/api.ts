@@ -183,6 +183,7 @@ function normalizeOptionalAction(value: unknown): RecommendationActionSelection 
 }
 
 interface RuntimeApp {
+  getBridgeRuntimeInventory: () => Promise<unknown>;
   getNodeRuntimeDiagnostics: (options: { homeyDeviceId?: string }) => Promise<unknown>;
   getRuntimeSupportBundle: (options: {
     homeyDeviceId?: string;
@@ -211,6 +212,13 @@ function getRuntimeApp(homey: unknown): RuntimeApp {
 }
 
 module.exports = {
+  async getRuntimeBridges({ homey }: { homey: unknown }) {
+    return executeRoute('getRuntimeBridges', async () => {
+      const app = getRuntimeApp(homey);
+      return app.getBridgeRuntimeInventory();
+    });
+  },
+
   async getRuntimeDiagnostics({ homey, query }: { homey: unknown; query: unknown }) {
     return executeRoute('getRuntimeDiagnostics', async () => {
       const app = getRuntimeApp(homey);

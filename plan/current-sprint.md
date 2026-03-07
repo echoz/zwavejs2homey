@@ -21,6 +21,16 @@ Kick off Phase 6 Reliability + UX delivery:
 
 ## Recently Completed
 
+- App settings configured-bridges visibility slice:
+  - added runtime route `GET /runtime/bridges` for read-only bridge inventory
+  - app runtime now exposes `getBridgeRuntimeInventory()` with:
+    - bridge identity/name
+    - per-bridge URL/auth configured state
+    - per-bridge transport/lifecycle status
+    - imported node count per bridge
+  - settings page now renders a Configured Bridges table and refreshes it alongside diagnostics
+  - runtime API client/smoke coverage updated for the new route
+
 - Bridge pairing + settings UX simplification slice:
   - removed bridge post-add `next_steps` handoff page from active pairing flow
   - bridge pairing now ends at `bridge_config` with inline outcome handling:
