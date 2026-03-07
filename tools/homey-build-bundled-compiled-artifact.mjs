@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
+import { pathToFileURL } from 'node:url';
 import {
   REPO_ROOT,
   sanitizeJsonPathsForRepo,
@@ -47,16 +48,17 @@ function parseFlagMap(argv) {
   return flags;
 }
 
-function getUsageText() {
+export function getUsageText() {
   return [
     'Usage:',
     '  homey-build-bundled-compiled-artifact',
     '    [--manifest-file rules/manifest.json]',
     '    [--output-file co.lazylabs.zwavejs2homey/assets/compiled/compiled-homey-profiles.v1.json]',
+    '    [--check]',
   ].join('\n');
 }
 
-function parseCliArgs(argv) {
+export function parseCliArgs(argv) {
   if (argv.includes('--help') || argv.includes('-h')) return { ok: false, error: getUsageText() };
   const flags = parseFlagMap(argv);
   const manifestFile = path.resolve(flags.get('--manifest-file') ?? DEFAULT_MANIFEST_FILE);
@@ -66,6 +68,7 @@ function parseCliArgs(argv) {
     command: {
       manifestFile,
       outputFile,
+      check: flags.has('--check'),
     },
   };
 }
@@ -218,7 +221,7 @@ function buildPipelineFingerprint(source) {
   return createHash('sha256').update(JSON.stringify(source)).digest('hex');
 }
 
-function buildBundledArtifact(command) {
+export function buildBundledArtifact(command) {
   const manifestEntries = toManifestEntries(command.manifestFile);
   const loaded = loadJsonRuleSetManifestWithOptions(manifestEntries);
 
@@ -292,18 +295,128 @@ function writeArtifact(filePath, artifact) {
   fs.writeFileSync(filePath, `${JSON.stringify(artifact, null, 2)}\n`, 'utf8');
 }
 
+function isObject(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function stableValuePreview(value) {
+  if (typeof value === 'string') return `"${value}"`;
+  if (
+    typeof value === 'number' ||
+    typeof value === 'boolean' ||
+    value === null ||
+    typeof value === 'undefined'
+  ) {
+    return String(value);
+  }
+  if (Array.isArray(value)) return `Array(len=${value.length})`;
+  if (isObject(value)) return `Object(keys=${Object.keys(value).length})`;
+  return String(value);
+}
+
+function firstJsonDiff(expected, actual, pointer = '$') {
+  if (Object.is(expected, actual)) return null;
+
+  if (Array.isArray(expected) || Array.isArray(actual)) {
+    if (!Array.isArray(expected) || !Array.isArray(actual)) {
+      return { pointer, expected, actual, reason: 'type-mismatch' };
+    }
+    if (expected.length !== actual.length) {
+      return {
+        pointer: `${pointer}.length`,
+        expected: expected.length,
+        actual: actual.length,
+        reason: 'array-length-mismatch',
+      };
+    }
+    for (let index = 0; index < expected.length; index += 1) {
+      const nested = firstJsonDiff(expected[index], actual[index], `${pointer}[${index}]`);
+      if (nested) return nested;
+    }
+    return null;
+  }
+
+  if (isObject(expected) || isObject(actual)) {
+    if (!isObject(expected) || !isObject(actual)) {
+      return { pointer, expected, actual, reason: 'type-mismatch' };
+    }
+    const expectedKeys = Object.keys(expected).sort();
+    const actualKeys = Object.keys(actual).sort();
+    const keyCountDiff = firstJsonDiff(expectedKeys, actualKeys, `${pointer}.__keys`);
+    if (keyCountDiff) return keyCountDiff;
+    for (const key of expectedKeys) {
+      const nested = firstJsonDiff(expected[key], actual[key], `${pointer}.${key}`);
+      if (nested) return nested;
+    }
+    return null;
+  }
+
+  return { pointer, expected, actual, reason: 'value-mismatch' };
+}
+
+export function verifyBundledArtifactSync(command) {
+  const result = buildBundledArtifact(command);
+  const normalizedExpectedArtifact = JSON.parse(JSON.stringify(result.artifact));
+  let committedArtifact;
+  try {
+    committedArtifact = readJsonFile(command.outputFile);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      [
+        `error: bundled compiled artifact is missing or unreadable: ${toRepoRelative(command.outputFile)}`,
+        `hint: run npm run compiler:build:bundled`,
+        `detail: ${detail}`,
+      ].join('\n'),
+    );
+  }
+  const diff = firstJsonDiff(normalizedExpectedArtifact, committedArtifact);
+  if (diff) {
+    throw new Error(
+      [
+        'error: bundled compiled artifact is out of sync with manifest/rules inputs',
+        `at: ${diff.pointer}`,
+        `expected: ${stableValuePreview(diff.expected)}`,
+        `actual: ${stableValuePreview(diff.actual)}`,
+        'hint: run npm run compiler:build:bundled',
+      ].join('\n'),
+    );
+  }
+  return result;
+}
+
+export function runBundledArtifactCommand(command, io = console) {
+  if (command.check) {
+    const result = verifyBundledArtifactSync(command);
+    io.log(`Bundled compiled artifact is in sync: ${result.summary.entries} entries`);
+    io.log(`Manifest: ${result.summary.manifestFile}`);
+    io.log(`Output: ${result.summary.outputFile}`);
+    return result;
+  }
+  const result = buildBundledArtifact(command);
+  writeArtifact(command.outputFile, result.artifact);
+  io.log(`Bundled compiled artifact generated: ${result.summary.entries} entries`);
+  io.log(`Manifest: ${result.summary.manifestFile}`);
+  io.log(`Output: ${result.summary.outputFile}`);
+  return result;
+}
+
 function main() {
   const parsed = parseCliArgs(process.argv.slice(2));
   if (!parsed.ok) {
     console.error(parsed.error);
     process.exit(parsed.error === getUsageText() ? 0 : 1);
   }
-
-  const result = buildBundledArtifact(parsed.command);
-  writeArtifact(parsed.command.outputFile, result.artifact);
-  console.log(`Bundled compiled artifact generated: ${result.summary.entries} entries`);
-  console.log(`Manifest: ${result.summary.manifestFile}`);
-  console.log(`Output: ${result.summary.outputFile}`);
+  try {
+    runBundledArtifactCommand(parsed.command, console);
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  }
 }
 
-main();
+const isMainModule =
+  process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
+if (isMainModule) {
+  main();
+}

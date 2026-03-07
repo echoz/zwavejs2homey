@@ -235,6 +235,10 @@ Delivered in early Phase 7 slices:
 - added capability coverage audit CLI (`homey:capability-audit`) to correlate bundled compiled profiles with runtime support-bundle diagnostics and rank capability expansion pressure
 - added inspect-live candidate ranking CLI (`compiler:expansion-candidates`) to rank product triples needing curation/rule expansion directly from live compile output
 - tuned expansion-candidate scoring so technical-only unmatched reasons do not inflate pressure on already-stable curated triples
+- added curated artifact shipping workflow for bundled runtime profiles:
+  - `compiler:build:bundled` generates deterministic bundled artifact output
+  - `compiler:verify:bundled` enforces freshness against manifest/rule inputs
+  - `compiler:ship:curated` provides one-step build + verify handoff
 - expanded runtime specialized capability coercion for:
   - `measure_battery` (Z-Wave battery sentinel normalization + bounded values)
   - `enum_select` (stable inbound string normalization + numeric outbound adaptation when target value type is numeric)

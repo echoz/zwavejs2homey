@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const { pathToFileURL } = require('node:url');
 const { assertCompiledHomeyProfilesArtifactV1 } = require('@zwavejs2homey/compiler');
 const {
   getSpecializedCapabilityCoercions,
@@ -18,6 +19,11 @@ const BUNDLED_ARTIFACT_FILE = path.join(
   'compiled-homey-profiles.v1.json',
 );
 const RULE_MANIFEST_FILE = path.join(REPO_ROOT, 'rules', 'manifest.json');
+const BUNDLED_BUILD_TOOL_FILE = path.join(
+  REPO_ROOT,
+  'tools',
+  'homey-build-bundled-compiled-artifact.mjs',
+);
 
 const RUNTIME_MAPPING_COVERAGE_POLICY = {
   onoff: {
@@ -165,6 +171,23 @@ test('bundled compiled profiles artifact is valid and non-empty', () => {
   const artifact = readJsonFile(BUNDLED_ARTIFACT_FILE);
   assertCompiledHomeyProfilesArtifactV1(artifact);
   assert.ok(artifact.entries.length > 0, 'bundled artifact must not be empty');
+});
+
+test('bundled compiled profiles artifact is in sync with shipping build output', async () => {
+  const { buildBundledArtifact } = await import(pathToFileURL(BUNDLED_BUILD_TOOL_FILE).href);
+  const committedArtifact = readJsonFile(BUNDLED_ARTIFACT_FILE);
+  const rebuilt = buildBundledArtifact({
+    manifestFile: RULE_MANIFEST_FILE,
+    outputFile: BUNDLED_ARTIFACT_FILE,
+    check: false,
+  });
+  const normalizedCommitted = JSON.parse(JSON.stringify(committedArtifact));
+  const normalizedRebuilt = JSON.parse(JSON.stringify(rebuilt.artifact));
+  assert.deepEqual(
+    normalizedCommitted,
+    normalizedRebuilt,
+    'Bundled artifact is stale. Run npm run compiler:build:bundled and commit the updated artifact.',
+  );
 });
 
 test('bundled compiled profiles artifact covers all project-product targets from manifest', () => {

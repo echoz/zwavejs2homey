@@ -57,6 +57,15 @@ Close Phase 6 Reliability + UX with production-ready stability + diagnostics UX:
   - expanded parser/behavior tests in:
     - `packages/core/test/homey-capability-coverage-audit-tool.test.ts`
 
+- Curated artifact shipping slice:
+  - bundled compiler build tool now supports verification mode:
+    - `npm run compiler:verify:bundled`
+  - added one-step shipping workflow:
+    - `npm run compiler:ship:curated` (`build:bundled` + `verify:bundled`)
+  - root `check` gate now includes bundled artifact freshness verification
+  - added regression guard in Homey app tests to ensure committed bundled artifact stays in sync with tool output:
+    - `co.lazylabs.zwavejs2homey/test/bundled-compiled-artifact.test.ts`
+
 - Phase 7 capability coercion expansion slice:
   - added specialized runtime handling for `measure_battery`:
     - normalizes sentinel battery values (`255 -> 1`)
@@ -1782,9 +1791,9 @@ Close Phase 6 Reliability + UX with production-ready stability + diagnostics UX:
 
 ## Next Tasks
 
-1. Complete capability coverage audit tooling (`compiled artifact` + runtime `support-bundle` diagnostics correlation) to rank capability expansion pressure.
-2. Expand runtime capability handling for top capability families identified by the audit while preserving existing UX contracts.
-3. Run closure gates on every slice (`npm --prefix co.lazylabs.zwavejs2homey run test`, runtime smoke/support bundle checks).
+1. Expand runtime capability handling for top capability families identified by the audit while preserving existing UX contracts.
+2. Run closure gates on every slice (`npm --prefix co.lazylabs.zwavejs2homey run test`, runtime smoke/support bundle checks).
+3. Use `compiler:ship:curated` whenever product/generic rule changes affect bundled runtime profiles.
 
 Note:
 

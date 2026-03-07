@@ -140,6 +140,18 @@ Build the bundled Homey runtime compiled artifact (static, rule-derived):
 npm run compiler:build:bundled
 ```
 
+Verify committed bundled artifact is up to date with current manifest/rules:
+
+```bash
+npm run compiler:verify:bundled
+```
+
+Ship curated artifact update (build + verify):
+
+```bash
+npm run compiler:ship:curated
+```
+
 Inspect/validate/simulate compile results:
 
 ```bash

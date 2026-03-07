@@ -132,6 +132,9 @@ Delivered:
 
 - protocol client (`core`) is stable and tested
 - compiler pipeline and diagnostics/tooling are fully operational
+- curated artifact shipping path is explicit and deterministic:
+  - bundled artifact build (`compiler:build:bundled`)
+  - bundled artifact freshness verification (`compiler:verify:bundled`)
 - TUI is delivered (panel-first, dual-root, simulation/scaffold workflows)
 - Homey app topology is in place:
   - `bridge` multi-instance pairing (`main`, `bridge-2`, `bridge-3`, ...)
