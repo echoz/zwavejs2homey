@@ -73,6 +73,12 @@ Close Phase 6 Reliability + UX with production-ready stability + diagnostics UX:
     - `packages/core/test/homey-compile-inspect-tool.test.ts`
     - `packages/core/test/homey-compile-inspect-live-tool.test.ts`
 
+- Phase 7 simulation CLI parity slice:
+  - `compiler:simulate` now accepts and forwards `--noise-filter actionable|all`
+  - usage/help text updated to advertise inspect noise control in simulation loops
+  - added parse regression coverage:
+    - `packages/core/test/homey-compile-simulate-tool.test.ts`
+
 - Bridge deletion cascade slice:
   - deleting a bridge device now triggers cascading delete attempts for node devices bound to the same `bridgeId`
   - bridge deletion still tears down bridge runtime connection/session after cascade attempts
