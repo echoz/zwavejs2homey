@@ -166,8 +166,10 @@ module.exports = {
             const app = getRuntimeApp(homey);
             const params = normalizeObject(query, 'query');
             const homeyDeviceId = normalizeOptionalString(params.homeyDeviceId, 'homeyDeviceId');
+            const bridgeId = normalizeOptionalString(params.bridgeId, 'bridgeId');
             return app.getNodeRuntimeDiagnostics({
                 homeyDeviceId,
+                bridgeId,
             });
         });
     },
@@ -176,9 +178,11 @@ module.exports = {
             const app = getRuntimeApp(homey);
             const params = normalizeObject(query, 'query');
             const homeyDeviceId = normalizeOptionalString(params.homeyDeviceId, 'homeyDeviceId');
+            const bridgeId = normalizeOptionalString(params.bridgeId, 'bridgeId');
             const includeNoAction = normalizeOptionalBoolean(params.includeNoAction, 'includeNoAction');
             return app.getRuntimeSupportBundle({
                 homeyDeviceId,
+                bridgeId,
                 includeNoAction: includeNoAction === true,
             });
         });
@@ -188,9 +192,11 @@ module.exports = {
             const app = getRuntimeApp(homey);
             const params = normalizeObject(query, 'query');
             const homeyDeviceId = normalizeOptionalString(params.homeyDeviceId, 'homeyDeviceId');
+            const bridgeId = normalizeOptionalString(params.bridgeId, 'bridgeId');
             const includeNoAction = normalizeOptionalBoolean(params.includeNoAction, 'includeNoAction');
             return app.getRecommendationActionQueue({
                 homeyDeviceId,
+                bridgeId,
                 includeNoAction: includeNoAction === true,
             });
         });
@@ -218,9 +224,11 @@ module.exports = {
             const app = getRuntimeApp(homey);
             const payload = normalizeObject(body, 'body');
             const homeyDeviceId = normalizeOptionalString(payload.homeyDeviceId, 'homeyDeviceId');
+            const bridgeId = normalizeOptionalString(payload.bridgeId, 'bridgeId');
             const includeNoAction = normalizeOptionalBoolean(payload.includeNoAction, 'includeNoAction');
             return app.executeRecommendationActions({
                 homeyDeviceId,
+                bridgeId,
                 includeNoAction: includeNoAction === true,
             });
         });

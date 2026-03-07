@@ -43,12 +43,15 @@ test('client getRuntimeDiagnostics forwards encoded query and unwraps envelope',
   });
   const client = createRuntimeApiClient(homeyApi);
 
-  const result = await client.getRuntimeDiagnostics({ homeyDeviceId: ' main:8 ' });
+  const result = await client.getRuntimeDiagnostics({
+    homeyDeviceId: ' main:8 ',
+    bridgeId: ' bridge-2 ',
+  });
   assert.deepEqual(result, { kind: 'diagnostics' });
   assert.deepEqual(homeyApi.calls, [
     {
       method: 'GET',
-      uri: '/runtime/diagnostics?homeyDeviceId=main%3A8',
+      uri: '/runtime/diagnostics?homeyDeviceId=main%3A8&bridgeId=bridge-2',
       body: undefined,
     },
   ]);
@@ -79,12 +82,13 @@ test('client getRecommendationActionQueue encodes includeNoAction in query', asy
 
   const result = await client.getRecommendationActionQueue({
     homeyDeviceId: 'main:8',
+    bridgeId: 'bridge-2',
     includeNoAction: true,
   });
   assert.equal(result.kind, 'queue');
   assert.deepEqual(homeyApi.calls[0], {
     method: 'GET',
-    uri: '/runtime/recommendations?homeyDeviceId=main%3A8&includeNoAction=true',
+    uri: '/runtime/recommendations?homeyDeviceId=main%3A8&bridgeId=bridge-2&includeNoAction=true',
     body: undefined,
   });
 });
@@ -97,12 +101,13 @@ test('client getRuntimeSupportBundle encodes query options', async () => {
 
   const result = await client.getRuntimeSupportBundle({
     homeyDeviceId: 'main:8',
+    bridgeId: 'bridge-2',
     includeNoAction: false,
   });
   assert.equal(result.kind, 'support-bundle');
   assert.deepEqual(homeyApi.calls[0], {
     method: 'GET',
-    uri: '/runtime/support-bundle?homeyDeviceId=main%3A8&includeNoAction=false',
+    uri: '/runtime/support-bundle?homeyDeviceId=main%3A8&bridgeId=bridge-2&includeNoAction=false',
     body: undefined,
   });
 });
@@ -118,6 +123,22 @@ test('client executeRecommendationAction validates required homeyDeviceId', asyn
     (error) => {
       assert.ok(error instanceof RuntimeApiClientError);
       assert.equal(error.code, 'invalid-argument');
+      return true;
+    },
+  );
+});
+
+test('client rejects non-string bridgeId arguments', async () => {
+  const homeyApi = createCallbackHomeyApi(() => {
+    throw new Error('should-not-call-homey-api');
+  });
+  const client = createRuntimeApiClient(homeyApi);
+  await assert.rejects(
+    () => client.getRuntimeDiagnostics({ bridgeId: 123 }),
+    (error) => {
+      assert.ok(error instanceof RuntimeApiClientError);
+      assert.equal(error.code, 'invalid-argument');
+      assert.match(error.message, /bridgeId must be a string/);
       return true;
     },
   );
@@ -149,13 +170,14 @@ test('client executeRecommendationActions forwards batch payload', async () => {
 
   const result = await client.executeRecommendationActions({
     homeyDeviceId: 'main:8',
+    bridgeId: 'bridge-2',
     includeNoAction: false,
   });
   assert.equal(result.total, 2);
   assert.deepEqual(homeyApi.calls[0], {
     method: 'POST',
     uri: '/runtime/recommendations/execute-batch',
-    body: { homeyDeviceId: 'main:8', includeNoAction: false },
+    body: { homeyDeviceId: 'main:8', bridgeId: 'bridge-2', includeNoAction: false },
   });
 });
 
@@ -216,7 +238,7 @@ test('client supports promise-style Homey api wrappers', async () => {
     {
       method: 'POST',
       uri: '/runtime/recommendations/execute-batch',
-      body: { homeyDeviceId: undefined, includeNoAction: undefined },
+      body: { homeyDeviceId: undefined, bridgeId: undefined, includeNoAction: undefined },
     },
   ]);
 });

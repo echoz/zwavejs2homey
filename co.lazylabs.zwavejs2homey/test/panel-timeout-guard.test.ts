@@ -43,4 +43,20 @@ test('settings page wraps Homey.api calls with apiRequestWithTimeout helper', ()
     1,
     `${relativePath}: homey.api should only appear inside apiRequestWithTimeout`,
   );
+
+  assert.match(
+    source,
+    /const bridgeFilter = mustElement<HTMLSelectElement>\('bridgeFilter'\)/,
+    `${relativePath}: missing bridge scope selector wiring`,
+  );
+  assert.match(
+    source,
+    /\/runtime\/diagnostics\$\{query\}/,
+    `${relativePath}: diagnostics request should support scoped query`,
+  );
+  assert.match(
+    source,
+    /\/runtime\/support-bundle\$\{query\}/,
+    `${relativePath}: support bundle request should support scoped query`,
+  );
 });

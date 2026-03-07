@@ -197,6 +197,7 @@ Delivered in Phase 6 so far:
 - app settings bridge visibility:
   - added read-only runtime bridge inventory endpoint (`GET /runtime/bridges`)
   - settings page now lists configured bridges with connection/runtime status and imported-node counts
+  - settings diagnostics/support-bundle flows now support per-bridge scope selection and row-level quick actions (`Use Scope`/`Help`)
 
 ## Active Risks
 

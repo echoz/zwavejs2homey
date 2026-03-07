@@ -66,6 +66,9 @@ function toQueryString(options) {
     if (options.homeyDeviceId) {
         segments.push(`homeyDeviceId=${encodeURIComponent(options.homeyDeviceId)}`);
     }
+    if (options.bridgeId) {
+        segments.push(`bridgeId=${encodeURIComponent(options.bridgeId)}`);
+    }
     if (typeof options.includeNoAction === 'boolean') {
         segments.push(`includeNoAction=${encodeURIComponent(options.includeNoAction ? 'true' : 'false')}`);
     }
@@ -136,21 +139,24 @@ function createRuntimeApiClient(homeyApi) {
         },
         async getRuntimeDiagnostics(options = {}) {
             const homeyDeviceId = normalizeOptionalString(options.homeyDeviceId, 'homeyDeviceId');
-            const query = toQueryString({ homeyDeviceId });
+            const bridgeId = normalizeOptionalString(options.bridgeId, 'bridgeId');
+            const query = toQueryString({ homeyDeviceId, bridgeId });
             const response = await invokeHomeyApi(homeyApi, 'GET', `/runtime/diagnostics${query}`);
             return parseEnvelope(response);
         },
         async getRuntimeSupportBundle(options = {}) {
             const homeyDeviceId = normalizeOptionalString(options.homeyDeviceId, 'homeyDeviceId');
+            const bridgeId = normalizeOptionalString(options.bridgeId, 'bridgeId');
             const includeNoAction = normalizeOptionalBoolean(options.includeNoAction, 'includeNoAction');
-            const query = toQueryString({ homeyDeviceId, includeNoAction });
+            const query = toQueryString({ homeyDeviceId, bridgeId, includeNoAction });
             const response = await invokeHomeyApi(homeyApi, 'GET', `/runtime/support-bundle${query}`);
             return parseEnvelope(response);
         },
         async getRecommendationActionQueue(options = {}) {
             const homeyDeviceId = normalizeOptionalString(options.homeyDeviceId, 'homeyDeviceId');
+            const bridgeId = normalizeOptionalString(options.bridgeId, 'bridgeId');
             const includeNoAction = normalizeOptionalBoolean(options.includeNoAction, 'includeNoAction');
-            const query = toQueryString({ homeyDeviceId, includeNoAction });
+            const query = toQueryString({ homeyDeviceId, bridgeId, includeNoAction });
             const response = await invokeHomeyApi(homeyApi, 'GET', `/runtime/recommendations${query}`);
             return parseEnvelope(response);
         },
@@ -166,9 +172,11 @@ function createRuntimeApiClient(homeyApi) {
         },
         async executeRecommendationActions(options = {}) {
             const homeyDeviceId = normalizeOptionalString(options.homeyDeviceId, 'homeyDeviceId');
+            const bridgeId = normalizeOptionalString(options.bridgeId, 'bridgeId');
             const includeNoAction = normalizeOptionalBoolean(options.includeNoAction, 'includeNoAction');
             const response = await invokeHomeyApi(homeyApi, 'POST', '/runtime/recommendations/execute-batch', {
                 homeyDeviceId,
+                bridgeId,
                 includeNoAction,
             });
             return parseEnvelope(response);

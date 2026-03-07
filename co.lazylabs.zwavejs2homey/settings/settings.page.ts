@@ -88,6 +88,8 @@ interface SettingsHomey {
   }
 
   const status = mustElement<HTMLElement>('status');
+  const bridgeFilter = mustElement<HTMLSelectElement>('bridgeFilter');
+  const bridgeScopeHint = mustElement<HTMLElement>('bridgeScopeHint');
   const runtimeKv = mustElement<HTMLElement>('runtime-kv');
   const runtimeHint = mustElement<HTMLElement>('runtime-hint');
   const warnings = mustElement<HTMLElement>('warnings');
@@ -99,6 +101,8 @@ interface SettingsHomey {
   const openBridgeToolsBtn = mustElement<HTMLButtonElement>('openBridgeToolsBtn');
   const exportSupportBundleBtn = mustElement<HTMLButtonElement>('exportSupportBundleBtn');
   const redactSupportBundleCheckbox = mustElement<HTMLInputElement>('redactSupportBundle');
+  let bridgeInventoryItems: BridgeInventoryItem[] = [];
+  let activeBridgeScope: string | null = null;
 
   function escapeHtml(value: unknown): string {
     return String(value)
@@ -113,6 +117,34 @@ interface SettingsHomey {
     status.textContent = message;
     status.classList.remove('ok', 'warn', 'error', 'muted');
     status.classList.add(tone);
+  }
+
+  function normalizeBridgeScope(value: unknown): string | null {
+    if (typeof value !== 'string') return null;
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+
+  function buildQueryString(params: Record<string, string | boolean | undefined>): string {
+    const query = new URLSearchParams();
+    for (const [key, rawValue] of Object.entries(params)) {
+      if (typeof rawValue === 'undefined') continue;
+      if (typeof rawValue === 'boolean') {
+        query.set(key, rawValue ? 'true' : 'false');
+        continue;
+      }
+      query.set(key, rawValue);
+    }
+    const output = query.toString();
+    return output ? `?${output}` : '';
+  }
+
+  function bridgeScopeLabel(): string {
+    return activeBridgeScope ? `bridge ${activeBridgeScope}` : 'all bridges';
+  }
+
+  function renderBridgeScopeHint(): void {
+    bridgeScopeHint.textContent = `Scope: ${bridgeScopeLabel()}.`;
   }
 
   function downloadTextFile(fileName: string, content: string): void {
@@ -173,14 +205,14 @@ interface SettingsHomey {
     runtimeHint.textContent = viewModel.runtimeHint;
     if (viewModel.warningCount > 0) {
       setStatus(
-        `Runtime diagnostics refreshed with ${viewModel.warningCount} warning${
+        `Runtime diagnostics refreshed for ${bridgeScopeLabel()} with ${viewModel.warningCount} warning${
           viewModel.warningCount === 1 ? '' : 's'
         }.`,
         'warn',
       );
       return;
     }
-    setStatus('Runtime diagnostics refreshed.', 'ok');
+    setStatus(`Runtime diagnostics refreshed for ${bridgeScopeLabel()}.`, 'ok');
   }
 
   function toBridgeConnectionPill(item: BridgeInventoryItem): ConnectionPill {
@@ -231,15 +263,55 @@ interface SettingsHomey {
       .sort((left, right) => left.bridgeId.localeCompare(right.bridgeId));
   }
 
+  function renderBridgeScopeOptions(items: BridgeInventoryItem[]): void {
+    const previousScope = activeBridgeScope;
+    const availableScopeIds = new Set(items.map((item) => item.bridgeId));
+    if (activeBridgeScope && !availableScopeIds.has(activeBridgeScope)) {
+      activeBridgeScope = null;
+    }
+
+    bridgeFilter.innerHTML = '';
+    const allOption = document.createElement('option');
+    allOption.value = '';
+    allOption.textContent = 'All Bridges';
+    bridgeFilter.appendChild(allOption);
+
+    for (const item of items) {
+      const option = document.createElement('option');
+      option.value = item.bridgeId;
+      const nameLabel = item.name && item.name.trim().length > 0 ? ` (${item.name.trim()})` : '';
+      option.textContent = `${item.bridgeId}${nameLabel}`;
+      bridgeFilter.appendChild(option);
+    }
+
+    bridgeFilter.disabled = items.length === 0;
+    bridgeFilter.value = activeBridgeScope ?? '';
+    renderBridgeScopeHint();
+
+    if (previousScope && previousScope !== activeBridgeScope) {
+      setStatus(
+        `Selected scope "${previousScope}" is no longer available. Reset to all bridges.`,
+        'warn',
+      );
+    }
+  }
+
+  function buildBridgeToolsHint(item: BridgeInventoryItem): string {
+    const deviceLabel = item.name && item.name.trim().length > 0 ? item.name.trim() : item.bridgeId;
+    return `For ${deviceLabel} (${item.bridgeId}): open Devices -> ZWJS Bridge -> Device Settings for URL/auth, or Repair for diagnostics and actions.`;
+  }
+
   function renderBridgeInventory(items: BridgeInventoryItem[]): void {
     if (!Array.isArray(items) || items.length === 0) {
       bridgesTableWrap.hidden = true;
       bridgesTableBody.innerHTML = '';
       bridgesEmpty.hidden = false;
       bridgesHint.textContent = 'No bridge devices are currently configured.';
+      renderBridgeScopeOptions([]);
       return;
     }
 
+    renderBridgeScopeOptions(items);
     bridgesTableWrap.hidden = false;
     bridgesEmpty.hidden = true;
     bridgesHint.textContent = `Showing ${items.length} configured bridge device(s).`;
@@ -250,8 +322,9 @@ interface SettingsHomey {
           item.runtime.lifecycle && item.runtime.lifecycle.trim().length > 0
             ? item.runtime.lifecycle
             : 'stopped';
+        const isScoped = activeBridgeScope && activeBridgeScope === item.bridgeId;
         return `
-          <tr>
+          <tr class="${isScoped ? 'is-scoped' : ''}">
             <td>
               <strong>${escapeHtml(item.bridgeId)}</strong><br />
               <span class="muted">${escapeHtml(item.name ?? item.homeyDeviceId ?? 'n/a')}</span>
@@ -265,6 +338,16 @@ interface SettingsHomey {
             </td>
             <td>${escapeHtml(lifecycleLabel)}</td>
             <td>${escapeHtml(item.importedNodeCount)}</td>
+            <td>
+              <div class="bridge-actions">
+                <button type="button" data-bridge-action="scope" data-bridge-id="${escapeHtml(
+                  item.bridgeId,
+                )}">Use Scope</button>
+                <button type="button" data-bridge-action="guide" data-bridge-id="${escapeHtml(
+                  item.bridgeId,
+                )}">Help</button>
+              </div>
+            </td>
           </tr>
         `;
       })
@@ -308,13 +391,14 @@ interface SettingsHomey {
 
   async function refreshDiagnostics(homey: SettingsHomey): Promise<void> {
     refreshDiagnosticsBtn.disabled = true;
-    runtimeHint.textContent = 'Refreshing runtime diagnostics...';
-    setStatus('Refreshing runtime diagnostics...', 'muted');
+    runtimeHint.textContent = `Refreshing runtime diagnostics for ${bridgeScopeLabel()}...`;
+    setStatus(`Refreshing runtime diagnostics for ${bridgeScopeLabel()}...`, 'muted');
     try {
+      const query = buildQueryString({ bridgeId: activeBridgeScope ?? undefined });
       const response = await apiRequestWithTimeout(
         homey,
         'GET',
-        '/runtime/diagnostics',
+        `/runtime/diagnostics${query}`,
         null,
         'runtime diagnostics request',
       );
@@ -332,7 +416,7 @@ interface SettingsHomey {
       setStatus(`Failed to load runtime diagnostics: ${message}`, 'error');
       renderRuntimeRows([]);
       renderWarnings(['Runtime diagnostics endpoint is unavailable.']);
-      runtimeHint.textContent = 'Runtime diagnostics unavailable.';
+      runtimeHint.textContent = `Runtime diagnostics unavailable for ${bridgeScopeLabel()}.`;
     } finally {
       refreshDiagnosticsBtn.disabled = false;
     }
@@ -351,13 +435,16 @@ interface SettingsHomey {
       );
       const parsed = presenter.parseRuntimeResponse(response);
       if (parsed.error || !parsed.data) {
+        bridgeInventoryItems = [];
         renderBridgeInventory([]);
         bridgesHint.textContent = parsed.error || 'Bridge inventory payload is invalid.';
         return;
       }
       const items = normalizeBridgeInventoryItems(parsed.data);
+      bridgeInventoryItems = items;
       renderBridgeInventory(items);
     } catch (error) {
+      bridgeInventoryItems = [];
       renderBridgeInventory([]);
       const message = error instanceof Error ? error.message : String(error);
       bridgesHint.textContent = `Bridge inventory unavailable: ${message}`;
@@ -369,10 +456,14 @@ interface SettingsHomey {
     const redact = redactSupportBundleCheckbox.checked;
     setStatus('Building support bundle...', 'muted');
     try {
+      const query = buildQueryString({
+        includeNoAction: true,
+        bridgeId: activeBridgeScope ?? undefined,
+      });
       const response = await apiRequestWithTimeout(
         homey,
         'GET',
-        '/runtime/support-bundle?includeNoAction=true',
+        `/runtime/support-bundle${query}`,
         null,
         'support bundle request',
       );
@@ -404,9 +495,46 @@ interface SettingsHomey {
       void refreshBridgeInventory(homey);
     });
 
+    bridgeFilter.addEventListener('change', () => {
+      activeBridgeScope = normalizeBridgeScope(bridgeFilter.value);
+      renderBridgeScopeHint();
+      void refreshDiagnostics(homey);
+    });
+
+    bridgesTableBody.addEventListener('click', (event) => {
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
+      const button = target.closest('button[data-bridge-action]') as HTMLButtonElement | null;
+      if (!button) return;
+      const bridgeId = normalizeBridgeScope(button.dataset.bridgeId);
+      if (!bridgeId) return;
+      const action = button.dataset.bridgeAction;
+      if (action === 'scope') {
+        activeBridgeScope = bridgeId;
+        bridgeFilter.value = bridgeId;
+        renderBridgeScopeHint();
+        renderBridgeInventory(bridgeInventoryItems);
+        void refreshDiagnostics(homey);
+        return;
+      }
+      if (action === 'guide') {
+        const bridge = bridgeInventoryItems.find((item) => item.bridgeId === bridgeId);
+        if (bridge) {
+          setStatus(buildBridgeToolsHint(bridge), 'muted');
+        }
+      }
+    });
+
     openBridgeToolsBtn.addEventListener('click', () => {
+      if (activeBridgeScope) {
+        const bridge = bridgeInventoryItems.find((item) => item.bridgeId === activeBridgeScope);
+        if (bridge) {
+          setStatus(buildBridgeToolsHint(bridge), 'muted');
+          return;
+        }
+      }
       setStatus(
-        'Open Devices -> ZWJS Bridge -> Repair for runtime tools, or Device Settings to edit bridge URL/auth.',
+        'Open Devices -> ZWJS Bridge -> Device Settings or Repair for bridge-level tooling.',
         'muted',
       );
     });

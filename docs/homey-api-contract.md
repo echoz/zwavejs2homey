@@ -45,15 +45,18 @@ Error responses keep the same shape:
 - `GET /runtime/diagnostics`
   - query:
     - `homeyDeviceId` (optional string)
+    - `bridgeId` (optional string)
 - `GET /runtime/support-bundle`
   - query:
     - `homeyDeviceId` (optional string)
+    - `bridgeId` (optional string)
     - `includeNoAction` (optional boolean-like string: `true|false|1|0|yes|no`)
   - used by:
     - settings UI "Export Support Bundle" action
 - `GET /runtime/recommendations`
   - query:
     - `homeyDeviceId` (optional string)
+    - `bridgeId` (optional string)
     - `includeNoAction` (optional boolean-like string: `true|false|1|0|yes|no`)
 - `POST /runtime/recommendations/execute`
   - body:
@@ -66,7 +69,15 @@ Error responses keep the same shape:
 - `POST /runtime/recommendations/execute-batch`
   - body:
     - `homeyDeviceId` (optional string)
+    - `bridgeId` (optional string)
     - `includeNoAction` (optional boolean-like string or boolean)
+
+Settings UI notes:
+
+- Diagnostics/support-bundle scope can be narrowed by bridge (`Bridge Scope` selector).
+- Configured bridge rows expose quick actions:
+  - `Use Scope` to focus diagnostics/export on that bridge
+  - `Help` to show per-bridge Device Settings/Repair navigation guidance
 
 ## Client Helper
 

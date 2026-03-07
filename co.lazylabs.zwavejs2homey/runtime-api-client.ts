@@ -47,13 +47,18 @@ interface HomeyApiFacade {
 export interface RuntimeApiClient {
   RuntimeApiClientError: typeof RuntimeApiClientError;
   getRuntimeBridges: () => Promise<unknown>;
-  getRuntimeDiagnostics: (options?: { homeyDeviceId?: unknown }) => Promise<unknown>;
+  getRuntimeDiagnostics: (options?: {
+    homeyDeviceId?: unknown;
+    bridgeId?: unknown;
+  }) => Promise<unknown>;
   getRuntimeSupportBundle: (options?: {
     homeyDeviceId?: unknown;
+    bridgeId?: unknown;
     includeNoAction?: unknown;
   }) => Promise<unknown>;
   getRecommendationActionQueue: (options?: {
     homeyDeviceId?: unknown;
+    bridgeId?: unknown;
     includeNoAction?: unknown;
   }) => Promise<unknown>;
   executeRecommendationAction: (options: {
@@ -62,6 +67,7 @@ export interface RuntimeApiClient {
   }) => Promise<unknown>;
   executeRecommendationActions: (options?: {
     homeyDeviceId?: unknown;
+    bridgeId?: unknown;
     includeNoAction?: unknown;
   }) => Promise<unknown>;
 }
@@ -116,10 +122,17 @@ function normalizeOptionalAction(value: unknown): OptionalAction | undefined {
   );
 }
 
-function toQueryString(options: { homeyDeviceId?: string; includeNoAction?: boolean }): string {
+function toQueryString(options: {
+  homeyDeviceId?: string;
+  bridgeId?: string;
+  includeNoAction?: boolean;
+}): string {
   const segments: string[] = [];
   if (options.homeyDeviceId) {
     segments.push(`homeyDeviceId=${encodeURIComponent(options.homeyDeviceId)}`);
+  }
+  if (options.bridgeId) {
+    segments.push(`bridgeId=${encodeURIComponent(options.bridgeId)}`);
   }
   if (typeof options.includeNoAction === 'boolean') {
     segments.push(
@@ -213,23 +226,26 @@ export function createRuntimeApiClient(homeyApi: unknown): RuntimeApiClient {
 
     async getRuntimeDiagnostics(options = {}) {
       const homeyDeviceId = normalizeOptionalString(options.homeyDeviceId, 'homeyDeviceId');
-      const query = toQueryString({ homeyDeviceId });
+      const bridgeId = normalizeOptionalString(options.bridgeId, 'bridgeId');
+      const query = toQueryString({ homeyDeviceId, bridgeId });
       const response = await invokeHomeyApi(homeyApi, 'GET', `/runtime/diagnostics${query}`);
       return parseEnvelope(response);
     },
 
     async getRuntimeSupportBundle(options = {}) {
       const homeyDeviceId = normalizeOptionalString(options.homeyDeviceId, 'homeyDeviceId');
+      const bridgeId = normalizeOptionalString(options.bridgeId, 'bridgeId');
       const includeNoAction = normalizeOptionalBoolean(options.includeNoAction, 'includeNoAction');
-      const query = toQueryString({ homeyDeviceId, includeNoAction });
+      const query = toQueryString({ homeyDeviceId, bridgeId, includeNoAction });
       const response = await invokeHomeyApi(homeyApi, 'GET', `/runtime/support-bundle${query}`);
       return parseEnvelope(response);
     },
 
     async getRecommendationActionQueue(options = {}) {
       const homeyDeviceId = normalizeOptionalString(options.homeyDeviceId, 'homeyDeviceId');
+      const bridgeId = normalizeOptionalString(options.bridgeId, 'bridgeId');
       const includeNoAction = normalizeOptionalBoolean(options.includeNoAction, 'includeNoAction');
-      const query = toQueryString({ homeyDeviceId, includeNoAction });
+      const query = toQueryString({ homeyDeviceId, bridgeId, includeNoAction });
       const response = await invokeHomeyApi(homeyApi, 'GET', `/runtime/recommendations${query}`);
       return parseEnvelope(response);
     },
@@ -247,6 +263,7 @@ export function createRuntimeApiClient(homeyApi: unknown): RuntimeApiClient {
 
     async executeRecommendationActions(options = {}) {
       const homeyDeviceId = normalizeOptionalString(options.homeyDeviceId, 'homeyDeviceId');
+      const bridgeId = normalizeOptionalString(options.bridgeId, 'bridgeId');
       const includeNoAction = normalizeOptionalBoolean(options.includeNoAction, 'includeNoAction');
       const response = await invokeHomeyApi(
         homeyApi,
@@ -254,6 +271,7 @@ export function createRuntimeApiClient(homeyApi: unknown): RuntimeApiClient {
         '/runtime/recommendations/execute-batch',
         {
           homeyDeviceId,
+          bridgeId,
           includeNoAction,
         },
       );

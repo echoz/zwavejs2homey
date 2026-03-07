@@ -21,6 +21,20 @@ Kick off Phase 6 Reliability + UX delivery:
 
 ## Recently Completed
 
+- Settings scoped-diagnostics + bridge quick-actions slice:
+  - settings diagnostics now support bridge scoping via `Bridge Scope` selector (`all` or per bridge)
+  - scoped requests now flow through:
+    - `GET /runtime/diagnostics?bridgeId=...`
+    - `GET /runtime/support-bundle?bridgeId=...`
+  - configured bridge rows now include quick actions:
+    - `Use Scope` (focus diagnostics/export on that bridge)
+    - `Help` (show bridge-specific Device Settings/Repair navigation guidance)
+  - API/runtime client normalization now accepts optional `bridgeId` on diagnostics/support-bundle/recommendation routes
+  - added/updated regression coverage for:
+    - API route bridgeId parsing
+    - runtime API client bridgeId query/body support
+    - settings page scoped-route wiring guard
+
 - App settings configured-bridges visibility slice:
   - added runtime route `GET /runtime/bridges` for read-only bridge inventory
   - app runtime now exposes `getBridgeRuntimeInventory()` with:

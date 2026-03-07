@@ -65,11 +65,11 @@ test('api getRuntimeDiagnostics forwards normalized query options', async () => 
   const { homey, calls } = createHomeyAppStub();
   const result = await api.getRuntimeDiagnostics({
     homey,
-    query: { homeyDeviceId: '  main:8 ' },
+    query: { homeyDeviceId: '  main:8 ', bridgeId: '  bridge-2  ' },
   });
   assertSuccessEnvelope(result);
   assert.equal(result.data.kind, 'diagnostics');
-  assert.deepEqual(calls.diagnostics, [{ homeyDeviceId: 'main:8' }]);
+  assert.deepEqual(calls.diagnostics, [{ homeyDeviceId: 'main:8', bridgeId: 'bridge-2' }]);
 });
 
 test('api getRuntimeBridges forwards request to app runtime', async () => {
@@ -86,22 +86,26 @@ test('api getRecommendationActionQueue parses includeNoAction values', async () 
   const { homey, calls } = createHomeyAppStub();
   const result = await api.getRecommendationActionQueue({
     homey,
-    query: { includeNoAction: 'true', homeyDeviceId: 'main:8' },
+    query: { includeNoAction: 'true', homeyDeviceId: 'main:8', bridgeId: 'bridge-2' },
   });
   assertSuccessEnvelope(result);
   assert.equal(result.data.kind, 'queue');
-  assert.deepEqual(calls.queue, [{ homeyDeviceId: 'main:8', includeNoAction: true }]);
+  assert.deepEqual(calls.queue, [
+    { homeyDeviceId: 'main:8', bridgeId: 'bridge-2', includeNoAction: true },
+  ]);
 });
 
 test('api getRuntimeSupportBundle parses filter query options', async () => {
   const { homey, calls } = createHomeyAppStub();
   const result = await api.getRuntimeSupportBundle({
     homey,
-    query: { includeNoAction: '1', homeyDeviceId: ' main:8 ' },
+    query: { includeNoAction: '1', homeyDeviceId: ' main:8 ', bridgeId: ' bridge-2 ' },
   });
   assertSuccessEnvelope(result);
   assert.equal(result.data.kind, 'support-bundle');
-  assert.deepEqual(calls.supportBundle, [{ homeyDeviceId: 'main:8', includeNoAction: true }]);
+  assert.deepEqual(calls.supportBundle, [
+    { homeyDeviceId: 'main:8', bridgeId: 'bridge-2', includeNoAction: true },
+  ]);
 });
 
 test('api executeRecommendationAction returns structured error when homeyDeviceId missing', async () => {
@@ -136,11 +140,13 @@ test('api executeRecommendationActions forwards normalized payload', async () =>
   const { homey, calls } = createHomeyAppStub();
   const result = await api.executeRecommendationActions({
     homey,
-    body: { homeyDeviceId: 'main:8', includeNoAction: '1' },
+    body: { homeyDeviceId: 'main:8', bridgeId: ' bridge-2 ', includeNoAction: '1' },
   });
   assertSuccessEnvelope(result);
   assert.equal(result.data.kind, 'actions');
-  assert.deepEqual(calls.actions, [{ homeyDeviceId: 'main:8', includeNoAction: true }]);
+  assert.deepEqual(calls.actions, [
+    { homeyDeviceId: 'main:8', bridgeId: 'bridge-2', includeNoAction: true },
+  ]);
 });
 
 test('api returns structured errors for invalid includeNoAction values', async () => {
@@ -151,6 +157,16 @@ test('api returns structured errors for invalid includeNoAction values', async (
   });
   assertErrorEnvelope(result, /invalid-request/);
   assert.match(result.error.message, /includeNoAction must be a boolean/);
+});
+
+test('api getRuntimeDiagnostics returns structured errors for invalid bridgeId type', async () => {
+  const { homey } = createHomeyAppStub();
+  const result = await api.getRuntimeDiagnostics({
+    homey,
+    query: { bridgeId: 42 },
+  });
+  assertErrorEnvelope(result, /invalid-request/);
+  assert.match(result.error.message, /bridgeId must be a string/);
 });
 
 test('api returns runtime-error envelope on unexpected app failures', async () => {

@@ -12,6 +12,8 @@
         return element;
     }
     const status = mustElement('status');
+    const bridgeFilter = mustElement('bridgeFilter');
+    const bridgeScopeHint = mustElement('bridgeScopeHint');
     const runtimeKv = mustElement('runtime-kv');
     const runtimeHint = mustElement('runtime-hint');
     const warnings = mustElement('warnings');
@@ -23,6 +25,8 @@
     const openBridgeToolsBtn = mustElement('openBridgeToolsBtn');
     const exportSupportBundleBtn = mustElement('exportSupportBundleBtn');
     const redactSupportBundleCheckbox = mustElement('redactSupportBundle');
+    let bridgeInventoryItems = [];
+    let activeBridgeScope = null;
     function escapeHtml(value) {
         return String(value)
             .replace(/&/g, '&amp;')
@@ -35,6 +39,32 @@
         status.textContent = message;
         status.classList.remove('ok', 'warn', 'error', 'muted');
         status.classList.add(tone);
+    }
+    function normalizeBridgeScope(value) {
+        if (typeof value !== 'string')
+            return null;
+        const trimmed = value.trim();
+        return trimmed.length > 0 ? trimmed : null;
+    }
+    function buildQueryString(params) {
+        const query = new URLSearchParams();
+        for (const [key, rawValue] of Object.entries(params)) {
+            if (typeof rawValue === 'undefined')
+                continue;
+            if (typeof rawValue === 'boolean') {
+                query.set(key, rawValue ? 'true' : 'false');
+                continue;
+            }
+            query.set(key, rawValue);
+        }
+        const output = query.toString();
+        return output ? `?${output}` : '';
+    }
+    function bridgeScopeLabel() {
+        return activeBridgeScope ? `bridge ${activeBridgeScope}` : 'all bridges';
+    }
+    function renderBridgeScopeHint() {
+        bridgeScopeHint.textContent = `Scope: ${bridgeScopeLabel()}.`;
     }
     function downloadTextFile(fileName, content) {
         const payload = content ?? '';
@@ -90,10 +120,10 @@
         renderWarnings(viewModel.warnings);
         runtimeHint.textContent = viewModel.runtimeHint;
         if (viewModel.warningCount > 0) {
-            setStatus(`Runtime diagnostics refreshed with ${viewModel.warningCount} warning${viewModel.warningCount === 1 ? '' : 's'}.`, 'warn');
+            setStatus(`Runtime diagnostics refreshed for ${bridgeScopeLabel()} with ${viewModel.warningCount} warning${viewModel.warningCount === 1 ? '' : 's'}.`, 'warn');
             return;
         }
-        setStatus('Runtime diagnostics refreshed.', 'ok');
+        setStatus(`Runtime diagnostics refreshed for ${bridgeScopeLabel()}.`, 'ok');
     }
     function toBridgeConnectionPill(item) {
         if (!item.configured) {
@@ -138,14 +168,45 @@
         })
             .sort((left, right) => left.bridgeId.localeCompare(right.bridgeId));
     }
+    function renderBridgeScopeOptions(items) {
+        const previousScope = activeBridgeScope;
+        const availableScopeIds = new Set(items.map((item) => item.bridgeId));
+        if (activeBridgeScope && !availableScopeIds.has(activeBridgeScope)) {
+            activeBridgeScope = null;
+        }
+        bridgeFilter.innerHTML = '';
+        const allOption = document.createElement('option');
+        allOption.value = '';
+        allOption.textContent = 'All Bridges';
+        bridgeFilter.appendChild(allOption);
+        for (const item of items) {
+            const option = document.createElement('option');
+            option.value = item.bridgeId;
+            const nameLabel = item.name && item.name.trim().length > 0 ? ` (${item.name.trim()})` : '';
+            option.textContent = `${item.bridgeId}${nameLabel}`;
+            bridgeFilter.appendChild(option);
+        }
+        bridgeFilter.disabled = items.length === 0;
+        bridgeFilter.value = activeBridgeScope ?? '';
+        renderBridgeScopeHint();
+        if (previousScope && previousScope !== activeBridgeScope) {
+            setStatus(`Selected scope "${previousScope}" is no longer available. Reset to all bridges.`, 'warn');
+        }
+    }
+    function buildBridgeToolsHint(item) {
+        const deviceLabel = item.name && item.name.trim().length > 0 ? item.name.trim() : item.bridgeId;
+        return `For ${deviceLabel} (${item.bridgeId}): open Devices -> ZWJS Bridge -> Device Settings for URL/auth, or Repair for diagnostics and actions.`;
+    }
     function renderBridgeInventory(items) {
         if (!Array.isArray(items) || items.length === 0) {
             bridgesTableWrap.hidden = true;
             bridgesTableBody.innerHTML = '';
             bridgesEmpty.hidden = false;
             bridgesHint.textContent = 'No bridge devices are currently configured.';
+            renderBridgeScopeOptions([]);
             return;
         }
+        renderBridgeScopeOptions(items);
         bridgesTableWrap.hidden = false;
         bridgesEmpty.hidden = true;
         bridgesHint.textContent = `Showing ${items.length} configured bridge device(s).`;
@@ -155,8 +216,9 @@
             const lifecycleLabel = item.runtime.lifecycle && item.runtime.lifecycle.trim().length > 0
                 ? item.runtime.lifecycle
                 : 'stopped';
+            const isScoped = activeBridgeScope && activeBridgeScope === item.bridgeId;
             return `
-          <tr>
+          <tr class="${isScoped ? 'is-scoped' : ''}">
             <td>
               <strong>${escapeHtml(item.bridgeId)}</strong><br />
               <span class="muted">${escapeHtml(item.name ?? item.homeyDeviceId ?? 'n/a')}</span>
@@ -168,6 +230,12 @@
             </td>
             <td>${escapeHtml(lifecycleLabel)}</td>
             <td>${escapeHtml(item.importedNodeCount)}</td>
+            <td>
+              <div class="bridge-actions">
+                <button type="button" data-bridge-action="scope" data-bridge-id="${escapeHtml(item.bridgeId)}">Use Scope</button>
+                <button type="button" data-bridge-action="guide" data-bridge-id="${escapeHtml(item.bridgeId)}">Help</button>
+              </div>
+            </td>
           </tr>
         `;
         })
@@ -206,10 +274,11 @@
     }
     async function refreshDiagnostics(homey) {
         refreshDiagnosticsBtn.disabled = true;
-        runtimeHint.textContent = 'Refreshing runtime diagnostics...';
-        setStatus('Refreshing runtime diagnostics...', 'muted');
+        runtimeHint.textContent = `Refreshing runtime diagnostics for ${bridgeScopeLabel()}...`;
+        setStatus(`Refreshing runtime diagnostics for ${bridgeScopeLabel()}...`, 'muted');
         try {
-            const response = await apiRequestWithTimeout(homey, 'GET', '/runtime/diagnostics', null, 'runtime diagnostics request');
+            const query = buildQueryString({ bridgeId: activeBridgeScope ?? undefined });
+            const response = await apiRequestWithTimeout(homey, 'GET', `/runtime/diagnostics${query}`, null, 'runtime diagnostics request');
             const parsed = presenter.parseRuntimeResponse(response);
             if (parsed.error) {
                 setStatus(parsed.error, 'error');
@@ -225,7 +294,7 @@
             setStatus(`Failed to load runtime diagnostics: ${message}`, 'error');
             renderRuntimeRows([]);
             renderWarnings(['Runtime diagnostics endpoint is unavailable.']);
-            runtimeHint.textContent = 'Runtime diagnostics unavailable.';
+            runtimeHint.textContent = `Runtime diagnostics unavailable for ${bridgeScopeLabel()}.`;
         }
         finally {
             refreshDiagnosticsBtn.disabled = false;
@@ -238,14 +307,17 @@
             const response = await apiRequestWithTimeout(homey, 'GET', '/runtime/bridges', null, 'bridge inventory request');
             const parsed = presenter.parseRuntimeResponse(response);
             if (parsed.error || !parsed.data) {
+                bridgeInventoryItems = [];
                 renderBridgeInventory([]);
                 bridgesHint.textContent = parsed.error || 'Bridge inventory payload is invalid.';
                 return;
             }
             const items = normalizeBridgeInventoryItems(parsed.data);
+            bridgeInventoryItems = items;
             renderBridgeInventory(items);
         }
         catch (error) {
+            bridgeInventoryItems = [];
             renderBridgeInventory([]);
             const message = error instanceof Error ? error.message : String(error);
             bridgesHint.textContent = `Bridge inventory unavailable: ${message}`;
@@ -256,7 +328,11 @@
         const redact = redactSupportBundleCheckbox.checked;
         setStatus('Building support bundle...', 'muted');
         try {
-            const response = await apiRequestWithTimeout(homey, 'GET', '/runtime/support-bundle?includeNoAction=true', null, 'support bundle request');
+            const query = buildQueryString({
+                includeNoAction: true,
+                bridgeId: activeBridgeScope ?? undefined,
+            });
+            const response = await apiRequestWithTimeout(homey, 'GET', `/runtime/support-bundle${query}`, null, 'support bundle request');
             const parsed = presenter.parseSupportBundleResponse(response);
             if (parsed.error || !parsed.data) {
                 setStatus(parsed.error || 'Support bundle payload is invalid.', 'error');
@@ -285,8 +361,46 @@
             void refreshDiagnostics(homey);
             void refreshBridgeInventory(homey);
         });
+        bridgeFilter.addEventListener('change', () => {
+            activeBridgeScope = normalizeBridgeScope(bridgeFilter.value);
+            renderBridgeScopeHint();
+            void refreshDiagnostics(homey);
+        });
+        bridgesTableBody.addEventListener('click', (event) => {
+            const target = event.target;
+            if (!target)
+                return;
+            const button = target.closest('button[data-bridge-action]');
+            if (!button)
+                return;
+            const bridgeId = normalizeBridgeScope(button.dataset.bridgeId);
+            if (!bridgeId)
+                return;
+            const action = button.dataset.bridgeAction;
+            if (action === 'scope') {
+                activeBridgeScope = bridgeId;
+                bridgeFilter.value = bridgeId;
+                renderBridgeScopeHint();
+                renderBridgeInventory(bridgeInventoryItems);
+                void refreshDiagnostics(homey);
+                return;
+            }
+            if (action === 'guide') {
+                const bridge = bridgeInventoryItems.find((item) => item.bridgeId === bridgeId);
+                if (bridge) {
+                    setStatus(buildBridgeToolsHint(bridge), 'muted');
+                }
+            }
+        });
         openBridgeToolsBtn.addEventListener('click', () => {
-            setStatus('Open Devices -> ZWJS Bridge -> Repair for runtime tools, or Device Settings to edit bridge URL/auth.', 'muted');
+            if (activeBridgeScope) {
+                const bridge = bridgeInventoryItems.find((item) => item.bridgeId === activeBridgeScope);
+                if (bridge) {
+                    setStatus(buildBridgeToolsHint(bridge), 'muted');
+                    return;
+                }
+            }
+            setStatus('Open Devices -> ZWJS Bridge -> Device Settings or Repair for bridge-level tooling.', 'muted');
         });
         exportSupportBundleBtn.addEventListener('click', () => {
             void exportSupportBundle(homey);

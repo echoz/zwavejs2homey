@@ -150,14 +150,59 @@
         border-bottom: 0;
       }
 
+      .bridge-table tbody tr.is-scoped {
+        background: rgba(36, 132, 191, 0.08);
+      }
+
       .bridge-table .muted {
         font-size: 11px;
+      }
+
+      .bridge-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .bridge-actions button {
+        width: auto;
+        padding: 4px 8px;
+        font-size: 12px;
+        border-radius: 6px;
       }
 
       .hint {
         margin-top: 8px;
         color: var(--muted);
         font-size: 12px;
+      }
+
+      .inline-controls {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
+        margin-top: 8px;
+      }
+
+      .inline-controls label {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .inline-controls select {
+        width: 100%;
+        padding: 8px;
+        border-radius: 8px;
+        border: 1px solid var(--panel-border);
+        background: var(--panel);
+        color: var(--text);
+      }
+
+      @media (min-width: 760px) {
+        .inline-controls {
+          grid-template-columns: 180px minmax(0, 1fr);
+          align-items: center;
+        }
       }
 
       .row {
@@ -214,6 +259,13 @@
       </p>
 
       <h2>Runtime Diagnostics</h2>
+      <div class="inline-controls">
+        <label for="bridgeFilter">Bridge Scope</label>
+        <select id="bridgeFilter" aria-label="Bridge scope">
+          <option value="">All Bridges</option>
+        </select>
+      </div>
+      <div id="bridgeScopeHint" class="hint">Scope: all bridges.</div>
       <div id="runtime-kv" class="kv"></div>
       <div id="runtime-hint" class="hint">Diagnostics not loaded yet.</div>
       <ul id="warnings" class="warnings" hidden></ul>
@@ -228,6 +280,7 @@
               <th>Connection</th>
               <th>Transport</th>
               <th>Imported Nodes</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody id="bridges-table-body"></tbody>
