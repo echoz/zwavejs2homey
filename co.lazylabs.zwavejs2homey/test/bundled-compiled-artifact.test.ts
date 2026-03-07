@@ -311,3 +311,48 @@ test('bundled runtime vertical coercion modes align with explicit policy', () =>
     `runtime mapping policy coercion modes are out of sync: ${modeMismatch.join(' | ')}`,
   );
 });
+
+test('bundled Yale YRD226 profile includes bidirectional lock + battery verticals', () => {
+  const artifact = readJsonFile(BUNDLED_ARTIFACT_FILE);
+  assertCompiledHomeyProfilesArtifactV1(artifact);
+
+  const yaleEntry = artifact.entries.find((entry) => {
+    const device = entry?.device;
+    return (
+      device?.manufacturerId === 297 && device?.productType === 32770 && device?.productId === 1536
+    );
+  });
+  assert.ok(yaleEntry, 'expected bundled artifact entry for Yale 297:32770:1536');
+
+  const capabilities = yaleEntry.compiled.profile.capabilities;
+  const byCapabilityId = new Map(capabilities.map((capability) => [capability.capabilityId, capability]));
+
+  assert.equal(byCapabilityId.has('locked'), true, 'expected locked capability');
+  assert.equal(byCapabilityId.has('enum_select'), true, 'expected enum_select capability');
+  assert.equal(byCapabilityId.has('measure_battery'), true, 'expected measure_battery capability');
+  assert.equal(byCapabilityId.has('measure_generic'), false, 'measure_generic should be suppressed');
+
+  const locked = byCapabilityId.get('locked');
+  assert.equal(locked.directionality, 'bidirectional');
+  assert.deepEqual(locked.outboundMapping?.target, {
+    commandClass: 98,
+    endpoint: 0,
+    property: 'targetMode',
+  });
+
+  const enumSelect = byCapabilityId.get('enum_select');
+  assert.equal(enumSelect.directionality, 'bidirectional');
+  assert.deepEqual(enumSelect.outboundMapping?.target, {
+    commandClass: 98,
+    endpoint: 0,
+    property: 'targetMode',
+  });
+
+  const battery = byCapabilityId.get('measure_battery');
+  assert.equal(battery.directionality, 'inbound-only');
+  assert.deepEqual(battery.inboundMapping?.selector, {
+    commandClass: 128,
+    endpoint: 0,
+    property: 'level',
+  });
+});
