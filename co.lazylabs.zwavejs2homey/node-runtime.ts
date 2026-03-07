@@ -207,6 +207,20 @@ function coerceDimOutboundTransform(value: unknown): number | undefined {
   return Math.round(clamp(numeric, 0, 1) * 99);
 }
 
+function coerceOnOffInboundTransform(value: unknown): boolean | undefined {
+  const booleanValue = normalizeBooleanValue(value);
+  if (booleanValue !== undefined) return booleanValue;
+  const numeric = normalizeNumericValue(value);
+  if (numeric === undefined) return undefined;
+  return numeric > 0;
+}
+
+function coerceOnOffOutboundTransform(value: unknown): number | undefined {
+  const booleanValue = normalizeBooleanValue(value);
+  if (booleanValue === undefined) return undefined;
+  return booleanValue ? 99 : 0;
+}
+
 function coerceNumericOutboundFallback(value: unknown): number | undefined {
   const numeric = normalizeNumericValue(value);
   if (numeric === undefined) return undefined;
@@ -277,6 +291,7 @@ const INBOUND_TRANSFORMERS: Record<
   (value: unknown) => PrimitiveCapabilityValue | undefined
 > = {
   zwave_level_0_99_to_homey_dim: coerceDimInboundTransform,
+  zwave_level_nonzero_to_homey_onoff: coerceOnOffInboundTransform,
 };
 
 const OUTBOUND_TRANSFORMERS: Record<
@@ -284,6 +299,7 @@ const OUTBOUND_TRANSFORMERS: Record<
   (value: unknown) => PrimitiveCapabilityValue | undefined
 > = {
   homey_dim_to_zwave_level_0_99: coerceDimOutboundTransform,
+  homey_onoff_to_zwave_level_0_99: coerceOnOffOutboundTransform,
 };
 
 const SPECIALIZED_CAPABILITY_COERCIONS = new Set(['enum_select', 'locked', 'measure_battery']);

@@ -12,8 +12,14 @@ const {
 } = require('../node-runtime.js');
 
 test('node-runtime publishes supported transform refs and specialized coercion ids', () => {
-  assert.deepEqual(getSupportedInboundTransformRefs(), ['zwave_level_0_99_to_homey_dim']);
-  assert.deepEqual(getSupportedOutboundTransformRefs(), ['homey_dim_to_zwave_level_0_99']);
+  assert.deepEqual(getSupportedInboundTransformRefs(), [
+    'zwave_level_0_99_to_homey_dim',
+    'zwave_level_nonzero_to_homey_onoff',
+  ]);
+  assert.deepEqual(getSupportedOutboundTransformRefs(), [
+    'homey_dim_to_zwave_level_0_99',
+    'homey_onoff_to_zwave_level_0_99',
+  ]);
   assert.deepEqual(getSpecializedCapabilityCoercions(), [
     'enum_select',
     'locked',
@@ -281,6 +287,14 @@ test('coerceCapability inbound/outbound uses transform refs and generic pass-thr
     ),
     1,
   );
+  assert.equal(
+    coerceCapabilityInboundValue('onoff', { value: 99 }, 'zwave_level_nonzero_to_homey_onoff'),
+    true,
+  );
+  assert.equal(
+    coerceCapabilityInboundValue('onoff', { value: 0 }, 'zwave_level_nonzero_to_homey_onoff'),
+    false,
+  );
   assert.equal(coerceCapabilityInboundValue('locked', { value: 1 }), true);
   assert.equal(coerceCapabilityInboundValue('measure_power', { value: 44.2 }), 44.2);
   assert.equal(
@@ -337,6 +351,11 @@ test('coerceCapability inbound/outbound uses transform refs and generic pass-thr
   assert.equal(
     coerceCapabilityOutboundValue('windowcoverings_set', 0.5, 'homey_dim_to_zwave_level_0_99'),
     50,
+  );
+  assert.equal(coerceCapabilityOutboundValue('onoff', true, 'homey_onoff_to_zwave_level_0_99'), 99);
+  assert.equal(
+    coerceCapabilityOutboundValue('onoff', false, 'homey_onoff_to_zwave_level_0_99'),
+    0,
   );
   assert.equal(coerceCapabilityOutboundValue('locked', true), true);
   assert.equal(coerceCapabilityOutboundValue('locked', true, undefined, 'string'), 'secured');

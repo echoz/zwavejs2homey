@@ -27,7 +27,7 @@ const BUNDLED_BUILD_TOOL_FILE = path.join(
 
 const RUNTIME_MAPPING_COVERAGE_POLICY = {
   onoff: {
-    coercionMode: 'generic',
+    coercionMode: 'specialized',
     coverageRef: 'test/node-device-harness.test.ts:onoff + dim verticals',
   },
   dim: {

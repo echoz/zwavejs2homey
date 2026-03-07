@@ -77,6 +77,21 @@ Close Phase 6 Reliability + UX with production-ready stability + diagnostics UX:
     - `co.lazylabs.zwavejs2homey/test/node-runtime.test.ts`
     - `co.lazylabs.zwavejs2homey/test/bundled-compiled-artifact.test.ts`
 
+- Phase 7 capability expansion slice (Leviton dimmers on/off vertical):
+  - expanded curated product rules for:
+    - `29:12801:1` (Leviton DZ6HD)
+    - `29:65:2` (Leviton ZW6HD)
+  - dimmer profiles now ship both:
+    - `dim` (existing)
+    - `onoff` (new, mapped to CC 38 target/current value path)
+  - added runtime transform refs for deterministic on/off <-> level mapping:
+    - inbound: `zwave_level_nonzero_to_homey_onoff`
+    - outbound: `homey_onoff_to_zwave_level_0_99`
+  - expanded runtime/bundled coverage:
+    - `co.lazylabs.zwavejs2homey/test/node-runtime.test.ts`
+    - `co.lazylabs.zwavejs2homey/test/bundled-compiled-artifact.test.ts`
+  - refreshed bundled curated artifact (`compiler:build:bundled`) and revalidated freshness (`compiler:verify:bundled`)
+
 - Phase 7 live expansion-candidate ranking slice:
   - added compile-inspect post-processing CLI:
     - `compiler:expansion-candidates`

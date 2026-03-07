@@ -23,6 +23,33 @@
         {
           "type": "capability",
           "mode": "replace",
+          "capabilityId": "onoff",
+          "inboundMapping": {
+            "kind": "value",
+            "selector": {
+              "commandClass": 38,
+              "endpoint": 0,
+              "property": "currentValue"
+            },
+            "transformRef": "zwave_level_nonzero_to_homey_onoff"
+          },
+          "outboundMapping": {
+            "kind": "set_value",
+            "target": {
+              "commandClass": 38,
+              "endpoint": 0,
+              "property": "targetValue"
+            },
+            "transformRef": "homey_onoff_to_zwave_level_0_99"
+          },
+          "flags": {
+            "readable": true,
+            "writeable": true
+          }
+        },
+        {
+          "type": "capability",
+          "mode": "replace",
           "capabilityId": "dim",
           "conflict": {
             "key": "cover.position_control",
