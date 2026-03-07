@@ -7,7 +7,10 @@ async function loadLib() {
 
 test('parseCliArgs validates unknown args and numeric bounds', async () => {
   const { parseCliArgs } = await loadLib();
-  assert.equal(parseCliArgs(['--wat']).ok, false);
+  const unknown = parseCliArgs(['--wat']);
+  assert.equal(unknown.ok, false);
+  assert.match(unknown.error, /^error:/);
+  assert.match(unknown.error, /hint: run with --help/i);
   assert.equal(parseCliArgs(['--top', '0']).ok, false);
   assert.equal(parseCliArgs(['--min-skip-signals', '-1']).ok, false);
   assert.equal(parseCliArgs(['--reason']).ok, false);
@@ -32,6 +35,7 @@ test('parseCliArgs parses explicit capability audit options', async () => {
     '2',
     '--reason',
     'missing-writeable-selector',
+    '--list-reasons',
     '--output-file',
     '/tmp/report.md',
   ]);
@@ -44,6 +48,7 @@ test('parseCliArgs parses explicit capability audit options', async () => {
   assert.equal(parsed.command.focus, 'all');
   assert.equal(parsed.command.minSkipSignals, 2);
   assert.equal(parsed.command.reasonFilter, 'missing-writeable-selector');
+  assert.equal(parsed.command.listReasons, true);
   assert.equal(parsed.command.outputFile, '/tmp/report.md');
 });
 
@@ -80,6 +85,7 @@ test('runHomeyCapabilityCoverageAudit ranks by artifact frequency without runtim
       format: 'summary',
       focus: 'actionable',
       minSkipSignals: 0,
+      listReasons: false,
       outputFile: undefined,
     },
     { log: (line) => logs.push(line) },
@@ -96,6 +102,8 @@ test('runHomeyCapabilityCoverageAudit ranks by artifact frequency without runtim
 
   assert.equal(result.summary.mode, 'artifact-frequency-only');
   assert.equal(result.summary.focus, 'actionable');
+  assert.equal(result.reasonCatalog.enabled, false);
+  assert.equal(result.reasonCatalog.rows.length, 0);
   assert.equal(result.summary.runtimeFilter.minSkipSignals, 0);
   assert.equal(result.summary.runtimeFilter.reason, null);
   assert.equal(result.summary.runtimeFilter.applied, false);
@@ -172,6 +180,7 @@ test('runHomeyCapabilityCoverageAudit supports wrapped support bundle payload an
       format: 'json',
       focus: 'actionable',
       minSkipSignals: 0,
+      listReasons: true,
       outputFile: '/tmp/audit.json',
     },
     { log: (line) => logs.push(line) },
@@ -190,6 +199,10 @@ test('runHomeyCapabilityCoverageAudit supports wrapped support bundle payload an
 
   assert.equal(result.summary.mode, 'runtime-diagnostics-weighted');
   assert.equal(result.summary.focus, 'actionable');
+  assert.equal(result.reasonCatalog.enabled, true);
+  assert.equal(result.reasonCatalog.observed, true);
+  assert.equal(result.reasonCatalog.rows[0].reason, 'missing-writeable-selector');
+  assert.match(result.reasonCatalog.rows[0].description, /writeable/i);
   assert.equal(result.summary.runtimeFilter.minSkipSignals, 0);
   assert.equal(result.summary.runtimeFilter.reason, null);
   assert.equal(result.summary.runtimeFilter.applied, true);
@@ -267,6 +280,7 @@ test('runHomeyCapabilityCoverageAudit focus=actionable filters zero-signal rows 
       format: 'json',
       focus: 'actionable',
       minSkipSignals: 0,
+      listReasons: false,
     },
     { log: () => {} },
     {
@@ -345,6 +359,7 @@ test('runHomeyCapabilityCoverageAudit supports reason + min-skip-signals runtime
       focus: 'all',
       minSkipSignals: 2,
       reasonFilter: 'missing-writeable-selector',
+      listReasons: false,
     },
     { log: () => {} },
     {

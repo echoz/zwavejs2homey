@@ -12,6 +12,26 @@ const DEFAULT_TOP = 10;
 type AuditFormat = 'summary' | 'markdown' | 'json' | 'json-pretty' | 'json-compact';
 type AuditFocus = 'actionable' | 'all';
 
+const KNOWN_SKIP_REASON_DESCRIPTIONS: Record<string, string> = {
+  capability_missing_on_homey_device:
+    'Capability exists in the resolved profile but not on the Homey device.',
+  inbound_selector_not_defined:
+    'Inbound selector does not resolve to a known Z-Wave value on the node.',
+  inbound_selector_not_readable:
+    'Inbound selector exists, but runtime reports it as not readable.',
+  outbound_target_not_defined:
+    'Outbound target does not resolve to a known Z-Wave value on the node.',
+  outbound_target_not_writeable:
+    'Outbound target exists, but runtime reports it as not writeable.',
+  outbound_target_writeability_unknown:
+    'Outbound target exists, but runtime cannot determine writeability.',
+  unsupported_value_type:
+    'Runtime value type cannot be coerced into the capability mapping contract.',
+  'missing-writeable-selector':
+    'Alias: outbound selector exists but runtime reports it as not writeable.',
+  'value-not-writeable': 'Alias: selected runtime value is not writeable.',
+};
+
 export interface HomeyCapabilityCoverageAuditCommand {
   artifactFile: string;
   supportBundleFile?: string;
@@ -20,6 +40,7 @@ export interface HomeyCapabilityCoverageAuditCommand {
   focus: AuditFocus;
   minSkipSignals: number;
   reasonFilter?: string;
+  listReasons: boolean;
   outputFile?: string;
 }
 
@@ -29,6 +50,15 @@ export interface HomeyCapabilityCoverageAuditResult {
   source: {
     artifactFile: string;
     supportBundleFile: string | null;
+  };
+  reasonCatalog: {
+    enabled: boolean;
+    observed: boolean;
+    rows: Array<{
+      reason: string;
+      count: number;
+      description: string;
+    }>;
   };
   summary: {
     mode: 'artifact-frequency-only' | 'runtime-diagnostics-weighted';
@@ -121,6 +151,7 @@ export function getUsageText(): string {
     '  --focus <actionable|all>      Ranking focus (default: actionable)',
     '  --min-skip-signals <n>        Runtime skip-signal threshold (default: 0)',
     '  --reason <skip-reason>        Filter runtime ranking to one skip reason',
+    '  --list-reasons                Include skip-reason catalog with descriptions',
     '  --output-file <path>          Write output to file (otherwise prints to stdout)',
     '  --help                        Show this help',
     '',
@@ -160,6 +191,16 @@ function hasBareFlag(argv: string[], flag: string): boolean {
     if (!next || next.startsWith('--')) return true;
   }
   return false;
+}
+
+function toCliError(message: string): string {
+  return [`error: ${message}`, 'hint: run with --help to see supported flags and examples'].join(
+    '\n',
+  );
+}
+
+function normalizeReasonToken(value: string): string {
+  return value.trim().toLowerCase();
 }
 
 function parseFlagMap(argv: string[]): Map<string, string> {
@@ -229,6 +270,7 @@ export function parseCliArgs(argv: string[]):
       '--focus',
       '--min-skip-signals',
       '--reason',
+      '--list-reasons',
       '--output-file',
     ]);
 
@@ -252,7 +294,10 @@ export function parseCliArgs(argv: string[]):
       throw new Error('--reason requires a non-empty value');
     }
     const reasonFilterRaw = trimOrUndefined(flags.get('--reason'));
-    const reasonFilter = reasonFilterRaw && reasonFilterRaw !== 'true' ? reasonFilterRaw : undefined;
+    const reasonFilter =
+      reasonFilterRaw && reasonFilterRaw !== 'true'
+        ? normalizeReasonToken(reasonFilterRaw)
+        : undefined;
     if (flags.has('--reason') && !reasonFilter) {
       throw new Error('--reason requires a non-empty value');
     }
@@ -272,13 +317,14 @@ export function parseCliArgs(argv: string[]):
         focus,
         minSkipSignals,
         reasonFilter,
+        listReasons: flags.has('--list-reasons'),
         outputFile,
       },
     };
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: toCliError(error instanceof Error ? error.message : String(error)),
     };
   }
 }
@@ -371,7 +417,10 @@ function parseSkipReasonTotals(input: unknown): Map<string, number> {
   if (!input || typeof input !== 'object' || Array.isArray(input)) return new Map();
   const totals = new Map<string, number>();
   for (const [reason, rawCount] of Object.entries(input as Record<string, unknown>)) {
-    const normalizedReason = trimOrUndefined(reason);
+    const normalizedReasonRaw = trimOrUndefined(reason);
+    const normalizedReason = normalizedReasonRaw
+      ? normalizeReasonToken(normalizedReasonRaw)
+      : undefined;
     if (!normalizedReason) continue;
     const count = toNumberOrZero(rawCount);
     if (count <= 0) continue;
@@ -393,6 +442,50 @@ function toSortedReasonRows(reasonTotals: Map<string, number>): Array<{ reason: 
       if (left.count !== right.count) return right.count - left.count;
       return left.reason.localeCompare(right.reason);
     });
+}
+
+function fallbackSkipReasonDescription(reason: string): string {
+  const tokenized = reason
+    .replace(/[-_]+/g, ' ')
+    .trim()
+    .replace(/\s+/g, ' ');
+  if (tokenized.length === 0) return 'Runtime mapping gate was skipped for this reason code.';
+  return `${tokenized[0].toUpperCase()}${tokenized.slice(1)}.`;
+}
+
+function describeSkipReason(reason: string): string {
+  return KNOWN_SKIP_REASON_DESCRIPTIONS[reason] ?? fallbackSkipReasonDescription(reason);
+}
+
+function buildReasonCatalog(
+  runtimeReasonTotals: Map<string, number>,
+  observed: boolean,
+): HomeyCapabilityCoverageAuditResult['reasonCatalog'] {
+  const sortedObserved = toSortedReasonRows(runtimeReasonTotals);
+  if (observed) {
+    return {
+      enabled: true,
+      observed: true,
+      rows: sortedObserved.map((row) => ({
+        reason: row.reason,
+        count: row.count,
+        description: describeSkipReason(row.reason),
+      })),
+    };
+  }
+
+  const known = Object.keys(KNOWN_SKIP_REASON_DESCRIPTIONS)
+    .sort((left, right) => left.localeCompare(right))
+    .map((reason) => ({
+      reason,
+      count: 0,
+      description: describeSkipReason(reason),
+    }));
+  return {
+    enabled: true,
+    observed: false,
+    rows: known,
+  };
 }
 
 function collectRuntimePressure(
@@ -550,6 +643,13 @@ function formatSummary(result: HomeyCapabilityCoverageAuditResult): string {
     `Runtime reason filter: ${result.summary.runtimeFilter.reason ?? '(none)'}`,
     `Runtime filter applied: ${result.summary.runtimeFilter.applied ? 'yes' : 'no'}`,
     `Top runtime skip reasons: ${topReasonsSummary}`,
+    `Reason catalog: ${
+      result.reasonCatalog.enabled
+        ? result.reasonCatalog.observed
+          ? 'enabled (observed runtime reasons)'
+          : 'enabled (known reason registry; no runtime data)'
+        : 'disabled (use --list-reasons)'
+    }`,
     '',
     `Top ${result.ranking.length} capabilities by expansion pressure:`,
   ];
@@ -567,6 +667,12 @@ function formatSummary(result: HomeyCapabilityCoverageAuditResult): string {
       `- ${row.capabilityId}: score=${row.score} artifactProfiles=${row.artifactProfiles} runtimeNodes=${row.runtimeNodes} runtimeSkipSignals=${row.runtimeSkipSignals} runtimeTopSkipReasons=${topSkipReasons}`,
       `  runtimeFilterSignals=${row.runtimeFilterSignals}`,
     );
+  }
+  if (result.reasonCatalog.rows.length > 0) {
+    lines.push('', 'Skip reason catalog:');
+    for (const row of result.reasonCatalog.rows) {
+      lines.push(`- ${row.reason} (${row.count}): ${row.description}`);
+    }
   }
   return lines.join('\n');
 }
@@ -593,6 +699,13 @@ function formatMarkdown(result: HomeyCapabilityCoverageAuditResult): string {
     `- Runtime reason filter: ${result.summary.runtimeFilter.reason ?? '(none)'}`,
     `- Runtime filter applied: ${result.summary.runtimeFilter.applied ? 'yes' : 'no'}`,
     `- Top runtime skip reasons: ${topReasonsSummary}`,
+    `- Reason catalog: ${
+      result.reasonCatalog.enabled
+        ? result.reasonCatalog.observed
+          ? 'enabled (observed runtime reasons)'
+          : 'enabled (known reason registry; no runtime data)'
+        : 'disabled (use --list-reasons)'
+    }`,
     '',
     `## Top ${result.ranking.length} capabilities by expansion pressure`,
     '',
@@ -614,6 +727,16 @@ function formatMarkdown(result: HomeyCapabilityCoverageAuditResult): string {
     lines.push(
       `| \`${row.capabilityId}\` | ${row.score} | ${row.artifactProfiles} | ${row.runtimeNodes} | ${row.runtimeSkipSignals} | ${row.runtimeFilterSignals} | ${topSkipReasons} |`,
     );
+  }
+  if (result.reasonCatalog.rows.length > 0) {
+    lines.push('');
+    lines.push('## Skip Reason Catalog');
+    lines.push('');
+    lines.push('| Reason | Count | Description |');
+    lines.push('| --- | ---: | --- |');
+    for (const row of result.reasonCatalog.rows) {
+      lines.push(`| \`${row.reason}\` | ${row.count} | ${row.description} |`);
+    }
   }
   return lines.join('\n');
 }
@@ -657,7 +780,8 @@ export async function runHomeyCapabilityCoverageAudit(
   const nowIso = deps.nowIso ?? (() => new Date().toISOString());
   const log = io.log ?? ((line: string) => console.log(line));
   const focus: AuditFocus = command.focus === 'all' ? 'all' : 'actionable';
-  const reasonFilter = trimOrUndefined(command.reasonFilter);
+  const reasonFilterRaw = trimOrUndefined(command.reasonFilter);
+  const reasonFilter = reasonFilterRaw ? normalizeReasonToken(reasonFilterRaw) : undefined;
   const minSkipSignals = Number.isFinite(command.minSkipSignals)
     ? Math.max(0, Math.trunc(command.minSkipSignals))
     : 0;
@@ -702,6 +826,13 @@ export async function runHomeyCapabilityCoverageAudit(
       artifactFile: command.artifactFile,
       supportBundleFile: command.supportBundleFile ?? null,
     },
+    reasonCatalog: command.listReasons
+      ? buildReasonCatalog(runtimePressure.skipReasonTotals, Boolean(runtimeBundle))
+      : {
+          enabled: false,
+          observed: Boolean(runtimeBundle),
+          rows: [],
+        },
     summary: {
       mode,
       focus,

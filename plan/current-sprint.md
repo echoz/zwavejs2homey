@@ -47,6 +47,16 @@ Close Phase 6 Reliability + UX with production-ready stability + diagnostics UX:
   - expanded parser + filter-behavior regressions in:
     - `packages/core/test/homey-capability-coverage-audit-tool.test.ts`
 
+- Phase 7 capability-audit explainability slice:
+  - added `--list-reasons` to `homey:capability-audit`
+  - output now supports an explained skip-reason catalog:
+    - reason code
+    - observed count (or `0` when listing known registry without runtime data)
+    - concise human description
+  - CLI parse errors now follow clearer `error + hint` style for faster troubleshooting
+  - expanded parser/behavior tests in:
+    - `packages/core/test/homey-capability-coverage-audit-tool.test.ts`
+
 - Phase 7 capability coercion expansion slice:
   - added specialized runtime handling for `measure_battery`:
     - normalizes sentinel battery values (`255 -> 1`)

@@ -231,6 +231,7 @@ npm run homey:capability-audit -- \
   --focus actionable \
   --min-skip-signals 2 \
   --reason missing-writeable-selector \
+  --list-reasons \
   --top 12 \
   --format markdown \
   --output-file /tmp/zwjs2homey-capability-audit.md
@@ -239,6 +240,7 @@ npm run homey:capability-audit -- \
 `--focus actionable` (default) ranks only capabilities with live runtime skip signals when a
 support bundle is provided. Use `--focus all` to include zero-signal capabilities.
 Add `--min-skip-signals` and `--reason` to narrow ranking to one runtime skip-pressure lane.
+Add `--list-reasons` for an explained skip-reason catalog (code + concise description).
 
 ## Rules and Artifacts
 
