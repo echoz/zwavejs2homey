@@ -61,6 +61,17 @@ function normalizeOptionalAction(value) {
         expected: ['auto', 'backfill-marker', 'adopt-recommended-baseline', 'none'],
     });
 }
+function normalizeOptionalObject(value, label) {
+    if (typeof value === 'undefined' || value === null)
+        return undefined;
+    if (typeof value !== 'object' || Array.isArray(value)) {
+        throw new RuntimeApiClientError('invalid-argument', `${label} must be an object`, {
+            field: label,
+            expected: 'object',
+        });
+    }
+    return value;
+}
 function toQueryString(options) {
     const segments = [];
     if (options.homeyDeviceId) {
@@ -201,6 +212,24 @@ function createRuntimeApiClient(homeyApi) {
             const extensionId = normalizeRequiredString(payload.extensionId, 'extensionId');
             const query = toQueryString({ homeyDeviceId, extensionId });
             const response = await invokeHomeyApi(homeyApi, 'GET', `/runtime/extensions/read${query}`);
+            return parseEnvelope(response);
+        },
+        async executeProfileExtensionAction(options) {
+            const payload = options && typeof options === 'object' ? options : {};
+            const homeyDeviceId = normalizeRequiredString(payload.homeyDeviceId, 'homeyDeviceId');
+            const extensionId = normalizeRequiredString(payload.extensionId, 'extensionId');
+            const actionId = normalizeRequiredString(payload.actionId, 'actionId');
+            const args = normalizeOptionalObject(payload.args, 'args');
+            const dryRun = normalizeOptionalBoolean(payload.dryRun, 'dryRun');
+            const confirm = normalizeOptionalBoolean(payload.confirm, 'confirm');
+            const response = await invokeHomeyApi(homeyApi, 'POST', '/runtime/extensions/execute', {
+                homeyDeviceId,
+                extensionId,
+                actionId,
+                args,
+                dryRun,
+                confirm,
+            });
             return parseEnvelope(response);
         },
     };

@@ -252,11 +252,16 @@ Delivered in early Phase 7 slices:
   - runtime methods: `getProfileExtensionInventory(...)`, `getProfileExtensionRead(...)`
   - routes: `GET /runtime/extensions`, `GET /runtime/extensions/read`
   - runtime client support + route/runtime tests
+- landed profile-extension action API safety surface:
+  - runtime method: `executeProfileExtensionAction(...)`
+  - route: `POST /runtime/extensions/execute`
+  - strict pre-execution safety gates with deterministic blocked/rejected reasons
+  - current no-handler state is explicit (`action-handler-not-implemented`)
+  - runtime/client/route tests + smoke route coverage
 
 Planned next Phase 7 extension slices:
 
 - implement first extension vertical for locks (user-code management in custom panel flow)
-- add profile-extension write action API path with strict safety gates
 - add an extension-candidate inventory pass for other families likely to need custom behavior:
   - covers/blinds calibration and advanced movement controls
   - thermostat schedule/program management

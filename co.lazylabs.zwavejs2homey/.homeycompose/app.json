@@ -45,6 +45,10 @@
     "getProfileExtensionRead": {
       "method": "GET",
       "path": "/runtime/extensions/read"
+    },
+    "executeProfileExtensionAction": {
+      "method": "POST",
+      "path": "/runtime/extensions/execute"
     }
   },
   "images": {

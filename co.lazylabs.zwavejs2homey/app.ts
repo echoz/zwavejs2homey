@@ -39,6 +39,7 @@ import {
   type ProfileExtensionContractV1,
   type ProfileExtensionMatchContextV1,
   type ProfileExtensionMatchExplanationV1,
+  type ProfileExtensionSafetyCheckV1,
 } from './profile-extension';
 
 interface ZwjsDiagnosticsStatusV1 {
@@ -223,6 +224,14 @@ interface NodeDeviceToolsSnapshotV1 {
   };
 }
 
+type ProfileExtensionActionExecutionStatusV1 = 'rejected' | 'blocked' | 'executed';
+
+interface ProfileExtensionActionSafetyResultV1 {
+  check: ProfileExtensionSafetyCheckV1;
+  passed: boolean;
+  reason: string;
+}
+
 module.exports = class Zwavejs2HomeyApp extends Homey.App {
   private readonly defaultBridgeId = ZWJS_DEFAULT_BRIDGE_ID;
   private readonly bridgeSessions = new Map<string, BridgeSessionRuntimeState>([
@@ -238,6 +247,23 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
   private readonly profileExtensionRegistry = createProfileExtensionRegistry(
     PROFILE_EXTENSION_CONTRACTS_V1,
   );
+  private readonly profileExtensionActionHandlers = new Map<
+    string,
+    (options: {
+      homeyDeviceId: string;
+      extensionId: string;
+      actionId: string;
+      node: NodeRuntimeDiagnosticsEntry;
+      context: ProfileExtensionMatchContextV1;
+      args: Record<string, unknown>;
+      dryRun: boolean;
+      confirm: boolean;
+    }) => Promise<{
+      executed: boolean;
+      reason: string;
+      details?: unknown;
+    }>
+  >();
 
   private readonly clientLogger: ClientLogger = {
     info: (msg: string, meta?: unknown) => this.log(msg, meta),
@@ -1845,6 +1871,282 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
       diagnostics: {
         profileAttribution: node.profileAttribution,
         fallbackReason: node.profile.fallbackReason,
+      },
+    };
+  }
+
+  private static normalizeProfileExtensionArgs(value: unknown): Record<string, unknown> {
+    if (typeof value === 'undefined' || value === null) return {};
+    if (typeof value !== 'object' || Array.isArray(value)) return {};
+    return value as Record<string, unknown>;
+  }
+
+  private evaluateProfileExtensionSafetyChecks(options: {
+    checks: readonly ProfileExtensionSafetyCheckV1[];
+    node: NodeRuntimeDiagnosticsEntry;
+    extensionMatched: boolean;
+    confirm: boolean;
+  }): ProfileExtensionActionSafetyResultV1[] {
+    return options.checks.map((check) => {
+      if (check === 'requires-supported-profile') {
+        return {
+          check,
+          passed: options.extensionMatched,
+          reason: options.extensionMatched ? 'ok' : 'extension-not-matched',
+        };
+      }
+
+      if (check === 'requires-node-ready') {
+        const ready = options.node.node.ready === true;
+        return {
+          check,
+          passed: ready,
+          reason: ready ? 'ok' : 'node-not-ready',
+        };
+      }
+
+      if (check === 'requires-write-access') {
+        const connected = this.normalizeZwjsDiagnosticsStatus(
+          options.node.bridgeId ?? undefined,
+        ).transportConnected;
+        return {
+          check,
+          passed: connected,
+          reason: connected ? 'ok' : 'bridge-not-connected',
+        };
+      }
+
+      if (check === 'requires-explicit-confirmation') {
+        return {
+          check,
+          passed: options.confirm,
+          reason: options.confirm ? 'ok' : 'confirmation-required',
+        };
+      }
+
+      return {
+        check,
+        passed: false,
+        reason: 'selector-writeability-not-evaluable',
+      };
+    });
+  }
+
+  async executeProfileExtensionAction(options: {
+    homeyDeviceId: string;
+    extensionId: string;
+    actionId: string;
+    args?: Record<string, unknown>;
+    dryRun?: boolean;
+    confirm?: boolean;
+  }): Promise<{
+    schemaVersion: 'homey-profile-extension-action/v1';
+    generatedAt: string;
+    device: {
+      homeyDeviceId: string;
+      bridgeId: string | null;
+      nodeId: number | null;
+    };
+    context: ProfileExtensionMatchContextV1;
+    extension: {
+      extensionId: string;
+      registered: boolean;
+      matched: boolean;
+      matchReason: ProfileExtensionMatchExplanationV1['reason'];
+    };
+    action: {
+      actionId: string;
+      registered: boolean;
+      dryRun: boolean;
+      confirm: boolean;
+      args: Record<string, unknown>;
+    };
+    safety: {
+      required: ProfileExtensionSafetyCheckV1[];
+      passed: ProfileExtensionSafetyCheckV1[];
+      failed: ProfileExtensionActionSafetyResultV1[];
+    };
+    execution: {
+      status: ProfileExtensionActionExecutionStatusV1;
+      executed: boolean;
+      reason: string;
+      details: unknown | null;
+    };
+  }> {
+    const homeyDeviceId = Zwavejs2HomeyApp.toStringOrNull(options?.homeyDeviceId);
+    if (!homeyDeviceId) {
+      throw new Error('Invalid homeyDeviceId for profile extension action');
+    }
+    const extensionId = Zwavejs2HomeyApp.toStringOrNull(options?.extensionId);
+    if (!extensionId) {
+      throw new Error('Invalid extensionId for profile extension action');
+    }
+    const actionId = Zwavejs2HomeyApp.toStringOrNull(options?.actionId);
+    if (!actionId) {
+      throw new Error('Invalid actionId for profile extension action');
+    }
+
+    const args = Zwavejs2HomeyApp.normalizeProfileExtensionArgs(options?.args);
+    const dryRun = options?.dryRun === true;
+    const confirm = options?.confirm === true;
+
+    const diagnostics = await this.getNodeRuntimeDiagnostics({ homeyDeviceId });
+    const node = diagnostics.nodes.find((entry) => entry.homeyDeviceId === homeyDeviceId);
+    if (!node) {
+      throw new Error(`Node runtime diagnostics not found for homeyDeviceId: ${homeyDeviceId}`);
+    }
+
+    const context = Zwavejs2HomeyApp.toProfileExtensionMatchContext(node);
+    const extensionContract = this.profileExtensionRegistry.get(extensionId);
+    const extensionExplanation = this.profileExtensionRegistry.explainMatch(extensionId, context);
+    const actionContract = this.profileExtensionRegistry.resolveAction(extensionId, actionId);
+
+    const baseResult = {
+      schemaVersion: 'homey-profile-extension-action/v1' as const,
+      generatedAt: new Date().toISOString(),
+      device: {
+        homeyDeviceId,
+        bridgeId: node.bridgeId,
+        nodeId: node.nodeId,
+      },
+      context,
+      extension: {
+        extensionId,
+        registered: Boolean(extensionContract),
+        matched: extensionExplanation.matched,
+        matchReason: extensionExplanation.reason,
+      },
+      action: {
+        actionId,
+        registered: Boolean(actionContract),
+        dryRun,
+        confirm,
+        args,
+      },
+      safety: {
+        required: [] as ProfileExtensionSafetyCheckV1[],
+        passed: [] as ProfileExtensionSafetyCheckV1[],
+        failed: [] as ProfileExtensionActionSafetyResultV1[],
+      },
+      execution: {
+        status: 'rejected' as ProfileExtensionActionExecutionStatusV1,
+        executed: false,
+        reason: 'unknown',
+        details: null as unknown | null,
+      },
+    };
+
+    if (!extensionContract) {
+      return {
+        ...baseResult,
+        execution: {
+          status: 'rejected',
+          executed: false,
+          reason: 'extension-not-registered',
+          details: null,
+        },
+      };
+    }
+
+    if (!extensionExplanation.matched) {
+      return {
+        ...baseResult,
+        execution: {
+          status: 'blocked',
+          executed: false,
+          reason: 'extension-not-matched',
+          details: extensionExplanation,
+        },
+      };
+    }
+
+    if (!actionContract) {
+      return {
+        ...baseResult,
+        execution: {
+          status: 'rejected',
+          executed: false,
+          reason: 'action-not-registered',
+          details: null,
+        },
+      };
+    }
+
+    if (dryRun && actionContract.dryRunSupported !== true) {
+      return {
+        ...baseResult,
+        execution: {
+          status: 'rejected',
+          executed: false,
+          reason: 'dry-run-not-supported',
+          details: null,
+        },
+      };
+    }
+
+    const safetyResults = this.evaluateProfileExtensionSafetyChecks({
+      checks: actionContract.safetyChecks,
+      node,
+      extensionMatched: extensionExplanation.matched,
+      confirm,
+    });
+    const failedSafety = safetyResults.filter((entry) => entry.passed !== true);
+    const passedSafety = safetyResults
+      .filter((entry) => entry.passed === true)
+      .map((entry) => entry.check);
+
+    const withSafety = {
+      ...baseResult,
+      safety: {
+        required: actionContract.safetyChecks.slice() as ProfileExtensionSafetyCheckV1[],
+        passed: passedSafety,
+        failed: failedSafety,
+      },
+    };
+
+    if (failedSafety.length > 0) {
+      return {
+        ...withSafety,
+        execution: {
+          status: 'blocked',
+          executed: false,
+          reason: 'safety-check-failed',
+          details: failedSafety,
+        },
+      };
+    }
+
+    const handler = this.profileExtensionActionHandlers.get(`${extensionId}:${actionId}`);
+    if (!handler) {
+      return {
+        ...withSafety,
+        execution: {
+          status: 'rejected',
+          executed: false,
+          reason: 'action-handler-not-implemented',
+          details: null,
+        },
+      };
+    }
+
+    const executionResult = await handler({
+      homeyDeviceId,
+      extensionId,
+      actionId,
+      node,
+      context,
+      args,
+      dryRun,
+      confirm,
+    });
+
+    return {
+      ...withSafety,
+      execution: {
+        status: executionResult.executed ? 'executed' : 'blocked',
+        executed: executionResult.executed,
+        reason: executionResult.reason,
+        details: executionResult.details ?? null,
       },
     };
   }

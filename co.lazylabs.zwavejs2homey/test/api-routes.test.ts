@@ -14,6 +14,7 @@ function createHomeyAppStub(overrides = {}) {
     actions: [],
     extensions: [],
     extensionRead: [],
+    extensionAction: [],
   };
 
   const app = {
@@ -48,6 +49,10 @@ function createHomeyAppStub(overrides = {}) {
     async getProfileExtensionRead(options) {
       calls.extensionRead.push(options);
       return { kind: 'extension-read' };
+    },
+    async executeProfileExtensionAction(options) {
+      calls.extensionAction.push(options);
+      return { kind: 'extension-action' };
     },
     ...overrides,
   };
@@ -206,6 +211,56 @@ test('api getProfileExtensionRead forwards normalized query', async () => {
   assert.equal(result.data.kind, 'extension-read');
   assert.deepEqual(calls.extensionRead, [
     { homeyDeviceId: 'main:8', extensionId: 'lock-user-codes' },
+  ]);
+});
+
+test('api executeProfileExtensionAction validates required payload fields', async () => {
+  const { homey } = createHomeyAppStub();
+
+  const missingAction = await api.executeProfileExtensionAction({
+    homey,
+    body: { homeyDeviceId: 'main:8', extensionId: 'lock-user-codes' },
+  });
+  assertErrorEnvelope(missingAction, /invalid-action-id/);
+
+  const invalidArgs = await api.executeProfileExtensionAction({
+    homey,
+    body: {
+      homeyDeviceId: 'main:8',
+      extensionId: 'lock-user-codes',
+      actionId: 'set-user-code',
+      args: ['invalid'],
+    },
+  });
+  assertErrorEnvelope(invalidArgs, /invalid-request/);
+  assert.match(invalidArgs.error.message, /args must be an object/);
+});
+
+test('api executeProfileExtensionAction forwards normalized body payload', async () => {
+  const { homey, calls } = createHomeyAppStub();
+
+  const result = await api.executeProfileExtensionAction({
+    homey,
+    body: {
+      homeyDeviceId: ' main:8 ',
+      extensionId: ' lock-user-codes ',
+      actionId: ' set-user-code ',
+      args: { slot: 1, code: '1234' },
+      dryRun: 'true',
+      confirm: '1',
+    },
+  });
+  assertSuccessEnvelope(result);
+  assert.equal(result.data.kind, 'extension-action');
+  assert.deepEqual(calls.extensionAction, [
+    {
+      homeyDeviceId: 'main:8',
+      extensionId: 'lock-user-codes',
+      actionId: 'set-user-code',
+      args: { slot: 1, code: '1234' },
+      dryRun: true,
+      confirm: true,
+    },
   ]);
 });
 

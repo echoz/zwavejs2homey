@@ -22,6 +22,7 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
             this.preferredBridgeId = pairing_1.ZWJS_DEFAULT_BRIDGE_ID;
             this.curationRuntime = (0, curation_1.loadCurationRuntimeFromSettings)(undefined);
             this.profileExtensionRegistry = (0, profile_extension_1.createProfileExtensionRegistry)(profile_extension_1.PROFILE_EXTENSION_CONTRACTS_V1);
+            this.profileExtensionActionHandlers = new Map();
             this.clientLogger = {
                 info: (msg, meta) => this.log(msg, meta),
                 warn: (msg, meta) => this.error(msg, meta),
@@ -1292,6 +1293,216 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
                 diagnostics: {
                     profileAttribution: node.profileAttribution,
                     fallbackReason: node.profile.fallbackReason,
+                },
+            };
+        }
+        static normalizeProfileExtensionArgs(value) {
+            if (typeof value === 'undefined' || value === null)
+                return {};
+            if (typeof value !== 'object' || Array.isArray(value))
+                return {};
+            return value;
+        }
+        evaluateProfileExtensionSafetyChecks(options) {
+            return options.checks.map((check) => {
+                if (check === 'requires-supported-profile') {
+                    return {
+                        check,
+                        passed: options.extensionMatched,
+                        reason: options.extensionMatched ? 'ok' : 'extension-not-matched',
+                    };
+                }
+                if (check === 'requires-node-ready') {
+                    const ready = options.node.node.ready === true;
+                    return {
+                        check,
+                        passed: ready,
+                        reason: ready ? 'ok' : 'node-not-ready',
+                    };
+                }
+                if (check === 'requires-write-access') {
+                    const connected = this.normalizeZwjsDiagnosticsStatus(options.node.bridgeId ?? undefined).transportConnected;
+                    return {
+                        check,
+                        passed: connected,
+                        reason: connected ? 'ok' : 'bridge-not-connected',
+                    };
+                }
+                if (check === 'requires-explicit-confirmation') {
+                    return {
+                        check,
+                        passed: options.confirm,
+                        reason: options.confirm ? 'ok' : 'confirmation-required',
+                    };
+                }
+                return {
+                    check,
+                    passed: false,
+                    reason: 'selector-writeability-not-evaluable',
+                };
+            });
+        }
+        async executeProfileExtensionAction(options) {
+            const homeyDeviceId = _a.toStringOrNull(options?.homeyDeviceId);
+            if (!homeyDeviceId) {
+                throw new Error('Invalid homeyDeviceId for profile extension action');
+            }
+            const extensionId = _a.toStringOrNull(options?.extensionId);
+            if (!extensionId) {
+                throw new Error('Invalid extensionId for profile extension action');
+            }
+            const actionId = _a.toStringOrNull(options?.actionId);
+            if (!actionId) {
+                throw new Error('Invalid actionId for profile extension action');
+            }
+            const args = _a.normalizeProfileExtensionArgs(options?.args);
+            const dryRun = options?.dryRun === true;
+            const confirm = options?.confirm === true;
+            const diagnostics = await this.getNodeRuntimeDiagnostics({ homeyDeviceId });
+            const node = diagnostics.nodes.find((entry) => entry.homeyDeviceId === homeyDeviceId);
+            if (!node) {
+                throw new Error(`Node runtime diagnostics not found for homeyDeviceId: ${homeyDeviceId}`);
+            }
+            const context = _a.toProfileExtensionMatchContext(node);
+            const extensionContract = this.profileExtensionRegistry.get(extensionId);
+            const extensionExplanation = this.profileExtensionRegistry.explainMatch(extensionId, context);
+            const actionContract = this.profileExtensionRegistry.resolveAction(extensionId, actionId);
+            const baseResult = {
+                schemaVersion: 'homey-profile-extension-action/v1',
+                generatedAt: new Date().toISOString(),
+                device: {
+                    homeyDeviceId,
+                    bridgeId: node.bridgeId,
+                    nodeId: node.nodeId,
+                },
+                context,
+                extension: {
+                    extensionId,
+                    registered: Boolean(extensionContract),
+                    matched: extensionExplanation.matched,
+                    matchReason: extensionExplanation.reason,
+                },
+                action: {
+                    actionId,
+                    registered: Boolean(actionContract),
+                    dryRun,
+                    confirm,
+                    args,
+                },
+                safety: {
+                    required: [],
+                    passed: [],
+                    failed: [],
+                },
+                execution: {
+                    status: 'rejected',
+                    executed: false,
+                    reason: 'unknown',
+                    details: null,
+                },
+            };
+            if (!extensionContract) {
+                return {
+                    ...baseResult,
+                    execution: {
+                        status: 'rejected',
+                        executed: false,
+                        reason: 'extension-not-registered',
+                        details: null,
+                    },
+                };
+            }
+            if (!extensionExplanation.matched) {
+                return {
+                    ...baseResult,
+                    execution: {
+                        status: 'blocked',
+                        executed: false,
+                        reason: 'extension-not-matched',
+                        details: extensionExplanation,
+                    },
+                };
+            }
+            if (!actionContract) {
+                return {
+                    ...baseResult,
+                    execution: {
+                        status: 'rejected',
+                        executed: false,
+                        reason: 'action-not-registered',
+                        details: null,
+                    },
+                };
+            }
+            if (dryRun && actionContract.dryRunSupported !== true) {
+                return {
+                    ...baseResult,
+                    execution: {
+                        status: 'rejected',
+                        executed: false,
+                        reason: 'dry-run-not-supported',
+                        details: null,
+                    },
+                };
+            }
+            const safetyResults = this.evaluateProfileExtensionSafetyChecks({
+                checks: actionContract.safetyChecks,
+                node,
+                extensionMatched: extensionExplanation.matched,
+                confirm,
+            });
+            const failedSafety = safetyResults.filter((entry) => entry.passed !== true);
+            const passedSafety = safetyResults
+                .filter((entry) => entry.passed === true)
+                .map((entry) => entry.check);
+            const withSafety = {
+                ...baseResult,
+                safety: {
+                    required: actionContract.safetyChecks.slice(),
+                    passed: passedSafety,
+                    failed: failedSafety,
+                },
+            };
+            if (failedSafety.length > 0) {
+                return {
+                    ...withSafety,
+                    execution: {
+                        status: 'blocked',
+                        executed: false,
+                        reason: 'safety-check-failed',
+                        details: failedSafety,
+                    },
+                };
+            }
+            const handler = this.profileExtensionActionHandlers.get(`${extensionId}:${actionId}`);
+            if (!handler) {
+                return {
+                    ...withSafety,
+                    execution: {
+                        status: 'rejected',
+                        executed: false,
+                        reason: 'action-handler-not-implemented',
+                        details: null,
+                    },
+                };
+            }
+            const executionResult = await handler({
+                homeyDeviceId,
+                extensionId,
+                actionId,
+                node,
+                context,
+                args,
+                dryRun,
+                confirm,
+            });
+            return {
+                ...withSafety,
+                execution: {
+                    status: executionResult.executed ? 'executed' : 'blocked',
+                    executed: executionResult.executed,
+                    reason: executionResult.reason,
+                    details: executionResult.details ?? null,
                 },
             };
         }

@@ -1858,14 +1858,31 @@ Close Phase 6 Reliability + UX with production-ready stability + diagnostics UX:
       - `getProfileExtensionRead(...)`
     - added route/client/runtime tests for extension discovery/read behavior
 
+116. Completed curated-profile extension action API safety-gate slice:
+
+
+    - added Homey app runtime action API:
+      - `executeProfileExtensionAction({ homeyDeviceId, extensionId, actionId, args?, dryRun?, confirm? })`
+    - added API envelope route:
+      - `POST /runtime/extensions/execute`
+    - action execution now enforces strict gates before any handler execution:
+      - extension registration + profile match
+      - action registration
+      - dry-run support contract
+      - safety checks (`requires-*`) with fail-closed behavior
+    - current behavior is explicit for unimplemented actions:
+      - returns deterministic `action-handler-not-implemented`
+      - no writes are performed without a registered handler
+    - added runtime/client/route test coverage for action API payload validation and safety outcomes
+    - runtime smoke now includes extension execute route coverage
+
 ## Next Tasks
 
 1. Expand runtime capability handling for top capability families identified by the audit while preserving existing UX contracts.
 2. Run closure gates on every slice (`npm --prefix co.lazylabs.zwavejs2homey run test`, runtime smoke/support bundle checks).
 3. Use `compiler:ship:curated` whenever product/generic rule changes affect bundled runtime profiles.
-4. Build the first extension slice for Yale locks: user-code management read path + clear action safety constraints.
-5. Add profile-extension write action API path with strict safety gates and explicit errors.
-6. Produce a cross-device extension candidate inventory (locks, covers, thermostat/schedules, security/siren) so custom work follows a reusable model instead of one-offs.
+4. Build the first extension slice for Yale locks: user-code management read path + action handlers using the extension API safety contract.
+5. Produce a cross-device extension candidate inventory (locks, covers, thermostat/schedules, security/siren) so custom work follows a reusable model instead of one-offs.
 
 Note:
 

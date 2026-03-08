@@ -93,6 +93,19 @@ Error responses keep the same shape:
     - extension contract details for the node context
     - match status/reason
     - read handler status (`implemented: false` until extension read handlers land)
+- `POST /runtime/extensions/execute`
+  - body:
+    - `homeyDeviceId` (required non-empty string)
+    - `extensionId` (required non-empty string)
+    - `actionId` (required non-empty string)
+    - `args` (optional object)
+    - `dryRun` (optional boolean-like string or boolean)
+    - `confirm` (optional boolean-like string or boolean)
+  - returns a deterministic action result envelope:
+    - extension/action registration state
+    - match state/reason
+    - evaluated safety checks (`required`, `passed`, `failed`)
+    - execution status/reason
 
 Settings UI notes:
 
@@ -116,6 +129,7 @@ Use `co.lazylabs.zwavejs2homey/runtime-api-client.js`:
   - `executeRecommendationActions(options?)`
   - `getProfileExtensions(options?)`
   - `getProfileExtensionRead(options)`
+  - `executeProfileExtensionAction(options)`
 
 The helper unwraps success envelopes and throws `RuntimeApiClientError` for:
 

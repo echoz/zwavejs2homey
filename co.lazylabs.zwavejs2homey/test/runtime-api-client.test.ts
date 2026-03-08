@@ -166,6 +166,68 @@ test('client getProfileExtensionRead encodes query payload', async () => {
   });
 });
 
+test('client executeProfileExtensionAction validates required payload', async () => {
+  const homeyApi = createCallbackHomeyApi(() => {
+    throw new Error('should-not-call-homey-api');
+  });
+  const client = createRuntimeApiClient(homeyApi);
+
+  await assert.rejects(
+    () => client.executeProfileExtensionAction({ homeyDeviceId: 'main:8', extensionId: 'x' }),
+    (error) => {
+      assert.ok(error instanceof RuntimeApiClientError);
+      assert.equal(error.code, 'invalid-argument');
+      assert.match(error.message, /actionId must be a non-empty string/);
+      return true;
+    },
+  );
+
+  await assert.rejects(
+    () =>
+      client.executeProfileExtensionAction({
+        homeyDeviceId: 'main:8',
+        extensionId: 'x',
+        actionId: 'set-user-code',
+        args: ['invalid'],
+      }),
+    (error) => {
+      assert.ok(error instanceof RuntimeApiClientError);
+      assert.equal(error.code, 'invalid-argument');
+      assert.match(error.message, /args must be an object/);
+      return true;
+    },
+  );
+});
+
+test('client executeProfileExtensionAction forwards normalized payload', async () => {
+  const homeyApi = createCallbackHomeyApi(({ callback }) => {
+    callback(null, createEnvelope({ kind: 'extension-action' }));
+  });
+  const client = createRuntimeApiClient(homeyApi);
+
+  const result = await client.executeProfileExtensionAction({
+    homeyDeviceId: ' main:8 ',
+    extensionId: ' lock-user-codes ',
+    actionId: ' set-user-code ',
+    args: { slot: 1, code: '1234' },
+    dryRun: true,
+    confirm: false,
+  });
+  assert.equal(result.kind, 'extension-action');
+  assert.deepEqual(homeyApi.calls[0], {
+    method: 'POST',
+    uri: '/runtime/extensions/execute',
+    body: {
+      homeyDeviceId: 'main:8',
+      extensionId: 'lock-user-codes',
+      actionId: 'set-user-code',
+      args: { slot: 1, code: '1234' },
+      dryRun: true,
+      confirm: false,
+    },
+  });
+});
+
 test('client executeRecommendationAction validates required homeyDeviceId', async () => {
   const homeyApi = createCallbackHomeyApi(() => {
     throw new Error('should-not-call-homey-api');

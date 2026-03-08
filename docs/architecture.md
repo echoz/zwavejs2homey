@@ -302,6 +302,11 @@ Current status:
   - runtime methods: `getProfileExtensionInventory(...)`, `getProfileExtensionRead(...)`
   - route surface: `GET /runtime/extensions`, `GET /runtime/extensions/read`
   - client wrappers + route/runtime tests in place
+- action safety API slice has landed:
+  - runtime method: `executeProfileExtensionAction(...)`
+  - route surface: `POST /runtime/extensions/execute`
+  - strict fail-closed safety checks before handler execution
+  - current default behavior is explicit when no handler exists (`action-handler-not-implemented`)
 
 ## Quality and Guardrails
 

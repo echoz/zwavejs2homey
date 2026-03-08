@@ -234,7 +234,7 @@ function createCurationDocument(entries) {
   };
 }
 
-function createLockUserCodesExtensionContract() {
+function createLockUserCodesExtensionContract(actions = []) {
   return {
     schemaVersion: PROFILE_EXTENSION_SCHEMA_VERSION,
     extensionId: 'lock-user-codes',
@@ -253,7 +253,7 @@ function createLockUserCodesExtensionContract() {
         },
       ],
     },
-    actions: [],
+    actions,
   };
 }
 
@@ -2045,6 +2045,130 @@ test('app profile extension read reports supported match but pending handler imp
   assert.equal(read.read.supported, true);
   assert.equal(read.read.implemented, false);
   assert.equal(read.read.reason, 'read-handler-not-implemented');
+
+  await app.onUninit();
+});
+
+test('app profile extension action blocks when safety checks fail', async () => {
+  const nodeDevices = [
+    createNodeDiagnosticsDevice({
+      id: 'main:12',
+      bridgeId: 'main',
+      nodeId: 12,
+      profileResolution: {
+        profileId: 'product-triple:29:12801:1',
+        classification: {
+          homeyClass: 'lock',
+          driverTemplateId: 'product-yale-lock',
+          confidence: 'curated',
+          uncurated: false,
+        },
+        nodeState: {
+          ready: true,
+        },
+        recommendationAvailable: false,
+        mappingDiagnostics: [],
+      },
+    }),
+  ];
+
+  const { app } = loadAppClass(nodeDevices);
+  await app.onInit();
+  app.profileExtensionRegistry = createProfileExtensionRegistry([
+    createLockUserCodesExtensionContract([
+      {
+        actionId: 'set-user-code',
+        title: 'Set User Code',
+        description: 'Set a lock code.',
+        dryRunSupported: true,
+        safetyChecks: ['requires-node-ready', 'requires-explicit-confirmation'],
+        arguments: [
+          { name: 'slot', type: 'integer', required: true },
+          { name: 'code', type: 'string', required: true },
+        ],
+      },
+    ]),
+  ]);
+
+  const result = await app.executeProfileExtensionAction({
+    homeyDeviceId: 'main:12',
+    extensionId: 'lock-user-codes',
+    actionId: 'set-user-code',
+    args: { slot: 1, code: '1234' },
+    dryRun: true,
+    confirm: false,
+  });
+
+  assert.equal(result.extension.matched, true);
+  assert.equal(result.action.registered, true);
+  assert.equal(result.execution.status, 'blocked');
+  assert.equal(result.execution.reason, 'safety-check-failed');
+  assert.equal(result.safety.required.length, 2);
+  assert.equal(result.safety.passed.includes('requires-node-ready'), true);
+  assert.equal(result.safety.failed.length, 1);
+  assert.equal(result.safety.failed[0].check, 'requires-explicit-confirmation');
+  assert.equal(result.safety.failed[0].reason, 'confirmation-required');
+
+  await app.onUninit();
+});
+
+test('app profile extension action returns unimplemented when all safety checks pass', async () => {
+  const nodeDevices = [
+    createNodeDiagnosticsDevice({
+      id: 'main:12',
+      bridgeId: 'main',
+      nodeId: 12,
+      profileResolution: {
+        profileId: 'product-triple:29:12801:1',
+        classification: {
+          homeyClass: 'lock',
+          driverTemplateId: 'product-yale-lock',
+          confidence: 'curated',
+          uncurated: false,
+        },
+        nodeState: {
+          ready: true,
+        },
+        recommendationAvailable: false,
+        mappingDiagnostics: [],
+      },
+    }),
+  ];
+
+  const { app } = loadAppClass(nodeDevices);
+  app.homey.settings.set('zwjs_connection', { url: 'ws://127.0.0.1:3001' });
+  await app.onInit();
+  app.profileExtensionRegistry = createProfileExtensionRegistry([
+    createLockUserCodesExtensionContract([
+      {
+        actionId: 'set-user-code',
+        title: 'Set User Code',
+        description: 'Set a lock code.',
+        dryRunSupported: true,
+        safetyChecks: ['requires-node-ready', 'requires-write-access'],
+        arguments: [
+          { name: 'slot', type: 'integer', required: true },
+          { name: 'code', type: 'string', required: true },
+        ],
+      },
+    ]),
+  ]);
+
+  const result = await app.executeProfileExtensionAction({
+    homeyDeviceId: 'main:12',
+    extensionId: 'lock-user-codes',
+    actionId: 'set-user-code',
+    args: { slot: 1, code: '1234' },
+    dryRun: true,
+    confirm: true,
+  });
+
+  assert.equal(result.safety.failed.length, 0);
+  assert.equal(result.safety.passed.includes('requires-node-ready'), true);
+  assert.equal(result.safety.passed.includes('requires-write-access'), true);
+  assert.equal(result.execution.status, 'rejected');
+  assert.equal(result.execution.executed, false);
+  assert.equal(result.execution.reason, 'action-handler-not-implemented');
 
   await app.onUninit();
 });

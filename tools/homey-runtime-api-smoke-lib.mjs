@@ -220,6 +220,19 @@ export function buildSmokeRouteRequests(command) {
         extensionId: '__smoke_extension__',
       },
     },
+    {
+      key: 'executeProfileExtensionAction',
+      method: 'POST',
+      path: '/runtime/extensions/execute',
+      body: {
+        homeyDeviceId: command.smokeDeviceId,
+        extensionId: '__smoke_extension__',
+        actionId: '__smoke_action__',
+        args: {},
+        dryRun: true,
+        confirm: false,
+      },
+    },
   ];
 }
 

@@ -259,4 +259,27 @@ module.exports = {
             });
         });
     },
+    async executeProfileExtensionAction({ homey, body }) {
+        return executeRoute('executeProfileExtensionAction', async () => {
+            const app = getRuntimeApp(homey);
+            const payload = normalizeObject(body, 'body');
+            const homeyDeviceId = normalizeRequiredString(payload.homeyDeviceId, 'homeyDeviceId', 'invalid-homey-device-id');
+            const extensionId = normalizeRequiredString(payload.extensionId, 'extensionId', 'invalid-extension-id');
+            const actionId = normalizeRequiredString(payload.actionId, 'actionId', 'invalid-action-id');
+            let args = {};
+            if (typeof payload.args !== 'undefined') {
+                args = normalizeObject(payload.args, 'args');
+            }
+            const dryRun = normalizeOptionalBoolean(payload.dryRun, 'dryRun');
+            const confirm = normalizeOptionalBoolean(payload.confirm, 'confirm');
+            return app.executeProfileExtensionAction({
+                homeyDeviceId,
+                extensionId,
+                actionId,
+                args,
+                dryRun: dryRun === true,
+                confirm: confirm === true,
+            });
+        });
+    },
 };

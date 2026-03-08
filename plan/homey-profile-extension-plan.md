@@ -63,6 +63,20 @@ Action contract:
     - `getProfileExtensions(...)`
     - `getProfileExtensionRead(...)`
   - route/client/runtime tests now cover normalization and contract behavior.
+- Runtime API action safety-gate slice is complete:
+  - Homey runtime now exposes:
+    - `executeProfileExtensionAction(...)`
+  - API route is now available:
+    - `POST /runtime/extensions/execute`
+  - runtime API client now supports:
+    - `executeProfileExtensionAction(...)`
+  - action execution currently enforces strict preconditions:
+    - extension + action registration
+    - profile match
+    - dry-run support checks
+    - fail-closed safety checks (`requires-*`)
+  - no write handlers are registered yet; action route returns deterministic
+    `action-handler-not-implemented` after safety passes.
 
 ## Slice Plan
 
@@ -78,7 +92,7 @@ Action contract:
 - expose extension discovery/read routes via app runtime API
 - expose extension action execution route with strict validation
 - add smoke tests and API contract coverage
-  Status: partially completed (`discovery/read` complete, action execution pending)
+  Status: completed
 
 3. Lock extension read slice
 
