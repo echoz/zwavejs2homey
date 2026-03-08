@@ -265,6 +265,14 @@ Delivered in early Phase 7 slices:
     `defined-value-ids-unavailable`, `user-code-slots-not-discovered`)
   - expanded app-runtime behavioral coverage for supported, unsupported, and
     partial-value read flows
+- landed first implemented extension action vertical (`lock-user-codes`):
+  - runtime action handlers now execute lock user-code operations:
+    - `set-user-code`
+    - `remove-user-code`
+    - `set-user-code-state`
+  - dry-run previews now return planned writes before execution
+  - live execution uses `node.set_value` with deterministic failure envelopes
+  - read/action paths now share slot-target resolution for deterministic behavior
 
 Planned next Phase 7 extension slices:
 

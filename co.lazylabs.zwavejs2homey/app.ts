@@ -262,6 +262,36 @@ interface LockUserCodeRuntimeDiagnosticsV1 {
   warnings: string[];
 }
 
+interface LockUserCodeSlotTargetV1 {
+  slot: number;
+  statusValueId: ZwjsDefinedValueId | null;
+  codeValueId: ZwjsDefinedValueId | null;
+}
+
+interface LockUserCodeRuntimeResolutionV1 {
+  ok: boolean;
+  reason: string;
+  nodeId: number | null;
+  client: ZwjsClient | null;
+  slotTargets: LockUserCodeSlotTargetV1[];
+  slotTargetsBySlot: ReadonlyMap<number, LockUserCodeSlotTargetV1>;
+  keypadStateValueId: ZwjsDefinedValueId | null;
+  slotStatusValueIdCount: number;
+  slotCodeValueIdCount: number;
+  warnings: string[];
+}
+
+interface ProfileExtensionActionHandlerOptionsV1 {
+  homeyDeviceId: string;
+  extensionId: string;
+  actionId: string;
+  node: NodeRuntimeDiagnosticsEntry;
+  context: ProfileExtensionMatchContextV1;
+  args: Record<string, unknown>;
+  dryRun: boolean;
+  confirm: boolean;
+}
+
 module.exports = class Zwavejs2HomeyApp extends Homey.App {
   private readonly defaultBridgeId = ZWJS_DEFAULT_BRIDGE_ID;
   private readonly bridgeSessions = new Map<string, BridgeSessionRuntimeState>([
@@ -279,16 +309,7 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
   );
   private readonly profileExtensionActionHandlers = new Map<
     string,
-    (options: {
-      homeyDeviceId: string;
-      extensionId: string;
-      actionId: string;
-      node: NodeRuntimeDiagnosticsEntry;
-      context: ProfileExtensionMatchContextV1;
-      args: Record<string, unknown>;
-      dryRun: boolean;
-      confirm: boolean;
-    }) => Promise<{
+    (options: ProfileExtensionActionHandlerOptionsV1) => Promise<{
       executed: boolean;
       reason: string;
       details?: unknown;
@@ -544,6 +565,30 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
       token.includes('keypaddisabled') ||
       token.includes('toomany')
     );
+  }
+
+  private static toWritableStateValue(rawKey: string): string | number {
+    if (/^-?\d+$/.test(rawKey)) {
+      const parsed = Number.parseInt(rawKey, 10);
+      if (Number.isFinite(parsed)) return parsed;
+    }
+    return rawKey;
+  }
+
+  private static resolveLockUserCodeStatusValueForState(
+    valueId: ZwjsDefinedValueId,
+    state: LockUserCodeSlotV1['state'],
+  ): { value: string | number; label: string } | null {
+    const states = Zwavejs2HomeyApp.toValueStatesMap(valueId.states);
+    if (states.size === 0) return null;
+    for (const [rawKey, label] of states.entries()) {
+      if (Zwavejs2HomeyApp.classifyLockUserCodeSlotState(label) !== state) continue;
+      return {
+        value: Zwavejs2HomeyApp.toWritableStateValue(rawKey),
+        label,
+      };
+    }
+    return null;
   }
 
   private static normalizeNodeStateSnapshot(
@@ -1359,6 +1404,7 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
    * onInit is called when the app is initialized.
    */
   async onInit() {
+    this.registerProfileExtensionActionHandlers();
     this.settingsSetListener = (key: string) => this.onSettingsChanged(key);
     this.settingsUnsetListener = (key: string) => this.onSettingsChanged(key);
     this.homey.settings.on('set', this.settingsSetListener);
@@ -1942,6 +1988,120 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
     return null;
   }
 
+  private async resolveLockUserCodeRuntime(options: {
+    node: NodeRuntimeDiagnosticsEntry;
+  }): Promise<LockUserCodeRuntimeResolutionV1> {
+    const warnings: string[] = [];
+    if (!options.node.bridgeId) {
+      return {
+        ok: false,
+        reason: 'missing-bridge-id',
+        nodeId: null,
+        client: null,
+        slotTargets: [],
+        slotTargetsBySlot: new Map(),
+        keypadStateValueId: null,
+        slotStatusValueIdCount: 0,
+        slotCodeValueIdCount: 0,
+        warnings,
+      };
+    }
+
+    if (typeof options.node.nodeId !== 'number' || !Number.isFinite(options.node.nodeId)) {
+      return {
+        ok: false,
+        reason: 'missing-node-id',
+        nodeId: null,
+        client: null,
+        slotTargets: [],
+        slotTargetsBySlot: new Map(),
+        keypadStateValueId: null,
+        slotStatusValueIdCount: 0,
+        slotCodeValueIdCount: 0,
+        warnings,
+      };
+    }
+
+    const bridgeSession = this.getBridgeSession(options.node.bridgeId);
+    const client = bridgeSession?.getZwjsClient();
+    if (!client) {
+      return {
+        ok: false,
+        reason: 'bridge-client-unavailable',
+        nodeId: options.node.nodeId,
+        client: null,
+        slotTargets: [],
+        slotTargetsBySlot: new Map(),
+        keypadStateValueId: null,
+        slotStatusValueIdCount: 0,
+        slotCodeValueIdCount: 0,
+        warnings,
+      };
+    }
+
+    const definedValueResult = await client.getNodeDefinedValueIds(options.node.nodeId);
+    if (!definedValueResult.success) {
+      warnings.push('defined-value-ids-unavailable');
+      return {
+        ok: false,
+        reason: 'defined-value-ids-unavailable',
+        nodeId: options.node.nodeId,
+        client,
+        slotTargets: [],
+        slotTargetsBySlot: new Map(),
+        keypadStateValueId: null,
+        slotStatusValueIdCount: 0,
+        slotCodeValueIdCount: 0,
+        warnings,
+      };
+    }
+
+    const definedValueIds = extractZwjsDefinedValueIds(definedValueResult.result);
+    const slotStatusValueIds = new Map<number, ZwjsDefinedValueId>();
+    const slotCodeValueIds = new Map<number, ZwjsDefinedValueId>();
+    const slotNumbers = new Set<number>();
+    let keypadStateValueId: ZwjsDefinedValueId | null = null;
+
+    for (const valueId of definedValueIds) {
+      const slot = Zwavejs2HomeyApp.toValueIdSlotNumber(valueId);
+      if (slot && Zwavejs2HomeyApp.isLockUserIdStatusValueId(valueId)) {
+        if (!slotStatusValueIds.has(slot)) slotStatusValueIds.set(slot, valueId);
+        slotNumbers.add(slot);
+        continue;
+      }
+      if (slot && Zwavejs2HomeyApp.isLockUserCodeValueId(valueId)) {
+        if (!slotCodeValueIds.has(slot)) slotCodeValueIds.set(slot, valueId);
+        slotNumbers.add(slot);
+        continue;
+      }
+      if (!keypadStateValueId && Zwavejs2HomeyApp.isLockKeypadStateValueId(valueId)) {
+        keypadStateValueId = valueId;
+      }
+    }
+
+    const slotTargets = Array.from(slotNumbers)
+      .sort((left, right) => left - right)
+      .map((slot) => ({
+        slot,
+        statusValueId: slotStatusValueIds.get(slot) ?? null,
+        codeValueId: slotCodeValueIds.get(slot) ?? null,
+      }));
+    const slotTargetsBySlot = new Map(slotTargets.map((entry) => [entry.slot, entry]));
+
+    return {
+      ok: true,
+      reason: slotTargets.length > 0 ? 'ok' : 'user-code-slots-not-discovered',
+      nodeId: options.node.nodeId,
+      client,
+      slotTargets,
+      slotTargetsBySlot,
+      keypadStateValueId,
+      slotStatusValueIdCount: slotStatusValueIds.size,
+      slotCodeValueIdCount: slotCodeValueIds.size,
+      warnings,
+    };
+  }
+
   private async readLockUserCodeSlots(options: {
     node: NodeRuntimeDiagnosticsEntry;
     extensionMatched: boolean;
@@ -1960,41 +2120,14 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
       };
     }
 
-    if (!options.node.bridgeId) {
+    const resolved = await this.resolveLockUserCodeRuntime({
+      node: options.node,
+    });
+    if (!resolved.ok || !resolved.client || typeof resolved.nodeId !== 'number') {
       return {
         supported: true,
         implemented: true,
-        reason: 'missing-bridge-id',
-        sections: [],
-      };
-    }
-    if (typeof options.node.nodeId !== 'number' || !Number.isFinite(options.node.nodeId)) {
-      return {
-        supported: true,
-        implemented: true,
-        reason: 'missing-node-id',
-        sections: [],
-      };
-    }
-
-    const bridgeSession = this.getBridgeSession(options.node.bridgeId);
-    const client = bridgeSession?.getZwjsClient();
-    if (!client) {
-      return {
-        supported: true,
-        implemented: true,
-        reason: 'bridge-client-unavailable',
-        sections: [],
-      };
-    }
-
-    const warnings: string[] = [];
-    const definedValueResult = await client.getNodeDefinedValueIds(options.node.nodeId);
-    if (!definedValueResult.success) {
-      return {
-        supported: true,
-        implemented: true,
-        reason: 'defined-value-ids-unavailable',
+        reason: resolved.reason,
         sections: [
           {
             sectionId: 'user-code-slots',
@@ -2013,54 +2146,43 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
             title: 'Lockout Diagnostics',
             diagnostics: {
               ready: options.node.node.ready === true,
-              valueIdsLoaded: false,
-              slotStatusValueIdCount: 0,
-              slotCodeValueIdCount: 0,
+              valueIdsLoaded: resolved.reason !== 'defined-value-ids-unavailable',
+              slotStatusValueIdCount: resolved.slotStatusValueIdCount,
+              slotCodeValueIdCount: resolved.slotCodeValueIdCount,
               keypadState: null,
               keypadStateLabel: null,
               lockoutActive: null,
-              warnings: ['defined-value-ids-unavailable'],
+              warnings: resolved.warnings,
             } satisfies LockUserCodeRuntimeDiagnosticsV1,
           },
         ],
       };
     }
 
-    const definedValueIds = extractZwjsDefinedValueIds(definedValueResult.result);
-    const slotStateIds = new Map<number, ZwjsDefinedValueId>();
-    const slotCodeIds = new Map<number, ZwjsDefinedValueId>();
-    const keypadStateValueId = definedValueIds.find((valueId) =>
-      Zwavejs2HomeyApp.isLockKeypadStateValueId(valueId),
-    );
-
-    for (const valueId of definedValueIds) {
-      const slot = Zwavejs2HomeyApp.toValueIdSlotNumber(valueId);
-      if (!slot) continue;
-      if (Zwavejs2HomeyApp.isLockUserIdStatusValueId(valueId) && !slotStateIds.has(slot)) {
-        slotStateIds.set(slot, valueId);
-      }
-      if (Zwavejs2HomeyApp.isLockUserCodeValueId(valueId) && !slotCodeIds.has(slot)) {
-        slotCodeIds.set(slot, valueId);
-      }
-    }
-
+    const warnings = [...resolved.warnings];
     const slots: LockUserCodeSlotV1[] = [];
-    for (const slot of Array.from(slotStateIds.keys()).sort((left, right) => left - right)) {
-      const valueId = slotStateIds.get(slot);
-      if (!valueId) continue;
-      const value = await this.readExtensionNodeValue({
-        client,
-        nodeId: options.node.nodeId,
-        valueId,
-        warningCode: `slot-${slot}-status-read-failed`,
-        warnings,
-      });
+    for (const target of resolved.slotTargets) {
+      const statusValueId = target.statusValueId;
+      const warningCode = `slot-${target.slot}-status-read-failed`;
+      const statusValue = statusValueId
+        ? await this.readExtensionNodeValue({
+            client: resolved.client,
+            nodeId: resolved.nodeId,
+            valueId: statusValueId,
+            warningCode,
+            warnings,
+          })
+        : null;
       const normalizedStatusValue =
-        typeof value === 'string' || typeof value === 'number' ? value : null;
-      const stateLabel = Zwavejs2HomeyApp.toStateLabel(value, valueId);
-      const state = Zwavejs2HomeyApp.classifyLockUserCodeSlotState(stateLabel);
+        typeof statusValue === 'string' || typeof statusValue === 'number' ? statusValue : null;
+      const stateLabel = statusValueId
+        ? Zwavejs2HomeyApp.toStateLabel(statusValue, statusValueId)
+        : null;
+      const state = statusValueId
+        ? Zwavejs2HomeyApp.classifyLockUserCodeSlotState(stateLabel)
+        : 'unknown';
       slots.push({
-        slot,
+        slot: target.slot,
         state,
         stateLabel,
         statusValue: normalizedStatusValue,
@@ -2075,25 +2197,25 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
     let keypadState: string | number | null = null;
     let keypadStateLabel: string | null = null;
     let lockoutActive: boolean | null = null;
-    if (keypadStateValueId) {
+    if (resolved.keypadStateValueId) {
       const keypadValue = await this.readExtensionNodeValue({
-        client,
-        nodeId: options.node.nodeId,
-        valueId: keypadStateValueId,
+        client: resolved.client,
+        nodeId: resolved.nodeId,
+        valueId: resolved.keypadStateValueId,
         warningCode: 'keypad-state-read-failed',
         warnings,
       });
       keypadState =
         typeof keypadValue === 'string' || typeof keypadValue === 'number' ? keypadValue : null;
-      keypadStateLabel = Zwavejs2HomeyApp.toStateLabel(keypadValue, keypadStateValueId);
+      keypadStateLabel = Zwavejs2HomeyApp.toStateLabel(keypadValue, resolved.keypadStateValueId);
       lockoutActive = Zwavejs2HomeyApp.isLockoutStateLabel(keypadStateLabel);
     }
 
     const diagnostics = {
       ready: options.node.node.ready === true,
       valueIdsLoaded: true,
-      slotStatusValueIdCount: slotStateIds.size,
-      slotCodeValueIdCount: slotCodeIds.size,
+      slotStatusValueIdCount: resolved.slotStatusValueIdCount,
+      slotCodeValueIdCount: resolved.slotCodeValueIdCount,
       keypadState,
       keypadStateLabel,
       lockoutActive,
@@ -2225,6 +2347,362 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
         fallbackReason: node.profile.fallbackReason,
       },
     };
+  }
+
+  private registerProfileExtensionActionHandlers(): void {
+    this.profileExtensionActionHandlers.clear();
+    this.profileExtensionActionHandlers.set('lock-user-codes:set-user-code', async (options) =>
+      this.executeLockSetUserCodeAction(options),
+    );
+    this.profileExtensionActionHandlers.set('lock-user-codes:remove-user-code', async (options) =>
+      this.executeLockRemoveUserCodeAction(options),
+    );
+    this.profileExtensionActionHandlers.set(
+      'lock-user-codes:set-user-code-state',
+      async (options) => this.executeLockSetUserCodeStateAction(options),
+    );
+  }
+
+  private static toRequiredPositiveIntegerArg(
+    args: Record<string, unknown>,
+    name: string,
+  ): number | null {
+    const value = args[name];
+    if (typeof value !== 'number' || !Number.isInteger(value) || !Number.isFinite(value)) {
+      return null;
+    }
+    return value > 0 ? value : null;
+  }
+
+  private static toRequiredNonEmptyStringArg(
+    args: Record<string, unknown>,
+    name: string,
+  ): string | null {
+    const value = Zwavejs2HomeyApp.toStringOrNull(args[name]);
+    return value && value.length > 0 ? value : null;
+  }
+
+  private static toLockUserCodeStateArg(
+    args: Record<string, unknown>,
+  ): 'enabled' | 'disabled' | null {
+    const value = Zwavejs2HomeyApp.toStringOrNull(args.state);
+    if (!value) return null;
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'enabled') return 'enabled';
+    if (normalized === 'disabled') return 'disabled';
+    return null;
+  }
+
+  private async executeProfileExtensionWrites(options: {
+    client: ZwjsClient;
+    nodeId: number;
+    writes: Array<{
+      valueId: ZwjsValueId;
+      value: unknown;
+      description: string;
+    }>;
+    dryRun: boolean;
+  }): Promise<{
+    executed: boolean;
+    reason: string;
+    details: unknown;
+  }> {
+    if (options.writes.length === 0) {
+      return {
+        executed: false,
+        reason: 'no-writes-planned',
+        details: null,
+      };
+    }
+    if (options.dryRun) {
+      return {
+        executed: false,
+        reason: 'dry-run-preview',
+        details: {
+          nodeId: options.nodeId,
+          writes: options.writes,
+        },
+      };
+    }
+
+    const applied: Array<{ index: number; valueId: ZwjsValueId; description: string }> = [];
+    for (const [index, write] of options.writes.entries()) {
+      const result = await options.client.setNodeValue({
+        nodeId: options.nodeId,
+        valueId: write.valueId,
+        value: write.value,
+      });
+      if (!result.success) {
+        return {
+          executed: false,
+          reason: 'zwjs-write-failed',
+          details: {
+            failedIndex: index,
+            failedWrite: write,
+            error: result.error,
+            applied,
+          },
+        };
+      }
+      applied.push({
+        index,
+        valueId: write.valueId,
+        description: write.description,
+      });
+    }
+
+    return {
+      executed: true,
+      reason: 'ok',
+      details: {
+        nodeId: options.nodeId,
+        writesApplied: applied.length,
+        writes: applied,
+      },
+    };
+  }
+
+  private async executeLockSetUserCodeAction(
+    options: ProfileExtensionActionHandlerOptionsV1,
+  ): Promise<{
+    executed: boolean;
+    reason: string;
+    details?: unknown;
+  }> {
+    const slot = Zwavejs2HomeyApp.toRequiredPositiveIntegerArg(options.args, 'slot');
+    if (!slot) {
+      return {
+        executed: false,
+        reason: 'invalid-slot',
+      };
+    }
+
+    const code = Zwavejs2HomeyApp.toRequiredNonEmptyStringArg(options.args, 'code');
+    if (!code) {
+      return {
+        executed: false,
+        reason: 'invalid-code',
+      };
+    }
+
+    const resolved = await this.resolveLockUserCodeRuntime({
+      node: options.node,
+    });
+    if (!resolved.ok || !resolved.client || typeof resolved.nodeId !== 'number') {
+      return {
+        executed: false,
+        reason: resolved.reason,
+        details: {
+          warnings: resolved.warnings,
+        },
+      };
+    }
+
+    const target = resolved.slotTargetsBySlot.get(slot);
+    if (!target) {
+      return {
+        executed: false,
+        reason: 'slot-not-found',
+        details: {
+          slot,
+          availableSlots: resolved.slotTargets.map((entry) => entry.slot),
+        },
+      };
+    }
+
+    if (!target.codeValueId) {
+      return {
+        executed: false,
+        reason: 'slot-code-write-target-missing',
+        details: {
+          slot,
+        },
+      };
+    }
+
+    return this.executeProfileExtensionWrites({
+      client: resolved.client,
+      nodeId: resolved.nodeId,
+      writes: [
+        {
+          valueId: target.codeValueId,
+          value: code,
+          description: `Set slot ${slot} code`,
+        },
+      ],
+      dryRun: options.dryRun,
+    });
+  }
+
+  private async executeLockRemoveUserCodeAction(
+    options: ProfileExtensionActionHandlerOptionsV1,
+  ): Promise<{
+    executed: boolean;
+    reason: string;
+    details?: unknown;
+  }> {
+    const slot = Zwavejs2HomeyApp.toRequiredPositiveIntegerArg(options.args, 'slot');
+    if (!slot) {
+      return {
+        executed: false,
+        reason: 'invalid-slot',
+      };
+    }
+
+    const resolved = await this.resolveLockUserCodeRuntime({
+      node: options.node,
+    });
+    if (!resolved.ok || !resolved.client || typeof resolved.nodeId !== 'number') {
+      return {
+        executed: false,
+        reason: resolved.reason,
+        details: {
+          warnings: resolved.warnings,
+        },
+      };
+    }
+
+    const target = resolved.slotTargetsBySlot.get(slot);
+    if (!target) {
+      return {
+        executed: false,
+        reason: 'slot-not-found',
+        details: {
+          slot,
+          availableSlots: resolved.slotTargets.map((entry) => entry.slot),
+        },
+      };
+    }
+
+    if (target.statusValueId) {
+      const availableState = Zwavejs2HomeyApp.resolveLockUserCodeStatusValueForState(
+        target.statusValueId,
+        'available',
+      );
+      if (availableState) {
+        return this.executeProfileExtensionWrites({
+          client: resolved.client,
+          nodeId: resolved.nodeId,
+          writes: [
+            {
+              valueId: target.statusValueId,
+              value: availableState.value,
+              description: `Set slot ${slot} status to ${availableState.label}`,
+            },
+          ],
+          dryRun: options.dryRun,
+        });
+      }
+    }
+
+    if (!target.codeValueId) {
+      return {
+        executed: false,
+        reason: 'slot-remove-target-missing',
+        details: {
+          slot,
+        },
+      };
+    }
+
+    return this.executeProfileExtensionWrites({
+      client: resolved.client,
+      nodeId: resolved.nodeId,
+      writes: [
+        {
+          valueId: target.codeValueId,
+          value: '',
+          description: `Clear slot ${slot} code`,
+        },
+      ],
+      dryRun: options.dryRun,
+    });
+  }
+
+  private async executeLockSetUserCodeStateAction(
+    options: ProfileExtensionActionHandlerOptionsV1,
+  ): Promise<{
+    executed: boolean;
+    reason: string;
+    details?: unknown;
+  }> {
+    const slot = Zwavejs2HomeyApp.toRequiredPositiveIntegerArg(options.args, 'slot');
+    if (!slot) {
+      return {
+        executed: false,
+        reason: 'invalid-slot',
+      };
+    }
+    const state = Zwavejs2HomeyApp.toLockUserCodeStateArg(options.args);
+    if (!state) {
+      return {
+        executed: false,
+        reason: 'invalid-state',
+      };
+    }
+
+    const resolved = await this.resolveLockUserCodeRuntime({
+      node: options.node,
+    });
+    if (!resolved.ok || !resolved.client || typeof resolved.nodeId !== 'number') {
+      return {
+        executed: false,
+        reason: resolved.reason,
+        details: {
+          warnings: resolved.warnings,
+        },
+      };
+    }
+
+    const target = resolved.slotTargetsBySlot.get(slot);
+    if (!target) {
+      return {
+        executed: false,
+        reason: 'slot-not-found',
+        details: {
+          slot,
+          availableSlots: resolved.slotTargets.map((entry) => entry.slot),
+        },
+      };
+    }
+
+    if (!target.statusValueId) {
+      return {
+        executed: false,
+        reason: 'slot-status-write-target-missing',
+        details: {
+          slot,
+        },
+      };
+    }
+
+    const mappedValue = Zwavejs2HomeyApp.resolveLockUserCodeStatusValueForState(
+      target.statusValueId,
+      state,
+    );
+    if (!mappedValue) {
+      return {
+        executed: false,
+        reason: 'slot-state-write-value-unsupported',
+        details: {
+          slot,
+          state,
+        },
+      };
+    }
+
+    return this.executeProfileExtensionWrites({
+      client: resolved.client,
+      nodeId: resolved.nodeId,
+      writes: [
+        {
+          valueId: target.statusValueId,
+          value: mappedValue.value,
+          description: `Set slot ${slot} state to ${mappedValue.label}`,
+        },
+      ],
+      dryRun: options.dryRun,
+    });
   }
 
   private static normalizeProfileExtensionArgs(value: unknown): Record<string, unknown> {

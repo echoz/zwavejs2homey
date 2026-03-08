@@ -111,6 +111,9 @@ function createMockCoreModule() {
         this.stopCalls += 1;
         totals.stopCalls += 1;
       },
+      async setNodeValue(_args) {
+        return { success: true, result: { success: true } };
+      },
       getStatus() {
         return {
           transportConnected: true,
@@ -288,6 +291,9 @@ function createMockProfileExtensionClient(overrides = {}) {
     },
     async getNodeValue() {
       return { success: true, result: { value: null } };
+    },
+    async setNodeValue() {
+      return { success: true, result: { success: true } };
     },
     ...overrides,
   };
@@ -2342,7 +2348,7 @@ test('app profile extension action blocks when safety checks fail', async () => 
   await app.onUninit();
 });
 
-test('app profile extension action returns unimplemented when all safety checks pass', async () => {
+test('app profile extension action returns dry-run preview when safety checks pass', async () => {
   const nodeDevices = [
     createNodeDiagnosticsDevice({
       id: 'main:12',
@@ -2366,7 +2372,6 @@ test('app profile extension action returns unimplemented when all safety checks 
   ];
 
   const { app } = loadAppClass(nodeDevices);
-  app.homey.settings.set('zwjs_connection', { url: 'ws://127.0.0.1:3001' });
   await app.onInit();
   app.profileExtensionRegistry = createProfileExtensionRegistry([
     createLockUserCodesExtensionContract([
@@ -2383,6 +2388,24 @@ test('app profile extension action returns unimplemented when all safety checks 
       },
     ]),
   ]);
+  const session = app.getBridgeSession('main');
+  assert.ok(session);
+  session.setZwjsClient(
+    createMockProfileExtensionClient({
+      async getNodeDefinedValueIds() {
+        return {
+          success: true,
+          result: [
+            {
+              commandClass: 99,
+              property: 'userCode',
+              propertyKey: 1,
+            },
+          ],
+        };
+      },
+    }),
+  );
 
   const result = await app.executeProfileExtensionAction({
     homeyDeviceId: 'main:12',
@@ -2396,9 +2419,180 @@ test('app profile extension action returns unimplemented when all safety checks 
   assert.equal(result.safety.failed.length, 0);
   assert.equal(result.safety.passed.includes('requires-node-ready'), true);
   assert.equal(result.safety.passed.includes('requires-write-access'), true);
-  assert.equal(result.execution.status, 'rejected');
+  assert.equal(result.execution.status, 'blocked');
   assert.equal(result.execution.executed, false);
-  assert.equal(result.execution.reason, 'action-handler-not-implemented');
+  assert.equal(result.execution.reason, 'dry-run-preview');
+  assert.equal(result.execution.details.writes.length, 1);
+  assert.equal(result.execution.details.writes[0].description, 'Set slot 1 code');
+
+  await app.onUninit();
+});
+
+test('app profile extension action executes remove-user-code write when slot status supports available', async () => {
+  const nodeDevices = [
+    createNodeDiagnosticsDevice({
+      id: 'main:12',
+      bridgeId: 'main',
+      nodeId: 12,
+      profileResolution: {
+        profileId: 'product-triple:29:12801:1',
+        classification: {
+          homeyClass: 'lock',
+          driverTemplateId: 'product-yale-lock',
+          confidence: 'curated',
+          uncurated: false,
+        },
+        nodeState: {
+          ready: true,
+        },
+        recommendationAvailable: false,
+        mappingDiagnostics: [],
+      },
+    }),
+  ];
+
+  const writes = [];
+  const { app } = loadAppClass(nodeDevices);
+  await app.onInit();
+  app.profileExtensionRegistry = createProfileExtensionRegistry([
+    createLockUserCodesExtensionContract([
+      {
+        actionId: 'remove-user-code',
+        title: 'Remove User Code',
+        description: 'Remove a lock code.',
+        dryRunSupported: true,
+        safetyChecks: ['requires-node-ready', 'requires-write-access'],
+        arguments: [{ name: 'slot', type: 'integer', required: true }],
+      },
+    ]),
+  ]);
+  const session = app.getBridgeSession('main');
+  assert.ok(session);
+  session.setZwjsClient(
+    createMockProfileExtensionClient({
+      async getNodeDefinedValueIds() {
+        return {
+          success: true,
+          result: [
+            {
+              commandClass: 99,
+              property: 'userIdStatus',
+              propertyKey: 1,
+              states: {
+                0: 'Available',
+                1: 'Enabled',
+              },
+            },
+          ],
+        };
+      },
+      async setNodeValue(args) {
+        writes.push(args);
+        return { success: true, result: { success: true } };
+      },
+    }),
+  );
+
+  const result = await app.executeProfileExtensionAction({
+    homeyDeviceId: 'main:12',
+    extensionId: 'lock-user-codes',
+    actionId: 'remove-user-code',
+    args: { slot: 1 },
+    dryRun: false,
+    confirm: true,
+  });
+
+  assert.equal(result.execution.status, 'executed');
+  assert.equal(result.execution.reason, 'ok');
+  assert.equal(writes.length, 1);
+  assert.equal(writes[0].nodeId, 12);
+  assert.equal(writes[0].value, 0);
+
+  await app.onUninit();
+});
+
+test('app profile extension action executes set-user-code-state using mapped enum value', async () => {
+  const nodeDevices = [
+    createNodeDiagnosticsDevice({
+      id: 'main:12',
+      bridgeId: 'main',
+      nodeId: 12,
+      profileResolution: {
+        profileId: 'product-triple:29:12801:1',
+        classification: {
+          homeyClass: 'lock',
+          driverTemplateId: 'product-yale-lock',
+          confidence: 'curated',
+          uncurated: false,
+        },
+        nodeState: {
+          ready: true,
+        },
+        recommendationAvailable: false,
+        mappingDiagnostics: [],
+      },
+    }),
+  ];
+
+  const writes = [];
+  const { app } = loadAppClass(nodeDevices);
+  await app.onInit();
+  app.profileExtensionRegistry = createProfileExtensionRegistry([
+    createLockUserCodesExtensionContract([
+      {
+        actionId: 'set-user-code-state',
+        title: 'Set User Code State',
+        description: 'Set lock code state.',
+        dryRunSupported: true,
+        safetyChecks: ['requires-node-ready', 'requires-write-access'],
+        arguments: [
+          { name: 'slot', type: 'integer', required: true },
+          { name: 'state', type: 'enum', required: true, enumValues: ['enabled', 'disabled'] },
+        ],
+      },
+    ]),
+  ]);
+  const session = app.getBridgeSession('main');
+  assert.ok(session);
+  session.setZwjsClient(
+    createMockProfileExtensionClient({
+      async getNodeDefinedValueIds() {
+        return {
+          success: true,
+          result: [
+            {
+              commandClass: 99,
+              property: 'userIdStatus',
+              propertyKey: 4,
+              states: {
+                1: 'Enabled',
+                2: 'Disabled',
+              },
+            },
+          ],
+        };
+      },
+      async setNodeValue(args) {
+        writes.push(args);
+        return { success: true, result: { success: true } };
+      },
+    }),
+  );
+
+  const result = await app.executeProfileExtensionAction({
+    homeyDeviceId: 'main:12',
+    extensionId: 'lock-user-codes',
+    actionId: 'set-user-code-state',
+    args: { slot: 4, state: 'disabled' },
+    dryRun: false,
+    confirm: true,
+  });
+
+  assert.equal(result.execution.status, 'executed');
+  assert.equal(result.execution.reason, 'ok');
+  assert.equal(writes.length, 1);
+  assert.equal(writes[0].nodeId, 12);
+  assert.equal(writes[0].value, 2);
 
   await app.onUninit();
 });

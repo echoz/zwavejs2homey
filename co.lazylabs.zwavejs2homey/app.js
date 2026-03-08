@@ -267,6 +267,28 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
                 token.includes('keypaddisabled') ||
                 token.includes('toomany'));
         }
+        static toWritableStateValue(rawKey) {
+            if (/^-?\d+$/.test(rawKey)) {
+                const parsed = Number.parseInt(rawKey, 10);
+                if (Number.isFinite(parsed))
+                    return parsed;
+            }
+            return rawKey;
+        }
+        static resolveLockUserCodeStatusValueForState(valueId, state) {
+            const states = _a.toValueStatesMap(valueId.states);
+            if (states.size === 0)
+                return null;
+            for (const [rawKey, label] of states.entries()) {
+                if (_a.classifyLockUserCodeSlotState(label) !== state)
+                    continue;
+                return {
+                    value: _a.toWritableStateValue(rawKey),
+                    label,
+                };
+            }
+            return null;
+        }
         static normalizeNodeStateSnapshot(profileResolution) {
             let nodeState;
             if (profileResolution.nodeState && typeof profileResolution.nodeState === 'object') {
@@ -934,6 +956,7 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
          * onInit is called when the app is initialized.
          */
         async onInit() {
+            this.registerProfileExtensionActionHandlers();
             this.settingsSetListener = (key) => this.onSettingsChanged(key);
             this.settingsUnsetListener = (key) => this.onSettingsChanged(key);
             this.homey.settings.on('set', this.settingsSetListener);
@@ -1355,6 +1378,112 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
             options.warnings.push(options.warningCode);
             return null;
         }
+        async resolveLockUserCodeRuntime(options) {
+            const warnings = [];
+            if (!options.node.bridgeId) {
+                return {
+                    ok: false,
+                    reason: 'missing-bridge-id',
+                    nodeId: null,
+                    client: null,
+                    slotTargets: [],
+                    slotTargetsBySlot: new Map(),
+                    keypadStateValueId: null,
+                    slotStatusValueIdCount: 0,
+                    slotCodeValueIdCount: 0,
+                    warnings,
+                };
+            }
+            if (typeof options.node.nodeId !== 'number' || !Number.isFinite(options.node.nodeId)) {
+                return {
+                    ok: false,
+                    reason: 'missing-node-id',
+                    nodeId: null,
+                    client: null,
+                    slotTargets: [],
+                    slotTargetsBySlot: new Map(),
+                    keypadStateValueId: null,
+                    slotStatusValueIdCount: 0,
+                    slotCodeValueIdCount: 0,
+                    warnings,
+                };
+            }
+            const bridgeSession = this.getBridgeSession(options.node.bridgeId);
+            const client = bridgeSession?.getZwjsClient();
+            if (!client) {
+                return {
+                    ok: false,
+                    reason: 'bridge-client-unavailable',
+                    nodeId: options.node.nodeId,
+                    client: null,
+                    slotTargets: [],
+                    slotTargetsBySlot: new Map(),
+                    keypadStateValueId: null,
+                    slotStatusValueIdCount: 0,
+                    slotCodeValueIdCount: 0,
+                    warnings,
+                };
+            }
+            const definedValueResult = await client.getNodeDefinedValueIds(options.node.nodeId);
+            if (!definedValueResult.success) {
+                warnings.push('defined-value-ids-unavailable');
+                return {
+                    ok: false,
+                    reason: 'defined-value-ids-unavailable',
+                    nodeId: options.node.nodeId,
+                    client,
+                    slotTargets: [],
+                    slotTargetsBySlot: new Map(),
+                    keypadStateValueId: null,
+                    slotStatusValueIdCount: 0,
+                    slotCodeValueIdCount: 0,
+                    warnings,
+                };
+            }
+            const definedValueIds = (0, core_1.extractZwjsDefinedValueIds)(definedValueResult.result);
+            const slotStatusValueIds = new Map();
+            const slotCodeValueIds = new Map();
+            const slotNumbers = new Set();
+            let keypadStateValueId = null;
+            for (const valueId of definedValueIds) {
+                const slot = _a.toValueIdSlotNumber(valueId);
+                if (slot && _a.isLockUserIdStatusValueId(valueId)) {
+                    if (!slotStatusValueIds.has(slot))
+                        slotStatusValueIds.set(slot, valueId);
+                    slotNumbers.add(slot);
+                    continue;
+                }
+                if (slot && _a.isLockUserCodeValueId(valueId)) {
+                    if (!slotCodeValueIds.has(slot))
+                        slotCodeValueIds.set(slot, valueId);
+                    slotNumbers.add(slot);
+                    continue;
+                }
+                if (!keypadStateValueId && _a.isLockKeypadStateValueId(valueId)) {
+                    keypadStateValueId = valueId;
+                }
+            }
+            const slotTargets = Array.from(slotNumbers)
+                .sort((left, right) => left - right)
+                .map((slot) => ({
+                slot,
+                statusValueId: slotStatusValueIds.get(slot) ?? null,
+                codeValueId: slotCodeValueIds.get(slot) ?? null,
+            }));
+            const slotTargetsBySlot = new Map(slotTargets.map((entry) => [entry.slot, entry]));
+            return {
+                ok: true,
+                reason: slotTargets.length > 0 ? 'ok' : 'user-code-slots-not-discovered',
+                nodeId: options.node.nodeId,
+                client,
+                slotTargets,
+                slotTargetsBySlot,
+                keypadStateValueId,
+                slotStatusValueIdCount: slotStatusValueIds.size,
+                slotCodeValueIdCount: slotCodeValueIds.size,
+                warnings,
+            };
+        }
         async readLockUserCodeSlots(options) {
             if (!options.extensionMatched) {
                 return {
@@ -1364,39 +1493,14 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
                     sections: [],
                 };
             }
-            if (!options.node.bridgeId) {
+            const resolved = await this.resolveLockUserCodeRuntime({
+                node: options.node,
+            });
+            if (!resolved.ok || !resolved.client || typeof resolved.nodeId !== 'number') {
                 return {
                     supported: true,
                     implemented: true,
-                    reason: 'missing-bridge-id',
-                    sections: [],
-                };
-            }
-            if (typeof options.node.nodeId !== 'number' || !Number.isFinite(options.node.nodeId)) {
-                return {
-                    supported: true,
-                    implemented: true,
-                    reason: 'missing-node-id',
-                    sections: [],
-                };
-            }
-            const bridgeSession = this.getBridgeSession(options.node.bridgeId);
-            const client = bridgeSession?.getZwjsClient();
-            if (!client) {
-                return {
-                    supported: true,
-                    implemented: true,
-                    reason: 'bridge-client-unavailable',
-                    sections: [],
-                };
-            }
-            const warnings = [];
-            const definedValueResult = await client.getNodeDefinedValueIds(options.node.nodeId);
-            if (!definedValueResult.success) {
-                return {
-                    supported: true,
-                    implemented: true,
-                    reason: 'defined-value-ids-unavailable',
+                    reason: resolved.reason,
                     sections: [
                         {
                             sectionId: 'user-code-slots',
@@ -1415,50 +1519,41 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
                             title: 'Lockout Diagnostics',
                             diagnostics: {
                                 ready: options.node.node.ready === true,
-                                valueIdsLoaded: false,
-                                slotStatusValueIdCount: 0,
-                                slotCodeValueIdCount: 0,
+                                valueIdsLoaded: resolved.reason !== 'defined-value-ids-unavailable',
+                                slotStatusValueIdCount: resolved.slotStatusValueIdCount,
+                                slotCodeValueIdCount: resolved.slotCodeValueIdCount,
                                 keypadState: null,
                                 keypadStateLabel: null,
                                 lockoutActive: null,
-                                warnings: ['defined-value-ids-unavailable'],
+                                warnings: resolved.warnings,
                             },
                         },
                     ],
                 };
             }
-            const definedValueIds = (0, core_1.extractZwjsDefinedValueIds)(definedValueResult.result);
-            const slotStateIds = new Map();
-            const slotCodeIds = new Map();
-            const keypadStateValueId = definedValueIds.find((valueId) => _a.isLockKeypadStateValueId(valueId));
-            for (const valueId of definedValueIds) {
-                const slot = _a.toValueIdSlotNumber(valueId);
-                if (!slot)
-                    continue;
-                if (_a.isLockUserIdStatusValueId(valueId) && !slotStateIds.has(slot)) {
-                    slotStateIds.set(slot, valueId);
-                }
-                if (_a.isLockUserCodeValueId(valueId) && !slotCodeIds.has(slot)) {
-                    slotCodeIds.set(slot, valueId);
-                }
-            }
+            const warnings = [...resolved.warnings];
             const slots = [];
-            for (const slot of Array.from(slotStateIds.keys()).sort((left, right) => left - right)) {
-                const valueId = slotStateIds.get(slot);
-                if (!valueId)
-                    continue;
-                const value = await this.readExtensionNodeValue({
-                    client,
-                    nodeId: options.node.nodeId,
-                    valueId,
-                    warningCode: `slot-${slot}-status-read-failed`,
-                    warnings,
-                });
-                const normalizedStatusValue = typeof value === 'string' || typeof value === 'number' ? value : null;
-                const stateLabel = _a.toStateLabel(value, valueId);
-                const state = _a.classifyLockUserCodeSlotState(stateLabel);
+            for (const target of resolved.slotTargets) {
+                const statusValueId = target.statusValueId;
+                const warningCode = `slot-${target.slot}-status-read-failed`;
+                const statusValue = statusValueId
+                    ? await this.readExtensionNodeValue({
+                        client: resolved.client,
+                        nodeId: resolved.nodeId,
+                        valueId: statusValueId,
+                        warningCode,
+                        warnings,
+                    })
+                    : null;
+                const normalizedStatusValue = typeof statusValue === 'string' || typeof statusValue === 'number' ? statusValue : null;
+                const stateLabel = statusValueId
+                    ? _a.toStateLabel(statusValue, statusValueId)
+                    : null;
+                const state = statusValueId
+                    ? _a.classifyLockUserCodeSlotState(stateLabel)
+                    : 'unknown';
                 slots.push({
-                    slot,
+                    slot: target.slot,
                     state,
                     stateLabel,
                     statusValue: normalizedStatusValue,
@@ -1471,24 +1566,24 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
             let keypadState = null;
             let keypadStateLabel = null;
             let lockoutActive = null;
-            if (keypadStateValueId) {
+            if (resolved.keypadStateValueId) {
                 const keypadValue = await this.readExtensionNodeValue({
-                    client,
-                    nodeId: options.node.nodeId,
-                    valueId: keypadStateValueId,
+                    client: resolved.client,
+                    nodeId: resolved.nodeId,
+                    valueId: resolved.keypadStateValueId,
                     warningCode: 'keypad-state-read-failed',
                     warnings,
                 });
                 keypadState =
                     typeof keypadValue === 'string' || typeof keypadValue === 'number' ? keypadValue : null;
-                keypadStateLabel = _a.toStateLabel(keypadValue, keypadStateValueId);
+                keypadStateLabel = _a.toStateLabel(keypadValue, resolved.keypadStateValueId);
                 lockoutActive = _a.isLockoutStateLabel(keypadStateLabel);
             }
             const diagnostics = {
                 ready: options.node.node.ready === true,
                 valueIdsLoaded: true,
-                slotStatusValueIdCount: slotStateIds.size,
-                slotCodeValueIdCount: slotCodeIds.size,
+                slotStatusValueIdCount: resolved.slotStatusValueIdCount,
+                slotCodeValueIdCount: resolved.slotCodeValueIdCount,
                 keypadState,
                 keypadStateLabel,
                 lockoutActive,
@@ -1580,6 +1675,288 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
                     fallbackReason: node.profile.fallbackReason,
                 },
             };
+        }
+        registerProfileExtensionActionHandlers() {
+            this.profileExtensionActionHandlers.clear();
+            this.profileExtensionActionHandlers.set('lock-user-codes:set-user-code', async (options) => this.executeLockSetUserCodeAction(options));
+            this.profileExtensionActionHandlers.set('lock-user-codes:remove-user-code', async (options) => this.executeLockRemoveUserCodeAction(options));
+            this.profileExtensionActionHandlers.set('lock-user-codes:set-user-code-state', async (options) => this.executeLockSetUserCodeStateAction(options));
+        }
+        static toRequiredPositiveIntegerArg(args, name) {
+            const value = args[name];
+            if (typeof value !== 'number' || !Number.isInteger(value) || !Number.isFinite(value)) {
+                return null;
+            }
+            return value > 0 ? value : null;
+        }
+        static toRequiredNonEmptyStringArg(args, name) {
+            const value = _a.toStringOrNull(args[name]);
+            return value && value.length > 0 ? value : null;
+        }
+        static toLockUserCodeStateArg(args) {
+            const value = _a.toStringOrNull(args.state);
+            if (!value)
+                return null;
+            const normalized = value.trim().toLowerCase();
+            if (normalized === 'enabled')
+                return 'enabled';
+            if (normalized === 'disabled')
+                return 'disabled';
+            return null;
+        }
+        async executeProfileExtensionWrites(options) {
+            if (options.writes.length === 0) {
+                return {
+                    executed: false,
+                    reason: 'no-writes-planned',
+                    details: null,
+                };
+            }
+            if (options.dryRun) {
+                return {
+                    executed: false,
+                    reason: 'dry-run-preview',
+                    details: {
+                        nodeId: options.nodeId,
+                        writes: options.writes,
+                    },
+                };
+            }
+            const applied = [];
+            for (const [index, write] of options.writes.entries()) {
+                const result = await options.client.setNodeValue({
+                    nodeId: options.nodeId,
+                    valueId: write.valueId,
+                    value: write.value,
+                });
+                if (!result.success) {
+                    return {
+                        executed: false,
+                        reason: 'zwjs-write-failed',
+                        details: {
+                            failedIndex: index,
+                            failedWrite: write,
+                            error: result.error,
+                            applied,
+                        },
+                    };
+                }
+                applied.push({
+                    index,
+                    valueId: write.valueId,
+                    description: write.description,
+                });
+            }
+            return {
+                executed: true,
+                reason: 'ok',
+                details: {
+                    nodeId: options.nodeId,
+                    writesApplied: applied.length,
+                    writes: applied,
+                },
+            };
+        }
+        async executeLockSetUserCodeAction(options) {
+            const slot = _a.toRequiredPositiveIntegerArg(options.args, 'slot');
+            if (!slot) {
+                return {
+                    executed: false,
+                    reason: 'invalid-slot',
+                };
+            }
+            const code = _a.toRequiredNonEmptyStringArg(options.args, 'code');
+            if (!code) {
+                return {
+                    executed: false,
+                    reason: 'invalid-code',
+                };
+            }
+            const resolved = await this.resolveLockUserCodeRuntime({
+                node: options.node,
+            });
+            if (!resolved.ok || !resolved.client || typeof resolved.nodeId !== 'number') {
+                return {
+                    executed: false,
+                    reason: resolved.reason,
+                    details: {
+                        warnings: resolved.warnings,
+                    },
+                };
+            }
+            const target = resolved.slotTargetsBySlot.get(slot);
+            if (!target) {
+                return {
+                    executed: false,
+                    reason: 'slot-not-found',
+                    details: {
+                        slot,
+                        availableSlots: resolved.slotTargets.map((entry) => entry.slot),
+                    },
+                };
+            }
+            if (!target.codeValueId) {
+                return {
+                    executed: false,
+                    reason: 'slot-code-write-target-missing',
+                    details: {
+                        slot,
+                    },
+                };
+            }
+            return this.executeProfileExtensionWrites({
+                client: resolved.client,
+                nodeId: resolved.nodeId,
+                writes: [
+                    {
+                        valueId: target.codeValueId,
+                        value: code,
+                        description: `Set slot ${slot} code`,
+                    },
+                ],
+                dryRun: options.dryRun,
+            });
+        }
+        async executeLockRemoveUserCodeAction(options) {
+            const slot = _a.toRequiredPositiveIntegerArg(options.args, 'slot');
+            if (!slot) {
+                return {
+                    executed: false,
+                    reason: 'invalid-slot',
+                };
+            }
+            const resolved = await this.resolveLockUserCodeRuntime({
+                node: options.node,
+            });
+            if (!resolved.ok || !resolved.client || typeof resolved.nodeId !== 'number') {
+                return {
+                    executed: false,
+                    reason: resolved.reason,
+                    details: {
+                        warnings: resolved.warnings,
+                    },
+                };
+            }
+            const target = resolved.slotTargetsBySlot.get(slot);
+            if (!target) {
+                return {
+                    executed: false,
+                    reason: 'slot-not-found',
+                    details: {
+                        slot,
+                        availableSlots: resolved.slotTargets.map((entry) => entry.slot),
+                    },
+                };
+            }
+            if (target.statusValueId) {
+                const availableState = _a.resolveLockUserCodeStatusValueForState(target.statusValueId, 'available');
+                if (availableState) {
+                    return this.executeProfileExtensionWrites({
+                        client: resolved.client,
+                        nodeId: resolved.nodeId,
+                        writes: [
+                            {
+                                valueId: target.statusValueId,
+                                value: availableState.value,
+                                description: `Set slot ${slot} status to ${availableState.label}`,
+                            },
+                        ],
+                        dryRun: options.dryRun,
+                    });
+                }
+            }
+            if (!target.codeValueId) {
+                return {
+                    executed: false,
+                    reason: 'slot-remove-target-missing',
+                    details: {
+                        slot,
+                    },
+                };
+            }
+            return this.executeProfileExtensionWrites({
+                client: resolved.client,
+                nodeId: resolved.nodeId,
+                writes: [
+                    {
+                        valueId: target.codeValueId,
+                        value: '',
+                        description: `Clear slot ${slot} code`,
+                    },
+                ],
+                dryRun: options.dryRun,
+            });
+        }
+        async executeLockSetUserCodeStateAction(options) {
+            const slot = _a.toRequiredPositiveIntegerArg(options.args, 'slot');
+            if (!slot) {
+                return {
+                    executed: false,
+                    reason: 'invalid-slot',
+                };
+            }
+            const state = _a.toLockUserCodeStateArg(options.args);
+            if (!state) {
+                return {
+                    executed: false,
+                    reason: 'invalid-state',
+                };
+            }
+            const resolved = await this.resolveLockUserCodeRuntime({
+                node: options.node,
+            });
+            if (!resolved.ok || !resolved.client || typeof resolved.nodeId !== 'number') {
+                return {
+                    executed: false,
+                    reason: resolved.reason,
+                    details: {
+                        warnings: resolved.warnings,
+                    },
+                };
+            }
+            const target = resolved.slotTargetsBySlot.get(slot);
+            if (!target) {
+                return {
+                    executed: false,
+                    reason: 'slot-not-found',
+                    details: {
+                        slot,
+                        availableSlots: resolved.slotTargets.map((entry) => entry.slot),
+                    },
+                };
+            }
+            if (!target.statusValueId) {
+                return {
+                    executed: false,
+                    reason: 'slot-status-write-target-missing',
+                    details: {
+                        slot,
+                    },
+                };
+            }
+            const mappedValue = _a.resolveLockUserCodeStatusValueForState(target.statusValueId, state);
+            if (!mappedValue) {
+                return {
+                    executed: false,
+                    reason: 'slot-state-write-value-unsupported',
+                    details: {
+                        slot,
+                        state,
+                    },
+                };
+            }
+            return this.executeProfileExtensionWrites({
+                client: resolved.client,
+                nodeId: resolved.nodeId,
+                writes: [
+                    {
+                        valueId: target.statusValueId,
+                        value: mappedValue.value,
+                        description: `Set slot ${slot} state to ${mappedValue.label}`,
+                    },
+                ],
+                dryRun: options.dryRun,
+            });
         }
         static normalizeProfileExtensionArgs(value) {
             if (typeof value === 'undefined' || value === null)

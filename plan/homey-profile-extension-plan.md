@@ -94,6 +94,24 @@ Action contract:
     with `implemented: true` for this extension.
   - behavioral coverage expanded in:
     - `co.lazylabs.zwavejs2homey/test/app-runtime-refresh.test.ts`
+- Lock extension action slice is complete:
+  - registered lock action handlers in runtime:
+    - `set-user-code`
+    - `remove-user-code`
+    - `set-user-code-state`
+  - handlers now use shared lock slot resolution so read + write target selection
+    is deterministic across runtime surfaces.
+  - action execution now supports:
+    - dry-run previews (`dry-run-preview` + planned writes)
+    - live `node.set_value` writes when safety checks pass
+  - deterministic action failure reasons include:
+    - `slot-not-found`
+    - `slot-code-write-target-missing`
+    - `slot-status-write-target-missing`
+    - `slot-state-write-value-unsupported`
+    - `zwjs-write-failed`
+  - behavioral coverage expanded in:
+    - `co.lazylabs.zwavejs2homey/test/app-runtime-refresh.test.ts`
 
 ## Slice Plan
 
@@ -123,6 +141,7 @@ Action contract:
 - implement safe user-code actions (set/update/remove/enable/disable)
 - enforce explicit writeability + selector checks before writes
 - surface clear failure reasons on unsupported lock variants
+  Status: completed
 
 5. UX slice
 

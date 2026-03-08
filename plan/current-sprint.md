@@ -22,6 +22,21 @@ Close Phase 6 Reliability + UX with production-ready stability + diagnostics UX:
 
 ## Recently Completed
 
+- Phase 7 profile-extension lock-action slice:
+  - registered runtime action handlers for:
+    - `lock-user-codes:set-user-code`
+    - `lock-user-codes:remove-user-code`
+    - `lock-user-codes:set-user-code-state`
+  - action handlers now use shared lock slot runtime resolution to keep read/write
+    slot targeting deterministic.
+  - execute path now supports:
+    - dry-run planned write previews (`dry-run-preview`)
+    - live `node.set_value` writes with deterministic write-failure envelopes
+  - added deterministic action-level reasons for slot/target/state mismatches and
+    write failures.
+  - expanded behavioral tests in:
+    - `co.lazylabs.zwavejs2homey/test/app-runtime-refresh.test.ts`
+
 - Phase 7 profile-extension lock-read slice:
   - implemented `lock-user-codes` read handler in app runtime
   - reads CC99 user-code slot state values and reports deterministic slot-state
