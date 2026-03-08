@@ -153,6 +153,10 @@ export function buildSmokeRouteRequests(command) {
     ...readQuery,
     includeNoAction: true,
   };
+  const extensionsQuery = {
+    ...readQuery,
+    includeUnmatched: true,
+  };
   const executeBatchBody = {
     homeyDeviceId: command.smokeDeviceId,
     includeNoAction: true,
@@ -200,6 +204,21 @@ export function buildSmokeRouteRequests(command) {
       method: 'POST',
       path: '/runtime/recommendations/execute-batch',
       body: executeBatchBody,
+    },
+    {
+      key: 'getProfileExtensions',
+      method: 'GET',
+      path: '/runtime/extensions',
+      query: extensionsQuery,
+    },
+    {
+      key: 'getProfileExtensionRead',
+      method: 'GET',
+      path: '/runtime/extensions/read',
+      query: {
+        homeyDeviceId: command.readDeviceId ?? command.smokeDeviceId,
+        extensionId: '__smoke_extension__',
+      },
     },
   ];
 }

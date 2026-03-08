@@ -77,6 +77,22 @@ Error responses keep the same shape:
     - `homeyDeviceId` (optional string)
     - `bridgeId` (optional string)
     - `includeNoAction` (optional boolean-like string or boolean)
+- `GET /runtime/extensions`
+  - query:
+    - `homeyDeviceId` (optional string)
+    - `bridgeId` (optional string)
+    - `includeUnmatched` (optional boolean-like string: `true|false|1|0|yes|no`)
+  - returns:
+    - registered profile-extension contracts (metadata only)
+    - per-node match inventory (`matched` + explain reasons)
+- `GET /runtime/extensions/read`
+  - query:
+    - `homeyDeviceId` (required non-empty string)
+    - `extensionId` (required non-empty string)
+  - returns:
+    - extension contract details for the node context
+    - match status/reason
+    - read handler status (`implemented: false` until extension read handlers land)
 
 Settings UI notes:
 
@@ -98,6 +114,8 @@ Use `co.lazylabs.zwavejs2homey/runtime-api-client.js`:
   - `getRecommendationActionQueue(options?)`
   - `executeRecommendationAction(options)`
   - `executeRecommendationActions(options?)`
+  - `getProfileExtensions(options?)`
+  - `getProfileExtensionRead(options)`
 
 The helper unwraps success envelopes and throws `RuntimeApiClientError` for:
 

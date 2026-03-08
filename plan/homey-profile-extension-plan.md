@@ -52,6 +52,17 @@ Action contract:
     `matched`) to support diagnostics and future UX messaging.
   - `co.lazylabs.zwavejs2homey/test/profile-extension.test.ts` covers route
     matching and validation failure semantics.
+- Runtime API discovery/read slice is complete:
+  - Homey runtime now exposes extension inventory/read methods:
+    - `getProfileExtensionInventory(...)`
+    - `getProfileExtensionRead(...)`
+  - API routes are now available:
+    - `GET /runtime/extensions`
+    - `GET /runtime/extensions/read`
+  - runtime API client now supports:
+    - `getProfileExtensions(...)`
+    - `getProfileExtensionRead(...)`
+  - route/client/runtime tests now cover normalization and contract behavior.
 
 ## Slice Plan
 
@@ -67,6 +78,7 @@ Action contract:
 - expose extension discovery/read routes via app runtime API
 - expose extension action execution route with strict validation
 - add smoke tests and API contract coverage
+  Status: partially completed (`discovery/read` complete, action execution pending)
 
 3. Lock extension read slice
 

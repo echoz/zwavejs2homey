@@ -4,9 +4,7 @@
   "version": "1.0.0",
   "compatibility": ">=12.4.0",
   "sdk": 3,
-  "platforms": [
-    "local"
-  ],
+  "platforms": ["local"],
   "name": {
     "en": "zwavejs2homey"
   },
@@ -14,9 +12,7 @@
     "en": "Z-Wave JS Bridge"
   },
   "brandColor": "#2484bf",
-  "category": [
-    "tools"
-  ],
+  "category": ["tools"],
   "permissions": [],
   "api": {
     "getRuntimeBridges": {
@@ -42,6 +38,14 @@
     "executeRecommendationActions": {
       "method": "POST",
       "path": "/runtime/recommendations/execute-batch"
+    },
+    "getProfileExtensions": {
+      "method": "GET",
+      "path": "/runtime/extensions"
+    },
+    "getProfileExtensionRead": {
+      "method": "GET",
+      "path": "/runtime/extensions/read"
     }
   },
   "images": {
@@ -60,9 +64,7 @@
       },
       "class": "other",
       "capabilities": [],
-      "platforms": [
-        "local"
-      ],
+      "platforms": ["local"],
       "connectivity": [],
       "pair": [
         {
@@ -155,9 +157,7 @@
       },
       "class": "other",
       "capabilities": [],
-      "platforms": [
-        "local"
-      ],
+      "platforms": ["local"],
       "connectivity": [],
       "pair": [
         {

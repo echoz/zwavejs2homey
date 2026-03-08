@@ -10,6 +10,7 @@ const compiled_profiles_1 = require("./compiled-profiles");
 const curation_1 = require("./curation");
 const pairing_1 = require("./pairing");
 const bridge_session_1 = require("./bridge-session");
+const profile_extension_1 = require("./profile-extension");
 module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
         constructor() {
             super(...arguments);
@@ -20,6 +21,7 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
             this.bridgeDiagnosticsRefreshStatusById = new Map();
             this.preferredBridgeId = pairing_1.ZWJS_DEFAULT_BRIDGE_ID;
             this.curationRuntime = (0, curation_1.loadCurationRuntimeFromSettings)(undefined);
+            this.profileExtensionRegistry = (0, profile_extension_1.createProfileExtensionRegistry)(profile_extension_1.PROFILE_EXTENSION_CONTRACTS_V1);
             this.clientLogger = {
                 info: (msg, meta) => this.log(msg, meta),
                 warn: (msg, meta) => this.error(msg, meta),
@@ -356,6 +358,7 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
                     matchBy: _a.toStringOrNull(profileResolution.matchBy),
                     matchKey: _a.toStringOrNull(profileResolution.matchKey),
                     profileId,
+                    driverTemplateId: _a.toStringOrNull(classification?.driverTemplateId),
                     fallbackReason,
                     homeyClass: _a.toStringOrNull(classification?.homeyClass),
                     confidence: confidenceCode,
@@ -426,6 +429,7 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
                     matchBy: null,
                     matchKey: null,
                     profileId: null,
+                    driverTemplateId: null,
                     fallbackReason: 'profile-resolution-not-ready',
                     homeyClass: null,
                     confidence: null,
@@ -1166,6 +1170,128 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
                 ui: {
                     readOnly: true,
                     actionsEnabled: false,
+                },
+            };
+        }
+        static toProfileExtensionMatchContext(node) {
+            return {
+                profileId: node.profile.profileId,
+                driverTemplateId: node.profile.driverTemplateId,
+                homeyClass: node.profile.homeyClass,
+            };
+        }
+        async getProfileExtensionInventory(options) {
+            const filterHomeyDeviceId = _a.toStringOrNull(options?.homeyDeviceId);
+            const filterBridgeId = _a.toStringOrNull(options?.bridgeId);
+            const includeUnmatched = options?.includeUnmatched === true;
+            const diagnostics = await this.getNodeRuntimeDiagnostics({
+                homeyDeviceId: filterHomeyDeviceId ?? undefined,
+                bridgeId: filterBridgeId ?? undefined,
+            });
+            const registered = this.profileExtensionRegistry.list().map((entry) => ({
+                extensionId: entry.extensionId,
+                title: entry.title,
+                description: entry.description,
+                match: entry.match,
+                readSectionCount: entry.read.sections.length,
+                actionCount: entry.actions.length,
+            }));
+            const nodes = diagnostics.nodes
+                .map((node) => {
+                const context = _a.toProfileExtensionMatchContext(node);
+                const explain = this.profileExtensionRegistry.explain(context);
+                const matched = explain
+                    .filter((entry) => entry.matched)
+                    .map((entry) => {
+                    const contract = this.profileExtensionRegistry.get(entry.extensionId);
+                    if (!contract)
+                        return null;
+                    return {
+                        extensionId: contract.extensionId,
+                        title: contract.title,
+                        description: contract.description,
+                    };
+                })
+                    .filter((entry) => Boolean(entry));
+                if (!includeUnmatched && matched.length === 0)
+                    return null;
+                return {
+                    homeyDeviceId: node.homeyDeviceId,
+                    bridgeId: node.bridgeId,
+                    nodeId: node.nodeId,
+                    context,
+                    matched,
+                    explain,
+                };
+            })
+                .filter((entry) => Boolean(entry));
+            const matchedExtensionsTotal = nodes.reduce((sum, entry) => sum + entry.matched.length, 0);
+            return {
+                schemaVersion: 'homey-profile-extension-runtime/v1',
+                generatedAt: new Date().toISOString(),
+                filters: {
+                    homeyDeviceId: filterHomeyDeviceId,
+                    bridgeId: filterBridgeId,
+                    includeUnmatched,
+                },
+                summary: {
+                    registeredExtensions: registered.length,
+                    scannedNodes: diagnostics.nodes.length,
+                    matchedNodes: nodes.filter((entry) => entry.matched.length > 0).length,
+                    matchedExtensionsTotal,
+                },
+                registered,
+                nodes,
+            };
+        }
+        async getProfileExtensionRead(options) {
+            const homeyDeviceId = _a.toStringOrNull(options?.homeyDeviceId);
+            if (!homeyDeviceId) {
+                throw new Error('Invalid homeyDeviceId for profile extension read');
+            }
+            const extensionId = _a.toStringOrNull(options?.extensionId);
+            if (!extensionId) {
+                throw new Error('Invalid extensionId for profile extension read');
+            }
+            const diagnostics = await this.getNodeRuntimeDiagnostics({ homeyDeviceId });
+            const node = diagnostics.nodes.find((entry) => entry.homeyDeviceId === homeyDeviceId);
+            if (!node) {
+                throw new Error(`Node runtime diagnostics not found for homeyDeviceId: ${homeyDeviceId}`);
+            }
+            const contract = this.profileExtensionRegistry.get(extensionId);
+            if (!contract) {
+                throw new Error(`Profile extension is not registered: ${extensionId}`);
+            }
+            const context = _a.toProfileExtensionMatchContext(node);
+            const explanation = this.profileExtensionRegistry.explainMatch(extensionId, context);
+            const readReason = explanation.matched ? 'read-handler-not-implemented' : explanation.reason;
+            return {
+                schemaVersion: 'homey-profile-extension-read/v1',
+                generatedAt: new Date().toISOString(),
+                device: {
+                    homeyDeviceId,
+                    bridgeId: node.bridgeId,
+                    nodeId: node.nodeId,
+                },
+                context,
+                extension: {
+                    extensionId: contract.extensionId,
+                    title: contract.title,
+                    description: contract.description,
+                    matched: explanation.matched,
+                    matchReason: explanation.reason,
+                    readSections: contract.read.sections,
+                    actions: contract.actions,
+                },
+                read: {
+                    supported: explanation.matched,
+                    implemented: false,
+                    reason: readReason,
+                    sections: [],
+                },
+                diagnostics: {
+                    profileAttribution: node.profileAttribution,
+                    fallbackReason: node.profile.fallbackReason,
                 },
             };
         }

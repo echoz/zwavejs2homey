@@ -207,6 +207,15 @@ interface RuntimeApp {
     bridgeId?: string;
     includeNoAction: boolean;
   }) => Promise<unknown>;
+  getProfileExtensionInventory: (options: {
+    homeyDeviceId?: string;
+    bridgeId?: string;
+    includeUnmatched: boolean;
+  }) => Promise<unknown>;
+  getProfileExtensionRead: (options: {
+    homeyDeviceId: string;
+    extensionId: string;
+  }) => Promise<unknown>;
 }
 
 function getRuntimeApp(homey: unknown): RuntimeApp {
@@ -302,6 +311,45 @@ module.exports = {
         homeyDeviceId,
         bridgeId,
         includeNoAction: includeNoAction === true,
+      });
+    });
+  },
+
+  async getProfileExtensions({ homey, query }: { homey: unknown; query: unknown }) {
+    return executeRoute('getProfileExtensions', async () => {
+      const app = getRuntimeApp(homey);
+      const params = normalizeObject(query, 'query');
+      const homeyDeviceId = normalizeOptionalString(params.homeyDeviceId, 'homeyDeviceId');
+      const bridgeId = normalizeOptionalString(params.bridgeId, 'bridgeId');
+      const includeUnmatched = normalizeOptionalBoolean(
+        params.includeUnmatched,
+        'includeUnmatched',
+      );
+      return app.getProfileExtensionInventory({
+        homeyDeviceId,
+        bridgeId,
+        includeUnmatched: includeUnmatched === true,
+      });
+    });
+  },
+
+  async getProfileExtensionRead({ homey, query }: { homey: unknown; query: unknown }) {
+    return executeRoute('getProfileExtensionRead', async () => {
+      const app = getRuntimeApp(homey);
+      const params = normalizeObject(query, 'query');
+      const homeyDeviceId = normalizeRequiredString(
+        params.homeyDeviceId,
+        'homeyDeviceId',
+        'invalid-homey-device-id',
+      );
+      const extensionId = normalizeRequiredString(
+        params.extensionId,
+        'extensionId',
+        'invalid-extension-id',
+      );
+      return app.getProfileExtensionRead({
+        homeyDeviceId,
+        extensionId,
       });
     });
   },

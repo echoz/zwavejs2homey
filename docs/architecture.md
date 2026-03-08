@@ -298,6 +298,10 @@ Current status:
   - deterministic predicate matching (`profileId`, `driverTemplateId`, `homeyClass`)
   - explainable mismatch reasons for diagnostics/UX
   - contract validation coverage in `test/profile-extension.test.ts`
+- discovery/read API slice has landed:
+  - runtime methods: `getProfileExtensionInventory(...)`, `getProfileExtensionRead(...)`
+  - route surface: `GET /runtime/extensions`, `GET /runtime/extensions/read`
+  - client wrappers + route/runtime tests in place
 
 ## Quality and Guardrails
 

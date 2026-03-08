@@ -37,6 +37,14 @@
     "executeRecommendationActions": {
       "method": "POST",
       "path": "/runtime/recommendations/execute-batch"
+    },
+    "getProfileExtensions": {
+      "method": "GET",
+      "path": "/runtime/extensions"
+    },
+    "getProfileExtensionRead": {
+      "method": "GET",
+      "path": "/runtime/extensions/read"
     }
   },
   "images": {

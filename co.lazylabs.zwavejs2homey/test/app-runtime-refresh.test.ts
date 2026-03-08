@@ -3,6 +3,9 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 const Module = require('node:module');
 const EventEmitter = require('node:events');
+const { createProfileExtensionRegistry, PROFILE_EXTENSION_SCHEMA_VERSION } = require(
+  path.resolve(__dirname, '../.homeybuild/profile-extension.js'),
+);
 
 class FakeSettings extends EventEmitter {
   constructor() {
@@ -228,6 +231,29 @@ function createCurationDocument(entries) {
     schemaVersion: 'homey-curation/v1',
     updatedAt: '2026-03-01T00:00:00.000Z',
     entries,
+  };
+}
+
+function createLockUserCodesExtensionContract() {
+  return {
+    schemaVersion: PROFILE_EXTENSION_SCHEMA_VERSION,
+    extensionId: 'lock-user-codes',
+    title: 'Lock User Codes',
+    description: 'Manage lock user code slots for supported lock profiles.',
+    match: {
+      driverTemplateIds: ['product-yale-lock'],
+      homeyClasses: ['lock'],
+    },
+    read: {
+      sections: [
+        {
+          sectionId: 'user-code-slots',
+          title: 'User Code Slots',
+          description: 'Current lock slot/code availability and status.',
+        },
+      ],
+    },
+    actions: [],
   };
 }
 
@@ -1941,6 +1967,84 @@ test('app executeRecommendationAction keeps execution reason when action remains
   assert.equal(result.latestReason, 'marker-missing-backfill');
   assert.equal(result.stateChanged, false);
   assert.equal(queueCallCount, 2);
+
+  await app.onUninit();
+});
+
+test('app profile extension inventory reports matched contracts for node diagnostics context', async () => {
+  const nodeDevices = [
+    createNodeDiagnosticsDevice({
+      id: 'main:12',
+      bridgeId: 'main',
+      nodeId: 12,
+      profileResolution: {
+        profileId: 'product-triple:29:12801:1',
+        classification: {
+          homeyClass: 'lock',
+          driverTemplateId: 'product-yale-lock',
+          confidence: 'curated',
+          uncurated: false,
+        },
+        recommendationAvailable: false,
+        mappingDiagnostics: [],
+      },
+    }),
+  ];
+
+  const { app } = loadAppClass(nodeDevices);
+  await app.onInit();
+  app.profileExtensionRegistry = createProfileExtensionRegistry([
+    createLockUserCodesExtensionContract(),
+  ]);
+
+  const inventory = await app.getProfileExtensionInventory({ includeUnmatched: true });
+  assert.equal(inventory.summary.registeredExtensions, 1);
+  assert.equal(inventory.summary.scannedNodes, 1);
+  assert.equal(inventory.summary.matchedNodes, 1);
+  assert.equal(inventory.summary.matchedExtensionsTotal, 1);
+  assert.equal(inventory.nodes.length, 1);
+  assert.equal(inventory.nodes[0].matched.length, 1);
+  assert.equal(inventory.nodes[0].matched[0].extensionId, 'lock-user-codes');
+  assert.equal(inventory.nodes[0].explain[0].reason, 'matched');
+
+  await app.onUninit();
+});
+
+test('app profile extension read reports supported match but pending handler implementation', async () => {
+  const nodeDevices = [
+    createNodeDiagnosticsDevice({
+      id: 'main:12',
+      bridgeId: 'main',
+      nodeId: 12,
+      profileResolution: {
+        profileId: 'product-triple:29:12801:1',
+        classification: {
+          homeyClass: 'lock',
+          driverTemplateId: 'product-yale-lock',
+          confidence: 'curated',
+          uncurated: false,
+        },
+        recommendationAvailable: false,
+        mappingDiagnostics: [],
+      },
+    }),
+  ];
+
+  const { app } = loadAppClass(nodeDevices);
+  await app.onInit();
+  app.profileExtensionRegistry = createProfileExtensionRegistry([
+    createLockUserCodesExtensionContract(),
+  ]);
+
+  const read = await app.getProfileExtensionRead({
+    homeyDeviceId: 'main:12',
+    extensionId: 'lock-user-codes',
+  });
+  assert.equal(read.extension.matched, true);
+  assert.equal(read.extension.matchReason, 'matched');
+  assert.equal(read.read.supported, true);
+  assert.equal(read.read.implemented, false);
+  assert.equal(read.read.reason, 'read-handler-not-implemented');
 
   await app.onUninit();
 });

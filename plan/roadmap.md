@@ -248,11 +248,15 @@ Delivered in early Phase 7 slices:
   - registry-level validation + deterministic predicate routing
   - explainable non-match reasons and action contract lookup
   - focused extension contract tests (`test/profile-extension.test.ts`)
+- landed profile-extension discovery/read API surface:
+  - runtime methods: `getProfileExtensionInventory(...)`, `getProfileExtensionRead(...)`
+  - routes: `GET /runtime/extensions`, `GET /runtime/extensions/read`
+  - runtime client support + route/runtime tests
 
 Planned next Phase 7 extension slices:
 
-- expose `profile extension` discovery/read runtime API routes from the registry contract
 - implement first extension vertical for locks (user-code management in custom panel flow)
+- add profile-extension write action API path with strict safety gates
 - add an extension-candidate inventory pass for other families likely to need custom behavior:
   - covers/blinds calibration and advanced movement controls
   - thermostat schedule/program management

@@ -233,4 +233,30 @@ module.exports = {
             });
         });
     },
+    async getProfileExtensions({ homey, query }) {
+        return executeRoute('getProfileExtensions', async () => {
+            const app = getRuntimeApp(homey);
+            const params = normalizeObject(query, 'query');
+            const homeyDeviceId = normalizeOptionalString(params.homeyDeviceId, 'homeyDeviceId');
+            const bridgeId = normalizeOptionalString(params.bridgeId, 'bridgeId');
+            const includeUnmatched = normalizeOptionalBoolean(params.includeUnmatched, 'includeUnmatched');
+            return app.getProfileExtensionInventory({
+                homeyDeviceId,
+                bridgeId,
+                includeUnmatched: includeUnmatched === true,
+            });
+        });
+    },
+    async getProfileExtensionRead({ homey, query }) {
+        return executeRoute('getProfileExtensionRead', async () => {
+            const app = getRuntimeApp(homey);
+            const params = normalizeObject(query, 'query');
+            const homeyDeviceId = normalizeRequiredString(params.homeyDeviceId, 'homeyDeviceId', 'invalid-homey-device-id');
+            const extensionId = normalizeRequiredString(params.extensionId, 'extensionId', 'invalid-extension-id');
+            return app.getProfileExtensionRead({
+                homeyDeviceId,
+                extensionId,
+            });
+        });
+    },
 };

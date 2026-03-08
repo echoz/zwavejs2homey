@@ -70,6 +70,15 @@ export interface RuntimeApiClient {
     bridgeId?: unknown;
     includeNoAction?: unknown;
   }) => Promise<unknown>;
+  getProfileExtensions: (options?: {
+    homeyDeviceId?: unknown;
+    bridgeId?: unknown;
+    includeUnmatched?: unknown;
+  }) => Promise<unknown>;
+  getProfileExtensionRead: (options: {
+    homeyDeviceId?: unknown;
+    extensionId?: unknown;
+  }) => Promise<unknown>;
 }
 
 function normalizeOptionalString(value: unknown, label: string): string | undefined {
@@ -126,6 +135,8 @@ function toQueryString(options: {
   homeyDeviceId?: string;
   bridgeId?: string;
   includeNoAction?: boolean;
+  includeUnmatched?: boolean;
+  extensionId?: string;
 }): string {
   const segments: string[] = [];
   if (options.homeyDeviceId) {
@@ -138,6 +149,14 @@ function toQueryString(options: {
     segments.push(
       `includeNoAction=${encodeURIComponent(options.includeNoAction ? 'true' : 'false')}`,
     );
+  }
+  if (typeof options.includeUnmatched === 'boolean') {
+    segments.push(
+      `includeUnmatched=${encodeURIComponent(options.includeUnmatched ? 'true' : 'false')}`,
+    );
+  }
+  if (options.extensionId) {
+    segments.push(`extensionId=${encodeURIComponent(options.extensionId)}`);
   }
   const query = segments.join('&');
   return query.length > 0 ? `?${query}` : '';
@@ -275,6 +294,27 @@ export function createRuntimeApiClient(homeyApi: unknown): RuntimeApiClient {
           includeNoAction,
         },
       );
+      return parseEnvelope(response);
+    },
+
+    async getProfileExtensions(options = {}) {
+      const homeyDeviceId = normalizeOptionalString(options.homeyDeviceId, 'homeyDeviceId');
+      const bridgeId = normalizeOptionalString(options.bridgeId, 'bridgeId');
+      const includeUnmatched = normalizeOptionalBoolean(
+        options.includeUnmatched,
+        'includeUnmatched',
+      );
+      const query = toQueryString({ homeyDeviceId, bridgeId, includeUnmatched });
+      const response = await invokeHomeyApi(homeyApi, 'GET', `/runtime/extensions${query}`);
+      return parseEnvelope(response);
+    },
+
+    async getProfileExtensionRead(options) {
+      const payload = options && typeof options === 'object' ? options : {};
+      const homeyDeviceId = normalizeRequiredString(payload.homeyDeviceId, 'homeyDeviceId');
+      const extensionId = normalizeRequiredString(payload.extensionId, 'extensionId');
+      const query = toQueryString({ homeyDeviceId, extensionId });
+      const response = await invokeHomeyApi(homeyApi, 'GET', `/runtime/extensions/read${query}`);
       return parseEnvelope(response);
     },
   };

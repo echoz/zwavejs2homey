@@ -12,6 +12,8 @@ function createHomeyAppStub(overrides = {}) {
     queue: [],
     action: [],
     actions: [],
+    extensions: [],
+    extensionRead: [],
   };
 
   const app = {
@@ -38,6 +40,14 @@ function createHomeyAppStub(overrides = {}) {
     async executeRecommendationActions(options) {
       calls.actions.push(options);
       return { kind: 'actions' };
+    },
+    async getProfileExtensionInventory(options) {
+      calls.extensions.push(options);
+      return { kind: 'extensions' };
+    },
+    async getProfileExtensionRead(options) {
+      calls.extensionRead.push(options);
+      return { kind: 'extension-read' };
     },
     ...overrides,
   };
@@ -146,6 +156,56 @@ test('api executeRecommendationActions forwards normalized payload', async () =>
   assert.equal(result.data.kind, 'actions');
   assert.deepEqual(calls.actions, [
     { homeyDeviceId: 'main:8', bridgeId: 'bridge-2', includeNoAction: true },
+  ]);
+});
+
+test('api getProfileExtensions forwards normalized query options', async () => {
+  const { homey, calls } = createHomeyAppStub();
+  const result = await api.getProfileExtensions({
+    homey,
+    query: {
+      homeyDeviceId: ' main:8 ',
+      bridgeId: ' bridge-2 ',
+      includeUnmatched: 'true',
+    },
+  });
+  assertSuccessEnvelope(result);
+  assert.equal(result.data.kind, 'extensions');
+  assert.deepEqual(calls.extensions, [
+    { homeyDeviceId: 'main:8', bridgeId: 'bridge-2', includeUnmatched: true },
+  ]);
+});
+
+test('api getProfileExtensionRead requires homeyDeviceId and extensionId', async () => {
+  const { homey } = createHomeyAppStub();
+
+  const missingDevice = await api.getProfileExtensionRead({
+    homey,
+    query: { extensionId: 'lock-user-codes' },
+  });
+  assertErrorEnvelope(missingDevice, /invalid-homey-device-id/);
+
+  const missingExtension = await api.getProfileExtensionRead({
+    homey,
+    query: { homeyDeviceId: 'main:8' },
+  });
+  assertErrorEnvelope(missingExtension, /invalid-extension-id/);
+});
+
+test('api getProfileExtensionRead forwards normalized query', async () => {
+  const { homey, calls } = createHomeyAppStub();
+
+  const result = await api.getProfileExtensionRead({
+    homey,
+    query: {
+      homeyDeviceId: ' main:8 ',
+      extensionId: ' lock-user-codes ',
+    },
+  });
+  assertSuccessEnvelope(result);
+  assert.equal(result.data.kind, 'extension-read');
+  assert.deepEqual(calls.extensionRead, [
+    { homeyDeviceId: 'main:8', extensionId: 'lock-user-codes' },
   ]);
 });
 

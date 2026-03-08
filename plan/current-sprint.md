@@ -1844,13 +1844,27 @@ Close Phase 6 Reliability + UX with production-ready stability + diagnostics UX:
       - enum argument contract validation
       - action lookup resolution
 
+115. Completed curated-profile extension runtime API discovery/read slice:
+
+
+    - added Homey app runtime extension APIs:
+      - `getProfileExtensionInventory({ homeyDeviceId?, bridgeId?, includeUnmatched })`
+      - `getProfileExtensionRead({ homeyDeviceId, extensionId })`
+    - added API envelope routes:
+      - `GET /runtime/extensions`
+      - `GET /runtime/extensions/read`
+    - added runtime API client methods:
+      - `getProfileExtensions(...)`
+      - `getProfileExtensionRead(...)`
+    - added route/client/runtime tests for extension discovery/read behavior
+
 ## Next Tasks
 
 1. Expand runtime capability handling for top capability families identified by the audit while preserving existing UX contracts.
 2. Run closure gates on every slice (`npm --prefix co.lazylabs.zwavejs2homey run test`, runtime smoke/support bundle checks).
 3. Use `compiler:ship:curated` whenever product/generic rule changes affect bundled runtime profiles.
-4. Expose profile-extension discovery/read runtime API routes using the new registry contract.
-5. Build the first extension slice for Yale locks: user-code management read path + clear action safety constraints.
+4. Build the first extension slice for Yale locks: user-code management read path + clear action safety constraints.
+5. Add profile-extension write action API path with strict safety gates and explicit errors.
 6. Produce a cross-device extension candidate inventory (locks, covers, thermostat/schedules, security/siren) so custom work follows a reusable model instead of one-offs.
 
 Note:

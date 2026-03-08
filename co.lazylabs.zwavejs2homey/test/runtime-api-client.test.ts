@@ -112,6 +112,60 @@ test('client getRuntimeSupportBundle encodes query options', async () => {
   });
 });
 
+test('client getProfileExtensions encodes includeUnmatched query option', async () => {
+  const homeyApi = createCallbackHomeyApi(({ callback }) => {
+    callback(null, createEnvelope({ kind: 'extensions' }));
+  });
+  const client = createRuntimeApiClient(homeyApi);
+
+  const result = await client.getProfileExtensions({
+    homeyDeviceId: 'main:8',
+    bridgeId: 'bridge-2',
+    includeUnmatched: true,
+  });
+  assert.equal(result.kind, 'extensions');
+  assert.deepEqual(homeyApi.calls[0], {
+    method: 'GET',
+    uri: '/runtime/extensions?homeyDeviceId=main%3A8&bridgeId=bridge-2&includeUnmatched=true',
+    body: undefined,
+  });
+});
+
+test('client getProfileExtensionRead requires homeyDeviceId and extensionId', async () => {
+  const homeyApi = createCallbackHomeyApi(() => {
+    throw new Error('should-not-call-homey-api');
+  });
+  const client = createRuntimeApiClient(homeyApi);
+
+  await assert.rejects(
+    () => client.getProfileExtensionRead({ homeyDeviceId: 'main:8' }),
+    (error) => {
+      assert.ok(error instanceof RuntimeApiClientError);
+      assert.equal(error.code, 'invalid-argument');
+      assert.match(error.message, /extensionId must be a non-empty string/);
+      return true;
+    },
+  );
+});
+
+test('client getProfileExtensionRead encodes query payload', async () => {
+  const homeyApi = createCallbackHomeyApi(({ callback }) => {
+    callback(null, createEnvelope({ kind: 'extension-read' }));
+  });
+  const client = createRuntimeApiClient(homeyApi);
+
+  const result = await client.getProfileExtensionRead({
+    homeyDeviceId: ' main:8 ',
+    extensionId: ' lock-user-codes ',
+  });
+  assert.equal(result.kind, 'extension-read');
+  assert.deepEqual(homeyApi.calls[0], {
+    method: 'GET',
+    uri: '/runtime/extensions/read?homeyDeviceId=main%3A8&extensionId=lock-user-codes',
+    body: undefined,
+  });
+});
+
 test('client executeRecommendationAction validates required homeyDeviceId', async () => {
   const homeyApi = createCallbackHomeyApi(() => {
     throw new Error('should-not-call-homey-api');
