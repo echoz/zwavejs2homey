@@ -41,34 +41,53 @@ Action contract:
 - runtime safety gate (permission, capability, device state, writeability checks)
 - deterministic result envelope (`ok`, `status`, `reason`, `details`)
 
+## Progress
+
+- Registry + schema slice is complete:
+  - `co.lazylabs.zwavejs2homey/profile-extension.ts` now defines the
+    `homey-profile-extension-contract/v1` contract.
+  - registry validation enforces deterministic predicates, ids, and action
+    schema shape.
+  - matching now returns explainable reasons (`missing-*`, `*-mismatch`,
+    `matched`) to support diagnostics and future UX messaging.
+  - `co.lazylabs.zwavejs2homey/test/profile-extension.test.ts` covers route
+    matching and validation failure semantics.
+
 ## Slice Plan
 
 1. Registry + schema slice
+
 - add extension registry module in Homey app runtime
 - define stable read/action contract types
 - add unit tests for match routing and contract validation
+  Status: completed
 
 2. Runtime API slice
+
 - expose extension discovery/read routes via app runtime API
 - expose extension action execution route with strict validation
 - add smoke tests and API contract coverage
 
 3. Lock extension read slice
+
 - implement read-only Yale lock user-code snapshot panel payload
 - include slot summary, enabled/disabled status, and lockout-related diagnostics
 - no mutation yet
 
 4. Lock extension action slice
+
 - implement safe user-code actions (set/update/remove/enable/disable)
 - enforce explicit writeability + selector checks before writes
 - surface clear failure reasons on unsupported lock variants
 
 5. UX slice
+
 - wire node custom panel to extension read/action API
 - keep system capability controls unchanged
 - add contextual hints when extension is unavailable for that device
 
 6. Candidate inventory slice
+
 - classify additional families needing extension paths
 - document priority and prerequisites for each family
 

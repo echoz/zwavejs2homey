@@ -1828,12 +1828,28 @@ Close Phase 6 Reliability + UX with production-ready stability + diagnostics UX:
     - ran TUI package suite (`npm run test -w @zwavejs2homey/tui`) with full pass
     - no adapter-integration regression follow-ups required from this checkpoint
 
+114. Completed curated-profile extension foundation slice (registry + contract validation):
+
+
+    - added typed profile-extension contract module in Homey runtime (`profile-extension.ts`)
+    - implemented deterministic registry behavior:
+      - extension contract normalization + validation
+      - predicate match routing (`profileId`, `driverTemplateId`, `homeyClass`)
+      - explainable match reasons and action contract lookup
+    - added focused contract tests (`test/profile-extension.test.ts`) covering:
+      - positive match routing
+      - explainability reasons for non-match paths
+      - duplicate extension id rejection
+      - invalid contract predicate rejection
+      - enum argument contract validation
+      - action lookup resolution
+
 ## Next Tasks
 
 1. Expand runtime capability handling for top capability families identified by the audit while preserving existing UX contracts.
 2. Run closure gates on every slice (`npm --prefix co.lazylabs.zwavejs2homey run test`, runtime smoke/support bundle checks).
 3. Use `compiler:ship:curated` whenever product/generic rule changes affect bundled runtime profiles.
-4. Define and implement a profile-extension registry contract so curated device profiles can expose custom panel/actions without weakening system capability semantics.
+4. Expose profile-extension discovery/read runtime API routes using the new registry contract.
 5. Build the first extension slice for Yale locks: user-code management read path + clear action safety constraints.
 6. Produce a cross-device extension candidate inventory (locks, covers, thermostat/schedules, security/siren) so custom work follows a reusable model instead of one-offs.
 

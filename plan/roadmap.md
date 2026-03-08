@@ -243,10 +243,15 @@ Delivered in early Phase 7 slices:
 - expanded runtime specialized capability coercion for:
   - `measure_battery` (Z-Wave battery sentinel normalization + bounded values)
   - `enum_select` (stable inbound string normalization + numeric outbound adaptation when target value type is numeric)
+- landed profile-extension contract foundation in Homey runtime:
+  - typed extension contract schema (`homey-profile-extension-contract/v1`)
+  - registry-level validation + deterministic predicate routing
+  - explainable non-match reasons and action contract lookup
+  - focused extension contract tests (`test/profile-extension.test.ts`)
 
 Planned next Phase 7 extension slices:
 
-- define `profile extension` contract (registry + runtime API shape + action safety model)
+- expose `profile extension` discovery/read runtime API routes from the registry contract
 - implement first extension vertical for locks (user-code management in custom panel flow)
 - add an extension-candidate inventory pass for other families likely to need custom behavior:
   - covers/blinds calibration and advanced movement controls

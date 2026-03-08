@@ -27,3 +27,4 @@ Decision records for major technical boundaries and policy choices.
 - `0021-homey-no-profile-match-runtime-policy-v1.md`: Locks no-match behavior to safe import with minimal fallback profile + explicit curation recommendation
 - `0022-homey-device-class-and-capability-mutation-policy-v1.md`: Locks structural class/capability mutation to explicit user-driven update flows (no automatic runtime structural mutation)
 - `0023-homey-runtime-generic-inference-freeze-v1.md`: Locks runtime to compiled-profile-first + curation-only (no adapter generic-inference expansion in v1)
+- `0024-homey-profile-extension-contract-v1.md`: Locks profile-specific advanced behavior to a typed runtime extension contract/registry that is additive to system capabilities

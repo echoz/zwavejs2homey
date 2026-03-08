@@ -268,7 +268,7 @@ Selected ZWJS node lifecycle events
     -> targeted node refresh (not global refresh)
 ```
 
-## Curated Profile Extension Lane (Planned)
+## Curated Profile Extension Lane (In Progress)
 
 ```text
 compiled profile match (profileId + driverTemplateId)
@@ -290,6 +290,14 @@ Design intent:
 - extension behavior is additive and explicitly scoped to curated profile identity
 - extension handlers remain adapter-owned runtime behavior (not compiler mutation logic)
 - first target extension vertical is lock user-code management
+
+Current status:
+
+- registry + contract foundation has landed in Homey runtime:
+  - `homey-profile-extension-contract/v1` typed schema
+  - deterministic predicate matching (`profileId`, `driverTemplateId`, `homeyClass`)
+  - explainable mismatch reasons for diagnostics/UX
+  - contract validation coverage in `test/profile-extension.test.ts`
 
 ## Quality and Guardrails
 

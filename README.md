@@ -22,7 +22,7 @@ It is built as four explicit layers:
 - Phase 4 TUI: complete
 - Phase 5 Homey adapter MVP: complete
 - Phase 6 reliability + UX: complete
-- Phase 7 capability expansion + custom UX: planned
+- Phase 7 capability expansion + custom UX: in progress
 
 Per-node capability expansion is now the primary next-phase focus.
 
