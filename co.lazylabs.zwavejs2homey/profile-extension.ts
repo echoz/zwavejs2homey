@@ -548,6 +548,106 @@ export function createProfileExtensionRegistry(
   return new ProfileExtensionRegistry(contracts);
 }
 
-export const PROFILE_EXTENSION_CONTRACTS_V1: readonly ProfileExtensionContractV1[] = Object.freeze(
-  [],
-);
+const LOCK_USER_CODES_EXTENSION_CONTRACT_V1: ProfileExtensionContractV1 = {
+  schemaVersion: PROFILE_EXTENSION_SCHEMA_VERSION,
+  extensionId: 'lock-user-codes',
+  title: 'Lock User Codes',
+  description: 'Inspect and manage lock user-code slots for supported lock profiles.',
+  match: {
+    driverTemplateIds: ['product-yale-lock'],
+    homeyClasses: ['lock'],
+  },
+  read: {
+    sections: [
+      {
+        sectionId: 'user-code-slots',
+        title: 'User Code Slots',
+        description: 'Current user-code slot status and occupancy summary.',
+      },
+      {
+        sectionId: 'lockout-diagnostics',
+        title: 'Lockout Diagnostics',
+        description: 'Current keypad/lockout status derived from runtime values.',
+      },
+    ],
+  },
+  actions: [
+    {
+      actionId: 'set-user-code',
+      title: 'Set User Code',
+      description: 'Set or update a user-code slot.',
+      dryRunSupported: true,
+      safetyChecks: [
+        'requires-supported-profile',
+        'requires-node-ready',
+        'requires-write-access',
+        'requires-explicit-confirmation',
+      ],
+      arguments: [
+        {
+          name: 'slot',
+          type: 'integer',
+          description: 'User-code slot number to set.',
+          required: true,
+        },
+        {
+          name: 'code',
+          type: 'string',
+          description: 'PIN code to assign to the slot.',
+          required: true,
+        },
+      ],
+    },
+    {
+      actionId: 'remove-user-code',
+      title: 'Remove User Code',
+      description: 'Remove the PIN assigned to a user-code slot.',
+      dryRunSupported: true,
+      safetyChecks: [
+        'requires-supported-profile',
+        'requires-node-ready',
+        'requires-write-access',
+        'requires-explicit-confirmation',
+      ],
+      arguments: [
+        {
+          name: 'slot',
+          type: 'integer',
+          description: 'User-code slot number to clear.',
+          required: true,
+        },
+      ],
+    },
+    {
+      actionId: 'set-user-code-state',
+      title: 'Set User Code State',
+      description: 'Enable or disable a user-code slot without changing the PIN.',
+      dryRunSupported: true,
+      safetyChecks: [
+        'requires-supported-profile',
+        'requires-node-ready',
+        'requires-write-access',
+        'requires-explicit-confirmation',
+      ],
+      arguments: [
+        {
+          name: 'slot',
+          type: 'integer',
+          description: 'User-code slot number to update.',
+          required: true,
+        },
+        {
+          name: 'state',
+          type: 'enum',
+          description: 'Target slot state.',
+          required: true,
+          enumValues: ['enabled', 'disabled'],
+        },
+      ],
+    },
+  ],
+};
+
+export const PROFILE_EXTENSION_CONTRACTS_V1: readonly ProfileExtensionContractV1[] = Object.freeze([
+  LOCK_USER_CODES_EXTENSION_CONTRACT_V1,
+]);

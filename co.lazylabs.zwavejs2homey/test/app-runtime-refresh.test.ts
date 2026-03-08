@@ -156,6 +156,19 @@ function createMockCoreModule() {
     module: {
       ZWJS_CONNECTION_SETTINGS_KEY: 'zwjs_connection',
       ZWJS_COMMAND_NODE_SET_VALUE: 'node.set_value',
+      extractZwjsDefinedValueIds(result) {
+        if (Array.isArray(result)) return result;
+        if (result && typeof result === 'object' && Array.isArray(result.values)) {
+          return result.values;
+        }
+        return [];
+      },
+      extractZwjsNodeValue(result) {
+        if (result && typeof result === 'object' && 'value' in result) {
+          return result.value;
+        }
+        return result;
+      },
       resolveZwjsConnectionConfig: () => ({
         source: 'default',
         warnings: [],
@@ -254,6 +267,29 @@ function createLockUserCodesExtensionContract(actions = []) {
       ],
     },
     actions,
+  };
+}
+
+function createMockProfileExtensionClient(overrides = {}) {
+  return {
+    async start() {},
+    async stop() {},
+    onEvent() {
+      return () => {};
+    },
+    getStatus() {
+      return {
+        transportConnected: true,
+        lifecycle: 'connected',
+      };
+    },
+    async getNodeDefinedValueIds() {
+      return { success: true, result: [] };
+    },
+    async getNodeValue() {
+      return { success: true, result: { value: null } };
+    },
+    ...overrides,
   };
 }
 
@@ -2010,7 +2046,7 @@ test('app profile extension inventory reports matched contracts for node diagnos
   await app.onUninit();
 });
 
-test('app profile extension read reports supported match but pending handler implementation', async () => {
+test('app profile extension read returns lock user-code slot summary for supported node', async () => {
   const nodeDevices = [
     createNodeDiagnosticsDevice({
       id: 'main:12',
@@ -2035,6 +2071,81 @@ test('app profile extension read reports supported match but pending handler imp
   app.profileExtensionRegistry = createProfileExtensionRegistry([
     createLockUserCodesExtensionContract(),
   ]);
+  const session = app.getBridgeSession('main');
+  assert.ok(session);
+  session.setZwjsClient(
+    createMockProfileExtensionClient({
+      async getNodeDefinedValueIds() {
+        return {
+          success: true,
+          result: [
+            {
+              commandClass: 99,
+              property: 'userIdStatus',
+              propertyKey: 1,
+              states: {
+                0: 'Available',
+                1: 'Enabled',
+              },
+            },
+            {
+              commandClass: 99,
+              property: 'userIdStatus',
+              propertyKey: 2,
+              states: {
+                0: 'Available',
+                1: 'Enabled',
+                2: 'Disabled',
+              },
+            },
+            {
+              commandClass: 99,
+              property: 'userCode',
+              propertyKey: 1,
+            },
+            {
+              commandClass: 99,
+              property: 'userCode',
+              propertyKey: 2,
+            },
+            {
+              commandClass: 113,
+              property: 'Access Control',
+              propertyKey: 'Keypad state',
+              states: {
+                0: 'Idle',
+                1: 'Keypad temporary disabled',
+              },
+            },
+          ],
+        };
+      },
+      async getNodeValue(_nodeId, valueId) {
+        if (
+          valueId.commandClass === 99 &&
+          valueId.property === 'userIdStatus' &&
+          valueId.propertyKey === 1
+        ) {
+          return { success: true, result: { value: 1 } };
+        }
+        if (
+          valueId.commandClass === 99 &&
+          valueId.property === 'userIdStatus' &&
+          valueId.propertyKey === 2
+        ) {
+          return { success: true, result: { value: 2 } };
+        }
+        if (
+          valueId.commandClass === 113 &&
+          valueId.property === 'Access Control' &&
+          valueId.propertyKey === 'Keypad state'
+        ) {
+          return { success: true, result: { value: 1 } };
+        }
+        return { success: true, result: { value: null } };
+      },
+    }),
+  );
 
   const read = await app.getProfileExtensionRead({
     homeyDeviceId: 'main:12',
@@ -2043,8 +2154,127 @@ test('app profile extension read reports supported match but pending handler imp
   assert.equal(read.extension.matched, true);
   assert.equal(read.extension.matchReason, 'matched');
   assert.equal(read.read.supported, true);
-  assert.equal(read.read.implemented, false);
-  assert.equal(read.read.reason, 'read-handler-not-implemented');
+  assert.equal(read.read.implemented, true);
+  assert.equal(read.read.reason, 'ok');
+  assert.equal(read.read.sections.length, 2);
+  assert.deepEqual(read.read.sections[0].summary, {
+    slotCount: 2,
+    enabledSlots: 1,
+    disabledSlots: 1,
+    availableSlots: 0,
+    unknownSlots: 0,
+  });
+  assert.equal(read.read.sections[1].diagnostics.lockoutActive, true);
+  assert.equal(read.read.sections[1].diagnostics.slotStatusValueIdCount, 2);
+  assert.equal(read.read.sections[1].diagnostics.slotCodeValueIdCount, 2);
+
+  await app.onUninit();
+});
+
+test('app profile extension read reports unsupported when extension predicates do not match device', async () => {
+  const nodeDevices = [
+    createNodeDiagnosticsDevice({
+      id: 'main:12',
+      bridgeId: 'main',
+      nodeId: 12,
+      profileResolution: {
+        profileId: 'product-triple:29:12801:1',
+        classification: {
+          homeyClass: 'light',
+          driverTemplateId: 'product-leviton-dimmer',
+          confidence: 'curated',
+          uncurated: false,
+        },
+        recommendationAvailable: false,
+        mappingDiagnostics: [],
+      },
+    }),
+  ];
+
+  const { app } = loadAppClass(nodeDevices);
+  await app.onInit();
+  app.profileExtensionRegistry = createProfileExtensionRegistry([
+    createLockUserCodesExtensionContract(),
+  ]);
+
+  const read = await app.getProfileExtensionRead({
+    homeyDeviceId: 'main:12',
+    extensionId: 'lock-user-codes',
+  });
+
+  assert.equal(read.extension.matched, false);
+  assert.equal(read.read.supported, false);
+  assert.equal(read.read.implemented, true);
+  assert.equal(read.read.reason, 'extension-not-matched');
+
+  await app.onUninit();
+});
+
+test('app profile extension read returns diagnostics when lock slot values are missing/unreadable', async () => {
+  const nodeDevices = [
+    createNodeDiagnosticsDevice({
+      id: 'main:12',
+      bridgeId: 'main',
+      nodeId: 12,
+      profileResolution: {
+        profileId: 'product-triple:29:12801:1',
+        classification: {
+          homeyClass: 'lock',
+          driverTemplateId: 'product-yale-lock',
+          confidence: 'curated',
+          uncurated: false,
+        },
+        recommendationAvailable: false,
+        mappingDiagnostics: [],
+      },
+    }),
+  ];
+
+  const { app } = loadAppClass(nodeDevices);
+  await app.onInit();
+  app.profileExtensionRegistry = createProfileExtensionRegistry([
+    createLockUserCodesExtensionContract(),
+  ]);
+  const session = app.getBridgeSession('main');
+  assert.ok(session);
+  session.setZwjsClient(
+    createMockProfileExtensionClient({
+      async getNodeDefinedValueIds() {
+        return {
+          success: true,
+          result: [
+            {
+              commandClass: 99,
+              property: 'userIdStatus',
+              propertyKey: 1,
+              states: {
+                0: 'Available',
+                1: 'Enabled',
+              },
+            },
+          ],
+        };
+      },
+      async getNodeValue() {
+        return {
+          success: false,
+          error: { errorCode: 'read_failed' },
+        };
+      },
+    }),
+  );
+
+  const read = await app.getProfileExtensionRead({
+    homeyDeviceId: 'main:12',
+    extensionId: 'lock-user-codes',
+  });
+
+  assert.equal(read.read.supported, true);
+  assert.equal(read.read.implemented, true);
+  assert.equal(read.read.reason, 'ok');
+  assert.equal(read.read.sections[0].slots[0].slot, 1);
+  assert.equal(read.read.sections[0].slots[0].state, 'unknown');
+  assert.deepEqual(read.read.sections[1].diagnostics.warnings, ['slot-1-status-read-failed']);
 
   await app.onUninit();
 });

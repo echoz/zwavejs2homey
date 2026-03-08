@@ -258,6 +258,13 @@ Delivered in early Phase 7 slices:
   - strict pre-execution safety gates with deterministic blocked/rejected reasons
   - current no-handler state is explicit (`action-handler-not-implemented`)
   - runtime/client/route tests + smoke route coverage
+- landed first implemented extension read vertical (`lock-user-codes`):
+  - runtime read now returns slot summaries + per-slot status rows for supported locks
+  - includes lockout diagnostics from keypad-state runtime probes when available
+  - deterministic degraded-state reasons (`bridge-client-unavailable`,
+    `defined-value-ids-unavailable`, `user-code-slots-not-discovered`)
+  - expanded app-runtime behavioral coverage for supported, unsupported, and
+    partial-value read flows
 
 Planned next Phase 7 extension slices:
 

@@ -77,6 +77,23 @@ Action contract:
     - fail-closed safety checks (`requires-*`)
   - no write handlers are registered yet; action route returns deterministic
     `action-handler-not-implemented` after safety passes.
+- Lock extension read slice is complete:
+  - `getProfileExtensionRead(...)` now provides implemented read payloads for
+    `lock-user-codes` when predicates match.
+  - read payload includes:
+    - user-code slot summary (`enabled` / `disabled` / `available` / `unknown`)
+    - per-slot state rows with resolved state labels
+    - lockout diagnostics (keypad-state probe + lockout-active heuristic)
+    - warning codes when value probes fail
+  - deterministic runtime reasons now include:
+    - `bridge-client-unavailable`
+    - `defined-value-ids-unavailable`
+    - `user-code-slots-not-discovered`
+    - `ok`
+  - unsupported devices now return `supported: false` + `extension-not-matched`
+    with `implemented: true` for this extension.
+  - behavioral coverage expanded in:
+    - `co.lazylabs.zwavejs2homey/test/app-runtime-refresh.test.ts`
 
 ## Slice Plan
 
@@ -99,6 +116,7 @@ Action contract:
 - implement read-only Yale lock user-code snapshot panel payload
 - include slot summary, enabled/disabled status, and lockout-related diagnostics
 - no mutation yet
+  Status: completed
 
 4. Lock extension action slice
 

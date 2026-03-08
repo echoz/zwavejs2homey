@@ -3,9 +3,13 @@
 import Homey from 'homey';
 import {
   createZwjsClient,
+  extractZwjsDefinedValueIds,
+  extractZwjsNodeValue,
   type ClientLogger,
+  type ZwjsDefinedValueId,
   type ZwjsClient,
   type ZwjsClientEvent,
+  type ZwjsValueId,
   resolveZwjsConnectionConfig,
   ZWJS_COMMAND_NODE_SET_VALUE,
   ZWJS_CONNECTION_SETTINGS_KEY,
@@ -240,6 +244,24 @@ interface ProfileExtensionActionArgumentIssueV1 {
   message: string;
 }
 
+interface LockUserCodeSlotV1 {
+  slot: number;
+  state: 'enabled' | 'disabled' | 'available' | 'unknown';
+  stateLabel: string | null;
+  statusValue: string | number | null;
+}
+
+interface LockUserCodeRuntimeDiagnosticsV1 {
+  ready: boolean;
+  valueIdsLoaded: boolean;
+  slotStatusValueIdCount: number;
+  slotCodeValueIdCount: number;
+  keypadState: string | number | null;
+  keypadStateLabel: string | null;
+  lockoutActive: boolean | null;
+  warnings: string[];
+}
+
 module.exports = class Zwavejs2HomeyApp extends Homey.App {
   private readonly defaultBridgeId = ZWJS_DEFAULT_BRIDGE_ID;
   private readonly bridgeSessions = new Map<string, BridgeSessionRuntimeState>([
@@ -416,6 +438,112 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
       return Number.isInteger(parsedDec) && Number.isFinite(parsedDec) ? parsedDec : null;
     }
     return null;
+  }
+
+  private static normalizeIdentifierToken(value: unknown): string | null {
+    const normalized = Zwavejs2HomeyApp.toStringOrNull(value);
+    if (!normalized) return null;
+    const token = normalized.toLowerCase().replace(/[^a-z0-9]/g, '');
+    return token.length > 0 ? token : null;
+  }
+
+  private static toValueIdSlotNumber(valueId: ZwjsDefinedValueId): number | null {
+    const propertyKeySlot = Zwavejs2HomeyApp.parseNumericIdentityOrNull(valueId.propertyKey);
+    if (propertyKeySlot && propertyKeySlot > 0) return propertyKeySlot;
+    const propertyKeyNameSlot = Zwavejs2HomeyApp.parseNumericIdentityOrNull(
+      valueId.propertyKeyName,
+    );
+    if (propertyKeyNameSlot && propertyKeyNameSlot > 0) return propertyKeyNameSlot;
+    return null;
+  }
+
+  private static isCommandClass(valueId: ZwjsDefinedValueId, commandClass: number): boolean {
+    return Zwavejs2HomeyApp.parseNumericIdentityOrNull(valueId.commandClass) === commandClass;
+  }
+
+  private static isLockUserIdStatusValueId(valueId: ZwjsDefinedValueId): boolean {
+    if (!Zwavejs2HomeyApp.isCommandClass(valueId, 99)) return false;
+    const propertyToken = Zwavejs2HomeyApp.normalizeIdentifierToken(valueId.property);
+    const propertyNameToken = Zwavejs2HomeyApp.normalizeIdentifierToken(valueId.propertyName);
+    return propertyToken === 'useridstatus' || propertyNameToken === 'useridstatus';
+  }
+
+  private static isLockUserCodeValueId(valueId: ZwjsDefinedValueId): boolean {
+    if (!Zwavejs2HomeyApp.isCommandClass(valueId, 99)) return false;
+    const propertyToken = Zwavejs2HomeyApp.normalizeIdentifierToken(valueId.property);
+    const propertyNameToken = Zwavejs2HomeyApp.normalizeIdentifierToken(valueId.propertyName);
+    return propertyToken === 'usercode' || propertyNameToken === 'usercode';
+  }
+
+  private static isLockKeypadStateValueId(valueId: ZwjsDefinedValueId): boolean {
+    if (!Zwavejs2HomeyApp.isCommandClass(valueId, 113)) return false;
+    const propertyToken = Zwavejs2HomeyApp.normalizeIdentifierToken(valueId.property);
+    const propertyNameToken = Zwavejs2HomeyApp.normalizeIdentifierToken(valueId.propertyName);
+    const propertyKeyToken = Zwavejs2HomeyApp.normalizeIdentifierToken(valueId.propertyKey);
+    const propertyKeyNameToken = Zwavejs2HomeyApp.normalizeIdentifierToken(valueId.propertyKeyName);
+    const propertyHasAccessControl =
+      propertyToken === 'accesscontrol' || propertyNameToken === 'accesscontrol';
+    const keyHasKeypadState =
+      propertyKeyToken === 'keypadstate' ||
+      propertyKeyNameToken === 'keypadstate' ||
+      propertyToken === 'keypadstate' ||
+      propertyNameToken === 'keypadstate';
+    return propertyHasAccessControl && keyHasKeypadState;
+  }
+
+  private static toValueStatesMap(value: unknown): Map<string, string> {
+    const states = new Map<string, string>();
+    if (Array.isArray(value)) {
+      value.forEach((entry, index) => {
+        const label = Zwavejs2HomeyApp.toStringOrNull(entry);
+        if (!label) return;
+        states.set(String(index), label);
+      });
+      return states;
+    }
+    if (!value || typeof value !== 'object') return states;
+    for (const [key, rawLabel] of Object.entries(value as Record<string, unknown>)) {
+      const label = Zwavejs2HomeyApp.toStringOrNull(rawLabel);
+      if (!label) continue;
+      states.set(String(key), label);
+    }
+    return states;
+  }
+
+  private static toStateLabel(value: unknown, valueId: ZwjsDefinedValueId): string | null {
+    const asString = Zwavejs2HomeyApp.toStringOrNull(value);
+    if (asString) return asString;
+    if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+    const states = Zwavejs2HomeyApp.toValueStatesMap(valueId.states);
+    return states.get(String(value)) ?? null;
+  }
+
+  private static classifyLockUserCodeSlotState(
+    stateLabel: string | null,
+  ): LockUserCodeSlotV1['state'] {
+    const token = stateLabel?.toLowerCase().replace(/[^a-z0-9]/g, '') ?? '';
+    if (!token) return 'unknown';
+    if (token.includes('occupied') || token.includes('enabled') || token.includes('passage')) {
+      return 'enabled';
+    }
+    if (token.includes('disabled') || token.includes('notavailable') || token.includes('blocked')) {
+      return 'disabled';
+    }
+    if (token.includes('available') || token.includes('vacant')) {
+      return 'available';
+    }
+    return 'unknown';
+  }
+
+  private static isLockoutStateLabel(stateLabel: string | null): boolean {
+    const token = stateLabel?.toLowerCase().replace(/[^a-z0-9]/g, '') ?? '';
+    if (!token) return false;
+    return (
+      token.includes('lockout') ||
+      token.includes('temporarydisabled') ||
+      token.includes('keypaddisabled') ||
+      token.includes('toomany')
+    );
   }
 
   private static normalizeNodeStateSnapshot(
@@ -1798,6 +1926,208 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
     };
   }
 
+  private async readExtensionNodeValue(options: {
+    client: ZwjsClient;
+    nodeId: number;
+    valueId: ZwjsValueId;
+    warningCode: string;
+    warnings: string[];
+  }): Promise<unknown | null> {
+    const result = await options.client.getNodeValue(options.nodeId, options.valueId);
+    if (result.success) {
+      const value = extractZwjsNodeValue(result.result);
+      return typeof value === 'undefined' ? null : value;
+    }
+    options.warnings.push(options.warningCode);
+    return null;
+  }
+
+  private async readLockUserCodeSlots(options: {
+    node: NodeRuntimeDiagnosticsEntry;
+    extensionMatched: boolean;
+  }): Promise<{
+    supported: boolean;
+    implemented: boolean;
+    reason: string;
+    sections: unknown[];
+  }> {
+    if (!options.extensionMatched) {
+      return {
+        supported: false,
+        implemented: true,
+        reason: 'extension-not-matched',
+        sections: [],
+      };
+    }
+
+    if (!options.node.bridgeId) {
+      return {
+        supported: true,
+        implemented: true,
+        reason: 'missing-bridge-id',
+        sections: [],
+      };
+    }
+    if (typeof options.node.nodeId !== 'number' || !Number.isFinite(options.node.nodeId)) {
+      return {
+        supported: true,
+        implemented: true,
+        reason: 'missing-node-id',
+        sections: [],
+      };
+    }
+
+    const bridgeSession = this.getBridgeSession(options.node.bridgeId);
+    const client = bridgeSession?.getZwjsClient();
+    if (!client) {
+      return {
+        supported: true,
+        implemented: true,
+        reason: 'bridge-client-unavailable',
+        sections: [],
+      };
+    }
+
+    const warnings: string[] = [];
+    const definedValueResult = await client.getNodeDefinedValueIds(options.node.nodeId);
+    if (!definedValueResult.success) {
+      return {
+        supported: true,
+        implemented: true,
+        reason: 'defined-value-ids-unavailable',
+        sections: [
+          {
+            sectionId: 'user-code-slots',
+            title: 'User Code Slots',
+            summary: {
+              slotCount: 0,
+              enabledSlots: 0,
+              disabledSlots: 0,
+              availableSlots: 0,
+              unknownSlots: 0,
+            },
+            slots: [],
+          },
+          {
+            sectionId: 'lockout-diagnostics',
+            title: 'Lockout Diagnostics',
+            diagnostics: {
+              ready: options.node.node.ready === true,
+              valueIdsLoaded: false,
+              slotStatusValueIdCount: 0,
+              slotCodeValueIdCount: 0,
+              keypadState: null,
+              keypadStateLabel: null,
+              lockoutActive: null,
+              warnings: ['defined-value-ids-unavailable'],
+            } satisfies LockUserCodeRuntimeDiagnosticsV1,
+          },
+        ],
+      };
+    }
+
+    const definedValueIds = extractZwjsDefinedValueIds(definedValueResult.result);
+    const slotStateIds = new Map<number, ZwjsDefinedValueId>();
+    const slotCodeIds = new Map<number, ZwjsDefinedValueId>();
+    const keypadStateValueId = definedValueIds.find((valueId) =>
+      Zwavejs2HomeyApp.isLockKeypadStateValueId(valueId),
+    );
+
+    for (const valueId of definedValueIds) {
+      const slot = Zwavejs2HomeyApp.toValueIdSlotNumber(valueId);
+      if (!slot) continue;
+      if (Zwavejs2HomeyApp.isLockUserIdStatusValueId(valueId) && !slotStateIds.has(slot)) {
+        slotStateIds.set(slot, valueId);
+      }
+      if (Zwavejs2HomeyApp.isLockUserCodeValueId(valueId) && !slotCodeIds.has(slot)) {
+        slotCodeIds.set(slot, valueId);
+      }
+    }
+
+    const slots: LockUserCodeSlotV1[] = [];
+    for (const slot of Array.from(slotStateIds.keys()).sort((left, right) => left - right)) {
+      const valueId = slotStateIds.get(slot);
+      if (!valueId) continue;
+      const value = await this.readExtensionNodeValue({
+        client,
+        nodeId: options.node.nodeId,
+        valueId,
+        warningCode: `slot-${slot}-status-read-failed`,
+        warnings,
+      });
+      const normalizedStatusValue =
+        typeof value === 'string' || typeof value === 'number' ? value : null;
+      const stateLabel = Zwavejs2HomeyApp.toStateLabel(value, valueId);
+      const state = Zwavejs2HomeyApp.classifyLockUserCodeSlotState(stateLabel);
+      slots.push({
+        slot,
+        state,
+        stateLabel,
+        statusValue: normalizedStatusValue,
+      });
+    }
+
+    const enabledSlots = slots.filter((entry) => entry.state === 'enabled').length;
+    const disabledSlots = slots.filter((entry) => entry.state === 'disabled').length;
+    const availableSlots = slots.filter((entry) => entry.state === 'available').length;
+    const unknownSlots = slots.filter((entry) => entry.state === 'unknown').length;
+
+    let keypadState: string | number | null = null;
+    let keypadStateLabel: string | null = null;
+    let lockoutActive: boolean | null = null;
+    if (keypadStateValueId) {
+      const keypadValue = await this.readExtensionNodeValue({
+        client,
+        nodeId: options.node.nodeId,
+        valueId: keypadStateValueId,
+        warningCode: 'keypad-state-read-failed',
+        warnings,
+      });
+      keypadState =
+        typeof keypadValue === 'string' || typeof keypadValue === 'number' ? keypadValue : null;
+      keypadStateLabel = Zwavejs2HomeyApp.toStateLabel(keypadValue, keypadStateValueId);
+      lockoutActive = Zwavejs2HomeyApp.isLockoutStateLabel(keypadStateLabel);
+    }
+
+    const diagnostics = {
+      ready: options.node.node.ready === true,
+      valueIdsLoaded: true,
+      slotStatusValueIdCount: slotStateIds.size,
+      slotCodeValueIdCount: slotCodeIds.size,
+      keypadState,
+      keypadStateLabel,
+      lockoutActive,
+      warnings,
+    } satisfies LockUserCodeRuntimeDiagnosticsV1;
+
+    const reason = slots.length > 0 ? 'ok' : 'user-code-slots-not-discovered';
+
+    return {
+      supported: true,
+      implemented: true,
+      reason,
+      sections: [
+        {
+          sectionId: 'user-code-slots',
+          title: 'User Code Slots',
+          summary: {
+            slotCount: slots.length,
+            enabledSlots,
+            disabledSlots,
+            availableSlots,
+            unknownSlots,
+          },
+          slots,
+        },
+        {
+          sectionId: 'lockout-diagnostics',
+          title: 'Lockout Diagnostics',
+          diagnostics,
+        },
+      ],
+    };
+  }
+
   async getProfileExtensionRead(options: { homeyDeviceId: string; extensionId: string }): Promise<{
     schemaVersion: 'homey-profile-extension-read/v1';
     generatedAt: string;
@@ -1850,7 +2180,26 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
     const context = Zwavejs2HomeyApp.toProfileExtensionMatchContext(node);
     const explanation = this.profileExtensionRegistry.explainMatch(extensionId, context);
 
-    const readReason = explanation.matched ? 'read-handler-not-implemented' : explanation.reason;
+    let read: {
+      supported: boolean;
+      implemented: boolean;
+      reason: string;
+      sections: unknown[];
+    };
+    if (contract.extensionId === 'lock-user-codes') {
+      read = await this.readLockUserCodeSlots({
+        node,
+        extensionMatched: explanation.matched,
+      });
+    } else {
+      const readReason = explanation.matched ? 'read-handler-not-implemented' : explanation.reason;
+      read = {
+        supported: explanation.matched,
+        implemented: false,
+        reason: readReason,
+        sections: [],
+      };
+    }
 
     return {
       schemaVersion: 'homey-profile-extension-read/v1',
@@ -1870,12 +2219,7 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
         readSections: contract.read.sections,
         actions: contract.actions,
       },
-      read: {
-        supported: explanation.matched,
-        implemented: false,
-        reason: readReason,
-        sections: [],
-      },
+      read,
       diagnostics: {
         profileAttribution: node.profileAttribution,
         fallbackReason: node.profile.fallbackReason,

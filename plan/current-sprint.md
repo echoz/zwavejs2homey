@@ -22,6 +22,21 @@ Close Phase 6 Reliability + UX with production-ready stability + diagnostics UX:
 
 ## Recently Completed
 
+- Phase 7 profile-extension lock-read slice:
+  - implemented `lock-user-codes` read handler in app runtime
+  - reads CC99 user-code slot state values and reports deterministic slot-state
+    summaries (`enabled` / `disabled` / `available` / `unknown`)
+  - reads CC113 keypad-state diagnostics (when available) and derives lockout
+    hinting in diagnostics payload
+  - emits deterministic read reasons for unsupported/degraded runtime states:
+    - `extension-not-matched`
+    - `bridge-client-unavailable`
+    - `defined-value-ids-unavailable`
+    - `user-code-slots-not-discovered`
+    - `ok`
+  - expanded behavioral tests in:
+    - `co.lazylabs.zwavejs2homey/test/app-runtime-refresh.test.ts`
+
 - Phase 7 Yale lock capability expansion slice:
   - expanded curated Yale YRD226 profile (`297:32770:1536`) to include:
     - `alarm_contact` from CC98 `doorStatus` (`zwave_door_status_to_homey_alarm_contact`)
