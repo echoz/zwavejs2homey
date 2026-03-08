@@ -97,6 +97,38 @@ function createSnapshot(overrides = {}) {
       syncReason: 'init',
       syncedAt: '2026-03-06T11:59:30.000Z',
     },
+    extensions: {
+      lockUserCodes: {
+        extension: {
+          extensionId: 'lock-user-codes',
+          matched: true,
+        },
+        read: {
+          supported: true,
+          implemented: true,
+          reason: 'ok',
+          sections: [
+            {
+              sectionId: 'user-code-slots',
+              summary: {
+                slotCount: 30,
+                enabledSlots: 4,
+                disabledSlots: 2,
+                availableSlots: 24,
+                unknownSlots: 0,
+              },
+            },
+            {
+              sectionId: 'lockout-diagnostics',
+              diagnostics: {
+                lockoutActive: false,
+                warnings: [],
+              },
+            },
+          ],
+        },
+      },
+    },
   };
 
   return {
@@ -236,4 +268,18 @@ test('device tools presenter infers compiled-only policy for legacy snapshots wi
     rowValue(viewModel.adapterRows, 'Inference Policy'),
     'Compiled-only policy: resolved from compiled profile; no runtime generic inference.',
   );
+});
+
+test('device tools presenter exposes lock extension action affordances when extension is available', () => {
+  const loaded = presenter.reduce(presenter.createInitialState(), {
+    type: 'load_success',
+    snapshot: createSnapshot(),
+  });
+
+  const viewModel = presenter.buildViewModel(loaded);
+  assert.equal(rowValue(viewModel.lockExtensionRows, 'Status'), 'Available');
+  assert.equal(viewModel.lockSetCodeDisabled, false);
+  assert.equal(viewModel.lockRemoveCodeDisabled, false);
+  assert.equal(viewModel.lockSetStateDisabled, false);
+  assert.match(viewModel.lockActionHint, /lock extension is active/i);
 });

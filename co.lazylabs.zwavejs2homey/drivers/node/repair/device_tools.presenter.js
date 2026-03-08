@@ -22,6 +22,26 @@ const actionReasonLabels = {
     'profile-resolution-not-ready': 'Runtime mapping is not ready yet for this device.',
     'missing-homey-device-id': 'Device identifier is unavailable in runtime diagnostics.',
     none: 'No action was required.',
+    'dry-run-preview': 'Dry-run preview generated. No write was performed.',
+    'slot-not-found': 'The selected slot does not exist for this lock.',
+    'slot-code-write-target-missing': 'This slot does not expose a writable code target.',
+    'slot-remove-target-missing': 'This slot cannot be removed on this lock variant.',
+    'slot-status-write-target-missing': 'This slot does not expose a writable status target.',
+    'slot-state-write-value-unsupported': 'This lock does not support the requested slot state value.',
+    'invalid-slot': 'Slot must be a positive integer.',
+    'invalid-code': 'Code must be a non-empty string.',
+    'invalid-state': 'State must be enabled or disabled.',
+    'zwjs-write-failed': 'ZWJS rejected the write command.',
+};
+const extensionReadReasonLabels = {
+    ok: 'Extension is available and runtime values were loaded.',
+    'extension-not-matched': 'This node does not match lock extension predicates.',
+    'missing-bridge-id': 'Bridge association is missing for this node.',
+    'missing-node-id': 'Node ID is missing for this device.',
+    'bridge-client-unavailable': 'Bridge transport client is unavailable.',
+    'defined-value-ids-unavailable': 'Lock value definitions could not be loaded.',
+    'user-code-slots-not-discovered': 'No lock user-code slots were discovered.',
+    'extension-read-error': 'Failed to load extension read data.',
 };
 function formatIso(ts) {
     if (!ts)
@@ -271,6 +291,76 @@ function recommendationBadge(snapshot) {
     }
     return { label: 'Profile Update Available', tone: 'danger' };
 }
+function extensionReasonLabel(reason) {
+    if (!reason)
+        return 'n/a';
+    const code = String(reason);
+    const label = extensionReadReasonLabels[code];
+    if (!label)
+        return code;
+    return `${label} (${code})`;
+}
+function getExtensionReadSection(read, sectionId) {
+    if (!read || typeof read !== 'object')
+        return null;
+    if (!Array.isArray(read.sections))
+        return null;
+    const section = read.sections.find((entry) => entry && typeof entry === 'object' && entry.sectionId === sectionId);
+    return section || null;
+}
+function lockExtensionActionAvailable(lockRead) {
+    if (!lockRead || typeof lockRead !== 'object')
+        return false;
+    const extensionMatched = lockRead.extension && lockRead.extension.matched === true;
+    const readSupported = lockRead.read && lockRead.read.supported === true;
+    const readImplemented = lockRead.read && lockRead.read.implemented === true;
+    return extensionMatched && readSupported && readImplemented;
+}
+function buildLockExtensionRows(lockRead) {
+    if (!lockRead || typeof lockRead !== 'object') {
+        return toKvRows([
+            ['Status', 'Unavailable'],
+            ['Reason', 'Extension snapshot is unavailable.'],
+        ]);
+    }
+    const userCodeSection = getExtensionReadSection(lockRead.read, 'user-code-slots');
+    const lockoutSection = getExtensionReadSection(lockRead.read, 'lockout-diagnostics');
+    const summary = userCodeSection && typeof userCodeSection.summary === 'object' ? userCodeSection.summary : {};
+    const diagnostics = lockoutSection && typeof lockoutSection.diagnostics === 'object'
+        ? lockoutSection.diagnostics
+        : {};
+    const warnings = Array.isArray(diagnostics.warnings)
+        ? diagnostics.warnings.map((entry) => String(entry))
+        : [];
+    return toKvRows([
+        ['Status', lockExtensionActionAvailable(lockRead) ? 'Available' : 'Unavailable'],
+        ['Read Reason', extensionReasonLabel(lockRead.read && lockRead.read.reason)],
+        ['Slots', summary.slotCount],
+        ['Enabled Slots', summary.enabledSlots],
+        ['Disabled Slots', summary.disabledSlots],
+        ['Available Slots', summary.availableSlots],
+        ['Unknown Slots', summary.unknownSlots],
+        [
+            'Lockout Active',
+            diagnostics.lockoutActive === true
+                ? 'Yes'
+                : diagnostics.lockoutActive === false
+                    ? 'No'
+                    : 'n/a',
+        ],
+        ['Warnings', warnings.length > 0 ? warnings.join(', ') : 'None'],
+    ], { omitEmpty: false });
+}
+function buildLockActionHint(lockRead) {
+    if (!lockRead || typeof lockRead !== 'object') {
+        return 'Lock extension data is unavailable for this device.';
+    }
+    if (!lockExtensionActionAvailable(lockRead)) {
+        const reasonCode = lockRead.read && lockRead.read.reason ? lockRead.read.reason : 'unavailable';
+        return `Lock extension unavailable: ${extensionReasonLabel(reasonCode)}`;
+    }
+    return 'Lock extension is active. Use slot + code/state inputs to run lock actions.';
+}
 (function attachDeviceToolsPresenter(root, factory) {
     const presenter = factory();
     if (typeof module !== 'undefined' && module.exports) {
@@ -364,6 +454,28 @@ function recommendationBadge(snapshot) {
         if (!actionResult || typeof actionResult !== 'object') {
             return { message: 'Action completed.', tone: 'ok' };
         }
+        if (actionResult.execution &&
+            typeof actionResult.execution === 'object' &&
+            typeof actionResult.execution.reason === 'string') {
+            const execution = actionResult.execution;
+            const reason = execution.reason;
+            if (execution.executed === true) {
+                return {
+                    message: 'Extension action completed.',
+                    tone: 'ok',
+                };
+            }
+            if (reason === 'dry-run-preview') {
+                return {
+                    message: actionReasonLabels[reason] || 'Dry-run preview generated.',
+                    tone: 'warn',
+                };
+            }
+            return {
+                message: actionReasonLabels[reason] || `Extension action not executed: ${reason}`,
+                tone: execution.status === 'rejected' ? 'error' : 'warn',
+            };
+        }
         if (actionResult.executed === true) {
             if (actionResult.selectedAction === 'backfill-marker') {
                 return {
@@ -431,6 +543,11 @@ function recommendationBadge(snapshot) {
                 backfillDisabled: true,
                 adoptDisabled: true,
                 actionHint: 'No action context available.',
+                lockExtensionRows: [],
+                lockSetCodeDisabled: true,
+                lockRemoveCodeDisabled: true,
+                lockSetStateDisabled: true,
+                lockActionHint: 'Lock extension data is unavailable.',
             };
         }
         const snapshot = state.snapshot;
@@ -464,9 +581,22 @@ function recommendationBadge(snapshot) {
                 : 'None';
         const deviceLabel = snapshot.device.nodeId !== null ? `Node ${snapshot.device.nodeId}` : 'Node';
         const recommendationBadgeView = recommendationBadge(snapshot);
+        const lockRead = snapshot.extensions ? snapshot.extensions.lockUserCodes : null;
+        const lockActionAvailable = lockExtensionActionAvailable(lockRead);
         const latestActionRows = state.latestActionResult && typeof state.latestActionResult === 'object'
             ? (() => {
                 const result = state.latestActionResult;
+                if (result.execution &&
+                    typeof result.execution === 'object' &&
+                    typeof result.execution.reason === 'string') {
+                    return toKvRows([
+                        ['Executed', result.execution.executed === true ? 'Yes' : 'No'],
+                        ['Extension', result.extension ? result.extension.extensionId : null],
+                        ['Action', result.action ? result.action.actionId : null],
+                        ['Status', result.execution.status],
+                        ['Reason', toReasonDetail(result.execution.reason, actionReasonLabels)],
+                    ]);
+                }
                 const latestReasonLabel = result.latestReason &&
                     snapshot.recommendation &&
                     snapshot.recommendation.reason === result.latestReason
@@ -600,6 +730,11 @@ function recommendationBadge(snapshot) {
             backfillDisabled: isBusy || !canBackfill,
             adoptDisabled: isBusy || !canAdopt,
             actionHint,
+            lockExtensionRows: buildLockExtensionRows(lockRead),
+            lockSetCodeDisabled: isBusy || !lockActionAvailable,
+            lockRemoveCodeDisabled: isBusy || !lockActionAvailable,
+            lockSetStateDisabled: isBusy || !lockActionAvailable,
+            lockActionHint: buildLockActionHint(lockRead),
         };
     }
     return {

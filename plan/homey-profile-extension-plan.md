@@ -112,6 +112,20 @@ Action contract:
     - `zwjs-write-failed`
   - behavioral coverage expanded in:
     - `co.lazylabs.zwavejs2homey/test/app-runtime-refresh.test.ts`
+- UX slice is complete for the first extension vertical:
+  - node Device Tools repair panel now consumes lock extension read payloads and
+    renders lock user-code diagnostics.
+  - panel now supports lock extension actions via existing timed repair handler:
+    - set code
+    - remove code
+    - set state
+  - extension actions are dispatched through the same Device Tools event channel
+    with explicit `kind: extension` payloads.
+  - dry-run preview mode is exposed in the panel for extension actions.
+  - added driver/presenter behavioral coverage for extension snapshot/action
+    wiring:
+    - `co.lazylabs.zwavejs2homey/test/driver-harness.test.ts`
+    - `co.lazylabs.zwavejs2homey/test/node-device-tools-presenter.test.ts`
 
 ## Slice Plan
 
@@ -148,6 +162,7 @@ Action contract:
 - wire node custom panel to extension read/action API
 - keep system capability controls unchanged
 - add contextual hints when extension is unavailable for that device
+  Status: completed (lock-user-codes vertical)
 
 6. Candidate inventory slice
 

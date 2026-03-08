@@ -22,6 +22,21 @@ Close Phase 6 Reliability + UX with production-ready stability + diagnostics UX:
 
 ## Recently Completed
 
+- Phase 7 profile-extension panel UX slice:
+  - node Device Tools repair panel now includes a Lock User Codes panel backed by
+    extension read data.
+  - lock panel actions now dispatch through the existing timed repair action
+    channel using `kind: extension` payloads:
+    - set code
+    - remove code
+    - set state
+  - lock action controls now support dry-run preview mode.
+  - driver repair snapshot now enriches node snapshot payloads with
+    `extensions.lockUserCodes` when extension read API is available.
+  - expanded coverage for panel wiring + presenter rendering in:
+    - `co.lazylabs.zwavejs2homey/test/driver-harness.test.ts`
+    - `co.lazylabs.zwavejs2homey/test/node-device-tools-presenter.test.ts`
+
 - Phase 7 profile-extension lock-action slice:
   - registered runtime action handlers for:
     - `lock-user-codes:set-user-code`

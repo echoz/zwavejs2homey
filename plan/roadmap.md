@@ -273,6 +273,12 @@ Delivered in early Phase 7 slices:
   - dry-run previews now return planned writes before execution
   - live execution uses `node.set_value` with deterministic failure envelopes
   - read/action paths now share slot-target resolution for deterministic behavior
+- landed first extension panel integration (Node Device Tools repair panel):
+  - repair snapshot now includes extension read payloads (`extensions.lockUserCodes`)
+  - repair action handler now supports extension action dispatch payloads
+    (`kind: extension`) on the existing `device_tools:execute_action` channel
+  - lock panel now supports set/remove/state actions plus dry-run previews
+    without changing system capability controls
 
 Planned next Phase 7 extension slices:
 

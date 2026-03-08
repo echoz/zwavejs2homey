@@ -1352,6 +1352,111 @@ test('node driver repair session exposes device tools snapshot handlers', async 
   ]);
 });
 
+test('node driver repair snapshot includes lock extension read payload when available', async () => {
+  const driver = new NodeDriver();
+  driver._configureHarness({
+    app: {
+      async getNodeDeviceToolsSnapshot(options) {
+        return {
+          schemaVersion: 'node-device-tools/v1',
+          device: { homeyDeviceId: options.homeyDeviceId },
+        };
+      },
+      async getProfileExtensionRead(options) {
+        return {
+          schemaVersion: 'homey-profile-extension-read/v1',
+          extension: {
+            extensionId: options.extensionId,
+            matched: true,
+          },
+          read: {
+            supported: true,
+            implemented: true,
+            reason: 'ok',
+            sections: [],
+          },
+        };
+      },
+    },
+    devices: [],
+  });
+
+  const handlers = new Map();
+  const session = {
+    setHandler(event, handler) {
+      handlers.set(event, handler);
+    },
+  };
+
+  await driver.onRepair(session, {
+    getData: () => ({ id: 'main:8' }),
+  });
+
+  const snapshot = await handlers.get('device_tools:get_snapshot')();
+  assert.equal(snapshot.extensions.lockUserCodes.extension.extensionId, 'lock-user-codes');
+  assert.equal(snapshot.extensions.lockUserCodes.read.reason, 'ok');
+});
+
+test('node driver repair action handler routes extension action payloads to app runtime', async () => {
+  const extensionCalls = [];
+  const driver = new NodeDriver();
+  driver._configureHarness({
+    app: {
+      async getNodeDeviceToolsSnapshot(options) {
+        return {
+          schemaVersion: 'node-device-tools/v1',
+          device: { homeyDeviceId: options.homeyDeviceId },
+        };
+      },
+      async executeProfileExtensionAction(options) {
+        extensionCalls.push(options);
+        return {
+          schemaVersion: 'homey-profile-extension-action/v1',
+          action: {
+            actionId: options.actionId,
+          },
+          execution: {
+            status: 'blocked',
+            executed: false,
+            reason: options.dryRun ? 'dry-run-preview' : 'ok',
+          },
+        };
+      },
+    },
+    devices: [],
+  });
+
+  const handlers = new Map();
+  const session = {
+    setHandler(event, handler) {
+      handlers.set(event, handler);
+    },
+  };
+
+  await driver.onRepair(session, {
+    getData: () => ({ id: 'main:8' }),
+  });
+
+  const result = await handlers.get('device_tools:execute_action')({
+    kind: 'extension',
+    extensionId: 'lock-user-codes',
+    actionId: 'set-user-code',
+    args: { slot: 2, code: '1234' },
+    dryRun: true,
+  });
+
+  assert.equal(result.actionResult.execution.reason, 'dry-run-preview');
+  assert.equal(extensionCalls.length, 1);
+  assert.deepEqual(extensionCalls[0], {
+    homeyDeviceId: 'main:8',
+    extensionId: 'lock-user-codes',
+    actionId: 'set-user-code',
+    args: { slot: 2, code: '1234' },
+    dryRun: true,
+    confirm: true,
+  });
+});
+
 test('node driver repair handler rejects when node device ID is unavailable', async () => {
   const driver = new NodeDriver();
   driver._configureHarness({

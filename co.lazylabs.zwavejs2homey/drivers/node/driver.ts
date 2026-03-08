@@ -17,6 +17,21 @@ type RecommendationActionSelection =
   | 'adopt-recommended-baseline'
   | 'none';
 
+interface ExtensionActionSelection {
+  kind: 'extension';
+  extensionId: string;
+  actionId: string;
+  args: Record<string, unknown>;
+  dryRun: boolean;
+}
+
+interface RecommendationActionRequest {
+  kind: 'recommendation';
+  action: RecommendationActionSelection;
+}
+
+type DeviceToolsActionRequest = RecommendationActionRequest | ExtensionActionSelection;
+
 interface BridgeSessionLike {
   bridgeId?: string;
   getZwjsClient?: () => ZwjsClient | undefined;
@@ -87,6 +102,18 @@ interface AppRuntimeAccess {
   executeRecommendationAction?: (options: {
     homeyDeviceId: string;
     action?: RecommendationActionSelection;
+  }) => Promise<unknown>;
+  getProfileExtensionRead?: (options: {
+    homeyDeviceId: string;
+    extensionId: string;
+  }) => Promise<unknown>;
+  executeProfileExtensionAction?: (options: {
+    homeyDeviceId: string;
+    extensionId: string;
+    actionId: string;
+    args?: Record<string, unknown>;
+    dryRun?: boolean;
+    confirm?: boolean;
   }) => Promise<unknown>;
 }
 
@@ -961,33 +988,42 @@ module.exports = class NodeDriver extends Homey.Driver {
     const app = this.homey.app as AppRuntimeAccess;
     const homeyDeviceId = this.resolveHomeyDeviceId(device);
 
-    const loadSnapshot = async (): Promise<unknown> => {
-      if (!homeyDeviceId) {
-        throw new Error('Device Tools unavailable: node device ID is missing.');
-      }
-      if (!app.getNodeDeviceToolsSnapshot) {
-        throw new Error('Device Tools unavailable: app runtime snapshot API is not ready.');
-      }
-      return app.getNodeDeviceToolsSnapshot({ homeyDeviceId });
-    };
+    const loadSnapshot = async (): Promise<unknown> =>
+      this.loadDeviceToolsSnapshot(app, homeyDeviceId);
 
     const executeAction = async (payload?: unknown): Promise<unknown> => {
       if (!homeyDeviceId) {
         throw new Error('Device Tools unavailable: node device ID is missing.');
       }
+      const actionRequest = this.parseDeviceToolsActionRequest(payload);
+
+      if (actionRequest.kind === 'extension') {
+        if (!app.executeProfileExtensionAction) {
+          throw new Error('Device Tools unavailable: profile extension action API is not ready.');
+        }
+        const actionResult = await app.executeProfileExtensionAction({
+          homeyDeviceId,
+          extensionId: actionRequest.extensionId,
+          actionId: actionRequest.actionId,
+          args: actionRequest.args,
+          dryRun: actionRequest.dryRun,
+          confirm: true,
+        });
+        const snapshot = await this.loadDeviceToolsSnapshot(app, homeyDeviceId);
+        return {
+          actionResult,
+          snapshot,
+        };
+      }
+
       if (!app.executeRecommendationAction) {
         throw new Error('Device Tools unavailable: recommendation action API is not ready.');
       }
-      if (!app.getNodeDeviceToolsSnapshot) {
-        throw new Error('Device Tools unavailable: app runtime snapshot API is not ready.');
-      }
-
-      const actionSelection = this.parseActionSelection(payload);
       const actionResult = await app.executeRecommendationAction({
         homeyDeviceId,
-        action: actionSelection,
+        action: actionRequest.action,
       });
-      const snapshot = await app.getNodeDeviceToolsSnapshot({ homeyDeviceId });
+      const snapshot = await this.loadDeviceToolsSnapshot(app, homeyDeviceId);
       return {
         actionResult,
         snapshot,
@@ -1024,14 +1060,89 @@ module.exports = class NodeDriver extends Homey.Driver {
     return trimmed.length > 0 ? trimmed : null;
   }
 
-  private parseActionSelection(payload: unknown): RecommendationActionSelection {
-    if (!payload || typeof payload !== 'object') return 'auto';
-    const { action } = payload as { action?: unknown };
-    if (typeof action === 'undefined') return 'auto';
-    if (typeof action !== 'string') {
-      throw new Error('Invalid Device Tools action selection: action must be a string.');
+  private async loadDeviceToolsSnapshot(
+    app: AppRuntimeAccess,
+    homeyDeviceId: string | null,
+  ): Promise<unknown> {
+    if (!homeyDeviceId) {
+      throw new Error('Device Tools unavailable: node device ID is missing.');
     }
-    const normalized = action.trim();
+    if (!app.getNodeDeviceToolsSnapshot) {
+      throw new Error('Device Tools unavailable: app runtime snapshot API is not ready.');
+    }
+
+    const snapshot = await app.getNodeDeviceToolsSnapshot({ homeyDeviceId });
+    let lockUserCodes: unknown = null;
+    if (app.getProfileExtensionRead) {
+      try {
+        lockUserCodes = await app.getProfileExtensionRead({
+          homeyDeviceId,
+          extensionId: 'lock-user-codes',
+        });
+      } catch (error) {
+        lockUserCodes = {
+          schemaVersion: 'homey-profile-extension-read/v1',
+          generatedAt: new Date().toISOString(),
+          extension: {
+            extensionId: 'lock-user-codes',
+            matched: false,
+            matchReason: 'extension-read-error',
+          },
+          read: {
+            supported: false,
+            implemented: false,
+            reason: 'extension-read-error',
+            sections: [],
+          },
+          diagnostics: {
+            error: error instanceof Error ? error.message : 'Unknown extension read error',
+          },
+        };
+      }
+    }
+
+    if (!snapshot || typeof snapshot !== 'object' || Array.isArray(snapshot)) {
+      return snapshot;
+    }
+
+    return {
+      ...(snapshot as Record<string, unknown>),
+      extensions: {
+        lockUserCodes,
+      },
+    };
+  }
+
+  private parseDeviceToolsActionRequest(payload: unknown): DeviceToolsActionRequest {
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+      return { kind: 'recommendation', action: 'auto' };
+    }
+
+    const record = payload as Record<string, unknown>;
+    const kind = this.normalizeStringOrNull(record.kind);
+    if (kind === 'extension') {
+      const extensionId = this.normalizeStringOrNull(record.extensionId);
+      const actionId = this.normalizeStringOrNull(record.actionId);
+      if (!extensionId || !actionId) {
+        throw new Error(
+          'Invalid Device Tools extension action payload: extensionId and actionId are required.',
+        );
+      }
+      const rawArgs = record.args;
+      const args =
+        rawArgs && typeof rawArgs === 'object' && !Array.isArray(rawArgs)
+          ? (rawArgs as Record<string, unknown>)
+          : {};
+      return {
+        kind: 'extension',
+        extensionId,
+        actionId,
+        args,
+        dryRun: record.dryRun === true,
+      };
+    }
+
+    const normalized = this.normalizeStringOrNull(record.action) ?? 'auto';
     const allowedSelections: RecommendationActionSelection[] = [
       'auto',
       'backfill-marker',
@@ -1039,10 +1150,13 @@ module.exports = class NodeDriver extends Homey.Driver {
       'none',
     ];
     if (allowedSelections.includes(normalized as RecommendationActionSelection)) {
-      return normalized as RecommendationActionSelection;
+      return {
+        kind: 'recommendation',
+        action: normalized as RecommendationActionSelection,
+      };
     }
     throw new Error(
-      'Invalid Device Tools action selection. Expected one of: auto, backfill-marker, adopt-recommended-baseline, none.',
+      'Invalid Device Tools action selection. Expected one of: auto, backfill-marker, adopt-recommended-baseline, none, or kind=extension payload.',
     );
   }
 };

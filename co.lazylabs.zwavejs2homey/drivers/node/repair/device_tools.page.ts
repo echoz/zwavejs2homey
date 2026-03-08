@@ -48,6 +48,15 @@ declare const Homey: HomeyRepairRuntime;
   const backfillBtn = mustElement<HTMLButtonElement>('backfill-btn');
   const adoptBtn = mustElement<HTMLButtonElement>('adopt-btn');
   const actionHint = mustElement<HTMLElement>('action-hint');
+  const lockExtensionKv = mustElement<HTMLElement>('lock-extension-kv');
+  const lockSlotInput = mustElement<HTMLInputElement>('lock-slot-input');
+  const lockCodeInput = mustElement<HTMLInputElement>('lock-code-input');
+  const lockStateSelect = mustElement<HTMLSelectElement>('lock-state-select');
+  const lockDryRun = mustElement<HTMLInputElement>('lock-dry-run');
+  const lockSetCodeBtn = mustElement<HTMLButtonElement>('lock-set-code-btn');
+  const lockRemoveCodeBtn = mustElement<HTMLButtonElement>('lock-remove-code-btn');
+  const lockSetStateBtn = mustElement<HTMLButtonElement>('lock-set-state-btn');
+  const lockActionHint = mustElement<HTMLElement>('lock-action-hint');
 
   function escapeHtml(value: unknown): string {
     return String(value)
@@ -104,6 +113,9 @@ declare const Homey: HomeyRepairRuntime;
     refreshBtn.disabled = viewModel.loading || viewModel.actionInFlight;
     backfillBtn.disabled = viewModel.backfillDisabled;
     adoptBtn.disabled = viewModel.adoptDisabled;
+    lockSetCodeBtn.disabled = viewModel.lockSetCodeDisabled;
+    lockRemoveCodeBtn.disabled = viewModel.lockRemoveCodeDisabled;
+    lockSetStateBtn.disabled = viewModel.lockSetStateDisabled;
 
     subtitle.textContent = viewModel.subtitle;
     errorPanel.hidden = !viewModel.error;
@@ -124,7 +136,9 @@ declare const Homey: HomeyRepairRuntime;
     setKv(curationKv, viewModel.curationRows);
     setKv(whyKv, viewModel.decisionRows);
     setKv(latestActionKv, viewModel.latestActionRows);
+    setKv(lockExtensionKv, viewModel.lockExtensionRows);
     actionHint.textContent = viewModel.actionHint;
+    lockActionHint.textContent = viewModel.lockActionHint;
   }
 
   async function emitWithTimeout(eventName: string, payload?: unknown): Promise<any> {
@@ -159,7 +173,7 @@ declare const Homey: HomeyRepairRuntime;
     render();
   }
 
-  async function executeAction(actionSelection: string, confirmationText: string): Promise<void> {
+  async function executeAction(actionPayload: unknown, confirmationText: string): Promise<void> {
     if (!stateRef.current.snapshot) return;
     if (!window.confirm(confirmationText)) return;
 
@@ -168,7 +182,9 @@ declare const Homey: HomeyRepairRuntime;
 
     try {
       const result = await emitWithTimeout('device_tools:execute_action', {
-        action: actionSelection,
+        ...(actionPayload && typeof actionPayload === 'object'
+          ? (actionPayload as Record<string, unknown>)
+          : {}),
       });
       const snapshot =
         result && typeof result === 'object' && result.snapshot
@@ -197,14 +213,87 @@ declare const Homey: HomeyRepairRuntime;
   });
   backfillBtn.addEventListener('click', () => {
     void executeAction(
-      'backfill-marker',
+      { action: 'backfill-marker' },
       'Backfill Profile Reference for this device? This writes marker metadata only.',
     );
   });
   adoptBtn.addEventListener('click', () => {
     void executeAction(
-      'adopt-recommended-baseline',
+      { action: 'adopt-recommended-baseline' },
       'Adopt the compiled profile update for this device? This removes current curation for this device.',
+    );
+  });
+  lockSetCodeBtn.addEventListener('click', () => {
+    const slot = Number.parseInt(lockSlotInput.value, 10);
+    const code = lockCodeInput.value.trim();
+    if (!Number.isFinite(slot) || slot <= 0) {
+      stateRef.current = presenter.reduce(stateRef.current, {
+        type: 'action_error',
+        message: 'Slot must be a positive integer.',
+      });
+      render();
+      return;
+    }
+    if (!code) {
+      stateRef.current = presenter.reduce(stateRef.current, {
+        type: 'action_error',
+        message: 'Code is required for Set Code.',
+      });
+      render();
+      return;
+    }
+    void executeAction(
+      {
+        kind: 'extension',
+        extensionId: 'lock-user-codes',
+        actionId: 'set-user-code',
+        args: { slot, code },
+        dryRun: lockDryRun.checked,
+      },
+      `Set lock user code for slot ${slot}?`,
+    );
+  });
+  lockRemoveCodeBtn.addEventListener('click', () => {
+    const slot = Number.parseInt(lockSlotInput.value, 10);
+    if (!Number.isFinite(slot) || slot <= 0) {
+      stateRef.current = presenter.reduce(stateRef.current, {
+        type: 'action_error',
+        message: 'Slot must be a positive integer.',
+      });
+      render();
+      return;
+    }
+    void executeAction(
+      {
+        kind: 'extension',
+        extensionId: 'lock-user-codes',
+        actionId: 'remove-user-code',
+        args: { slot },
+        dryRun: lockDryRun.checked,
+      },
+      `Remove lock user code for slot ${slot}?`,
+    );
+  });
+  lockSetStateBtn.addEventListener('click', () => {
+    const slot = Number.parseInt(lockSlotInput.value, 10);
+    const state = lockStateSelect.value;
+    if (!Number.isFinite(slot) || slot <= 0) {
+      stateRef.current = presenter.reduce(stateRef.current, {
+        type: 'action_error',
+        message: 'Slot must be a positive integer.',
+      });
+      render();
+      return;
+    }
+    void executeAction(
+      {
+        kind: 'extension',
+        extensionId: 'lock-user-codes',
+        actionId: 'set-user-code-state',
+        args: { slot, state },
+        dryRun: lockDryRun.checked,
+      },
+      `Set lock user code state for slot ${slot} to ${state}?`,
     );
   });
 
