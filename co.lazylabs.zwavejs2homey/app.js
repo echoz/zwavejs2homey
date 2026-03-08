@@ -1303,6 +1303,71 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
                 return {};
             return value;
         }
+        static hasOwnProperty(target, key) {
+            return Object.prototype.hasOwnProperty.call(target, key);
+        }
+        static isValidArgumentType(value, type) {
+            if (type === 'string')
+                return typeof value === 'string';
+            if (type === 'number')
+                return typeof value === 'number' && Number.isFinite(value);
+            if (type === 'integer')
+                return typeof value === 'number' && Number.isInteger(value);
+            if (type === 'boolean')
+                return typeof value === 'boolean';
+            if (type === 'enum')
+                return typeof value === 'string';
+            return false;
+        }
+        validateProfileExtensionActionArgs(options) {
+            const schema = options.schema ?? [];
+            const args = options.args;
+            const issues = [];
+            const allowedNames = new Set(schema.map((entry) => entry.name));
+            for (const key of Object.keys(args)) {
+                if (allowedNames.has(key))
+                    continue;
+                issues.push({
+                    code: 'unknown-arg',
+                    name: key,
+                    message: `Unknown action argument: ${key}`,
+                });
+            }
+            for (const entry of schema) {
+                const hasValue = _a.hasOwnProperty(args, entry.name);
+                const value = hasValue ? args[entry.name] : undefined;
+                if ((value === undefined || value === null) && entry.required === true) {
+                    issues.push({
+                        code: 'missing-required-arg',
+                        name: entry.name,
+                        message: `Missing required argument: ${entry.name}`,
+                    });
+                    continue;
+                }
+                if (value === undefined || value === null)
+                    continue;
+                if (!_a.isValidArgumentType(value, entry.type)) {
+                    issues.push({
+                        code: 'invalid-arg-type',
+                        name: entry.name,
+                        message: `Invalid argument type for ${entry.name}: expected ${entry.type}`,
+                    });
+                    continue;
+                }
+                if (entry.type !== 'enum')
+                    continue;
+                const allowedValues = Array.isArray(entry.enumValues) ? entry.enumValues : [];
+                const valueAsString = value;
+                if (allowedValues.includes(valueAsString))
+                    continue;
+                issues.push({
+                    code: 'invalid-arg-enum',
+                    name: entry.name,
+                    message: `Invalid enum value for ${entry.name}: ${valueAsString}`,
+                });
+            }
+            return issues;
+        }
         evaluateProfileExtensionSafetyChecks(options) {
             return options.checks.map((check) => {
                 if (check === 'requires-supported-profile') {
@@ -1358,22 +1423,25 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
             const args = _a.normalizeProfileExtensionArgs(options?.args);
             const dryRun = options?.dryRun === true;
             const confirm = options?.confirm === true;
+            const extensionContract = this.profileExtensionRegistry.get(extensionId);
+            const actionContract = this.profileExtensionRegistry.resolveAction(extensionId, actionId);
             const diagnostics = await this.getNodeRuntimeDiagnostics({ homeyDeviceId });
             const node = diagnostics.nodes.find((entry) => entry.homeyDeviceId === homeyDeviceId);
-            if (!node) {
-                throw new Error(`Node runtime diagnostics not found for homeyDeviceId: ${homeyDeviceId}`);
-            }
-            const context = _a.toProfileExtensionMatchContext(node);
-            const extensionContract = this.profileExtensionRegistry.get(extensionId);
+            const context = node
+                ? _a.toProfileExtensionMatchContext(node)
+                : {
+                    profileId: null,
+                    driverTemplateId: null,
+                    homeyClass: null,
+                };
             const extensionExplanation = this.profileExtensionRegistry.explainMatch(extensionId, context);
-            const actionContract = this.profileExtensionRegistry.resolveAction(extensionId, actionId);
             const baseResult = {
                 schemaVersion: 'homey-profile-extension-action/v1',
                 generatedAt: new Date().toISOString(),
                 device: {
                     homeyDeviceId,
-                    bridgeId: node.bridgeId,
-                    nodeId: node.nodeId,
+                    bridgeId: node?.bridgeId ?? null,
+                    nodeId: node?.nodeId ?? null,
                 },
                 context,
                 extension: {
@@ -1401,6 +1469,17 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
                     details: null,
                 },
             };
+            if (!node) {
+                return {
+                    ...baseResult,
+                    execution: {
+                        status: 'rejected',
+                        executed: false,
+                        reason: 'node-not-found',
+                        details: null,
+                    },
+                };
+            }
             if (!extensionContract) {
                 return {
                     ...baseResult,
@@ -1442,6 +1521,23 @@ module.exports = (_a = class Zwavejs2HomeyApp extends homey_1.default.App {
                         executed: false,
                         reason: 'dry-run-not-supported',
                         details: null,
+                    },
+                };
+            }
+            const argIssues = this.validateProfileExtensionActionArgs({
+                schema: actionContract.arguments,
+                args,
+            });
+            if (argIssues.length > 0) {
+                return {
+                    ...baseResult,
+                    execution: {
+                        status: 'rejected',
+                        executed: false,
+                        reason: 'invalid-action-args',
+                        details: {
+                            issues: argIssues,
+                        },
                     },
                 };
             }

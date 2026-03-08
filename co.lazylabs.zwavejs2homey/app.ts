@@ -36,6 +36,8 @@ import { createBridgeSession, type BridgeSessionRuntimeState } from './bridge-se
 import {
   createProfileExtensionRegistry,
   PROFILE_EXTENSION_CONTRACTS_V1,
+  type ProfileExtensionActionArgumentSchemaV1,
+  type ProfileExtensionActionArgumentTypeV1,
   type ProfileExtensionContractV1,
   type ProfileExtensionMatchContextV1,
   type ProfileExtensionMatchExplanationV1,
@@ -230,6 +232,12 @@ interface ProfileExtensionActionSafetyResultV1 {
   check: ProfileExtensionSafetyCheckV1;
   passed: boolean;
   reason: string;
+}
+
+interface ProfileExtensionActionArgumentIssueV1 {
+  code: 'missing-required-arg' | 'invalid-arg-type' | 'invalid-arg-enum' | 'unknown-arg';
+  name: string;
+  message: string;
 }
 
 module.exports = class Zwavejs2HomeyApp extends Homey.App {
@@ -1881,6 +1889,78 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
     return value as Record<string, unknown>;
   }
 
+  private static hasOwnProperty(target: Record<string, unknown>, key: string): boolean {
+    return Object.prototype.hasOwnProperty.call(target, key);
+  }
+
+  private static isValidArgumentType(
+    value: unknown,
+    type: ProfileExtensionActionArgumentTypeV1,
+  ): boolean {
+    if (type === 'string') return typeof value === 'string';
+    if (type === 'number') return typeof value === 'number' && Number.isFinite(value);
+    if (type === 'integer') return typeof value === 'number' && Number.isInteger(value);
+    if (type === 'boolean') return typeof value === 'boolean';
+    if (type === 'enum') return typeof value === 'string';
+    return false;
+  }
+
+  private validateProfileExtensionActionArgs(options: {
+    schema: readonly ProfileExtensionActionArgumentSchemaV1[] | undefined;
+    args: Record<string, unknown>;
+  }): ProfileExtensionActionArgumentIssueV1[] {
+    const schema = options.schema ?? [];
+    const args = options.args;
+    const issues: ProfileExtensionActionArgumentIssueV1[] = [];
+    const allowedNames = new Set(schema.map((entry) => entry.name));
+
+    for (const key of Object.keys(args)) {
+      if (allowedNames.has(key)) continue;
+      issues.push({
+        code: 'unknown-arg',
+        name: key,
+        message: `Unknown action argument: ${key}`,
+      });
+    }
+
+    for (const entry of schema) {
+      const hasValue = Zwavejs2HomeyApp.hasOwnProperty(args, entry.name);
+      const value = hasValue ? args[entry.name] : undefined;
+
+      if ((value === undefined || value === null) && entry.required === true) {
+        issues.push({
+          code: 'missing-required-arg',
+          name: entry.name,
+          message: `Missing required argument: ${entry.name}`,
+        });
+        continue;
+      }
+
+      if (value === undefined || value === null) continue;
+
+      if (!Zwavejs2HomeyApp.isValidArgumentType(value, entry.type)) {
+        issues.push({
+          code: 'invalid-arg-type',
+          name: entry.name,
+          message: `Invalid argument type for ${entry.name}: expected ${entry.type}`,
+        });
+        continue;
+      }
+
+      if (entry.type !== 'enum') continue;
+      const allowedValues = Array.isArray(entry.enumValues) ? entry.enumValues : [];
+      const valueAsString = value as string;
+      if (allowedValues.includes(valueAsString)) continue;
+      issues.push({
+        code: 'invalid-arg-enum',
+        name: entry.name,
+        message: `Invalid enum value for ${entry.name}: ${valueAsString}`,
+      });
+    }
+
+    return issues;
+  }
+
   private evaluateProfileExtensionSafetyChecks(options: {
     checks: readonly ProfileExtensionSafetyCheckV1[];
     node: NodeRuntimeDiagnosticsEntry;
@@ -1990,24 +2070,27 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
     const dryRun = options?.dryRun === true;
     const confirm = options?.confirm === true;
 
+    const extensionContract = this.profileExtensionRegistry.get(extensionId);
+    const actionContract = this.profileExtensionRegistry.resolveAction(extensionId, actionId);
+
     const diagnostics = await this.getNodeRuntimeDiagnostics({ homeyDeviceId });
     const node = diagnostics.nodes.find((entry) => entry.homeyDeviceId === homeyDeviceId);
-    if (!node) {
-      throw new Error(`Node runtime diagnostics not found for homeyDeviceId: ${homeyDeviceId}`);
-    }
-
-    const context = Zwavejs2HomeyApp.toProfileExtensionMatchContext(node);
-    const extensionContract = this.profileExtensionRegistry.get(extensionId);
+    const context: ProfileExtensionMatchContextV1 = node
+      ? Zwavejs2HomeyApp.toProfileExtensionMatchContext(node)
+      : {
+          profileId: null,
+          driverTemplateId: null,
+          homeyClass: null,
+        };
     const extensionExplanation = this.profileExtensionRegistry.explainMatch(extensionId, context);
-    const actionContract = this.profileExtensionRegistry.resolveAction(extensionId, actionId);
 
     const baseResult = {
       schemaVersion: 'homey-profile-extension-action/v1' as const,
       generatedAt: new Date().toISOString(),
       device: {
         homeyDeviceId,
-        bridgeId: node.bridgeId,
-        nodeId: node.nodeId,
+        bridgeId: node?.bridgeId ?? null,
+        nodeId: node?.nodeId ?? null,
       },
       context,
       extension: {
@@ -2035,6 +2118,18 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
         details: null as unknown | null,
       },
     };
+
+    if (!node) {
+      return {
+        ...baseResult,
+        execution: {
+          status: 'rejected',
+          executed: false,
+          reason: 'node-not-found',
+          details: null,
+        },
+      };
+    }
 
     if (!extensionContract) {
       return {
@@ -2080,6 +2175,24 @@ module.exports = class Zwavejs2HomeyApp extends Homey.App {
           executed: false,
           reason: 'dry-run-not-supported',
           details: null,
+        },
+      };
+    }
+
+    const argIssues = this.validateProfileExtensionActionArgs({
+      schema: actionContract.arguments,
+      args,
+    });
+    if (argIssues.length > 0) {
+      return {
+        ...baseResult,
+        execution: {
+          status: 'rejected',
+          executed: false,
+          reason: 'invalid-action-args',
+          details: {
+            issues: argIssues,
+          },
         },
       };
     }
